@@ -96,6 +96,27 @@ ABILITY_DB: dict[str, list[tuple]] = {
 
 # ── Registration ───────────────────────────────────────────────
 
+# ── Ability tag mapping: ability_name → ability_tag ────────────
+ABILITY_TAG_MAP: dict[str, str] = {
+    "诈死": "fake_death",
+    "威慑": "intimidate",
+    "铁拳": "iron_fist",
+    "食能": "energy_eater",
+    "光合": "photosynthesis",
+    "杀意": "killing_intent",
+    "铁壁": "iron_wall",
+    "连打": "combo_strike",
+    "好胜": "competitive",
+    "贪吃": "gluttony",
+    "蓄能": "charge_up",
+    "疾风": "gale_wind",
+    "传递": "pass_on",
+    "协防": "ally_guard",
+    "先发": "head_start",
+    "追击": "pursuit",
+}
+
+
 def register_ability_handlers(bus: "EventBus", pet: "PetState") -> None:
     """Register all ability handlers for a pet on the event bus."""
     from roco.engine.events import GameEvent
@@ -104,11 +125,15 @@ def register_ability_handlers(bus: "EventBus", pet: "PetState") -> None:
     if not name or name not in ABILITY_DB:
         return
 
+    # Set ability tags on pet (for fast lookup without string matching)
+    tag = ABILITY_TAG_MAP.get(name, "")
+    if tag:
+        pet.ability_tags.append(tag)
+
     event_map = {e.name: e for e in GameEvent}
     for evt_name, fn in ABILITY_DB[name]:
         evt = event_map.get(evt_name)
         if evt:
-            # Capture pet in closure
             def handler(ctx: EventCtx, pet=pet, fn=fn) -> None:
                 fn(ctx, pet)
             bus.on(evt, handler, priority=100, source=f"ability:{name}")

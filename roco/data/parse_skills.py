@@ -1,13 +1,15 @@
-"""Parse raw skill wikitext into a key-value JSON mapping.
+"""Parse raw skill wikitext → classified JSON with tags and pre-parsed fields.
 
-Output: _data/parsed/skills.json  →  {"猛烈撞击": {...fields}, ...}
+Output: _data/parsed/skills.json  →  {"猛烈撞击": {..., "tags": [...], ...}}
 
 Usage:
     python scripts/parse_skills.py
 """
 
 import re
-from roco.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.engine.skill_tags import classify
+from roco.engine.state import SkillRef
 
 TEMPLATE_RE = re.compile(r"^\|(.+?)=(.+)", re.MULTILINE)
 INT_FIELDS = ("耗能", "威力")
@@ -33,6 +35,23 @@ def parse_one(name: str, text: str) -> dict | None:
                 skill[f] = int(skill[f])
             except (ValueError, TypeError):
                 pass
+
+    # Classify at parse time — store tags + parsed fields in JSON
+    sref = SkillRef(
+        name=skill.get("技能名称", name),
+        element=skill.get("属性", ""),
+        category=skill.get("技能类别", ""),
+        energy=skill.get("耗能", 0),
+        power=skill.get("威力", 0),
+        effect=skill.get("效果", ""),
+    )
+    classify(sref)
+    skill["tags"] = sref.tags
+    skill["weather_type"] = sref.weather_type
+    skill["enemy_cost_up_amount"] = sref.enemy_cost_up_amount
+    skill["hp_cost_pct"] = sref.hp_cost_pct
+    skill["permanent_hit_growth"] = sref.permanent_hit_growth
+    skill["permanent_power_growth"] = sref.permanent_power_growth
 
     return skill
 

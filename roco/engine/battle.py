@@ -77,7 +77,7 @@ class BattleEngine:
             return
         state = ctx.state
         is_a = pet in state.team_a
-        magic_cost = 0 if "诈死" in pet.ability_name else 1
+        magic_cost = 0 if "fake_death" in pet.ability_tags else 1
         if is_a:
             state.magic_a = max(0, state.magic_a - magic_cost)
         else:

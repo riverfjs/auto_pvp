@@ -77,6 +77,7 @@ _CLASSIFIERS: list[tuple[str, str | None, str | None, object]] = [
 
 _RE_HEAL_HP = re.compile(r"回复\s*(\d+)%\s*(HP|生命)")
 _RE_HEAL_NRG = re.compile(r"回复\s*(\d+)\s*能量")
+_RE_STEAL_NRG = re.compile(r"偷取\s*(\d+)\s*能量")
 _RE_DRAIN_PCT = re.compile(r"吸血\s*(\d+)%")
 _RE_DEF_PCT = re.compile(r"减伤\s*(\d+)%")
 _RE_HIT_COUNT = re.compile(r"连击\s*(\d+)\s*次")
@@ -87,13 +88,19 @@ _RE_FREEZE_N = re.compile(r"(\d+)\s*层\s*冻结")
 _RE_LEECH_N = re.compile(r"(\d+)\s*层\s*寄生")
 _RE_COST_UP = re.compile(r"全技能能耗\s*\+\s*(\d+)")
 _RE_HP_COST = re.compile(r"失去\s*(\d+)%\s*生命")
+_RE_HIT_GROWTH = re.compile(r"连击数永久\s*\+\s*(\d+)")
+_RE_POWER_GROWTH = re.compile(r"威力永久\s*\+\s*(\d+)")
+_WEATHER_MAP = {"沙涌": "sandstorm", "沙暴": "sandstorm", "祈雨": "rain", "求雨": "rain",
+                "冰雹": "snow", "雪天": "snow", "暴风雪": "snow"}
 _RE_STAT_UP = re.compile(r"(物攻|魔攻|物防|魔防|速度)\s*\+(\d+)%")
 _RE_STAT_DOWN = re.compile(r"(物攻|魔攻|物防|魔防|速度)\s*\-(\d+)%")
+_RE_ENEMY_DOWN = re.compile(r"敌方(物攻|魔攻|物防|魔防|速度)\s*\-(\d+)%")
 
 
-def _stat_key(name: str) -> str:
-    return {"物攻": "atk_phys", "魔攻": "atk_mag",
-            "物防": "def_phys", "魔防": "def_mag", "速度": "speed"}.get(name, "")
+def _stat_field(name: str, prefix: str = "self_") -> str:
+    """Map Chinese stat name → SkillRef field name."""
+    m = {"物攻": "atk", "魔攻": "spatk", "物防": "def", "魔防": "spdef", "速度": "speed"}
+    return prefix + m.get(name, name)
 
 
 def classify(skill: SkillRef) -> SkillRef:
@@ -122,6 +129,8 @@ def classify(skill: SkillRef) -> SkillRef:
         skill.self_heal_energy = int(m.group(1))
         if "heal_energy" not in tags:
             tags.append("heal_energy")
+    if m := _RE_STEAL_NRG.search(eff):
+        skill.steal_energy = int(m.group(1))
 
     if m := _RE_DEF_PCT.search(eff):
         skill.damage_reduction = int(m.group(1)) / 100.0
@@ -143,20 +152,51 @@ def classify(skill: SkillRef) -> SkillRef:
 
     # Stat changes
     for m in _RE_STAT_UP.finditer(eff):
-        key = _stat_key(m.group(1))
+        field = _stat_field(m.group(1))
         pct = int(m.group(2)) / 100.0
-        setattr(skill, f"self_{key}", getattr(skill, f"self_{key}", 0) + pct)
+        setattr(skill, field, getattr(skill, field, 0) + pct)
         if "stat_change" not in tags:
             tags.append("stat_change")
     for m in _RE_STAT_DOWN.finditer(eff):
-        key = _stat_key(m.group(1))
+        field = _stat_field(m.group(1))
         pct = -int(m.group(2)) / 100.0
-        # Apply as self debuff (enemy context determined at runtime)
-        cur = getattr(skill, f"self_{key}", 0)
+        cur = getattr(skill, field, 0)
         if cur == 0:
-            setattr(skill, f"self_{key}", pct)
+            setattr(skill, field, pct)
         if "stat_change" not in tags:
             tags.append("stat_change")
+    for m in _RE_ENEMY_DOWN.finditer(eff):
+        field = _stat_field(m.group(1), "enemy_")
+        pct = int(m.group(2)) / 100.0
+        setattr(skill, field, pct)
+        if "stat_change" not in tags:
+            tags.append("stat_change")
+
+    # ── Parse weather type ──
+    for kw, wt in _WEATHER_MAP.items():
+        if kw in eff:
+            skill.weather_type = wt
+            if "weather" not in tags:
+                tags.append("weather")
+            break
+
+    # ── Parse numeric effect values ──
+    if m := _RE_COST_UP.search(eff):
+        skill.enemy_cost_up_amount = int(m.group(1))
+    if m := _RE_HP_COST.search(eff):
+        skill.hp_cost_pct = int(m.group(1)) / 100.0
+    if m := _RE_HIT_GROWTH.search(eff):
+        skill.permanent_hit_growth = int(m.group(1))
+        if "permanent_mod" not in tags:
+            tags.append("permanent_mod")
+    if m := _RE_POWER_GROWTH.search(eff):
+        skill.permanent_power_growth = int(m.group(1))
+        if "permanent_mod" not in tags:
+            tags.append("permanent_mod")
+
+    # ── Ability tag classification ──
+    if "应对" in eff and "counter" not in tags:
+        tags.append("counter")
 
     # Pure damage: no other tags assigned
     if not tags and skill.power > 0:

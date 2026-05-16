@@ -40,7 +40,13 @@ class SkillRef:
     poison_stacks: int = 0
     burn_stacks: int = 0
     freeze_stacks: int = 0
-    tags: list[str] = field(default_factory=list)  # sub-type tags for dispatch
+    tags: list[str] = field(default_factory=list)
+    # Pre-parsed effect values (set at import time, zero runtime regex)
+    weather_type: str = ""           # "sandstorm"|"rain"|"snow"|""
+    enemy_cost_up_amount: int = 0
+    hp_cost_pct: float = 0.0
+    permanent_hit_growth: int = 0
+    permanent_power_growth: int = 0
 
 
 @dataclass
@@ -68,6 +74,7 @@ class PetState:
     slot: int = 0
     ability_name: str = ""
     ability_desc: str = ""
+    ability_tags: list[str] = field(default_factory=list)  # pre-classified
 
     @property
     def max_hp(self) -> int:

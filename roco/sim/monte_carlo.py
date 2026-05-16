@@ -20,7 +20,6 @@ from collections import Counter
 from roco.engine.battle import BattleEngine
 from roco.engine.state import BattleState, MoveDecision, PetState, SkillRef
 from roco.engine.damage import compute_stats
-from roco.engine.skill_tags import classify
 from roco.data.utils import DB_DIR
 from roco.config.constants import DEFAULT_MAX_TURNS
 
@@ -56,16 +55,25 @@ def load_pet_from_db(name: str, conn: sqlite3.Connection,
     if move_names:
         for mn in move_names:
             sk = conn.execute(
-                "SELECT name, element, category, energy, power, effect "
+                "SELECT name, element, category, energy, power, effect, "
+                "tags, weather_type, enemy_cost_up_amount, hp_cost_pct, "
+                "permanent_hit_growth, permanent_power_growth "
                 "FROM skills WHERE name = ?", (mn,)
             ).fetchone()
             if sk:
+                # Tags and parsed fields come from DB (pre-classified at import time)
+                tags_str = sk["tags"] or "" if "tags" in sk.keys() else ""
                 sref = SkillRef(
                     name=sk["name"], element=sk["element"],
                     category=sk["category"], energy=sk["energy"],
                     power=sk["power"], effect=sk["effect"] or "",
+                    tags=tags_str.split(",") if tags_str else [],
+                    weather_type=sk["weather_type"] if "weather_type" in sk.keys() else "",
+                    enemy_cost_up_amount=sk["enemy_cost_up_amount"] if "enemy_cost_up_amount" in sk.keys() else 0,
+                    hp_cost_pct=sk["hp_cost_pct"] if "hp_cost_pct" in sk.keys() else 0.0,
+                    permanent_hit_growth=sk["permanent_hit_growth"] if "permanent_hit_growth" in sk.keys() else 0,
+                    permanent_power_growth=sk["permanent_power_growth"] if "permanent_power_growth" in sk.keys() else 0,
                 )
-                classify(sref)
                 skills.append(sref)
 
     return PetState(

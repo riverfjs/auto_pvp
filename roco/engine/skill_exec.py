@@ -252,13 +252,8 @@ def _exec_force_switch(attacker: PetState, _defender: PetState,
 
 def _exec_set_weather(_attacker: PetState, _defender: PetState,
                       skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    eff = skill.effect
-    if "沙涌" in eff or "沙暴" in eff:
-        state.weather, state.weather_turns = "sandstorm", 5
-    elif "祈雨" in eff or "求雨" in eff:
-        state.weather, state.weather_turns = "rain", 5
-    elif "冰雹" in eff or "雪天" in eff or "暴风雪" in eff:
-        state.weather, state.weather_turns = "snow", 5
+    if skill.weather_type:
+        state.weather, state.weather_turns = skill.weather_type, 5
 
 
 def _exec_counter_effect(attacker: PetState, _defender: PetState,
@@ -297,9 +292,7 @@ def _exec_mirror_damage(_attacker: PetState, defender: PetState,
 def _exec_enemy_cost_up(attacker: PetState, defender: PetState,
                         skill: SkillRef, state: BattleState, _countered: bool) -> None:
     """Enemy energy cost up: increase opponent's skill energy costs."""
-    import re
-    m = re.search(r"全技能能耗\s*\+\s*(\d+)", skill.effect)
-    delta = int(m.group(1)) if m else 1
+    delta = skill.enemy_cost_up_amount or 1
     defender._cost_mod = getattr(defender, "_cost_mod", 0) + delta
     defender._cost_mod_turns = 3
     state.log.append(BattleEvent(
@@ -310,10 +303,8 @@ def _exec_enemy_cost_up(attacker: PetState, defender: PetState,
 
 def _exec_hp_for_energy(attacker: PetState, _defender: PetState,
                         skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """HP for energy (石头大餐): pay HP % instead of energy."""
-    import re
-    m = re.search(r"失去\s*(\d+)%\s*生命", skill.effect)
-    pct = int(m.group(1)) / 100.0 if m else 0.10
+    """HP for energy: pay HP % instead of energy."""
+    pct = skill.hp_cost_pct or 0.10
     hp_cost = int(attacker.max_hp * pct)
     attacker.current_hp = max(0, attacker.current_hp - hp_cost)
 
@@ -321,10 +312,10 @@ def _exec_hp_for_energy(attacker: PetState, _defender: PetState,
 def _exec_permanent_mod(attacker: PetState, _defender: PetState,
                         skill: SkillRef, _state: BattleState, _countered: bool) -> None:
     """Permanent skill modification: per-use growth (e.g. 连击数永久+2)."""
-    if "连击数永久" in skill.effect:
-        skill.hit_count += 2  # permanent hit count growth
-    if "威力永久" in skill.effect:
-        skill.power += 10  # permanent power growth
+    if skill.permanent_hit_growth:
+        skill.hit_count += skill.permanent_hit_growth
+    if skill.permanent_power_growth:
+        skill.power += skill.permanent_power_growth
 
 
 # ── Tag → handler map ──────────────────────────────────────────
@@ -403,7 +394,7 @@ def execute_move(attacker: PetState, defender: PetState,
 
     # Cooldown
     new_cd = {i: c - 1 for i, c in attacker.cooldowns.items() if c > 1}
-    if "应对" in exec_skill.effect:
+    if "counter" in exec_skill.tags:
         new_cd[exec_index] = 2
     attacker.cooldowns = new_cd
 
@@ -462,16 +453,9 @@ def register_skill_handlers(bus: "EventBus") -> None:
 
     def on_weather_skill(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
-        if not skill:
+        if not skill or not skill.weather_type:
             return
-        eff = skill.effect
-        state = ctx.state
-        if "沙涌" in eff or "沙暴" in eff:
-            state.weather, state.weather_turns = "sandstorm", 5
-        elif "祈雨" in eff or "求雨" in eff:
-            state.weather, state.weather_turns = "rain", 5
-        elif "冰雹" in eff or "雪天" in eff or "暴风雪" in eff:
-            state.weather, state.weather_turns = "snow", 5
+        ctx.state.weather, ctx.state.weather_turns = skill.weather_type, 5
 
     bus.on(GameEvent.TURN_END, on_leech_tick, priority=180, source="skill")
     bus.on(GameEvent.AFTER_MOVE, on_force_switch, priority=50, source="skill")
