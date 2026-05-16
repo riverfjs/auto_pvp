@@ -58,20 +58,19 @@ class BattleEngine:
 
     def _init_systems(self) -> None:
         """Explicitly construct all game subsystems — no import-time side effects."""
-        from roco.systems.weather import register_weather_handlers
-        from roco.systems.marks import register_mark_handlers
-        from roco.engine.skill_exec import register_skill_handlers
-        from roco.systems.burst import register_burst_handlers
-        from roco.systems.barrel import register_barrel_handlers
-        from roco.systems.devotion import register_devotion_handlers
-        from roco.systems.cute import register_cute_handlers
-        register_weather_handlers(self.bus)
-        register_mark_handlers(self.bus)
-        register_skill_handlers(self.bus)
-        register_burst_handlers(self.bus)
-        register_barrel_handlers(self.bus)
-        register_devotion_handlers(self.bus)
-        register_cute_handlers(self.bus)
+        subsystems = [
+            ("roco.systems.weather", "register_weather_handlers"),
+            ("roco.systems.marks", "register_mark_handlers"),
+            ("roco.engine.skill_exec", "register_skill_handlers"),
+            ("roco.systems.burst", "register_burst_handlers"),
+            ("roco.systems.barrel", "register_barrel_handlers"),
+            ("roco.systems.devotion", "register_devotion_handlers"),
+            ("roco.systems.cute", "register_cute_handlers"),
+        ]
+        import importlib
+        for mod_name, fn_name in subsystems:
+            mod = importlib.import_module(mod_name)
+            getattr(mod, fn_name)(self.bus)
 
     # ── Event handlers registered by engine itself ──────────────
 
