@@ -95,8 +95,8 @@ def test_energy_consumed_after_attack():
     b = [_mk_pet("B", hp=999, atk=50, spd=50, element="火", moves=[_ember()])]
     engine = BattleEngine(a, b)
     engine.step(_move(0), _move(0))
-    # gain 2 - cost 2 = 0
-    assert engine.get_active("a").current_energy == 0
+    # start 10 + gain 2 (cap 10) - cost 2 = 8
+    assert engine.get_active("a").current_energy == 8
 
 
 def test_energy_accumulates():
@@ -104,10 +104,10 @@ def test_energy_accumulates():
     b = [_mk_pet("B", hp=999, atk=50, spd=50, element="普通", moves=[_ember(), _tackle()])]
     engine = BattleEngine(a, b)
     engine.step(_move(1), _move(1))  # both tackle (1 energy)
-    # gain 2 - cost 1 = 1 remaining
-    # turn 2: gain 2 → 3, use tackle → 2
+    # start 10 + gain 2 (cap 10) - cost 1 = 9
+    # turn 2: gain 2 (cap 10) - cost 1 = 9
     engine.step(_move(1), _move(1))
-    assert engine.get_active("a").current_energy == 2
+    assert engine.get_active("a").current_energy == 9
 
 
 def test_faint_and_auto_switch(two_pet_team_a, two_pet_team_b):

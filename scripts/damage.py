@@ -20,7 +20,10 @@ from scripts.battle_config import (
     IV_STAT_MAP,
     MIN_DAMAGE,
     NATURE_MOD,
+    DAMAGE_FORMULA_CONSTANT,
+    STAB_MULTIPLIER,
 )
+from scripts.systems.weather import weather_damage_mult
 from scripts.type_chart import effectiveness_v2
 
 
@@ -90,19 +93,35 @@ def apply_nature_mod(stats: dict[str, int], nature: str) -> dict[str, int]:
 
 def calc_attack_damage(
     power: int,
-    atk_stat: int,
-    def_stat: int,
+    atk_stat: float,
+    def_stat: float,
     type_mult: float = 1.0,
+    stab: float = 1.0,
+    weather_mult: float = 1.0,
+    hit_count: int = 1,
+    power_buff: float = 1.0,
 ) -> int:
-    """Core attack damage: floor(power * atk / def * type_mult).
+    """Full attack damage formula matching game mechanics.
 
+    damage = (atk / def) * power * 0.9 * type_mult * stab * weather * hits * power_buff
     Minimum MIN_DAMAGE if power > 0.
     """
     if power <= 0 or atk_stat <= 0 or def_stat <= 0:
         return 0
-    raw = power * atk_stat / def_stat * type_mult
-    dmg = int(raw)
+    base = (atk_stat / def_stat) * power * DAMAGE_FORMULA_CONSTANT
+    total = base * type_mult * stab * weather_mult * hit_count * power_buff
+    dmg = int(total)
     return max(dmg, MIN_DAMAGE)
+
+
+def get_stab(move_element: str, pet_element: str) -> float:
+    """Same-type attack bonus: 1.5x if move element matches pet element."""
+    return STAB_MULTIPLIER if move_element == pet_element else 1.0
+
+
+def get_weather_mult(move_element: str, weather: str | None) -> float:
+    """Weather damage modifier for the given move element."""
+    return weather_damage_mult(move_element, weather)
 
 
 def calc_burn_damage(

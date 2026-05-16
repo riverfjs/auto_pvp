@@ -92,12 +92,12 @@ def test_nature_pairs_are_distinct():
 # ── Damage formulas ────────────────────────────────────────────
 
 @pytest.mark.parametrize("power,atk,def_,mult,expected", [
-    (100, 120, 100, 1.0, 120),
-    (100, 120, 100, 2.0, 240),
-    (100, 120, 100, 0.5, 60),
-    (100, 120, 100, 3.0, 360),
-    (100, 100, 200, 1.0, 50),
-    (100, 100, 200, 2.0, 100),
+    (100, 120, 100, 1.0, 108),   # 100*120/100 * 1.0 * 0.9 = 108
+    (100, 120, 100, 2.0, 216),
+    (100, 120, 100, 0.5, 54),
+    (100, 120, 100, 3.0, 324),
+    (100, 100, 200, 1.0, 45),    # 100*100/200 * 1.0 * 0.9 = 45
+    (100, 100, 200, 2.0, 90),
 ])
 def test_calc_attack_damage(power, atk, def_, mult, expected):
     assert calc_attack_damage(power, atk, def_, mult) == expected
@@ -114,9 +114,9 @@ def test_calc_attack_damage_zero_power():
 
 
 def test_calc_attack_damage_floor():
-    """Damage floors to int."""
+    """Damage floors to int with 0.9 constant."""
     dmg = calc_attack_damage(95, 87, 113, 1.0)
-    assert dmg == int(95 * 87 / 113)
+    assert dmg == int(95 * 87 / 113 * 0.9)
 
 
 # ── Burn damage ────────────────────────────────────────────────
@@ -212,7 +212,7 @@ def test_energy_gain():
 
 
 def test_energy_gain_capped():
-    assert calc_energy_after_gain(7) == 8  # capped at MAX_ENERGY
+    assert calc_energy_after_gain(9) == 10  # capped at MAX_ENERGY=10
 
 
 def test_energy_after_use():
