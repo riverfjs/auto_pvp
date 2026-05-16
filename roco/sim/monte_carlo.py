@@ -20,6 +20,7 @@ from collections import Counter
 from roco.engine.battle import BattleEngine
 from roco.engine.state import BattleState, MoveDecision, PetState, SkillRef
 from roco.engine.damage import compute_stats
+from roco.engine.skill_tags import classify
 from roco.data.utils import DB_DIR
 from roco.config.constants import DEFAULT_MAX_TURNS
 
@@ -59,11 +60,13 @@ def load_pet_from_db(name: str, conn: sqlite3.Connection,
                 "FROM skills WHERE name = ?", (mn,)
             ).fetchone()
             if sk:
-                skills.append(SkillRef(
+                sref = SkillRef(
                     name=sk["name"], element=sk["element"],
                     category=sk["category"], energy=sk["energy"],
                     power=sk["power"], effect=sk["effect"] or "",
-                ))
+                )
+                classify(sref)
+                skills.append(sref)
 
     return PetState(
         name=name,

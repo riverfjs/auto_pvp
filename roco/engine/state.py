@@ -40,6 +40,7 @@ class SkillRef:
     poison_stacks: int = 0
     burn_stacks: int = 0
     freeze_stacks: int = 0
+    tags: list[str] = field(default_factory=list)  # sub-type tags for dispatch
 
 
 @dataclass

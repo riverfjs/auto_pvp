@@ -6,6 +6,7 @@ from roco.engine.state import (
     BattleState, MoveDecision, PetState, SkillRef,
 )
 from roco.engine.damage import compute_stats
+from roco.engine.skill_tags import classify
 
 
 # ── Fixtures ───────────────────────────────────────────────────
@@ -25,26 +26,29 @@ def _mk_pet(name: str, hp: int = 100, atk: int = 80, spd: int = 60,
     )
 
 
-def _tackle() -> SkillRef:
-    return SkillRef(name="撞击", element="普通", category="物攻", energy=1, power=50)
+def _mk_skill(name: str, element: str = "普通", category: str = "物攻",
+              energy: int = 1, power: int = 50, effect: str = "") -> SkillRef:
+    """Create and classify a SkillRef."""
+    sk = SkillRef(name=name, element=element, category=category,
+                  energy=energy, power=power, effect=effect)
+    classify(sk)
+    return sk
 
+
+def _tackle() -> SkillRef:
+    return _mk_skill("撞击", "普通", "物攻", 1, 50)
 
 def _ember() -> SkillRef:
-    return SkillRef(name="火花", element="火", category="魔攻", energy=2, power=60)
-
+    return _mk_skill("火花", "火", "魔攻", 2, 60)
 
 def _water_gun() -> SkillRef:
-    return SkillRef(name="水枪", element="水", category="魔攻", energy=2, power=60)
-
+    return _mk_skill("水枪", "水", "魔攻", 2, 60)
 
 def _will_o_wisp() -> SkillRef:
-    return SkillRef(name="鬼火", element="火", category="状态", energy=2, power=0,
-                    effect="造成灼烧")
-
+    return _mk_skill("鬼火", "火", "状态", 2, 0, "造成灼烧")
 
 def _defense_curl() -> SkillRef:
-    return SkillRef(name="防御", element="普通", category="防御", energy=1, power=0,
-                    effect="减伤70%")
+    return _mk_skill("防御", "普通", "防御", 1, 0, "减伤70%")
 
 
 def _move(skill_index: int) -> MoveDecision:

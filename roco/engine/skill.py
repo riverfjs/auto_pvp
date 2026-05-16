@@ -54,12 +54,12 @@ def execute_move(
     if not can_use_skill(attacker.current_energy, effective_cost):
         return
 
-    # ── Damage reduction (defense skills) ──
+    # ── Damage reduction (defense skills buff self, not target) ──
     if skill.damage_reduction > 0:
-        defender.buff_stages["def_phys"] = clamp_stage(
-            defender.buff_stages.get("def_phys", 0) + 3)
-        defender.buff_stages["def_mag"] = clamp_stage(
-            defender.buff_stages.get("def_mag", 0) + 3)
+        attacker.buff_stages["def_phys"] = clamp_stage(
+            attacker.buff_stages.get("def_phys", 0) + 3)
+        attacker.buff_stages["def_mag"] = clamp_stage(
+            attacker.buff_stages.get("def_mag", 0) + 3)
         attacker.current_energy = calc_energy_after_use(
             attacker.current_energy, effective_cost)
         state.log.append(BattleEvent(
@@ -191,29 +191,20 @@ def _apply_status_from_effect(
     attacker: PetState, defender: PetState,
     skill: SkillRef, state: BattleState,
 ) -> None:
-    """Apply burn/poison/freeze from parsed skill data, with keyword fallback."""
-    burn = skill.burn_stacks
-    poison = skill.poison_stacks
-    freeze = skill.freeze_stacks
-
-    # Keyword fallback (for test fixtures / unparsed skills)
-    if burn == 0 and "灼烧" in skill.effect:
-        burn = 1
-    if poison == 0 and ("中毒" in skill.effect or "剧毒" in skill.effect):
-        poison = 1
-    if freeze == 0 and ("冻结" in skill.effect or "冰冻" in skill.effect):
-        freeze = 1
-
-    if burn > 0 and not defender.is_immune_to_status("灼烧"):
-        defender.status_stacks["灼烧"] = defender.status_stacks.get("灼烧", 0) + burn
+    """Apply burn/poison/freeze/leech from pre-parsed skill fields."""
+    if skill.burn_stacks > 0 and not defender.is_immune_to_status("灼烧"):
+        defender.status_stacks["灼烧"] = defender.status_stacks.get("灼烧", 0) + skill.burn_stacks
         state.log.append(BattleEvent(
             turn=state.turn_number, actor=attacker.name, action="status_tick",
-            detail={"status": "灼烧", "stacks": burn, "target": defender.name},
+            detail={"status": "灼烧", "stacks": skill.burn_stacks, "target": defender.name},
         ))
-    if poison > 0 and not defender.is_immune_to_status("中毒"):
-        defender.status_stacks["中毒"] = defender.status_stacks.get("中毒", 0) + poison
-    if freeze > 0 and not defender.is_immune_to_status("冻结"):
-        defender.status_stacks["冻结"] = defender.status_stacks.get("冻结", 0) + freeze
+    if skill.poison_stacks > 0 and not defender.is_immune_to_status("中毒"):
+        defender.status_stacks["中毒"] = defender.status_stacks.get("中毒", 0) + skill.poison_stacks
+    if skill.freeze_stacks > 0 and not defender.is_immune_to_status("冻结"):
+        defender.status_stacks["冻结"] = defender.status_stacks.get("冻结", 0) + skill.freeze_stacks
+    if skill.leech_stacks > 0:
+        defender.status_stacks["寄生"] = defender.status_stacks.get("寄生", 0) + skill.leech_stacks
+        defender.leech_source = attacker.name
 
 
 def _apply_stat_changes(
@@ -302,8 +293,9 @@ def _apply_post_effects(
     if skill.enemy_lose_energy > 0:
         defender.current_energy = max(0, defender.current_energy - skill.enemy_lose_energy)
 
-    # Leech stacks
-    if skill.leech_stacks > 0:
+    # Leech stacks (already applied in _apply_status_from_effect if parsed;
+    # this handles the case where leech_stacks was set manually e.g. by test fixtures)
+    if skill.leech_stacks > 0 and "寄生" not in defender.status_stacks:
         defender.status_stacks["寄生"] = defender.status_stacks.get("寄生", 0) + skill.leech_stacks
         defender.leech_source = attacker.name
 
@@ -352,11 +344,7 @@ def register_skill_handlers(bus: "EventBus") -> None:
         if skill_data.enemy_lose_energy > 0:
             defender.current_energy = max(0, defender.current_energy - skill_data.enemy_lose_energy)
 
-        # Leech stacks — track who applied them for heal-back
-        if skill_data.leech_stacks > 0:
-            defender.status_stacks["寄生"] = (
-                defender.status_stacks.get("寄生", 0) + skill_data.leech_stacks)
-            defender.leech_source = attacker.name
+        # Leech is applied in _apply_status_from_effect during move execution
 
     bus.on(GameEvent.AFTER_DAMAGE, on_after_damage, priority=60, source="skill")
 
