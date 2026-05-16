@@ -48,7 +48,8 @@ class BattleEngine:
             pet.is_fainted = False
             register_ability_handlers(self.bus, pet)
 
-        # Emit SWITCH_IN for starting active pets (triggers ON_ENTER abilities)
+        # Emit BATTLE_START then SWITCH_IN for starting pets
+        self.bus.emit(EventCtx(GameEvent.BATTLE_START, self.state))
         for team, pet in (("a", team_a[0]), ("b", team_b[0])):
             self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet,
                                    data={"team": team}))
@@ -155,8 +156,10 @@ class BattleEngine:
         a_ctr, b_ctr = resolve_counter(a_cat, b_cat)
         if a_ctr:
             self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, state, actor=a_pet, target=b_pet))
+            self.bus.emit(EventCtx(GameEvent.ALLY_COUNTER, state, actor=a_pet, data={"team": "a"}))
         if b_ctr:
             self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, state, actor=b_pet, target=a_pet))
+            self.bus.emit(EventCtx(GameEvent.ALLY_COUNTER, state, actor=b_pet, data={"team": "b"}))
 
         # Execute faster
         countered_1 = (first_team == "a" and b_ctr) or (first_team == "b" and a_ctr)
@@ -258,9 +261,13 @@ class BattleEngine:
         if new_pet.is_fainted:
             return
 
-        # SWITCH_OUT event
+        # SWITCH_OUT + ENEMY_SWITCH events
         self.bus.emit(EventCtx(GameEvent.SWITCH_OUT, state, actor=switcher,
                                data={"team": team}))
+        opp_team_id = "b" if team == "a" else "a"
+        opp_pet = state.team_b[state.active_b] if team == "a" else state.team_a[state.active_a]
+        self.bus.emit(EventCtx(GameEvent.ENEMY_SWITCH, state, actor=opp_pet,
+                               data={"team": opp_team_id}))
         switcher.charging_skill_idx = -1
 
         state.log.append(BEvent(

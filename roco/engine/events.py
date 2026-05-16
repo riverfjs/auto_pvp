@@ -29,6 +29,7 @@ class GameEvent(Enum):
     """All hook points in the battle lifecycle."""
 
     # ── Round-level ──
+    BATTLE_START = auto()      # battle begins (after all pets initialized)
     TURN_START = auto()        # start of turn, before energy gain
     TURN_END = auto()          # end of turn, after status/weather ticks
 
@@ -42,11 +43,13 @@ class GameEvent(Enum):
     # ── Pet lifecycle ──
     SWITCH_IN = auto()         # pet enters battle
     SWITCH_OUT = auto()        # pet leaves battle
+    ENEMY_SWITCH = auto()      # opponent switches
     FAINT = auto()             # pet faints
     KILL = auto()              # pet kills an opponent
 
     # ── Interaction ──
     COUNTER_SUCCESS = auto()   # counter move succeeds (应对成功)
+    ALLY_COUNTER = auto()      # ally on the team successfully countered
     TAKE_DAMAGE = auto()       # pet takes damage (after HP deducted)
     STATUS_APPLIED = auto()    # status effect applied to pet
     STATUS_TICK = auto()       # per-pet status tick at turn end

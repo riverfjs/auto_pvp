@@ -43,11 +43,16 @@ TAG_ORDER: dict[str, int] = {
     "stat_change":   40,
     "force_switch":  45,
     "weather":       50,
-    "counter":       55,
-    "conditional":   60,
-    "scaling":       65,
-    "multi_hit":     -1,  # handled in damage formula
-    "priority":      -1,  # handled in speed calc
+    "counter":           55,
+    "conditional":       60,
+    "conditional_buff":  60,
+    "scaling":           65,
+    "mirror_damage":     70,
+    "enemy_cost_up":     45,
+    "hp_for_energy":     5,
+    "permanent_mod":     75,
+    "multi_hit":         -1,
+    "priority":          -1,
 }
 
 # ── Handlers ────────────────────────────────────────────────────
@@ -271,8 +276,55 @@ def _exec_conditional(_attacker: PetState, _defender: PetState,
 
 def _exec_scaling(_attacker: PetState, _defender: PetState,
                   _skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Scaling effects are resolved at event time via BEFORE_MOVE handlers."""
-    pass
+    """Scaling (per-use permanent growth): handled by permanent_mod tag."""
+
+
+def _exec_mirror_damage(_attacker: PetState, defender: PetState,
+                        skill: SkillRef, state: BattleState, countered: bool) -> None:
+    """Mirror/reflect damage (听桥): reflect countered skill's power back as damage."""
+    if not countered:
+        return
+    # Reflect: deal the countered skill's power as fixed damage to the attacker
+    # (attacker here is the one who got countered — they take mirror damage)
+    reflect_dmg = skill.power
+    defender.current_hp = max(0, defender.current_hp - reflect_dmg)
+    state.log.append(BattleEvent(
+        turn=state.turn_number, actor=defender.name, action="attack",
+        detail={"move": "reflect", "damage": reflect_dmg, "mirror": True},
+    ))
+
+
+def _exec_enemy_cost_up(attacker: PetState, defender: PetState,
+                        skill: SkillRef, state: BattleState, _countered: bool) -> None:
+    """Enemy energy cost up: increase opponent's skill energy costs."""
+    import re
+    m = re.search(r"全技能能耗\s*\+\s*(\d+)", skill.effect)
+    delta = int(m.group(1)) if m else 1
+    defender._cost_mod = getattr(defender, "_cost_mod", 0) + delta
+    defender._cost_mod_turns = 3
+    state.log.append(BattleEvent(
+        turn=state.turn_number, actor=attacker.name, action="status_tick",
+        detail={"enemy_cost_up": delta, "target": defender.name},
+    ))
+
+
+def _exec_hp_for_energy(attacker: PetState, _defender: PetState,
+                        skill: SkillRef, _state: BattleState, _countered: bool) -> None:
+    """HP for energy (石头大餐): pay HP % instead of energy."""
+    import re
+    m = re.search(r"失去\s*(\d+)%\s*生命", skill.effect)
+    pct = int(m.group(1)) / 100.0 if m else 0.10
+    hp_cost = int(attacker.max_hp * pct)
+    attacker.current_hp = max(0, attacker.current_hp - hp_cost)
+
+
+def _exec_permanent_mod(attacker: PetState, _defender: PetState,
+                        skill: SkillRef, _state: BattleState, _countered: bool) -> None:
+    """Permanent skill modification: per-use growth (e.g. 连击数永久+2)."""
+    if "连击数永久" in skill.effect:
+        skill.hit_count += 2  # permanent hit count growth
+    if "威力永久" in skill.effect:
+        skill.power += 10  # permanent power growth
 
 
 # ── Tag → handler map ──────────────────────────────────────────
@@ -293,9 +345,14 @@ TAG_HANDLERS: dict[str, SkillHandler] = {
     "stat_change":   _exec_stat_change,
     "force_switch":  _exec_force_switch,
     "weather":       _exec_set_weather,
-    "counter":       _exec_counter_effect,
-    "conditional":   _exec_conditional,
-    "scaling":       _exec_scaling,
+    "counter":           _exec_counter_effect,
+    "conditional":       _exec_conditional,
+    "conditional_buff":  _exec_conditional,
+    "scaling":           _exec_scaling,
+    "mirror_damage":     _exec_mirror_damage,
+    "enemy_cost_up":     _exec_enemy_cost_up,
+    "hp_for_energy":     _exec_hp_for_energy,
+    "permanent_mod":     _exec_permanent_mod,
 }
 
 

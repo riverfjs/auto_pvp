@@ -63,6 +63,12 @@ ABILITY_DB: dict[str, list[tuple]] = {
     "威慑": [("SWITCH_IN", _intimidate)],
     "铁拳": [("SWITCH_IN", _iron_fist)],
     "加速": [("SWITCH_IN", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.10))],
+    "好胜": [("SWITCH_IN", lambda c, p: p.buff_stages.update({'atk_phys': 1, 'atk_mag': 1}))],
+    "贪吃": [("SWITCH_IN", lambda c, p: setattr(p, 'current_energy',
+        min(10, p.current_energy + 2)))],
+    # ── On-leave ──
+    "传递": [("SWITCH_OUT", lambda c, p: setattr(c.target, 'power_multiplier',
+        getattr(c.target, 'power_multiplier', 1.0) * 1.05) if c.target else None)],
     # ── On-kill ──
     "食能": [("KILL", _energy_eater)],
     "杀意": [("KILL", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.05))],
@@ -70,12 +76,15 @@ ABILITY_DB: dict[str, list[tuple]] = {
     "光合": [("TAKE_DAMAGE", _photosynthesis)],
     "铁壁": [("TAKE_DAMAGE", lambda c, p: p.buff_stages.update(
         {'def_phys': max(-6, p.buff_stages.get('def_phys', 0) + 1)}))],
-    # ── On-counter-success ──
+    # ── On-counter / ally-counter ──
     "连打": [("COUNTER_SUCCESS", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.30))],
-    # ── Passive (on-enter, permanent) ──
-    "好胜": [("SWITCH_IN", lambda c, p: p.buff_stages.update({'atk_phys': 1, 'atk_mag': 1}))],
-    "贪吃": [("SWITCH_IN", lambda c, p: setattr(p, 'current_energy',
+    "协防": [("ALLY_COUNTER", lambda c, p: p.buff_stages.update(
+        {'def_phys': max(-6, p.buff_stages.get('def_phys', 0) + 1)}))],
+    # ── On-battle-start ──
+    "先发": [("BATTLE_START", lambda c, p: setattr(p, 'current_energy',
         min(10, p.current_energy + 2)))],
+    # ── On-enemy-switch ──
+    "追击": [("ENEMY_SWITCH", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.20))],
     # ── On-turn-end ──
     "蓄能": [("TURN_END", lambda c, p: setattr(p, 'current_energy',
         min(10, p.current_energy + 1)))],

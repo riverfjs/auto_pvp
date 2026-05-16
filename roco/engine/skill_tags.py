@@ -63,6 +63,14 @@ _CLASSIFIERS: list[tuple[str, str | None, str | None, object]] = [
     ("conditional",   "每失去",   None,              None),
     ("scaling",       "每失去",   None,              None),
     ("scaling",       "每次使用", None,              None),
+    ("mirror_damage", "反弹",     None,              None),
+    ("mirror_damage", "反射",     None,              None),
+    ("enemy_cost_up", "全技能能耗+", None,           None),
+    ("hp_for_energy", "失去生命", None,              None),
+    ("permanent_mod", "永久",     None,              None),
+    ("permanent_mod", "每次使用后", None,            None),
+    ("conditional_buff", "若敌方换人", None,         None),
+    ("conditional_buff", "每层中毒", None,           None),
 ]
 
 # ── Regex-based refinements ──
@@ -77,6 +85,8 @@ _RE_BURN_N = re.compile(r"(\d+)\s*层\s*灼烧")
 _RE_POISON_N = re.compile(r"(\d+)\s*层\s*中毒")
 _RE_FREEZE_N = re.compile(r"(\d+)\s*层\s*冻结")
 _RE_LEECH_N = re.compile(r"(\d+)\s*层\s*寄生")
+_RE_COST_UP = re.compile(r"全技能能耗\s*\+\s*(\d+)")
+_RE_HP_COST = re.compile(r"失去\s*(\d+)%\s*生命")
 _RE_STAT_UP = re.compile(r"(物攻|魔攻|物防|魔防|速度)\s*\+(\d+)%")
 _RE_STAT_DOWN = re.compile(r"(物攻|魔攻|物防|魔防|速度)\s*\-(\d+)%")
 
