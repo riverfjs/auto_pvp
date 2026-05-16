@@ -8,29 +8,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from roco.engine.damage import (
-    compute_stats, calc_attack_damage, calc_burn_damage, calc_burn_decay,
-    calc_poison_damage, get_type_multiplier, get_stab, can_use_skill,
-    calc_energy_after_gain, calc_energy_after_use, apply_buff_stages, clamp_stage,
+    calc_burn_damage, calc_burn_decay, calc_poison_damage,
+    get_type_multiplier, calc_energy_after_gain, can_use_skill,
+    apply_buff_stages,
 )
 from roco.engine.state import (
-    SkillRef, PetState, BattleEvent, MoveDecision, BattleState,
-    DEFAULT_MAGIC_POWER,
+    PetState, BattleEvent, MoveDecision, BattleState, DEFAULT_MAGIC_POWER,
 )
+from roco.engine.skill import execute_move, get_skill_category
+from roco.engine.ability import trigger, AbilityTiming
 from roco.config.constants import (
     ENERGY_GAIN_PER_TURN, STARTING_ENERGY, MAX_ENERGY,
-    DEFAULT_MAX_TURNS, COUNTER_DAMAGE_BONUS,
+    DEFAULT_MAX_TURNS,
 )
-from roco.systems.weather import (
-    weather_damage_mult, sandstorm_chip_damage,
-    snow_frostbite_damage, is_sandstorm_immune,
-)
-from roco.systems.marks import (
-    apply_marks_to_speed, apply_marks_to_skill_cost,
-    apply_marks_to_attack_power, apply_marks_on_enter,
-    tick_marks_end_of_turn, calc_meteor_extra_damage,
-)
+from roco.systems.weather import sandstorm_chip_damage, snow_frostbite_damage, is_sandstorm_immune
+from roco.systems.marks import apply_marks_to_speed, apply_marks_to_skill_cost, apply_marks_on_enter, tick_marks_end_of_turn
 from roco.systems.counter import resolve_counter
-from roco.engine.type_chart import TYPES
 
 
 # ── Battle engine ──────────────────────────────────────────────
@@ -50,13 +43,14 @@ class BattleEngine:
             active_a=0,
             active_b=0,
         )
-        # Set starting HP
+        # Set starting HP + trigger passive abilities
         for pet in team_a + team_b:
             pet.current_hp = pet.max_hp
             pet.current_energy = STARTING_ENERGY
             pet.buff_stages = {}
             pet.status_stacks = {}
             pet.is_fainted = False
+            trigger(pet, AbilityTiming.PASSIVE, self.state)
 
     # ── public API ──────────────────────────────────────────────
 
@@ -143,12 +137,7 @@ class BattleEngine:
                     pet.current_energy = calc_energy_after_gain(pet.current_energy)
 
     def _get_skill_cat(self, pet: PetState, decision: MoveDecision) -> str:
-        if decision.action == "switch" or decision.skill_index is None:
-            return ""
-        idx = decision.skill_index
-        if idx < 0 or idx >= len(pet.moves):
-            return ""
-        return pet.moves[idx].category
+        return get_skill_category(pet, decision.skill_index or 0)
 
 
     def _execute_decision(self, actor: PetState, target: PetState,
@@ -160,200 +149,9 @@ class BattleEngine:
         if decision.action == "switch":
             self._do_switch(actor, decision, team, state)
         elif decision.action == "move" and decision.skill_index is not None:
-            self._do_move(actor, target, decision.skill_index, state, countered)
-
-    def _do_move(self, attacker: PetState, defender: PetState,
-                 skill_index: int, state: BattleState,
-                 countered: bool = False) -> None:
-        if skill_index < 0 or skill_index >= len(attacker.moves):
-            return
-
-        skill = attacker.moves[skill_index]
-
-        # ── Charge resolution ──
-        # If charging from previous turn, use the stored skill (regardless of decision)
-        if attacker.charging_skill_idx >= 0:
-            charge_idx = attacker.charging_skill_idx
-            attacker.charging_skill_idx = -1
-            if charge_idx < len(attacker.moves):
-                skill = attacker.moves[charge_idx]
-                skill_index = charge_idx
-
-        # Check cooldown
-        if attacker.cooldowns.get(skill_index, 0) > 0:
-            return
-
-        # Apply moisture mark cost reduction
-        team_marks = state.marks_a if attacker in state.team_a else state.marks_b
-        effective_cost = apply_marks_to_skill_cost(skill.energy, team_marks)
-
-        if not can_use_skill(attacker.current_energy, effective_cost):
-            return
-
-        # ── Charge start: skip execution, set charge for next turn ──
-        if "蓄力" in skill.effect:
-            attacker.current_energy = calc_energy_after_use(
-                attacker.current_energy, effective_cost)
-            attacker.charging_skill_idx = skill_index
-            state.log.append(BattleEvent(
-                turn=state.turn_number, actor=attacker.name,
-                action="buff",
-                detail={"move": skill.name, "charge": True},
-            ))
-            return
-
-        attacker.current_energy = calc_energy_after_use(
-            attacker.current_energy, effective_cost)
-
-        if skill.category in ("物攻", "魔攻"):
-            self._execute_damage_move(attacker, defender, skill, state, countered)
-        elif skill.category == "状态":
-            self._execute_status_move(attacker, defender, skill, state)
-        elif skill.category == "防御":
-            self._execute_defense_move(attacker, skill, state)
-
-        # ── Cooldown: reduce all existing cooldowns, set new one if applicable ──
-        new_cd: dict[int, int] = {}
-        for idx, cd in attacker.cooldowns.items():
-            if cd > 1:
-                new_cd[idx] = cd - 1
-        if "应对" in skill.effect and "冷却" in skill.effect:
-            # Skills with counter mechanics often have cooldowns
-            new_cd[skill_index] = 2  # 2 turn cooldown
-        attacker.cooldowns = new_cd
-
-    def _execute_damage_move(self, attacker: PetState, defender: PetState,
-                             skill: SkillRef, state: BattleState,
-                             countered: bool = False) -> None:
-        # Determine stat pair
-        if skill.category == "物攻":
-            atk = float(attacker.effective_stats["atk_phys"])
-            dfn = float(defender.effective_stats["def_phys"])
-        else:
-            atk = float(attacker.effective_stats["atk_mag"])
-            dfn = float(defender.effective_stats["def_mag"])
-
-        # Apply buff stages
-        if attacker.buff_stages:
-            buffed = apply_buff_stages(attacker.effective_stats, attacker.buff_stages)
-            if skill.category == "物攻":
-                atk = float(buffed["atk_phys"])
-            else:
-                atk = float(buffed["atk_mag"])
-        if defender.buff_stages:
-            buffed = apply_buff_stages(defender.effective_stats, defender.buff_stages)
-            if skill.category == "物攻":
-                dfn = float(buffed["def_phys"])
-            else:
-                dfn = float(buffed["def_mag"])
-
-        # Core multipliers
-        type_mult = get_type_multiplier(skill.element, defender.defender_types)
-        stab = get_stab(skill.element, attacker.element_primary)
-
-        # Weather modifier (from attacker's marks/weather)
-        weather_mult = weather_damage_mult(skill.element, state.weather)
-
-        # Mark-based power buffs
-        attacker_marks = state.marks_a if attacker in state.team_a else state.marks_b
-        mark_power_buff = apply_marks_to_attack_power(
-            skill.power, skill.element, attacker_marks, attacker.element_primary)
-
-        # Counter bonus
-        counter_buff = COUNTER_DAMAGE_BONUS if countered else 1.0
-
-        # Combined power buff
-        power_buff = (mark_power_buff * counter_buff *
-                      attacker.power_multiplier)
-
-        damage = calc_attack_damage(
-            skill.power, atk, dfn, type_mult,
-            stab=stab, weather_mult=weather_mult, power_buff=power_buff,
-        )
-
-        # Meteor mark extra damage (星陨 — 非幻系攻击触发幻系额外魔伤)
-        defender_marks = state.marks_b if defender in state.team_b else state.marks_a
-        if skill.element != "幻":
-            meteor_dmg = calc_meteor_extra_damage(defender_marks)
-            if meteor_dmg > 0:
-                damage += meteor_dmg
-                # Meteor stacks are consumed after triggering
-                state.log.append(BattleEvent(
-                    turn=state.turn_number,
-                    actor=attacker.name,
-                    action="status_tick",
-                    detail={"status": "meteor", "extra_damage": meteor_dmg},
-                ))
-
-        # Apply frostbite HP reduction (effective max HP)
-        effective_hp = defender.current_hp - defender.frostbite_damage
-        defender.current_hp = max(0, min(effective_hp, defender.current_hp) - damage)
-        if defender.frostbite_damage > 0:
-            defender.current_hp = max(0, defender.current_hp)
-
-        state.log.append(BattleEvent(
-            turn=state.turn_number,
-            actor=attacker.name,
-            action="attack",
-            detail={
-                "move": skill.name, "damage": damage,
-                "target": defender.name, "type_mult": type_mult,
-                "stab": stab, "weather_mult": weather_mult,
-                "countered": countered,
-                "target_hp_pct": round(defender.hp_pct * 100, 1),
-            },
-        ))
-
-        self._apply_status_from_effect(attacker, defender, skill.effect, state)
-
-        if defender.current_hp <= 0:
-            self._handle_faint(defender, state)
-
-    def _execute_status_move(self, attacker: PetState, defender: PetState,
-                             skill: SkillRef, state: BattleState) -> None:
-        self._apply_status_from_effect(attacker, defender, skill.effect, state)
-        state.log.append(BattleEvent(
-            turn=state.turn_number,
-            actor=attacker.name,
-            action="attack",
-            detail={"move": skill.name, "type": "status", "target": defender.name},
-        ))
-
-    def _execute_defense_move(self, attacker: PetState, skill: SkillRef,
-                              state: BattleState) -> None:
-        # Defense moves buff self
-        if "减伤" in skill.effect:
-            # Approximate: buff both defenses
-            attacker.buff_stages["def_phys"] = clamp_stage(
-                attacker.buff_stages.get("def_phys", 0) + 1)
-            attacker.buff_stages["def_mag"] = clamp_stage(
-                attacker.buff_stages.get("def_mag", 0) + 1)
-        state.log.append(BattleEvent(
-            turn=state.turn_number,
-            actor=attacker.name,
-            action="buff",
-            detail={"move": skill.name, "type": "defense"},
-        ))
-
-    def _apply_status_from_effect(self, attacker: PetState, defender: PetState,
-                                  effect: str, state: BattleState) -> None:
-        """Naive keyword matching to apply status effects from move text."""
-        if not effect:
-            return
-
-        if "灼烧" in effect and not defender.is_immune_to_status("灼烧"):
-            stacks = defender.status_stacks.get("灼烧", 0) + 1
-            defender.status_stacks["灼烧"] = stacks
-            state.log.append(BattleEvent(
-                turn=state.turn_number,
-                actor=attacker.name,
-                action="status_tick",
-                detail={"status": "灼烧", "stacks": stacks, "target": defender.name},
-            ))
-
-        if "中毒" in effect and not defender.is_immune_to_status("中毒"):
-            stacks = defender.status_stacks.get("中毒", 0) + 1
-            defender.status_stacks["中毒"] = stacks
+            execute_move(actor, target, decision.skill_index, state, countered)
+            if target.current_hp <= 0:
+                self._handle_faint(target, state)
 
     def _do_switch(self, switcher: PetState, decision: MoveDecision,
                    team: str, state: BattleState) -> None:
@@ -385,6 +183,9 @@ class BattleEngine:
 
         new_pet.current_energy = max(new_pet.current_energy, 0)
 
+        # Trigger ON_ENTER ability
+        trigger(new_pet, AbilityTiming.ON_ENTER, state)
+
         # Apply mark on-enter effects
         marks = state.marks_a if team == "a" else state.marks_b
         mark_hp, mark_nrg = apply_marks_on_enter(new_pet, marks)
@@ -396,6 +197,19 @@ class BattleEngine:
     def _handle_faint(self, pet: PetState, state: BattleState) -> None:
         pet.is_fainted = True
         pet.current_hp = 0
+
+        # ── Ability triggers ──
+        trigger(pet, AbilityTiming.ON_FAINT, state)
+        # Find killer (last attacker) and trigger ON_KILL
+        for ev in reversed(state.log):
+            if ev.action == "attack" and ev.detail.get("target") == pet.name:
+                killer_name = ev.actor
+                opp_team = state.team_b if pet in state.team_a else state.team_a
+                for opp in opp_team:
+                    if opp.name == killer_name:
+                        trigger(opp, AbilityTiming.ON_KILL, state, target=pet)
+                        break
+                break
 
         # Determine which team and apply magic_power cost
         team = state.team_a if pet in state.team_a else state.team_b
