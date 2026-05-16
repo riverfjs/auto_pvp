@@ -21,7 +21,7 @@ DEFAULT_MAX_TURNS: int = 200
 
 # ── Weather ─────────────────────────────────────────────────────
 WEATHER_DOT_FRACTION: float = 1.0 / 16.0
-WEATHER_DOT_IMMUNE_TYPES: tuple[str, ...] = ("地", "钢", "机械")
+WEATHER_DOT_IMMUNE_TYPES: tuple[str, ...] = ("地", "机械")
 
 # ── Counter ─────────────────────────────────────────────────────
 COUNTER_DAMAGE_BONUS: float = 1.3

@@ -1,7 +1,7 @@
 from roco.engine.state import StatusFlag, StatusType
 """Weather system for Roco Kingdom PVP simulation.
 
-Supported weathers: rain (水系+50%), sandstorm (非地/钢/机械受1/16伤害),
+Supported weathers: rain (水系+50%), sandstorm (非地/机械受1/16伤害),
 snow (每回合累积冻伤).
 """
 
@@ -11,8 +11,8 @@ WEATHER_DAMAGE_MULT: dict[str, dict[str, float]] = {
     "snow": {},
 }
 
-# Sandstorm: types immune to end-of-turn chip damage
-SANDSTORM_IMMUNE = frozenset({"地", "岩", "钢", "机械"})
+# Sandstorm: types immune to end-of-turn chip damage. Roco has 地, not 岩.
+SANDSTORM_IMMUNE = frozenset({"地", "机械"})
 
 # Snow: frostbite per turn = max_hp // 12
 SNOW_FROSTBITE_FRACTION = 12

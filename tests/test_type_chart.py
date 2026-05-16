@@ -1,6 +1,7 @@
 """Unit tests for type_chart.py — verified against WIKI 克制计算器."""
 
 import pytest
+from roco.engine.state import Element
 from roco.engine.type_chart import (
     TYPES,
     CHART,
@@ -24,7 +25,16 @@ from roco.engine.type_chart import (
 def test_all_types_present():
     assert len(TYPES) == 18
     assert "无" not in TYPES
+    assert "岩" not in TYPES
+    assert "地" in TYPES
     assert all(t in CHART for t in TYPES)
+
+
+def test_element_aliases_use_roco_ground_not_rock():
+    assert not hasattr(Element, "ROCK")
+    assert Element.from_str("地") is Element.GROUND
+    assert Element.from_str("地面") is Element.GROUND
+    assert Element.from_str("岩") is Element.GROUND
 
 
 def test_every_type_has_four_facets():

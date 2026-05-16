@@ -5,8 +5,9 @@ from __future__ import annotations
 from roco.config.constants import (
     DAMAGE_FORMULA_CONSTANT, STAB_MULTIPLIER, MIN_DAMAGE,
     BURN_HP_CAP, BURN_DAMAGE_PCT, POISON_DAMAGE_PCT,
-    ENERGY_GAIN_PER_TURN, MAX_ENERGY,
+    ENERGY_GAIN_PER_TURN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
+from roco.config.natures import IV_STAT_MAP, NATURE_MOD
 from roco.engine.state import (
     ActivePokemon, SkillData, SkillCategory, Stats, StatusFlag, StatusType,
     buff_multiplier as _bm,
@@ -22,6 +23,50 @@ def energy_after_gain(current: int) -> int:
 
 def energy_after_use(current: int, cost: int) -> int:
     return max(current - cost, 0)
+
+
+def apply_iv_mod(stats: dict[str, int], ivs: list[str] | None = None) -> dict[str, int]:
+    """Apply simple +10% IV bonuses to selected non-HP battle stats."""
+    result = dict(stats)
+    for iv in ivs or []:
+        key = IV_STAT_MAP.get(iv)
+        if not key or key == "hp" or key not in result:
+            continue
+        result[key] = int(result[key] * (1.0 + IV_BONUS))
+    return result
+
+
+def apply_nature_mod(stats: dict[str, int], nature: str = "") -> dict[str, int]:
+    """Apply nature boost/reduction using the local Roco nature table."""
+    result = dict(stats)
+    boost, reduce = NATURE_MOD.get(nature, ("", ""))
+    if boost and boost in result and boost != "hp":
+        result[boost] = int(result[boost] * (1.0 + NATURE_BOOST))
+    if reduce and reduce in result and reduce != "hp":
+        result[reduce] = int(result[reduce] * (1.0 - NATURE_REDUCE))
+    return result
+
+
+def compute_stats(
+    hp: int,
+    atk_phys: int,
+    atk_mag: int,
+    def_phys: int,
+    def_mag: int,
+    speed: int,
+    nature: str = "",
+    ivs: list[str] | None = None,
+) -> dict[str, int]:
+    """Build battle stats from base values, applying IV before nature."""
+    stats = {
+        "hp": hp,
+        "atk_phys": atk_phys,
+        "atk_mag": atk_mag,
+        "def_phys": def_phys,
+        "def_mag": def_mag,
+        "speed": speed,
+    }
+    return apply_nature_mod(apply_iv_mod(stats, ivs), nature)
 
 
 def calc_attack_damage(
@@ -48,9 +93,23 @@ def calc_burn_damage(max_hp: int, stacks: int, type_mult: float = 1.0, mid_turn:
     return int(hp * stacks * BURN_DAMAGE_PCT * m)
 
 def burn_decay(stacks: int) -> int: return (stacks + 1) // 2
+calc_burn_decay = burn_decay
 
 def calc_poison_damage(max_hp: int, stacks: int) -> int:
     return int(max_hp * stacks * POISON_DAMAGE_PCT) if stacks > 0 else 0
 
 def clamp_stage(v: int) -> int: return max(-6, min(6, v))
 def buff_multiplier(stage: int) -> float: return _bm(stage)
+
+calc_energy_after_gain = energy_after_gain
+calc_energy_after_use = energy_after_use
+
+
+def apply_buff_stages(stats: dict[str, int], stages: dict[str, int]) -> dict[str, int]:
+    """Apply battle buff stages to non-HP stats."""
+    result = dict(stats)
+    for key, stage in stages.items():
+        if key == "hp" or key not in result:
+            continue
+        result[key] = int(result[key] * buff_multiplier(clamp_stage(stage)))
+    return result

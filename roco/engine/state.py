@@ -40,6 +40,27 @@ class WeatherType(IntEnum):
     NONE = 0; RAIN = 1; SANDSTORM = 2; SNOW = 3
 
 
+class Element(IntEnum):
+    """Roco 18-element system for per-element skill count packing."""
+    NORMAL = 0; GRASS = 1; FIRE = 2; WATER = 3; LIGHT = 4; GROUND = 5
+    ICE = 6; DRAGON = 7; ELECTRIC = 8; POISON = 9; BUG = 10; FIGHTING = 11
+    FLYING = 12; CUTE = 13; GHOST = 14; DARK = 15; MECHANICAL = 16; ILLUSION = 17
+
+    @classmethod
+    def from_str(cls, s: str) -> "Element":
+        _m = {
+            "普通": cls.NORMAL, "草": cls.GRASS, "火": cls.FIRE, "水": cls.WATER,
+            "光": cls.LIGHT, "地": cls.GROUND, "地面": cls.GROUND, "岩": cls.GROUND,
+            "冰": cls.ICE, "龙": cls.DRAGON, "电": cls.ELECTRIC, "毒": cls.POISON,
+            "虫": cls.BUG, "武": cls.FIGHTING, "格斗": cls.FIGHTING,
+            "翼": cls.FLYING, "飞行": cls.FLYING, "萌": cls.CUTE,
+            "幽": cls.GHOST, "幽灵": cls.GHOST, "恶": cls.DARK,
+            "机械": cls.MECHANICAL, "钢": cls.MECHANICAL,
+            "幻": cls.ILLUSION, "超能": cls.ILLUSION,
+        }
+        return _m.get(s.replace("系", "").strip(), cls.NORMAL)
+
+
 # ── Packed buff stage helpers ─────────────────────────────────
 
 def _pack_buff(atk_p=0, atk_m=0, def_p=0, def_m=0, spd=4, acc=0, eva=0) -> int:
@@ -82,6 +103,56 @@ def _set_status(packed: int, t: StatusType, val: int) -> int:
     return packed | ((val & 0xFF) << shift)
 
 
+# ── Mark/Devotion pack ────────────────────────────────────────
+
+class MarkIdx(IntEnum):
+    MOISTURE=0; DRAGON=1; CHARGE=2; WIND=3; ELECTRIC=4; SOLAR=5; ATTACK=6
+    SLOW=7; SPIRIT=8; METEOR=9; POISON=10; THORN=11
+
+class DevotionIdx(IntEnum):
+    JIAMEI=0; FEIDUAN=1; CHONGJIAN=2; KUNFU=3; CHONGQUN=4
+
+def _pack_marks(**counts) -> int:
+    r = 0
+    for k, v in counts.items():
+        r |= (v & 0xF) << (k.value * 4)
+    return r
+
+def _unpack_mark(packed: int, idx: MarkIdx) -> int:
+    return (packed >> (idx.value * 4)) & 0xF
+
+def _set_mark(packed: int, idx: MarkIdx, val: int) -> int:
+    shift = idx.value * 4
+    return (packed & ~(0xF << shift)) | ((val & 0xF) << shift)
+
+def _pack_devotion(**counts) -> int:
+    r = 0
+    for k, v in counts.items():
+        r |= (v & 0xF) << (k.value * 4)
+    return r
+
+def _unpack_devotion(packed: int, idx: DevotionIdx) -> int:
+    return (packed >> (idx.value * 4)) & 0xF
+
+# ── Skill count pack ───────────────────────────────────────────
+
+def _pack_skill_counts(**counts: int) -> int:
+    """Pack per-element skill usage counts. 18 elements × 4bits each = 72 bits."""
+    r = 0
+    for elem, cnt in counts.items():
+        r |= (cnt & 0xF) << (elem.value * 4)
+    return r
+
+def _unpack_skill_count(packed: int, elem: Element) -> int:
+    return (packed >> (elem.value * 4)) & 0xF
+
+def _inc_skill_count(packed: int, elem: Element) -> int:
+    shift = elem.value * 4
+    cur = (packed >> shift) & 0xF
+    if cur < 0xF:
+        return (packed & ~(0xF << shift)) | ((cur + 1) << shift)
+    return packed
+
 # ── Weather pack ───────────────────────────────────────────────
 
 def _pack_weather(wtype: WeatherType, turns: int) -> int:
@@ -90,6 +161,26 @@ def _pack_weather(wtype: WeatherType, turns: int) -> int:
 
 def _unpack_weather(packed: int) -> tuple[WeatherType, int]:
     return WeatherType(packed & 0xF), (packed >> 4) & 0xF
+
+
+# ── Burst entry turn pack ──────────────────────────────────────
+
+def _pack_burst_entries(**slots) -> int:
+    """Pack 6 slots × 6bits each (turn 0-63). Key = slot index 0-5."""
+    r = 0
+    for slot, turn in slots.items():
+        r |= (turn & 0x3F) << (slot * 6)
+    return r
+
+
+def _unpack_burst_entry(packed: int, slot: int) -> int:
+    """Get entry turn for a slot (0-5). Returns 0 if never entered."""
+    return (packed >> (slot * 6)) & 0x3F
+
+def _set_burst_entry(packed: int, slot: int, turn: int) -> int:
+    """Set entry turn for a slot (0-5)."""
+    shift = slot * 6
+    return (packed & ~(0x3F << shift)) | ((turn & 0x3F) << shift)
 
 
 # ── Cooldown pack ─────────────────────────────────────────────
@@ -132,6 +223,9 @@ class SkillData:
     counter_physical_self_atk: float = 0; counter_defense_enemy_def: float = 0
     counter_status_burn_stacks: int = 0; counter_status_poison_stacks: int = 0
     counter_status_freeze_stacks: int = 0; counter_damage_reflect: float = 0
+
+
+SkillRef = SkillData
 
 
 @dataclass(slots=True)
@@ -254,19 +348,17 @@ class BattleState:
     active_a: int = 0; active_b: int = 0
     magic_a: int = 4; magic_b: int = 4
     weather: int = 0               # packed weather: type(4)|turns(4)
-    marks_a: dict = field(default_factory=dict)
-    marks_b: dict = field(default_factory=dict)
-    devotion_a: dict = field(default_factory=dict)
-    devotion_b: dict = field(default_factory=dict)
-    burst_a: dict = field(default_factory=dict)
-    burst_b: dict = field(default_factory=dict)
-    burst_entry_turn_a: dict = field(default_factory=dict)
-    burst_entry_turn_b: dict = field(default_factory=dict)
+    marks_a: int = 0       # packed: 12 marks × 4bits (counts)
+    marks_b: int = 0
+    devotion_a: int = 0    # packed: 5 devotions × 4bits (counts)
+    devotion_b: int = 0
+    burst_entry_turn_a: int = 0  # packed: 6 slots × 6bits
+    burst_entry_turn_b: int = 0
+    skill_counts_a: int = 0  # packed: 18 elements × 4bits
+    skill_counts_b: int = 0
     barrel_pending_a: bool = False; barrel_pending_b: bool = False
     counter_count_a: int = 0; counter_count_b: int = 0
     switch_this_turn_a: bool = False; switch_this_turn_b: bool = False
-    skill_counts_a: dict = field(default_factory=dict)
-    skill_counts_b: dict = field(default_factory=dict)
     turn_number: int = 0
     log: list[BattleEvent] = field(default_factory=list)
     winner: str | None = None
