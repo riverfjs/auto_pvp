@@ -56,7 +56,24 @@ class SkillRef:
     is_mark: bool = False        # 印记技能 (vs 临时buff)
     agility: bool = False        # 迅捷入场自动释放
     burst: bool = False          # 迸发技能
-    devotion_affected: bool = False  # 消耗奉献层数
+    devotion_affected: bool = False
+    charge: bool = False           # 蓄力技能
+    # Counter effects (triggered on COUNTER_SUCCESS)
+    counter_physical_drain: float = 0
+    counter_physical_energy_drain: int = 0
+    counter_physical_self_atk: float = 0
+    counter_physical_enemy_def: float = 0
+    counter_defense_self_atk: float = 0
+    counter_defense_self_def: float = 0
+    counter_defense_enemy_def: float = 0
+    counter_defense_enemy_energy_cost: int = 0
+    counter_status_power_mult: float = 0
+    counter_status_enemy_lose_energy: int = 0
+    counter_status_poison_stacks: int = 0
+    counter_status_burn_stacks: int = 0
+    counter_status_freeze_stacks: int = 0
+    counter_skill_cooldown: int = 0
+    counter_damage_reflect: float = 0
 
 
 @dataclass
@@ -86,8 +103,18 @@ class PetState:
     ability_desc: str = ""
     ability_tags: list[str] = field(default_factory=list)
     ability_state: dict = field(default_factory=dict)    # runtime KV store
-    meteor_countdown: int = 0     # 星陨倒计时 (>0时每回合-1, =0引爆)
-    cute_stacks: int = 0          # 萌化层数  # pre-classified
+    meteor_countdown: int = 0
+    meteor_stacks: int = 0
+    cute_stacks: int = 0
+    # Runtime modifiers (reset on switch-out)
+    life_drain_mod: float = 0
+    skill_power_bonus: int = 0
+    skill_power_pct_mod: float = 0
+    skill_cost_mod: int = 0
+    hit_count_mod: int = 0
+    priority_stage: int = 0
+    next_attack_power_bonus: int = 0
+    next_attack_power_pct: float = 0  # pre-classified
 
     @property
     def max_hp(self) -> int:
@@ -152,6 +179,12 @@ class BattleState:
     burst_entry_turn_b: dict[str, int] = field(default_factory=dict)
     barrel_pending_a: bool = False
     barrel_pending_b: bool = False
+    counter_count_a: int = 0
+    counter_count_b: int = 0
+    switch_this_turn_a: bool = False
+    switch_this_turn_b: bool = False
+    skill_use_counts_a: dict[str, int] = field(default_factory=dict)
+    skill_use_counts_b: dict[str, int] = field(default_factory=dict)
     turn_number: int = 0
     log: list[BattleEvent] = field(default_factory=list)
     winner: str | None = None

@@ -48,7 +48,9 @@ class GameEvent(Enum):
     SWITCH_OUT = auto()        # pet leaves battle
     ENEMY_SWITCH = auto()      # opponent switches
     FAINT = auto()             # pet faints
+    BE_KILLED = auto()         # pet is killed by opponent
     KILL = auto()              # pet kills an opponent
+    PASSIVE = auto()           # always-on passive check
 
     # ── Interaction ──
     COUNTER_SUCCESS = auto()   # counter move succeeds (应对成功)

@@ -54,6 +54,22 @@ def _photosynthesis(ctx: "EventCtx", pet: "PetState") -> None:
     pet.current_hp = min(pet.max_hp, pet.current_hp + heal)
 
 
+def _auto_switch_zero_energy(ctx: "EventCtx", pet: "PetState") -> None:
+    """Auto-switch when energy reaches 0."""
+    if pet.current_energy > 0:
+        return
+    state = ctx.state
+    team = state.team_a if pet in state.team_a else state.team_b
+    is_a = team is state.team_a
+    alive = [i for i, p in enumerate(team) if not p.is_fainted and p != pet]
+    if not alive:
+        return
+    if is_a:
+        state.active_a = alive[0]
+    else:
+        state.active_b = alive[0]
+
+
 # ── Ability database ───────────────────────────────────────────
 
 ABILITY_DB: dict[str, list[tuple]] = {
@@ -91,6 +107,13 @@ ABILITY_DB: dict[str, list[tuple]] = {
     # ── On-turn-start ──
     "疾风": [("TURN_START", lambda c, p: setattr(p, 'power_multiplier',
         p.power_multiplier * 1.15 if p.current_hp == p.max_hp else 1.0))],
+    # ── On-be-killed ──
+    "不朽": [("BE_KILLED", lambda c, p: p.ability_state.update({"delayed_revive_turns": 3}))],
+    # ── Passive ──
+    "守卫": [("PASSIVE", lambda c, p: p.buff_stages.update({"def_phys": 1, "def_mag": 1}))],
+    "奋勇": [("PASSIVE", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.10))],
+    # ── Auto-switch on zero energy ──
+    "防过载": [("TURN_START", lambda c, p: _auto_switch_zero_energy(c, p))],
 }
 
 

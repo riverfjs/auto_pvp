@@ -48,8 +48,10 @@ class BattleEngine:
             pet.is_fainted = False
             register_ability_handlers(self.bus, pet)
 
-        # Emit BATTLE_START then SWITCH_IN for starting pets
+        # Emit BATTLE_START + PASSIVE for all pets, then SWITCH_IN
         self.bus.emit(EventCtx(GameEvent.BATTLE_START, self.state))
+        for pet in team_a + team_b:
+            self.bus.emit(EventCtx(GameEvent.PASSIVE, self.state, actor=pet))
         for team, pet in (("a", team_a[0]), ("b", team_b[0])):
             self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet,
                                    data={"team": team}))
@@ -313,10 +315,12 @@ class BattleEngine:
         self.bus.emit(EventCtx(GameEvent.FAINT, state, actor=pet,
                                target=killer))
 
-        # KILL event (ability triggers for killer)
+        # KILL + BE_KILLED events
         if killer:
             self.bus.emit(EventCtx(GameEvent.KILL, state, actor=killer,
                                    target=pet))
+        self.bus.emit(EventCtx(GameEvent.BE_KILLED, state, actor=pet,
+                               target=killer))
 
         # Auto-switch
         team = state.team_a if pet in state.team_a else state.team_b
