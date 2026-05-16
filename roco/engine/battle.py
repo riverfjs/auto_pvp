@@ -59,9 +59,17 @@ class BattleEngine:
         from roco.systems.weather import register_weather_handlers
         from roco.systems.marks import register_mark_handlers
         from roco.engine.skill_exec import register_skill_handlers
+        from roco.systems.burst import register_burst_handlers
+        from roco.systems.barrel import register_barrel_handlers
+        from roco.systems.devotion import register_devotion_handlers
+        from roco.systems.cute import register_cute_handlers
         register_weather_handlers(self.bus)
         register_mark_handlers(self.bus)
         register_skill_handlers(self.bus)
+        register_burst_handlers(self.bus)
+        register_barrel_handlers(self.bus)
+        register_devotion_handlers(self.bus)
+        register_cute_handlers(self.bus)
 
     # ── Event handlers registered by engine itself ──────────────
 

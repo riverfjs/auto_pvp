@@ -25,13 +25,20 @@ if TYPE_CHECKING:
 # Handler signature
 SkillHandler = Callable[["PetState", "PetState", SkillRef, "BattleState", bool], None]
 
-# ── Tag execution order (lower = earlier) ──────────────────────
+# ── Tag execution order (lower = earlier). Grouped by phase ────
+# Phase PRE (0-9):    setup — charge, energy mods, defense
+# Phase CORE (10-19):  damage calculation
+# Phase POST (20+):    effects after damage — drain, heal, status, etc.
 
 TAG_ORDER: dict[str, int] = {
+    # PRE phase
     "charge":        0,
     "energy_all_in": 5,
-    "defense":       10,
+    "hp_for_energy": 5,
+    "defense":       8,
+    # CORE phase
     "pure_damage":   15,
+    # POST phase
     "drain":         20,
     "heal_hp":       25,
     "heal_energy":   25,
@@ -42,17 +49,17 @@ TAG_ORDER: dict[str, int] = {
     "leech":         35,
     "stat_change":   40,
     "force_switch":  45,
+    "enemy_cost_up": 45,
     "weather":       50,
-    "counter":           55,
-    "conditional":       60,
-    "conditional_buff":  60,
-    "scaling":           65,
-    "mirror_damage":     70,
-    "enemy_cost_up":     45,
-    "hp_for_energy":     5,
-    "permanent_mod":     75,
-    "multi_hit":         -1,
-    "priority":          -1,
+    "counter":       55,
+    "conditional":   60,
+    "conditional_buff": 60,
+    "scaling":       65,
+    "mirror_damage": 70,
+    "permanent_mod": 75,
+    # handled elsewhere
+    "multi_hit":     -1,
+    "priority":      -1,
 }
 
 # ── Handlers ────────────────────────────────────────────────────

@@ -71,6 +71,9 @@ _CLASSIFIERS: list[tuple[str, str | None, str | None, object]] = [
     ("permanent_mod", "每次使用后", None,            None),
     ("conditional_buff", "若敌方换人", None,         None),
     ("conditional_buff", "每层中毒", None,           None),
+    ("burst",         "迸发",     "burst",           True),
+    ("agility",       "迅捷",     "agility",         True),
+    ("is_mark",       "印记",     "is_mark",         True),
 ]
 
 # ── Regex-based refinements ──

@@ -47,6 +47,16 @@ class SkillRef:
     hp_cost_pct: float = 0.0
     permanent_hit_growth: int = 0
     permanent_power_growth: int = 0
+    # Combined stat modifiers
+    self_all_atk: float = 0      # 双攻+
+    self_all_def: float = 0      # 双防+
+    enemy_all_atk: float = 0     # 敌方双攻-
+    enemy_all_def: float = 0     # 敌方双防-
+    # Mechanic flags
+    is_mark: bool = False        # 印记技能 (vs 临时buff)
+    agility: bool = False        # 迅捷入场自动释放
+    burst: bool = False          # 迸发技能
+    devotion_affected: bool = False  # 消耗奉献层数
 
 
 @dataclass
@@ -74,7 +84,10 @@ class PetState:
     slot: int = 0
     ability_name: str = ""
     ability_desc: str = ""
-    ability_tags: list[str] = field(default_factory=list)  # pre-classified
+    ability_tags: list[str] = field(default_factory=list)
+    ability_state: dict = field(default_factory=dict)    # runtime KV store
+    meteor_countdown: int = 0     # 星陨倒计时 (>0时每回合-1, =0引爆)
+    cute_stacks: int = 0          # 萌化层数  # pre-classified
 
     @property
     def max_hp(self) -> int:
@@ -132,6 +145,13 @@ class BattleState:
     weather_turns: int = 0
     marks_a: dict[str, float] = field(default_factory=dict)
     marks_b: dict[str, float] = field(default_factory=dict)
+    # Subsystem state
+    devotion_a: dict[str, int] = field(default_factory=dict)
+    devotion_b: dict[str, int] = field(default_factory=dict)
+    burst_entry_turn_a: dict[str, int] = field(default_factory=dict)
+    burst_entry_turn_b: dict[str, int] = field(default_factory=dict)
+    barrel_pending_a: bool = False
+    barrel_pending_b: bool = False
     turn_number: int = 0
     log: list[BattleEvent] = field(default_factory=list)
     winner: str | None = None
