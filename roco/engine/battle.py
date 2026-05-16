@@ -11,17 +11,14 @@ from roco.engine.damage import (
 from roco.engine.state import (
     PetState, BattleEvent as BEvent, MoveDecision, BattleState,
 )
-from roco.engine.skill import execute_move, get_skill_category
+from roco.engine.skill_exec import execute_move, get_skill_category
+from roco.engine.skill_exec import execute_move, get_skill_category
 from roco.engine.events import EventBus, EventCtx, GameEvent
 from roco.config.constants import (
     ENERGY_GAIN_PER_TURN, STARTING_ENERGY, MAX_ENERGY, DEFAULT_MAX_TURNS,
 )
 from roco.systems.marks import apply_marks_to_speed, apply_marks_to_skill_cost
 from roco.systems.counter import resolve_counter
-
-from roco.systems.weather import register_weather_handlers
-from roco.systems.marks import register_mark_handlers
-from roco.engine.skill import register_skill_handlers
 from roco.engine.ability import register_ability_handlers
 
 
@@ -39,9 +36,7 @@ class BattleEngine:
 
         # ── Event bus + subsystem registration ──
         self.bus = EventBus()
-        register_weather_handlers(self.bus)
-        register_mark_handlers(self.bus)
-        register_skill_handlers(self.bus)
+        self._init_systems()
         self._register_engine_handlers()
 
         # Init pets + register their abilities
@@ -57,6 +52,15 @@ class BattleEngine:
         for team, pet in (("a", team_a[0]), ("b", team_b[0])):
             self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet,
                                    data={"team": team}))
+
+    def _init_systems(self) -> None:
+        """Explicitly construct all game subsystems — no import-time side effects."""
+        from roco.systems.weather import register_weather_handlers
+        from roco.systems.marks import register_mark_handlers
+        from roco.engine.skill_exec import register_skill_handlers
+        register_weather_handlers(self.bus)
+        register_mark_handlers(self.bus)
+        register_skill_handlers(self.bus)
 
     # ── Event handlers registered by engine itself ──────────────
 

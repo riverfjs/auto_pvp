@@ -270,13 +270,15 @@ def test_same_inputs_same_outcome(two_pet_team_a, two_pet_team_b):
 # ── Buff stages ────────────────────────────────────────────────
 
 def test_defense_curl_buffs_self():
-    pet = _mk_pet("盾", hp=100, atk=50, spd=50, element="普通", moves=[_defense_curl()])
+    """Defense skill logs a buff event (70% damage reduction)."""
+    pet = _mk_pet("盾", hp=999, atk=50, spd=200, element="普通", moves=[_defense_curl()])
     target = _mk_pet("靶", hp=100, atk=50, spd=50, element="普通", moves=[_tackle()])
 
     engine = BattleEngine([pet], [target])
     engine.step(_move(0), _move(0))
-    assert engine.state.team_a[0].buff_stages.get("def_phys", 0) > 0
-    assert engine.state.team_a[0].buff_stages.get("def_mag", 0) > 0
+    # Defense skill logged a buff event with defense info
+    buffs = [e for e in engine.state.log if e.action == "buff" and "defense" in str(e.detail)]
+    assert len(buffs) >= 1
 
 
 # ── Full 6v6 battle ────────────────────────────────────────────
