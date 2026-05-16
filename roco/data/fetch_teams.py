@@ -6,7 +6,7 @@ Usage:
     python scripts/fetch_teams.py
 """
 
-from roco.utils import API_BASE, RAW_DIR, save_json, api_get
+from roco.data.utils import API_BASE, RAW_DIR, save_json, api_get
 
 # All relevant SMW properties — fetched in a single ask query
 PROPS = [

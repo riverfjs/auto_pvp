@@ -19,7 +19,8 @@ def register_barrel_handlers(bus: "EventBus") -> None:
     def on_switch_out(ctx: EventCtx) -> None:
         """If leaving pet has barrel, set pending for team."""
         pet = ctx.actor
-        if not pet or not pet.ability_state.get("barrel_active"):
+        from roco.engine.state import AbilityFlag
+        if not pet or not pet.has_ability_flag(AbilityFlag.BARREL_ACTIVE):
             return
         team = ctx.data.get("team", "a")
         state = ctx.state
@@ -37,7 +38,8 @@ def register_barrel_handlers(bus: "EventBus") -> None:
         state = ctx.state
         pending = state.barrel_pending_a if team == "a" else state.barrel_pending_b
         if pending:
-            pet.ability_state["barrel_active"] = True
+            from roco.engine.state import AbilityFlag
+            pet.set_ability_flag(AbilityFlag.BARREL_ACTIVE)
             if team == "a":
                 state.barrel_pending_a = False
             else:
@@ -46,7 +48,8 @@ def register_barrel_handlers(bus: "EventBus") -> None:
     def on_before_move(ctx: EventCtx) -> None:
         """Barrel nullifies type effectiveness until first action."""
         pet = ctx.actor
-        if not pet or not pet.ability_state.get("barrel_active"):
+        from roco.engine.state import AbilityFlag
+        if not pet or not pet.has_ability_flag(AbilityFlag.BARREL_ACTIVE):
             return
         # Type effectiveness = 1.0 while barrel is active
         # (damage calc in skill_exec checks this via ctx.data)
@@ -55,8 +58,9 @@ def register_barrel_handlers(bus: "EventBus") -> None:
     def on_after_move(ctx: EventCtx) -> None:
         """Clear barrel after first action."""
         pet = ctx.actor
-        if pet and pet.ability_state.get("barrel_active"):
-            pet.ability_state["barrel_active"] = False
+        from roco.engine.state import AbilityFlag
+        if pet and pet.has_ability_flag(AbilityFlag.BARREL_ACTIVE):
+            pet.set_ability_flag(AbilityFlag.BARREL_ACTIVE, False)
 
     bus.on(GameEvent.SWITCH_OUT, on_switch_out, priority=70, source="barrel")
     bus.on(GameEvent.SWITCH_IN, on_switch_in, priority=70, source="barrel")

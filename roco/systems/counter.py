@@ -1,4 +1,4 @@
-"""Counter (应对) system — rock-paper-scissors style move interaction.
+"""Counter (应对) system — category-triangle move interaction.
 
 When two moves resolve in the same turn, the move category determines
 if a counter occurs:

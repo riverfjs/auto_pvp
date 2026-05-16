@@ -3,7 +3,7 @@
 import pytest
 from roco.engine.battle import BattleEngine
 from roco.engine.state import (
-    BattleState, MoveDecision, PersistentPokemon, ActivePokemon as AP,
+    BattleState, MoveDecision, PersistentPet, ActivePet as AP,
     SkillData, SkillCategory, StatusFlag, StatusType, Stats, WeatherType,
     _pack_buff, _unpack_buff,
 )
@@ -23,7 +23,7 @@ def _mk_skill(name="撞击", element="普通", cat=SkillCategory.PHYSICAL,
     return sk
 
 def _mk_pet(name="A", hp=100, atk=80, spd=60, element="普通", moves=None, nature="", ivs=None):
-    pp = PersistentPokemon(
+    pp = PersistentPet(
         name=name, stats=_stat_dict(hp=hp, atk=atk, spd=spd),
         types=(element, ""), moves=moves or [_mk_skill()],
         nature=nature, ivs=ivs or [])

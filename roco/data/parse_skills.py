@@ -46,7 +46,7 @@ def parse_one(name: str, text: str) -> dict | None:
         effect=skill.get("效果", ""),
     )
     classify(sref)
-    skill["effect_flags"] = sref.effect_flags
+    skill["effect_flags"] = int(sref.effect_flags)
     skill["weather_type"] = sref.weather_type
     skill["enemy_cost_up_amount"] = sref.enemy_cost_up_amount
     skill["hp_cost_pct"] = sref.hp_cost_pct

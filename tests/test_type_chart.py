@@ -30,11 +30,13 @@ def test_all_types_present():
     assert all(t in CHART for t in TYPES)
 
 
-def test_element_aliases_use_roco_ground_not_rock():
+def test_element_aliases_use_roco_ground_not_legacy_elements():
     assert not hasattr(Element, "ROCK")
     assert Element.from_str("地") is Element.GROUND
     assert Element.from_str("地面") is Element.GROUND
-    assert Element.from_str("岩") is Element.GROUND
+    for legacy in ("岩", "岩石", "钢", "Rock", "ROCK", "Steel", "STEEL"):
+        with pytest.raises(ValueError):
+            Element.from_str(legacy)
 
 
 def test_every_type_has_four_facets():
@@ -149,7 +151,7 @@ def test_dual_type_neutral():
     # 毒+虫 → 地 cancels (毒 weak, 虫 neutral)
     # Actually: 毒.weak=[地,恶,幻], 虫 has nothing for 地 → 2.0
     ("地", ("毒", "虫"), WEAK_MULT),
-    # 钢+岩 doesn't exist, but let's test 机械+地
+    # 机械+地 dual type
     # 机械.vulnerable=[普通,草,冰,龙,毒,虫,翼,萌,机械,幻], 地.vulnerable=[普通,火,电,毒,翼]
     # 普通 → both vulnerable → 0.25
     ("普通", ("机械", "地"), OVERLAP_VULN_MULT),

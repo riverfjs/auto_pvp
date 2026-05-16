@@ -1,4 +1,4 @@
-"""Pure damage calculation — works with ActivePokemon and packed bitfields."""
+"""Pure damage calculation — works with ActivePet and packed bitfields."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from roco.config.constants import (
 )
 from roco.config.natures import IV_STAT_MAP, NATURE_MOD
 from roco.engine.state import (
-    ActivePokemon, SkillData, SkillCategory, Stats, StatusFlag, StatusType,
+    ActivePet, SkillData, SkillCategory, Stats, StatusFlag, StatusType,
     buff_multiplier as _bm,
 )
 from roco.engine.type_chart import effectiveness_v2

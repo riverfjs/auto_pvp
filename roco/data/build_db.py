@@ -1,69 +1,37 @@
-"""Merge parsed pets, skills & yinji into the final PVP database.
+"""Rebuild the normalized SQLite database from parsed structured data."""
 
-Output: _db/data.json
+from __future__ import annotations
 
-Usage:
-    python scripts/build_db.py
-"""
-
-from roco.utils import PARSED_DIR, DB_DIR, load_json, save_json
+from roco.data.catalog import compile_catalog
+from roco.data.import_db import import_abilities, import_pets, import_skills, import_teams, import_yinji
+from roco.data.migrate import migrate
+from roco.data.utils import PARSED_DIR, DB_DIR, load_json
 
 
 def main() -> None:
-    pets_path = PARSED_DIR / "pets.json"
-    skills_path = PARSED_DIR / "skills.json"
+    conn = migrate(reset=True)
+    skills = load_json(PARSED_DIR / "skills.json")
+    pets = load_json(PARSED_DIR / "pets.json")
+
+    ability_lookup = import_abilities(conn, pets)
+    skill_lookup = import_skills(conn, skills)
+    pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
+
     yinji_path = PARSED_DIR / "yinji.json"
+    if yinji_path.exists():
+        import_yinji(conn, load_json(yinji_path))
 
-    if not pets_path.exists():
-        print(f"Missing {pets_path}. Run parse_pets.py first.")
-        return
-    if not skills_path.exists():
-        print(f"Missing {skills_path}. Run parse_skills.py first.")
-        return
+    teams_path = PARSED_DIR / "teams.json"
+    if teams_path.exists():
+        import_teams(conn, load_json(teams_path), pet_lookup, skill_lookup)
 
-    pets: dict[str, dict] = load_json(pets_path)
-    skills: dict[str, dict] = load_json(skills_path)
-    yinji: dict[str, dict] = load_json(yinji_path) if yinji_path.exists() else {}
-    print(f"Loaded {len(pets)} pets, {len(skills)} skills, {len(yinji)} 印记")
-
-    # Resolve skill references in each pet
-    skill_fields = ("技能", "血脉技能", "可学技能石")
-    missing_skills: set[str] = set()
-
-    for name, pet in pets.items():
-        for field in skill_fields:
-            skill_names: list[str] = pet.get(field, [])
-            if not skill_names:
-                continue
-            resolved = {}
-            for sn in skill_names:
-                if sn in skills:
-                    resolved[sn] = skills[sn]
-                elif sn in yinji:  # 印记 sometimes referenced as skills
-                    pass  # skip, they're marks
-                else:
-                    missing_skills.add(sn)
-            if resolved:
-                pet[f"_{field}"] = resolved
-
-    db = {
-        "meta": {
-            "source": "https://wiki.biligame.com/rocom",
-            "license": "CC BY-NC-SA 4.0",
-            "pet_count": len(pets),
-            "skill_count": len(skills),
-            "yinji_count": len(yinji),
-        },
-        "pets": pets,
-        "skills": skills,
-        "yinji": yinji,
-    }
-
-    out_path = DB_DIR / "data.json"
-    save_json(db, out_path)
-    print(f"Built → {out_path}")
-    if missing_skills:
-        print(f"Unresolved skills ({len(missing_skills)}): {', '.join(sorted(missing_skills)[:20])}")
+    conn.commit()
+    catalog = compile_catalog(conn)
+    conn.close()
+    print(
+        f"Built -> {DB_DIR / 'data.db'} "
+        f"({len(catalog.pets_by_id)} pets, {len(catalog.skills_by_id)} skills)"
+    )
 
 
 if __name__ == "__main__":

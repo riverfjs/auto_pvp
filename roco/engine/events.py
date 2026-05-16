@@ -22,7 +22,7 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from roco.engine.state import PetState, BattleState
+    from roco.engine.state import ActivePet, BattleState
 
 
 class GameEvent(Enum):
@@ -33,7 +33,7 @@ class GameEvent(Enum):
     TURN_START = auto()        # start of turn, before energy gain
     TURN_END = auto()          # end of turn, after status/weather ticks
 
-    # ── Move pipeline (pkmn-inspired explicit steps) ──
+    # ── Move pipeline (engine-inspired explicit steps) ──
     BEFORE_MOVE = auto()       # setup: charge, energy mod, defense (can cancel)
     CHECK_HIT = auto()         # accuracy/immune check
     CALC_DAMAGE = auto()       # compute raw damage
@@ -74,8 +74,8 @@ class EventCtx:
     """Context passed to event handlers. Handlers may modify mutable fields."""
     event: GameEvent
     state: "BattleState"
-    actor: "PetState | None" = None
-    target: "PetState | None" = None
+    actor: "ActivePet | None" = None
+    target: "ActivePet | None" = None
     data: dict = field(default_factory=dict)
     cancelled: bool = False
 

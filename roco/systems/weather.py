@@ -1,4 +1,4 @@
-from roco.engine.state import StatusFlag, StatusType
+from roco.engine.state import StatusFlag, StatusType, WeatherType
 """Weather system for Roco Kingdom PVP simulation.
 
 Supported weathers: rain (水系+50%), sandstorm (非地/机械受1/16伤害),
@@ -50,29 +50,30 @@ def register_weather_handlers(bus: "EventBus") -> None:
 
     def weather_tick(ctx: EventCtx) -> None:
         state = ctx.state
-        weather = state.weather
-        if not weather:
+        weather = state.weather_type
+        if weather is WeatherType.NONE:
             return
 
         # Weather duration
         if state.weather_turns > 0:
             state.weather_turns -= 1
             if state.weather_turns <= 0:
-                state.weather = None
+                state.weather = 0
                 return
 
-        if weather == "sandstorm":
+        if weather is WeatherType.SANDSTORM:
             for pet in state.team_a + state.team_b:
-                if pet.is_fainted or is_sandstorm_immune(pet.element_primary):
+                if pet.is_fainted or any(is_sandstorm_immune(elem) for elem in pet.elements):
                     continue
                 dmg = sandstorm_chip_damage(pet.max_hp)
                 pet.current_hp = max(0, pet.current_hp - dmg)
-        elif weather == "snow":
+        elif weather is WeatherType.SNOW:
             for pet in state.team_a + state.team_b:
                 if pet.is_fainted:
                     continue
                 frost = snow_frostbite_damage(pet.max_hp)
-                pet.frostbite_damage += frost
-                pet.status_flags |= StatusFlag.FREEZE; pet.set_status_count(StatusType.FREEZE,  pet.get_status_count(StatusType.FREEZE) + 2)
+                pet.frostbite += frost
+                pet.status_flags |= StatusFlag.FREEZE
+                pet.set_status_count(StatusType.FREEZE, pet.get_status_count(StatusType.FREEZE) + 2)
 
     bus.on(GameEvent.TURN_END, weather_tick, priority=250, source="weather")

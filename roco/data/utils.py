@@ -7,7 +7,7 @@ from pathlib import Path
 import requests
 
 API_BASE = "https://wiki.biligame.com/rocom/api.php"
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "_data"
 INDEX_DIR = DATA_DIR / "index"
 RAW_DIR = DATA_DIR / "raw"

@@ -9,7 +9,7 @@ Usage:
 
 import re
 import sys
-from roco.utils import (
+from roco.data.utils import (
     CATEGORY_PETS,
     CATEGORY_SKILLS,
     YINJI_SOURCE_PAGE,

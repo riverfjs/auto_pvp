@@ -1,9 +1,11 @@
-"""pkmn-inspired data model — two-tier (Persistent/Battle) + packed bitfields."""
+"""Engine-inspired Pet data model: two-tier runtime state plus packed bitfields."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntFlag, IntEnum, auto
+from types import MappingProxyType
+from typing import Any
 
 # ── Enums ───────────────────────────────────────────────────────
 
@@ -16,6 +18,61 @@ class EffectFlag(IntFlag):
     CONDITIONAL = auto(); MIRROR_DAMAGE = auto(); ENEMY_COST_UP = auto()
     HP_FOR_ENERGY = auto(); PERMANENT_MOD = auto(); PURE_DAMAGE = auto()
     BURST = auto(); AGILITY = auto(); IS_MARK = auto()
+
+
+class Timing(IntEnum):
+    """NRC_AI-style effect trigger points, stored as compact integer codes."""
+    PASSIVE = 0
+    BATTLE_START = 1
+    TURN_START = 2
+    BEFORE_MOVE = 3
+    ON_DAMAGE = 4
+    AFTER_MOVE = 5
+    TURN_END = 6
+    SWITCH_IN = 7
+    SWITCH_OUT = 8
+    FAINT = 9
+    KILL = 10
+    COUNTER_SUCCESS = 11
+
+
+class EffectTag(IntEnum):
+    """Effect primitive codes used by skill and ability effect rows."""
+    DAMAGE = 1
+    HEAL_HP = 2
+    HEAL_ENERGY = 3
+    STEAL_ENERGY = 4
+    ENEMY_LOSE_ENERGY = 5
+    LIFE_DRAIN = 6
+    SELF_BUFF = 7
+    ENEMY_DEBUFF = 8
+    BURN = 9
+    POISON = 10
+    FREEZE = 11
+    LEECH = 12
+    METEOR = 13
+    MARK = 14
+    DAMAGE_REDUCTION = 15
+    FORCE_SWITCH = 16
+    ENERGY_ALL_IN = 17
+    WEATHER = 18
+    COUNTER_ATTACK = 19
+    COUNTER_STATUS = 20
+    COUNTER_DEFENSE = 21
+    BARREL_STATE = 22
+    BURST_POWER_BONUS = 23
+    FAINT_NO_MP_LOSS = 24
+    ENERGY_REGEN_PER_TURN = 25
+
+
+class AbilityFlag(IntFlag):
+    """Packed runtime ability flags. Parameterized bonuses use fixed fields."""
+    NONE = 0
+    BARREL_ACTIVE = auto()
+    REVIVE = auto()
+    FAKE_DEATH = auto()
+    COST_INVERT = auto()
+    ENERGY_NO_CAP = auto()
 
 
 class StatusFlag(IntFlag):
@@ -50,20 +107,37 @@ class Element(IntEnum):
     def from_str(cls, s: str) -> "Element":
         _m = {
             "普通": cls.NORMAL, "草": cls.GRASS, "火": cls.FIRE, "水": cls.WATER,
-            "光": cls.LIGHT, "地": cls.GROUND, "地面": cls.GROUND, "岩": cls.GROUND,
+            "光": cls.LIGHT, "地": cls.GROUND, "地面": cls.GROUND,
             "冰": cls.ICE, "龙": cls.DRAGON, "电": cls.ELECTRIC, "毒": cls.POISON,
             "虫": cls.BUG, "武": cls.FIGHTING, "格斗": cls.FIGHTING,
             "翼": cls.FLYING, "飞行": cls.FLYING, "萌": cls.CUTE,
             "幽": cls.GHOST, "幽灵": cls.GHOST, "恶": cls.DARK,
-            "机械": cls.MECHANICAL, "钢": cls.MECHANICAL,
+            "机械": cls.MECHANICAL,
             "幻": cls.ILLUSION, "超能": cls.ILLUSION,
         }
-        return _m.get(s.replace("系", "").strip(), cls.NORMAL)
+        token = s.replace("系", "").strip()
+        if token in {"岩", "岩石", "钢", "Rock", "ROCK", "rock", "Steel", "STEEL", "steel"}:
+            raise ValueError(f"legacy element is not supported: {s!r}")
+        try:
+            return _m[token]
+        except KeyError as exc:
+            raise ValueError(f"unknown element: {s!r}") from exc
+
+
+ELEMENT_NAMES: tuple[str, ...] = (
+    "普通", "草", "火", "水", "光", "地", "冰", "龙", "电",
+    "毒", "虫", "武", "翼", "萌", "幽", "恶", "机械", "幻",
+)
+
+
+def normalize_element_name(value: str) -> str:
+    """Normalize structured element input to the canonical Roco Chinese name."""
+    return ELEMENT_NAMES[Element.from_str(value).value]
 
 
 # ── Packed buff stage helpers ─────────────────────────────────
 
-def _pack_buff(atk_p=0, atk_m=0, def_p=0, def_m=0, spd=4, acc=0, eva=0) -> int:
+def _pack_buff(atk_p=0, atk_m=0, def_p=0, def_m=0, spd=0, acc=0, eva=0) -> int:
     """Pack 7 buff stages into u32. Each 4 bits, signed (-6 to +6)."""
     def s(v): return (v + 6) & 0xF
     return (s(atk_p) | s(def_p) << 4 | s(spd) << 8 | s(atk_m) << 12 |
@@ -201,11 +275,38 @@ def _unpack_cooldown(packed: int) -> dict[int, int]:
 
 
 @dataclass(slots=True)
+class EffectSpec:
+    """Compiled effect primitive from data storage."""
+    tag: EffectTag
+    timing: Timing
+    params: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
+    chance: float = 1.0
+    condition: str = ""
+
+
+@dataclass(slots=True)
+class SkillEffect:
+    skill_id: int
+    effect: EffectSpec
+    sort_order: int = 0
+
+
+@dataclass(slots=True)
+class AbilityEffect:
+    ability_id: int
+    effect: EffectSpec
+    sort_order: int = 0
+
+
+@dataclass(slots=True)
 class SkillData:
     """Immutable skill definition — loaded from DB, never modified."""
     name: str; element: str; category: SkillCategory
     energy: int; power: int; effect: str
+    skill_id: int = 0
+    element_id: int = 0
     effect_flags: int = EffectFlag.NONE
+    effects: tuple[SkillEffect, ...] = ()
     # Pre-parsed effect values
     life_drain: float = 0; self_heal_hp: float = 0; self_heal_energy: int = 0
     steal_energy: int = 0; enemy_lose_energy: int = 0
@@ -228,13 +329,48 @@ class SkillData:
 SkillRef = SkillData
 
 
+def _stats_tuple(stats: dict[int, int] | tuple[int, ...] | list[int]) -> tuple[int, int, int, int, int, int]:
+    if isinstance(stats, dict):
+        keys = {
+            Stats.HP: "hp",
+            Stats.ATK_PHYS: "atk_phys",
+            Stats.ATK_MAG: "atk_mag",
+            Stats.DEF_PHYS: "def_phys",
+            Stats.DEF_MAG: "def_mag",
+            Stats.SPEED: "speed",
+        }
+        return tuple(int(stats.get(s, stats.get(keys[s], 0))) for s in Stats)  # type: ignore[return-value]
+    values = tuple(int(v) for v in stats)
+    if len(values) != len(Stats):
+        raise ValueError(f"stats must contain {len(Stats)} values")
+    return values  # type: ignore[return-value]
+
+
 @dataclass(slots=True)
-class PersistentPokemon:
-    """Immutable pet definition — loaded from DB, shared across simulations."""
+class PetData:
+    """Static Pet definition compiled from the normalized data store."""
+    pet_id: int
     name: str
-    stats: dict[int, int]     # Stats enum → value
+    stats: tuple[int, int, int, int, int, int]
+    types: tuple[str, str]
+    skill_ids: tuple[int, ...] = ()
+    ability_id: int = 0
+    ability_name: str = ""
+    ability_desc: str = ""
+
+    def stat(self, stat: Stats) -> int:
+        return self.stats[stat.value]
+
+
+@dataclass(slots=True)
+class PersistentPet:
+    """Persistent team-slot Pet state shared across simulations."""
+    name: str
+    stats: dict[int, int] | tuple[int, int, int, int, int, int]
     types: tuple[str, str]    # (primary, secondary)
-    moves: list[SkillData]
+    moves: list[SkillData] | tuple[SkillData, ...]
+    data_id: int = 0
+    ability_id: int = 0
     ability_name: str = ""
     ability_desc: str = ""
     ability_tags: list[str] = field(default_factory=list)
@@ -242,11 +378,42 @@ class PersistentPokemon:
     nature: str = ""
     ivs: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        self.stats = _stats_tuple(self.stats)
+        self.moves = tuple(self.moves)
+
+    @classmethod
+    def from_data(
+        cls,
+        data: PetData,
+        moves: list[SkillData] | tuple[SkillData, ...],
+        *,
+        bloodline: str = "",
+        nature: str = "",
+        ivs: list[str] | None = None,
+    ) -> "PersistentPet":
+        return cls(
+            name=data.name,
+            stats=data.stats,
+            types=data.types,
+            moves=tuple(moves),
+            data_id=data.pet_id,
+            ability_id=data.ability_id,
+            ability_name=data.ability_name,
+            ability_desc=data.ability_desc,
+            bloodline=bloodline,
+            nature=nature,
+            ivs=ivs or [],
+        )
+
+    def stat(self, stat: Stats) -> int:
+        return self.stats[stat.value]  # type: ignore[index]
+
 
 @dataclass
-class ActivePokemon:
+class ActivePet:
     """Battle-only mutable state — reset on every switch-in."""
-    persistent: PersistentPokemon
+    persistent: PersistentPet
     current_hp: int = 0
     current_energy: int = 10
     buff_stages: int = _pack_buff()   # packed u32
@@ -258,7 +425,12 @@ class ActivePokemon:
     charging_skill: int = -1
     cooldowns: int = 0               # packed
     leech_source: str = ""
-    ability_state: dict = field(default_factory=dict)
+    ability_flags: int = AbilityFlag.NONE
+    ability_counters: int = 0
+    burst_power_bonus: int = 40
+    burst_extend: int = 0
+    burst_enemy_cost_up: int = 0
+    burst_element_cost_reduce: str = ""
     is_fainted: bool = False
     slot: int = 0
     # Runtime scratch
@@ -268,14 +440,14 @@ class ActivePokemon:
     _cost_mod_turns: int = 0
 
     @property
-    def max_hp(self) -> int: return self.persistent.stats.get(Stats.HP, 1)
+    def max_hp(self) -> int: return self.persistent.stat(Stats.HP) or 1
     @property
-    def speed(self) -> int: return self.persistent.stats.get(Stats.SPEED, 0)
+    def speed(self) -> int: return self._stat(Stats.SPEED)
     @property
     def hp_pct(self) -> float: return self.current_hp / max(1, self.max_hp)
 
     def _stat(self, s: Stats) -> int:
-        base = self.persistent.stats.get(s, 0)
+        base = self.persistent.stat(s)
         idx = {Stats.ATK_PHYS:0, Stats.DEF_PHYS:1, Stats.SPEED:2, Stats.ATK_MAG:3, Stats.DEF_MAG:4}.get(s, 0)
         stage = _unpack_buff(self.buff_stages, idx)
         return int(base * buff_multiplier(stage))
@@ -308,6 +480,15 @@ class ActivePokemon:
 
     def has_status(self, f: StatusFlag) -> bool:
         return bool(self.status_flags & f)
+
+    def has_ability_flag(self, f: AbilityFlag) -> bool:
+        return bool(self.ability_flags & f)
+
+    def set_ability_flag(self, f: AbilityFlag, enabled: bool = True) -> None:
+        if enabled:
+            self.ability_flags |= f
+        else:
+            self.ability_flags &= ~f
 
     def is_immune_to(self, f: StatusFlag) -> bool:
         IMMUNITY = {"火": StatusFlag.BURN, "草": StatusFlag.LEECH, "毒": StatusFlag.POISON, "冰": StatusFlag.FREEZE}
@@ -343,8 +524,8 @@ class MoveDecision:
 
 @dataclass
 class BattleState:
-    team_a: list[ActivePokemon]
-    team_b: list[ActivePokemon]
+    team_a: list[ActivePet]
+    team_b: list[ActivePet]
     active_a: int = 0; active_b: int = 0
     magic_a: int = 4; magic_b: int = 4
     weather: int = 0               # packed weather: type(4)|turns(4)

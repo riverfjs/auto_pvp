@@ -1,73 +1,228 @@
-"""Load parsed JSON data into the SQLite database.
+"""Import structured JSON into the normalized SQLite data store."""
 
-Reads _data/parsed/{pets,skills,yinji}.json and inserts into _db/data.db.
-Run scripts/migrate.py first to create the tables.
-
-Usage:
-    python scripts/import_db.py
-"""
+from __future__ import annotations
 
 import json
 import sqlite3
-from roco.utils import PARSED_DIR, DB_DIR, load_json
+from collections.abc import Iterable
+
+from roco.data.utils import PARSED_DIR, DB_DIR, load_json
+from roco.engine.skill_tags import classify
+from roco.engine.state import (
+    EffectFlag,
+    EffectTag,
+    Element,
+    SkillCategory,
+    SkillData,
+    Timing,
+    normalize_element_name,
+)
 
 
-def _safe_int(val: str | None) -> int | None:
+def _safe_int(val: object) -> int | None:
     try:
-        return int(val) if val else None
+        if val is None or val == "":
+            return None
+        return int(val)
     except (ValueError, TypeError):
         return None
 
 
-def import_skills(conn: sqlite3.Connection, skills: dict[str, dict]) -> dict[str, int]:
-    """Insert all skills, return {name: id} lookup."""
-    lookup: dict[str, int] = {}
-    rows: list[tuple] = []
-    for name, sk in skills.items():
-        rows.append((
-            sk.get("技能名称", name),
-            sk.get("属性", ""),
-            sk.get("技能类别", ""),
-            sk.get("耗能", 0),
-            sk.get("威力", 0),
-            sk.get("效果", ""),
-            sk.get("描述", ""),
-            sk.get("技能版本", ""),
-        ))
-    conn.executemany(
-        "INSERT INTO skills (name, element, category, energy, power, effect, flavor_text, version) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        rows,
+def _required_int(val: object, default: int = 0) -> int:
+    parsed = _safe_int(val)
+    return default if parsed is None else parsed
+
+
+def _element_id(conn: sqlite3.Connection, raw: str) -> int:
+    name = normalize_element_name(raw)
+    row = conn.execute("SELECT id FROM elements WHERE name = ?", (name,)).fetchone()
+    if row is None:
+        raise ValueError(f"element not seeded: {name}")
+    return int(row[0])
+
+
+def _maybe_element_id(conn: sqlite3.Connection, raw: str | None) -> int | None:
+    if not raw:
+        return None
+    return _element_id(conn, raw)
+
+
+def _category(raw: object) -> tuple[int, str]:
+    if isinstance(raw, SkillCategory):
+        return raw.value, _CATEGORY_NAMES[raw]
+    text = str(raw or "").strip()
+    cat = _CATEGORY_MAP.get(text)
+    if not cat:
+        raise ValueError(f"unknown skill category: {raw!r}")
+    return cat.value, _CATEGORY_NAMES[cat]
+
+
+_CATEGORY_MAP = {
+    "物攻": SkillCategory.PHYSICAL,
+    "魔攻": SkillCategory.MAGICAL,
+    "防御": SkillCategory.DEFENSE,
+    "状态": SkillCategory.STATUS,
+}
+
+_CATEGORY_NAMES = {
+    SkillCategory.PHYSICAL: "物攻",
+    SkillCategory.MAGICAL: "魔攻",
+    SkillCategory.DEFENSE: "防御",
+    SkillCategory.STATUS: "状态",
+}
+
+
+def _skill_from_raw(name: str, sk: dict) -> SkillData:
+    category_code, _category_name = _category(sk.get("技能类别", "物攻"))
+    skill = SkillData(
+        name=sk.get("技能名称", name),
+        element=normalize_element_name(sk.get("属性", "普通")),
+        category=SkillCategory(category_code),
+        energy=_required_int(sk.get("耗能"), 0),
+        power=_required_int(sk.get("威力"), 0),
+        effect=sk.get("效果", ""),
     )
-    # Build lookup
-    cur = conn.execute("SELECT id, name FROM skills")
-    for row in cur:
-        lookup[row[1]] = row[0]
-    print(f"  skills: {len(lookup)} inserted")
+    return classify(skill)
+
+
+def _json(data: object) -> str:
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def _effect_rows_for_skill(skill_id: int, skill: SkillData) -> list[tuple]:
+    rows: list[tuple] = []
+
+    def add(timing: Timing, tag: EffectTag, params: dict, sort_order: int) -> None:
+        rows.append((skill_id, timing.value, tag.value, int(skill.effect_flags), _json(params), "", sort_order))
+
+    order = 0
+    if skill.power > 0 or skill.effect_flags & EffectFlag.PURE_DAMAGE:
+        add(Timing.ON_DAMAGE, EffectTag.DAMAGE, {"power": skill.power, "hit_count": skill.hit_count}, order); order += 1
+    if skill.life_drain:
+        add(Timing.ON_DAMAGE, EffectTag.LIFE_DRAIN, {"pct": skill.life_drain}, order); order += 1
+    if skill.self_heal_hp:
+        add(Timing.AFTER_MOVE, EffectTag.HEAL_HP, {"pct": skill.self_heal_hp}, order); order += 1
+    if skill.self_heal_energy:
+        add(Timing.AFTER_MOVE, EffectTag.HEAL_ENERGY, {"amount": skill.self_heal_energy}, order); order += 1
+    if skill.steal_energy:
+        add(Timing.AFTER_MOVE, EffectTag.STEAL_ENERGY, {"amount": skill.steal_energy}, order); order += 1
+    if skill.enemy_lose_energy:
+        add(Timing.AFTER_MOVE, EffectTag.ENEMY_LOSE_ENERGY, {"amount": skill.enemy_lose_energy}, order); order += 1
+    if skill.damage_reduction:
+        add(Timing.BEFORE_MOVE, EffectTag.DAMAGE_REDUCTION, {"pct": skill.damage_reduction}, order); order += 1
+    for tag, stacks in (
+        (EffectTag.BURN, skill.burn_stacks),
+        (EffectTag.POISON, skill.poison_stacks),
+        (EffectTag.FREEZE, skill.freeze_stacks),
+        (EffectTag.LEECH, skill.leech_stacks),
+        (EffectTag.METEOR, skill.meteor_stacks),
+    ):
+        if stacks:
+            add(Timing.AFTER_MOVE, tag, {"stacks": stacks}, order); order += 1
+    if skill.force_switch:
+        add(Timing.AFTER_MOVE, EffectTag.FORCE_SWITCH, {}, order); order += 1
+    if skill.effect_flags & EffectFlag.ENERGY_ALL_IN:
+        add(Timing.BEFORE_MOVE, EffectTag.ENERGY_ALL_IN, {}, order); order += 1
+    if skill.weather_type:
+        add(Timing.AFTER_MOVE, EffectTag.WEATHER, {"type": skill.weather_type, "turns": 5}, order); order += 1
+    return rows
+
+
+def _ability_effect_rows(ability_id: int, name: str) -> Iterable[tuple]:
+    if name == "诈死":
+        yield (ability_id, Timing.FAINT.value, EffectTag.FAINT_NO_MP_LOSS.value, 0, "{}", "", 0)
+    elif name == "蓄能":
+        yield (ability_id, Timing.TURN_END.value, EffectTag.ENERGY_REGEN_PER_TURN.value, 0, '{"amount":1}', "", 0)
+
+
+def import_abilities(conn: sqlite3.Connection, pets: dict[str, dict]) -> dict[str, int]:
+    rows: dict[str, str] = {}
+    for pet in pets.values():
+        name = pet.get("特性", "").strip()
+        if name:
+            rows.setdefault(name, pet.get("特性描述", ""))
+    conn.executemany(
+        "INSERT INTO abilities (name, description) VALUES (?, ?)",
+        sorted(rows.items()),
+    )
+    lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
+    effect_rows = []
+    for name, aid in lookup.items():
+        effect_rows.extend(_ability_effect_rows(aid, name))
+    if effect_rows:
+        conn.executemany(
+            "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            effect_rows,
+        )
+    print(f"  abilities: {len(lookup)} inserted")
     return lookup
 
 
-def import_pets(conn: sqlite3.Connection, pets: dict[str, dict], skill_lookup: dict[str, int]) -> None:
-    """Insert all pets and their skill links."""
-    pet_rows: list[tuple] = []
-    pet_names: list[str] = []
+def import_skills(conn: sqlite3.Connection, skills: dict[str, dict]) -> dict[str, int]:
+    lookup: dict[str, int] = {}
+    rows: list[tuple] = []
+    compiled: list[SkillData] = []
+    for name, raw in skills.items():
+        skill = _skill_from_raw(name, raw)
+        category_code, category_name = _category(skill.category)
+        rows.append((
+            skill.name,
+            _element_id(conn, skill.element),
+            category_code,
+            category_name,
+            skill.energy,
+            skill.power,
+            skill.effect,
+            raw.get("描述", ""),
+            int(skill.effect_flags),
+            raw.get("技能版本", ""),
+        ))
+        compiled.append(skill)
+    conn.executemany(
+        "INSERT INTO skills (name, element_id, category_code, category_name, energy, power, effect_text, flavor_text, flags, source_version) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        rows,
+    )
+    lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
+    effect_rows: list[tuple] = []
+    for skill in compiled:
+        skill_id = lookup[skill.name]
+        effect_rows.extend(_effect_rows_for_skill(skill_id, skill))
+    if effect_rows:
+        conn.executemany(
+            "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            effect_rows,
+        )
+    print(f"  skills: {len(lookup)} inserted")
+    print(f"  skill_effects: {len(effect_rows)} inserted")
+    return lookup
+
+
+def import_pets(
+    conn: sqlite3.Connection,
+    pets: dict[str, dict],
+    skill_lookup: dict[str, int],
+    ability_lookup: dict[str, int],
+) -> dict[str, int]:
+    rows: list[tuple] = []
     for name, pet in pets.items():
-        pet_names.append(name)
-        pet_rows.append((
+        ability_name = pet.get("特性", "").strip()
+        rows.append((
             name,
             pet.get("地区形态名称", ""),
             pet.get("精灵阶段", ""),
             pet.get("精灵形态", ""),
-            pet.get("主属性", ""),
-            pet.get("2属性", ""),
-            pet.get("特性", ""),
-            pet.get("特性描述", ""),
-            pet.get("生命", 0),
-            pet.get("物攻", 0),
-            pet.get("魔攻", 0),
-            pet.get("物防", 0),
-            pet.get("魔防", 0),
-            pet.get("速度", 0),
+            _element_id(conn, pet.get("主属性", "普通")),
+            _maybe_element_id(conn, pet.get("2属性")),
+            ability_lookup.get(ability_name),
+            _required_int(pet.get("生命"), 1),
+            _required_int(pet.get("物攻"), 0),
+            _required_int(pet.get("魔攻"), 0),
+            _required_int(pet.get("物防"), 0),
+            _required_int(pet.get("魔防"), 0),
+            _required_int(pet.get("速度"), 0),
             pet.get("体型", ""),
             pet.get("重量", ""),
             pet.get("分布地区", ""),
@@ -77,92 +232,65 @@ def import_pets(conn: sqlite3.Connection, pets: dict[str, dict], skill_lookup: d
             pet.get("更新版本", ""),
         ))
     conn.executemany(
-        "INSERT INTO pets (name, form_name, stage, form_type, element_primary, element_secondary, "
-        "ability_name, ability_desc, hp, atk_phys, atk_mag, def_phys, def_mag, speed, "
-        "height, weight, distribution, description, is_shiny, evolution_cond, version) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        pet_rows,
+        "INSERT INTO pets (name, form_name, stage, form_type, element_primary_id, element_secondary_id, ability_id, "
+        "hp, atk_phys, atk_mag, def_phys, def_mag, speed, height, weight, distribution, description, is_shiny, evolution_cond, source_version) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        rows,
     )
+    pet_lookup = {name: pid for pid, name in conn.execute("SELECT id, name FROM pets")}
 
-    # Build pet id lookup
-    pet_lookup: dict[str, int] = {}
-    cur = conn.execute("SELECT id, name FROM pets")
-    for row in cur:
-        pet_lookup[row[1]] = row[0]
-
-    # Insert pet_skills
-    skill_fields = [
-        ("技能", "技能"),
-        ("血脉技能", "血脉技能"),
-        ("可学技能石", "可学技能石"),
-    ]
-    for field, stype in skill_fields:
-        ps_rows: list[tuple] = []
+    link_rows: list[tuple] = []
+    for field, source_type in (("技能", "技能"), ("血脉技能", "血脉技能"), ("可学技能石", "可学技能石")):
         for name, pet in pets.items():
-            names: list[str] = pet.get(field, [])
             levels: list[str] = pet.get("技能解锁等级", []) if field == "技能" else []
-            for i, sn in enumerate(names):
-                ps_rows.append((
+            for i, skill_name in enumerate(pet.get(field, [])):
+                link_rows.append((
                     pet_lookup[name],
-                    skill_lookup.get(sn),
-                    sn,
-                    stype,
-                    _safe_int(levels[i]) if i < len(levels) and levels[i] else None,
+                    skill_lookup.get(skill_name),
+                    skill_name,
+                    source_type,
+                    _safe_int(levels[i]) if i < len(levels) else None,
                     i,
                 ))
-        conn.executemany(
-            "INSERT INTO pet_skills (pet_id, skill_id, skill_name, skill_type, unlock_level, sort_order) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            ps_rows,
-        )
-
+    conn.executemany(
+        "INSERT INTO pet_skills (pet_id, skill_id, skill_name, source_type, unlock_level, sort_order) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        link_rows,
+    )
     print(f"  pets: {len(pet_lookup)} inserted")
-    # Count pet_skills
-    cnt = conn.execute("SELECT COUNT(*) FROM pet_skills").fetchone()[0]
-    print(f"  pet_skills: {cnt} links inserted")
+    print(f"  pet_skills: {len(link_rows)} links inserted")
+    return pet_lookup
 
 
 def import_yinji(conn: sqlite3.Connection, yinji: dict[str, dict]) -> None:
-    """Insert all yinji and their skill sources."""
-    yinji_rows: list[tuple] = []
-    yinji_names: list[str] = []
-    for name, yj in yinji.items():
-        yinji_names.append(name)
-        mechanism = json.dumps(yj.get("机制说明", []), ensure_ascii=False)
-        yinji_rows.append((name, yj.get("类型", ""), yj.get("效果描述", ""), mechanism))
-
-    conn.executemany(
-        "INSERT INTO yinji (name, type, effect, mechanism) VALUES (?, ?, ?, ?)",
-        yinji_rows,
-    )
-
-    # Build lookup
-    yj_lookup: dict[str, int] = {}
-    cur = conn.execute("SELECT id, name FROM yinji")
-    for row in cur:
-        yj_lookup[row[1]] = row[0]
-
-    # Insert yinji_skills
-    ys_rows: list[tuple] = []
-    for name, yj in yinji.items():
-        yj_id = yj_lookup[name]
-        for sk_name, desc in yj.get("可施加技能", {}).items():
-            ys_rows.append((yj_id, sk_name, desc))
-
-    conn.executemany(
-        "INSERT INTO yinji_skills (yinji_id, skill_name, description) VALUES (?, ?, ?)",
-        ys_rows,
-    )
-
-    print(f"  yinji: {len(yj_lookup)} inserted")
-    cnt = conn.execute("SELECT COUNT(*) FROM yinji_skills").fetchone()[0]
-    print(f"  yinji_skills: {cnt} links inserted")
+    skill_lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
+    rows: list[tuple] = []
+    for mark_name, mark in yinji.items():
+        for skill_name, desc in mark.get("可施加技能", {}).items():
+            sid = skill_lookup.get(skill_name)
+            if sid:
+                rows.append((
+                    sid,
+                    Timing.AFTER_MOVE.value,
+                    EffectTag.MARK.value,
+                    0,
+                    _json({"mark": mark_name, "description": desc}),
+                    "",
+                    100,
+                ))
+    if rows:
+        conn.executemany(
+            "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+    print(f"  yinji skill_effects: {len(rows)} inserted")
 
 
-def import_teams(conn: sqlite3.Connection, teams: dict[str, dict]) -> None:
-    """Insert all teams and their pet slots."""
+def import_teams(conn: sqlite3.Connection, teams: dict[str, dict], pet_lookup: dict[str, int], skill_lookup: dict[str, int]) -> None:
     team_rows: list[tuple] = []
     pet_rows: list[tuple] = []
+    skill_rows: list[tuple] = []
 
     for tid, team in teams.items():
         team_rows.append((
@@ -174,42 +302,53 @@ def import_teams(conn: sqlite3.Connection, teams: dict[str, dict]) -> None:
             team.get("description", ""),
             team.get("upload_date", ""),
         ))
+    conn.executemany(
+        "INSERT INTO teams (id, title, author, team_type, bloodline_magic, description, upload_date) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        team_rows,
+    )
+
+    for tid, team in teams.items():
         for pet in team.get("pets", []):
-            moves = pet.get("moves", [])
             pet_rows.append((
                 tid,
-                pet.get("slot", 0),
+                int(pet.get("slot", 0)),
+                pet_lookup.get(pet.get("name", "")) or pet_lookup.get(pet.get("name_short", "")),
                 pet.get("name", ""),
                 pet.get("name_short", ""),
                 pet.get("bloodline", ""),
                 pet.get("nature", ""),
-                ",".join(pet.get("ivs", [])),
-                moves[0] if len(moves) > 0 else "",
-                moves[1] if len(moves) > 1 else "",
-                moves[2] if len(moves) > 2 else "",
-                moves[3] if len(moves) > 3 else "",
+                _json(pet.get("ivs", [])),
             ))
-
     conn.executemany(
-        "INSERT INTO teams (id, title, author, type, bloodline_magic, description, upload_date) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        team_rows,
-    )
-    conn.executemany(
-        "INSERT INTO team_pets (team_id, slot, pet_name, name_short, bloodline, nature, ivs, "
-        "move1, move2, move3, move4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO team_pets (team_id, slot, pet_id, pet_name, name_short, bloodline, nature, ivs_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         pet_rows,
     )
 
+    team_pet_ids = {
+        (team_id, slot): tpid
+        for tpid, team_id, slot in conn.execute("SELECT id, team_id, slot FROM team_pets")
+    }
+    for tid, team in teams.items():
+        for pet in team.get("pets", []):
+            tpid = team_pet_ids[(tid, int(pet.get("slot", 0)))]
+            for i, move in enumerate(pet.get("moves", []), start=1):
+                skill_rows.append((tpid, i, skill_lookup.get(move), move))
+    conn.executemany(
+        "INSERT INTO team_pet_skills (team_pet_id, slot, skill_id, skill_name) VALUES (?, ?, ?, ?)",
+        skill_rows,
+    )
     print(f"  teams: {len(team_rows)} inserted")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
+    print(f"  team_pet_skills: {len(skill_rows)} moves inserted")
 
 
 def main() -> None:
     db_path = DB_DIR / "data.db"
     if not db_path.exists():
         print(f"Database not found: {db_path}")
-        print("Run 'python scripts/migrate.py' first.")
+        print("Run 'python -m roco.data.migrate' first.")
         return
 
     conn = sqlite3.connect(str(db_path))
@@ -217,40 +356,31 @@ def main() -> None:
     conn.execute("PRAGMA journal_mode = WAL")
 
     print("Importing...")
-
     skills: dict[str, dict] = load_json(PARSED_DIR / "skills.json")
-    skill_lookup = import_skills(conn, skills)
-
     pets: dict[str, dict] = load_json(PARSED_DIR / "pets.json")
-    import_pets(conn, pets, skill_lookup)
+
+    ability_lookup = import_abilities(conn, pets)
+    skill_lookup = import_skills(conn, skills)
+    pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
 
     yinji_path = PARSED_DIR / "yinji.json"
     if yinji_path.exists():
-        yinji: dict[str, dict] = load_json(yinji_path)
-        import_yinji(conn, yinji)
+        import_yinji(conn, load_json(yinji_path))
 
-    # Teams
     teams_path = PARSED_DIR / "teams.json"
     if teams_path.exists():
-        teams: dict[str, dict] = load_json(teams_path)
-        import_teams(conn, teams)
+        import_teams(conn, load_json(teams_path), pet_lookup, skill_lookup)
 
     conn.commit()
-    # Summary
-    counts = conn.execute(
-        "SELECT 'pets', COUNT(*) FROM pets UNION ALL "
-        "SELECT 'skills', COUNT(*) FROM skills UNION ALL "
-        "SELECT 'pet_skills', COUNT(*) FROM pet_skills UNION ALL "
-        "SELECT 'yinji', COUNT(*) FROM yinji UNION ALL "
-        "SELECT 'yinji_skills', COUNT(*) FROM yinji_skills UNION ALL "
-        "SELECT 'teams', COUNT(*) FROM teams UNION ALL "
-        "SELECT 'team_pets', COUNT(*) FROM team_pets"
-    ).fetchall()
-    for name, cnt in counts:
+    for name, in conn.execute(
+        "SELECT 'pets' UNION ALL SELECT 'skills' UNION ALL SELECT 'abilities' UNION ALL "
+        "SELECT 'pet_skills' UNION ALL SELECT 'skill_effects' UNION ALL SELECT 'teams' UNION ALL "
+        "SELECT 'team_pets' UNION ALL SELECT 'team_pet_skills'"
+    ):
+        cnt = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
         print(f"  {name}: {cnt}")
-
     conn.close()
-    print(f"Done → {db_path}")
+    print(f"Done -> {db_path}")
 
 
 if __name__ == "__main__":

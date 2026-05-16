@@ -7,7 +7,7 @@ Usage:
 """
 
 import re
-from roco.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
 
 TEMPLATE_RE = re.compile(r"^\|(.+?)=(.+)", re.MULTILINE)
 

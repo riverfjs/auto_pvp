@@ -1,4 +1,4 @@
-"""Phase-based skill execution — works with ActivePokemon and packed bitfields."""
+"""Phase-based skill execution — works with ActivePet and packed bitfields."""
 
 from __future__ import annotations
 
@@ -7,16 +7,16 @@ from roco.engine.damage import (
     energy_after_use, can_use_skill,
 )
 from roco.engine.state import (
-    ActivePokemon, SkillData, SkillCategory, BattleEvent, BattleState,
-    EffectFlag, StatusFlag, StatusType, Stats, WeatherType,
-    _unpack_buff, _set_buff, _unpack_status, _set_status, _pack_cooldown, _unpack_cooldown,
+    ActivePet, SkillData, SkillCategory, BattleEvent, BattleState,
+    EffectFlag, WeatherType, Element,
+    _pack_cooldown, _unpack_cooldown, _inc_skill_count,
 )
 from roco.config.constants import COUNTER_DAMAGE_BONUS, MAX_ENERGY
 from roco.systems.weather import weather_damage_mult
 from roco.systems.marks import apply_marks_to_skill_cost, apply_marks_to_attack_power, calc_meteor_extra_damage
 
 
-def get_skill_category(pet: ActivePokemon, skill_index: int) -> SkillCategory:
+def get_skill_category(pet: ActivePet, skill_index: int) -> SkillCategory:
     if skill_index < 0 or skill_index >= len(pet.persistent.moves):
         return SkillCategory.PHYSICAL
     return pet.persistent.moves[skill_index].category
@@ -34,52 +34,85 @@ def _emit(bus, event_name, state, actor, target, data):
     return bus.emit(EventCtx(getattr(GameEvent, event_name), state, actor=actor, target=target, data=data))
 
 
-def execute_move(attacker: ActivePokemon, defender: ActivePokemon,
-                 skill_index: int, state: BattleState, countered: bool = False):
+def execute_move(
+    attacker: ActivePet,
+    defender: ActivePet,
+    skill_index: int,
+    state: BattleState,
+    countered: bool = False,
+    *,
+    team: str | None = None,
+):
     moves = attacker.persistent.moves
-    if skill_index < 0 or skill_index >= len(moves): return
+    if skill_index < 0 or skill_index >= len(moves): return 0
     skill = moves[skill_index]
 
     cds = _unpack_cooldown(attacker.cooldowns)
-    if cds.get(skill_index, 0) > 0: return
-
-    marks = state.marks_a if attacker in state.team_a else state.marks_b
-    cost = apply_marks_to_skill_cost(skill.energy, marks)
-    if not can_use_skill(attacker.current_energy, cost): return
+    if cds.get(skill_index, 0) > 0: return 0
 
     exec_skill = skill; exec_index = skill_index
     if attacker.charging_skill >= 0:
         ci = attacker.charging_skill; attacker.charging_skill = -1
         if ci < len(moves): exec_skill = moves[ci]; exec_index = ci
 
-    attacker.current_energy = energy_after_use(attacker.current_energy, cost)
     bus = _get_bus()
+    team = team or ("a" if attacker in state.team_a else "b")
+    marks = state.marks_a if team == "a" else state.marks_b
+    base_cost = apply_marks_to_skill_cost(exec_skill.energy + attacker._cost_mod, marks)
 
     ctx = _emit(bus, "PRE_USE", state, attacker, defender,
-                {"skill": exec_skill, "countered": countered})
-    if ctx.cancelled: return
+                {"skill": exec_skill, "countered": countered, "skill_index": exec_index,
+                 "team": team, "cost": base_cost})
+    if ctx.cancelled: return 0
+    cost = max(0, int(ctx.data.get("cost", base_cost)) + ctx.energy_delta)
+    if not can_use_skill(attacker.current_energy, cost): return 0
 
+    attacker.current_energy = energy_after_use(attacker.current_energy, cost)
+    attacker._power_mod *= ctx.power_mod
+    _record_skill_use(state, team, exec_skill)
+
+    damage = 0
     if exec_skill.category in (SkillCategory.PHYSICAL, SkillCategory.MAGICAL):
-        _calc_and_apply(attacker, defender, exec_skill, state, countered, bus)
+        damage = _calc_and_apply(attacker, defender, exec_skill, state, countered, bus, ctx.data)
 
     _emit(bus, "POST_USE", state, attacker, defender,
-          {"skill": exec_skill, "countered": countered})
+          {"skill": exec_skill, "countered": countered, "damage": damage, "team": team})
 
     if exec_skill.effect_flags & EffectFlag.COUNTER:
         cds[exec_index] = 2
     attacker.cooldowns = _pack_cooldown(cds)
+    return damage
 
 
-def _calc_and_apply(attacker: ActivePokemon, defender: ActivePokemon,
-                    skill: SkillData, state: BattleState, countered: bool, bus):
-    phys = skill.category in (SkillCategory.PHYSICAL, SkillCategory.PHYSICAL)
+def _record_skill_use(state: BattleState, team: str, skill: SkillData) -> None:
+    try:
+        elem = Element.from_str(skill.element)
+    except ValueError:
+        return
+    if team == "a":
+        state.skill_counts_a = _inc_skill_count(state.skill_counts_a, elem)
+    else:
+        state.skill_counts_b = _inc_skill_count(state.skill_counts_b, elem)
+
+
+def _weather_key(weather: WeatherType) -> str | None:
+    return {
+        WeatherType.RAIN: "rain",
+        WeatherType.SANDSTORM: "sandstorm",
+        WeatherType.SNOW: "snow",
+    }.get(weather)
+
+
+def _calc_and_apply(attacker: ActivePet, defender: ActivePet,
+                    skill: SkillData, state: BattleState, countered: bool, bus,
+                    pipeline_data: dict) -> int:
     phys = skill.category == SkillCategory.PHYSICAL
     atk = float(attacker.atk_phys if phys else attacker.atk_mag)
     dfn = float(defender.def_phys if phys else defender.def_mag)
 
-    type_mult = get_type_multiplier(skill.element, defender.elements)
+    type_mult = 1.0 if pipeline_data.get("_barrel") else get_type_multiplier(skill.element, defender.elements)
     stab = get_stab(skill.element, attacker.elements[0])
-    weather_mult = weather_damage_mult(skill.element, WeatherType(state.weather & 0xF).name.lower() if state.weather else None)
+    weather_mult = weather_damage_mult(skill.element, _weather_key(state.weather_type))
 
     atk_marks = state.marks_a if attacker in state.team_a else state.marks_b
     mark_buff = apply_marks_to_attack_power(skill.power, skill.element, atk_marks, attacker.elements[0])
@@ -111,6 +144,9 @@ def _calc_and_apply(attacker: ActivePokemon, defender: ActivePokemon,
 
     _emit(bus, "ON_DAMAGE", state, attacker, defender,
           {"skill": skill, "damage": damage, "countered": countered})
+    _emit(bus, "TAKE_DAMAGE", state, defender, attacker,
+          {"skill": skill, "damage": damage, "countered": countered})
+    return damage
 
 
 def register_skill_handlers(bus):

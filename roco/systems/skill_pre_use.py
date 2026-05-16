@@ -13,7 +13,9 @@ def register(bus):
         sk = ctx.data.get("skill")
         if not sk or not (sk.effect_flags & EffectFlag.ENERGY_ALL_IN): return
         r = ctx.actor.current_energy
-        if r > 0: ctx.actor._power_mod += r * 0.25; ctx.actor.current_energy = 0
+        if r > 0:
+            ctx.power_mod += r * 0.25
+            ctx.data["cost"] = r
     def h_defense(ctx):
         sk = ctx.data.get("skill")
         if not sk or sk.damage_reduction <= 0: return
