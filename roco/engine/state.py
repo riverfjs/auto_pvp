@@ -63,6 +63,7 @@ class PetState:
     charging_skill_idx: int = -1
     cooldowns: dict[int, int] = field(default_factory=dict)
     is_fainted: bool = False
+    leech_source: str = ""              # name of pet that applied leech
     slot: int = 0
     ability_name: str = ""
     ability_desc: str = ""

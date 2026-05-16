@@ -57,11 +57,31 @@ def _photosynthesis(ctx: "EventCtx", pet: "PetState") -> None:
 # ── Ability database ───────────────────────────────────────────
 
 ABILITY_DB: dict[str, list[tuple]] = {
+    # ── On-faint ──
     "诈死": [("FAINT", _fake_death)],
+    # ── On-enter ──
     "威慑": [("SWITCH_IN", _intimidate)],
     "铁拳": [("SWITCH_IN", _iron_fist)],
+    "加速": [("SWITCH_IN", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.10))],
+    # ── On-kill ──
     "食能": [("KILL", _energy_eater)],
+    "杀意": [("KILL", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.05))],
+    # ── On-take-damage ──
     "光合": [("TAKE_DAMAGE", _photosynthesis)],
+    "铁壁": [("TAKE_DAMAGE", lambda c, p: p.buff_stages.update(
+        {'def_phys': max(-6, p.buff_stages.get('def_phys', 0) + 1)}))],
+    # ── On-counter-success ──
+    "连打": [("COUNTER_SUCCESS", lambda c, p: setattr(p, 'power_multiplier', p.power_multiplier * 1.30))],
+    # ── Passive (on-enter, permanent) ──
+    "好胜": [("SWITCH_IN", lambda c, p: p.buff_stages.update({'atk_phys': 1, 'atk_mag': 1}))],
+    "贪吃": [("SWITCH_IN", lambda c, p: setattr(p, 'current_energy',
+        min(10, p.current_energy + 2)))],
+    # ── On-turn-end ──
+    "蓄能": [("TURN_END", lambda c, p: setattr(p, 'current_energy',
+        min(10, p.current_energy + 1)))],
+    # ── On-turn-start ──
+    "疾风": [("TURN_START", lambda c, p: setattr(p, 'power_multiplier',
+        p.power_multiplier * 1.15 if p.current_hp == p.max_hp else 1.0))],
 }
 
 

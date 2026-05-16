@@ -129,11 +129,13 @@ class BattleEngine:
                 if not pet.is_fainted:
                     pet.current_energy = calc_energy_after_gain(pet.current_energy)
 
-        # Speed order
+        # Speed order (with priority_mod from selected skills)
         a_pet = state.team_a[state.active_a]
         b_pet = state.team_b[state.active_b]
-        a_speed = apply_marks_to_speed(a_pet.speed, state.marks_a)
-        b_speed = apply_marks_to_speed(b_pet.speed, state.marks_b)
+        a_prio = self._priority(a_pet, move_a)
+        b_prio = self._priority(b_pet, move_b)
+        a_speed = apply_marks_to_speed(a_pet.speed, state.marks_a) + a_prio
+        b_speed = apply_marks_to_speed(b_pet.speed, state.marks_b) + b_prio
         a_first = a_speed >= b_speed
 
         first_pet = a_pet if a_first else b_pet
@@ -147,6 +149,10 @@ class BattleEngine:
         a_cat = self._cat(a_pet, move_a)
         b_cat = self._cat(b_pet, move_b)
         a_ctr, b_ctr = resolve_counter(a_cat, b_cat)
+        if a_ctr:
+            self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, state, actor=a_pet, target=b_pet))
+        if b_ctr:
+            self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, state, actor=b_pet, target=a_pet))
 
         # Execute faster
         countered_1 = (first_team == "a" and b_ctr) or (first_team == "b" and a_ctr)
@@ -192,6 +198,15 @@ class BattleEngine:
     def _cat(self, pet: PetState, decision: MoveDecision) -> str:
         return get_skill_category(pet, decision.skill_index or 0)
 
+    def _priority(self, pet: PetState, decision: MoveDecision) -> int:
+        """Get priority modifier from the selected move (or 0 if switching)."""
+        if decision.action != "move" or decision.skill_index is None:
+            return 0
+        idx = decision.skill_index
+        if idx < 0 or idx >= len(pet.moves):
+            return 0
+        return pet.moves[idx].priority_mod
+
     def _exec(self, actor: PetState, target: PetState,
               decision: MoveDecision, team: str,
               state: BattleState, countered: bool = False) -> None:
@@ -207,17 +222,23 @@ class BattleEngine:
             self.bus.emit(ctx)
             if ctx.cancelled:
                 return
+            actor._turn_power_mod = ctx.power_mod
             hp_before = target.current_hp
             execute_move(actor, target, decision.skill_index, state, countered)
+            actor._turn_power_mod = 1.0
             dmg_taken = hp_before - target.current_hp
+            skill = actor.moves[decision.skill_index] if decision.skill_index < len(actor.moves) else None
             if dmg_taken > 0:
-                skill = actor.moves[decision.skill_index] if decision.skill_index < len(actor.moves) else None
                 self.bus.emit(EventCtx(GameEvent.AFTER_DAMAGE, state,
                     actor=actor, target=target,
                     data={"damage": dmg_taken, "skill": skill}))
                 self.bus.emit(EventCtx(GameEvent.TAKE_DAMAGE, state,
                     actor=target, target=actor,
                     data={"damage": dmg_taken}))
+            # AFTER_MOVE (for force switch etc.)
+            self.bus.emit(EventCtx(GameEvent.AFTER_MOVE, state,
+                actor=actor, target=target,
+                data={"skill": skill, "damage": dmg_taken}))
             if target.current_hp <= 0:
                 self._handle_faint(target, state)
 

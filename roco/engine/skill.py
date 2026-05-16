@@ -126,12 +126,13 @@ def _execute_damage(
     mark_buff = apply_marks_to_attack_power(
         skill.power, skill.element, attacker_marks, attacker.element_primary)
     counter_buff = COUNTER_DAMAGE_BONUS if countered else 1.0
+    env_power_mod = getattr(attacker, "_turn_power_mod", 1.0)
 
     damage = calc_attack_damage(
         skill.power, atk, dfn, type_mult,
         stab=stab, weather_mult=weather_mult,
         hit_count=skill.hit_count,
-        power_buff=mark_buff * counter_buff * attacker.power_multiplier,
+        power_buff=mark_buff * counter_buff * attacker.power_multiplier * env_power_mod,
     )
 
     # Meteor extra damage
@@ -304,6 +305,7 @@ def _apply_post_effects(
     # Leech stacks
     if skill.leech_stacks > 0:
         defender.status_stacks["寄生"] = defender.status_stacks.get("寄生", 0) + skill.leech_stacks
+        defender.leech_source = attacker.name
 
 
 # ── Event bus registration ─────────────────────────────────────
@@ -350,9 +352,120 @@ def register_skill_handlers(bus: "EventBus") -> None:
         if skill_data.enemy_lose_energy > 0:
             defender.current_energy = max(0, defender.current_energy - skill_data.enemy_lose_energy)
 
-        # Leech stacks
+        # Leech stacks — track who applied them for heal-back
         if skill_data.leech_stacks > 0:
             defender.status_stacks["寄生"] = (
                 defender.status_stacks.get("寄生", 0) + skill_data.leech_stacks)
+            defender.leech_source = attacker.name
 
     bus.on(GameEvent.AFTER_DAMAGE, on_after_damage, priority=60, source="skill")
+
+    def on_force_switch(ctx: EventCtx) -> None:
+        """Force switch: self-pivot (折返) — auto-switch attacker after move."""
+        skill_data = ctx.data.get("skill")
+        if not skill_data or not skill_data.force_switch:
+            return
+        attacker = ctx.actor
+        if not attacker or attacker.is_fainted:
+            return
+        state = ctx.state
+        team = state.team_a if attacker in state.team_a else state.team_b
+        is_a = team is state.team_a
+        alive = [i for i, p in enumerate(team) if not p.is_fainted and p != attacker]
+        if not alive:
+            return
+        # Auto-switch to first alive bench
+        new_idx = alive[0]
+        if is_a:
+            state.active_a = new_idx
+        else:
+            state.active_b = new_idx
+        state.log.append(BattleEvent(
+            turn=state.turn_number, actor=attacker.name, action="switch",
+            detail={"from": attacker.name, "to": team[new_idx].name, "force": True},
+        ))
+
+    bus.on(GameEvent.AFTER_MOVE, on_force_switch, priority=50, source="skill")
+
+    def on_before_move(ctx: EventCtx) -> None:
+        """Pre-move modifiers: energy all-in, conditional power, counter reflect."""
+        attacker = ctx.actor
+        skill_data = ctx.data.get("skill")
+        if not attacker or not skill_data:
+            return
+
+        # ── Energy all-in (全额投入): drain all energy, +25 power per point ──
+        if "耗尽" in skill_data.effect or "全额" in skill_data.effect:
+            remaining = attacker.current_energy
+            if remaining > 0:
+                # Bonus power = 25 per energy consumed
+                ctx.power_mod += remaining * 0.25  # 25% per energy point
+                attacker.current_energy = 0
+                ctx.data["_all_in_energy"] = remaining
+
+        # ── Conditional power: first-hit bonus ──
+        if "先手" in skill_data.effect and "威力" in skill_data.effect:
+            # Check if attacker is faster
+            opp_team = ctx.state.team_b if attacker in ctx.state.team_a else ctx.state.team_a
+            opp = opp_team[ctx.state.active_b if attacker in ctx.state.team_a else ctx.state.active_a]
+            if attacker.speed >= opp.speed:
+                ctx.power_mod += 0.50  # +50% power when faster
+
+        # ── Counter power: 3x on successful counter ──
+        if ctx.data.get("countered"):
+            if "应对" in skill_data.effect and "威力" in skill_data.effect:
+                ctx.power_mod *= 2.0  # 翻倍 on counter
+
+    bus.on(GameEvent.BEFORE_MOVE, on_before_move, priority=40, source="skill")
+
+    def on_weather_skill(ctx: EventCtx) -> None:
+        """Skills that set weather (沙涌→sandstorm, 祈雨→rain, 冰雹/雪天→snow)."""
+        skill_data = ctx.data.get("skill")
+        if not skill_data:
+            return
+        eff = skill_data.effect
+        state = ctx.state
+        if "沙涌" in eff or "沙暴" in eff:
+            state.weather = "sandstorm"
+            state.weather_turns = 5
+        elif "祈雨" in eff or "求雨" in eff:
+            state.weather = "rain"
+            state.weather_turns = 5
+        elif "冰雹" in eff or "雪天" in eff or "暴风雪" in eff:
+            state.weather = "snow"
+            state.weather_turns = 5
+
+    bus.on(GameEvent.AFTER_MOVE, on_weather_skill, priority=30, source="skill")
+
+    def on_counter_interrupt(ctx: EventCtx) -> None:
+        """Counter interrupt: only cancel if the counter-er has '打断' effect."""
+        # The countered flag means the other side's move counters this one.
+        # Only cancel if explicit interrupt (counter-er has 打断 keyword).
+        # We check the current move's category — if it's being countered,
+        # and the counter-er has an interrupt effect, cancel.
+        pass  # Interrupt is contextual — handled by the counter-er's skill effect
+
+    bus.on(GameEvent.BEFORE_MOVE, on_counter_interrupt, priority=10, source="counter")
+
+    def on_leech_tick(ctx: EventCtx) -> None:
+        """Leech tick: 8%/stack damage, heal caster."""
+        state = ctx.state
+        for pet in state.team_a + state.team_b:
+            stacks = pet.status_stacks.get("寄生", 0)
+            if stacks <= 0 or pet.is_fainted or not pet.leech_source:
+                continue
+            dmg = int(pet.max_hp * 0.08 * stacks)
+            pet.current_hp = max(0, pet.current_hp - dmg)
+            # Find caster and heal
+            for team in (state.team_a, state.team_b):
+                for p in team:
+                    if p.name == pet.leech_source and not p.is_fainted:
+                        heal = dmg
+                        p.current_hp = min(p.max_hp, p.current_hp + heal)
+                        break
+            state.log.append(BattleEvent(
+                turn=state.turn_number, actor=pet.name, action="status_tick",
+                detail={"status": "寄生", "damage": dmg, "stacks": stacks},
+            ))
+
+    bus.on(GameEvent.TURN_END, on_leech_tick, priority=180, source="skill")
