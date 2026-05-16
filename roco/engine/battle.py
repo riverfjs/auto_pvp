@@ -1,100 +1,164 @@
-"""Turn-based battle engine for Roco Kingdom PVP simulation.
+"""Turn-based battle engine — emits events, subsystems react via EventBus.
 
 Deterministic: same inputs + same move choices = same outcome.
-Randomness comes from the policy layer, NOT the engine.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from roco.engine.damage import (
-    calc_burn_damage, calc_burn_decay, calc_poison_damage,
-    get_type_multiplier, calc_energy_after_gain, can_use_skill,
-    apply_buff_stages,
+    calc_energy_after_gain, can_use_skill,
 )
 from roco.engine.state import (
-    PetState, BattleEvent, MoveDecision, BattleState, DEFAULT_MAGIC_POWER,
+    PetState, BattleEvent as BEvent, MoveDecision, BattleState,
 )
 from roco.engine.skill import execute_move, get_skill_category
-from roco.engine.ability import trigger, AbilityTiming
+from roco.engine.events import EventBus, EventCtx, GameEvent
 from roco.config.constants import (
-    ENERGY_GAIN_PER_TURN, STARTING_ENERGY, MAX_ENERGY,
-    DEFAULT_MAX_TURNS,
+    ENERGY_GAIN_PER_TURN, STARTING_ENERGY, MAX_ENERGY, DEFAULT_MAX_TURNS,
 )
-from roco.systems.weather import sandstorm_chip_damage, snow_frostbite_damage, is_sandstorm_immune
-from roco.systems.marks import apply_marks_to_speed, apply_marks_to_skill_cost, apply_marks_on_enter, tick_marks_end_of_turn
+from roco.systems.marks import apply_marks_to_speed, apply_marks_to_skill_cost
 from roco.systems.counter import resolve_counter
 
+# Import subsystem registration functions
+from roco.systems.weather import register_weather_handlers
+from roco.systems.marks import register_mark_handlers
+from roco.engine.skill import register_skill_handlers
 
-# ── Battle engine ──────────────────────────────────────────────
 
 class BattleEngine:
-    """Deterministic battle simulator. Call step() per turn."""
+    """Deterministic battle simulator. Events-based architecture."""
 
     def __init__(self, team_a: list[PetState], team_b: list[PetState],
                  max_turns: int = DEFAULT_MAX_TURNS):
         self.max_turns = max_turns
-        # Validate teams
         if not team_a or not team_b:
             raise ValueError("Both teams must have at least 1 pet")
-        self.state = BattleState(
-            team_a=team_a,
-            team_b=team_b,
-            active_a=0,
-            active_b=0,
-        )
-        # Set starting HP + trigger passive abilities
+
+        self.state = BattleState(team_a=team_a, team_b=team_b,
+                                 active_a=0, active_b=0)
+
+        # ── Event bus + subsystem registration ──
+        self.bus = EventBus()
+        register_weather_handlers(self.bus)
+        register_mark_handlers(self.bus)
+        register_skill_handlers(self.bus)
+        self._register_engine_handlers()
+
+        # Init pets
         for pet in team_a + team_b:
             pet.current_hp = pet.max_hp
             pet.current_energy = STARTING_ENERGY
             pet.buff_stages = {}
             pet.status_stacks = {}
             pet.is_fainted = False
-            trigger(pet, AbilityTiming.PASSIVE, self.state)
+
+        # Emit SWITCH_IN for starting active pets (triggers ON_ENTER abilities)
+        for team, pet in (("a", team_a[0]), ("b", team_b[0])):
+            self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet,
+                                   data={"team": team}))
+
+    # ── Event handlers registered by engine itself ──────────────
+
+    def _register_engine_handlers(self) -> None:
+        bus = self.bus
+        bus.on(GameEvent.FAINT, self._on_faint_magic, priority=999, source="engine")
+        bus.on(GameEvent.TURN_END, self._on_turn_end_status, priority=300, source="engine")
+
+    def _on_faint_magic(self, ctx: EventCtx) -> None:
+        """Engine-level: deduct magic_power on faint (except 诈死)."""
+        pet = ctx.actor
+        if not pet:
+            return
+        state = ctx.state
+        is_a = pet in state.team_a
+        magic_cost = 0 if "诈死" in pet.ability_name else 1
+        if is_a:
+            state.magic_a = max(0, state.magic_a - magic_cost)
+        else:
+            state.magic_b = max(0, state.magic_b - magic_cost)
+        state.log.append(BEvent(
+            turn=state.turn_number, actor=pet.name, action="faint",
+            detail={"magic_cost": magic_cost,
+                    "magic_remaining": state.magic_a if is_a else state.magic_b},
+        ))
+
+    def _on_turn_end_status(self, ctx: EventCtx) -> None:
+        """Engine-level: per-pet burn/poison status ticks."""
+        from roco.engine.damage import (
+            calc_burn_damage, calc_burn_decay, calc_poison_damage,
+            get_type_multiplier,
+        )
+        state = ctx.state
+        for pet in state.team_a + state.team_b:
+            if pet.is_fainted:
+                continue
+            if "灼烧" in pet.status_stacks:
+                stacks = pet.status_stacks["灼烧"]
+                tm = get_type_multiplier("火", pet.defender_types)
+                dmg = calc_burn_damage(pet.max_hp, stacks, tm, mid_turn=False)
+                pet.current_hp = max(0, pet.current_hp - dmg)
+                pet.status_stacks["灼烧"] = calc_burn_decay(stacks)
+                state.log.append(BEvent(
+                    turn=state.turn_number, actor=pet.name, action="status_tick",
+                    detail={"status": "灼烧", "damage": dmg, "stacks_before": stacks},
+                ))
+            if "中毒" in pet.status_stacks:
+                stacks = pet.status_stacks["中毒"]
+                dmg = calc_poison_damage(pet.max_hp, stacks)
+                pet.current_hp = max(0, pet.current_hp - dmg)
+                state.log.append(BEvent(
+                    turn=state.turn_number, actor=pet.name, action="status_tick",
+                    detail={"status": "中毒", "damage": dmg},
+                ))
+            if pet.current_hp <= 0:
+                self._handle_faint(pet, state)
 
     # ── public API ──────────────────────────────────────────────
 
     def step(self, move_a: MoveDecision, move_b: MoveDecision) -> BattleState:
-        """Execute one full turn. Returns updated state."""
         state = self.state
         state.turn_number += 1
 
-        # 1. Start of turn: energy gain
-        self._start_of_turn()
+        # TURN_START event (before energy gain)
+        self.bus.emit(EventCtx(GameEvent.TURN_START, state))
 
-        # 2. Resolve turn order by speed (with mark-modified speed)
+        # Energy gain
+        for team in (state.team_a, state.team_b):
+            for pet in team:
+                if not pet.is_fainted:
+                    pet.current_energy = calc_energy_after_gain(pet.current_energy)
+
+        # Speed order
         a_pet = state.team_a[state.active_a]
         b_pet = state.team_b[state.active_b]
         a_speed = apply_marks_to_speed(a_pet.speed, state.marks_a)
         b_speed = apply_marks_to_speed(b_pet.speed, state.marks_b)
         a_first = a_speed >= b_speed
 
-        first_pet, second_pet = (a_pet, b_pet) if a_first else (b_pet, a_pet)
-        first_move, second_move = (move_a, move_b) if a_first else (move_b, move_a)
-        first_team, second_team = ("a", "b") if a_first else ("b", "a")
+        first_pet = a_pet if a_first else b_pet
+        second_pet = b_pet if a_first else a_pet
+        first_move = move_a if a_first else move_b
+        second_move = move_b if a_first else move_a
+        first_team = "a" if a_first else "b"
+        second_team = "b" if a_first else "a"
 
-        # 2.5 Resolve counter
-        a_skill_cat = self._get_skill_cat(a_pet, move_a)
-        b_skill_cat = self._get_skill_cat(b_pet, move_b)
-        a_counters_b, b_counters_a = resolve_counter(a_skill_cat, b_skill_cat)
+        # Counter resolution
+        a_cat = self._cat(a_pet, move_a)
+        b_cat = self._cat(b_pet, move_b)
+        a_ctr, b_ctr = resolve_counter(a_cat, b_cat)
 
-        # 3. Execute faster pet
-        self._execute_decision(first_pet, second_pet, first_move, first_team, state,
-                               countered=(first_team == "a" and b_counters_a) or
-                                         (first_team == "b" and a_counters_b))
+        # Execute faster
+        countered_1 = (first_team == "a" and b_ctr) or (first_team == "b" and a_ctr)
+        self._exec(first_pet, second_pet, first_move, first_team, state, countered_1)
 
         if not second_pet.is_fainted:
-            # 4. Execute slower pet
-            self._execute_decision(second_pet, first_pet, second_move, second_team, state,
-                                   countered=(second_team == "a" and b_counters_a) or
-                                             (second_team == "b" and a_counters_b))
+            countered_2 = (second_team == "a" and b_ctr) or (second_team == "b" and a_ctr)
+            self._exec(second_pet, first_pet, second_move, second_team, state, countered_2)
 
-        # 5. End of turn: status ticks, burn decay, buff decay
-        self._end_of_turn()
+        # TURN_END event (weather, marks, status ticks)
+        self.bus.emit(EventCtx(GameEvent.TURN_END, state))
 
-        # 6. Check win condition
         self._check_win(state)
-
         return state
 
     def is_finished(self) -> bool:
@@ -108,48 +172,48 @@ class BattleEngine:
         return (self.state.team_a if team == "a" else self.state.team_b)[idx]
 
     def get_available_switches(self, team: str) -> list[int]:
-        """Indices of non-fainted bench pets."""
         pets = self.state.team_a if team == "a" else self.state.team_b
-        active_idx = self.state.active_a if team == "a" else self.state.active_b
-        return [i for i, p in enumerate(pets) if i != active_idx and not p.is_fainted]
+        active = self.state.active_a if team == "a" else self.state.active_b
+        return [i for i, p in enumerate(pets) if i != active and not p.is_fainted]
 
     def get_valid_moves(self, team: str) -> list[int]:
-        """Indices of moves the active pet can use (energy + cooldown + charge)."""
         pet = self.get_active(team)
-        # If charging, only the charged skill is valid
         if pet.charging_skill_idx >= 0:
             return [pet.charging_skill_idx]
-        team_marks = self.state.marks_a if team == "a" else self.state.marks_b
-        return [
-            i for i, m in enumerate(pet.moves)
-            if can_use_skill(pet.current_energy,
-                           apply_marks_to_skill_cost(m.energy, team_marks))
-            and pet.cooldowns.get(i, 0) <= 0
-        ]
+        marks = self.state.marks_a if team == "a" else self.state.marks_b
+        return [i for i, m in enumerate(pet.moves)
+                if can_use_skill(pet.current_energy,
+                               apply_marks_to_skill_cost(m.energy, marks))
+                and pet.cooldowns.get(i, 0) <= 0]
 
     # ── internal ────────────────────────────────────────────────
 
-    def _start_of_turn(self) -> None:
-        state = self.state
-        for team in (state.team_a, state.team_b):
-            for pet in team:
-                if not pet.is_fainted:
-                    pet.current_energy = calc_energy_after_gain(pet.current_energy)
-
-    def _get_skill_cat(self, pet: PetState, decision: MoveDecision) -> str:
+    def _cat(self, pet: PetState, decision: MoveDecision) -> str:
         return get_skill_category(pet, decision.skill_index or 0)
 
-
-    def _execute_decision(self, actor: PetState, target: PetState,
-                          decision: MoveDecision, team: str,
-                          state: BattleState, countered: bool = False) -> None:
+    def _exec(self, actor: PetState, target: PetState,
+              decision: MoveDecision, team: str,
+              state: BattleState, countered: bool = False) -> None:
         if actor.is_fainted:
             return
-
         if decision.action == "switch":
             self._do_switch(actor, decision, team, state)
         elif decision.action == "move" and decision.skill_index is not None:
+            # BEFORE_MOVE event (can cancel via ctx.cancelled)
+            ctx = EventCtx(GameEvent.BEFORE_MOVE, state, actor=actor, target=target,
+                           data={"team": team, "countered": countered,
+                                 "skill_index": decision.skill_index})
+            self.bus.emit(ctx)
+            if ctx.cancelled:
+                return
+            hp_before = target.current_hp
             execute_move(actor, target, decision.skill_index, state, countered)
+            dmg_taken = hp_before - target.current_hp
+            if dmg_taken > 0:
+                skill = actor.moves[decision.skill_index] if decision.skill_index < len(actor.moves) else None
+                self.bus.emit(EventCtx(GameEvent.AFTER_DAMAGE, state,
+                    actor=actor, target=target,
+                    data={"damage": dmg_taken, "skill": skill}))
             if target.current_hp <= 0:
                 self._handle_faint(target, state)
 
@@ -158,7 +222,6 @@ class BattleEngine:
         pets = state.team_a if team == "a" else state.team_b
         if decision.switch_slot is None:
             return
-
         new_idx = decision.switch_slot
         if new_idx < 0 or new_idx >= len(pets):
             return
@@ -166,13 +229,13 @@ class BattleEngine:
         if new_pet.is_fainted:
             return
 
-        # Clear charge on switch-out
+        # SWITCH_OUT event
+        self.bus.emit(EventCtx(GameEvent.SWITCH_OUT, state, actor=switcher,
+                               data={"team": team}))
         switcher.charging_skill_idx = -1
 
-        state.log.append(BattleEvent(
-            turn=state.turn_number,
-            actor=switcher.name,
-            action="switch",
+        state.log.append(BEvent(
+            turn=state.turn_number, actor=switcher.name, action="switch",
             detail={"from": switcher.name, "to": new_pet.name},
         ))
 
@@ -183,60 +246,38 @@ class BattleEngine:
 
         new_pet.current_energy = max(new_pet.current_energy, 0)
 
-        # Trigger ON_ENTER ability
-        trigger(new_pet, AbilityTiming.ON_ENTER, state)
-
-        # Apply mark on-enter effects
-        marks = state.marks_a if team == "a" else state.marks_b
-        mark_hp, mark_nrg = apply_marks_on_enter(new_pet, marks)
-        if mark_hp > 0:
-            new_pet.current_hp = max(0, new_pet.current_hp - mark_hp)
-        if mark_nrg > 0:
-            new_pet.current_energy = max(0, new_pet.current_energy - mark_nrg)
+        # SWITCH_IN event (marks + abilities trigger through this)
+        self.bus.emit(EventCtx(GameEvent.SWITCH_IN, state, actor=new_pet,
+                               data={"team": team}))
 
     def _handle_faint(self, pet: PetState, state: BattleState) -> None:
         pet.is_fainted = True
         pet.current_hp = 0
 
-        # ── Ability triggers ──
-        trigger(pet, AbilityTiming.ON_FAINT, state)
-        # Find killer (last attacker) and trigger ON_KILL
+        # Find killer
+        killer: PetState | None = None
         for ev in reversed(state.log):
             if ev.action == "attack" and ev.detail.get("target") == pet.name:
-                killer_name = ev.actor
                 opp_team = state.team_b if pet in state.team_a else state.team_a
                 for opp in opp_team:
-                    if opp.name == killer_name:
-                        trigger(opp, AbilityTiming.ON_KILL, state, target=pet)
+                    if opp.name == ev.actor:
+                        killer = opp
                         break
                 break
 
-        # Determine which team and apply magic_power cost
+        # FAINT event (magic cost handled by engine handler)
+        self.bus.emit(EventCtx(GameEvent.FAINT, state, actor=pet,
+                               target=killer))
+
+        # KILL event (ability triggers for killer)
+        if killer:
+            self.bus.emit(EventCtx(GameEvent.KILL, state, actor=killer,
+                                   target=pet))
+
+        # Auto-switch
         team = state.team_a if pet in state.team_a else state.team_b
         is_a = team is state.team_a
-
-        # "诈死" ability: fainting doesn't cost magic power
-        magic_cost = 1
-        if "诈死" in pet.ability_name:
-            magic_cost = 0
-
-        if is_a:
-            state.magic_a = max(0, state.magic_a - magic_cost)
-        else:
-            state.magic_b = max(0, state.magic_b - magic_cost)
-
-        state.log.append(BattleEvent(
-            turn=state.turn_number,
-            actor=pet.name,
-            action="faint",
-            detail={"magic_cost": magic_cost,
-                    "magic_remaining": state.magic_a if is_a else state.magic_b},
-        ))
-
-        # Auto-switch to first available bench pet
         active_idx = state.active_a if is_a else state.active_b
-
-        # Only auto-switch if this was the active pet
         idx_in_team = team.index(pet) if pet in team else -1
         if idx_in_team != active_idx:
             return
@@ -247,112 +288,28 @@ class BattleEngine:
                     state.active_a = i
                 else:
                     state.active_b = i
-                state.log.append(BattleEvent(
-                    turn=state.turn_number,
-                    actor=p.name,
-                    action="switch",
+                state.log.append(BEvent(
+                    turn=state.turn_number, actor=p.name, action="switch",
                     detail={"auto": True, "reason": "faint_replace"},
                 ))
+                # SWITCH_IN for new active
+                self.bus.emit(EventCtx(GameEvent.SWITCH_IN, state, actor=p,
+                                       data={"team": "a" if is_a else "b",
+                                             "auto": True}))
                 return
-
-    def _end_of_turn(self) -> None:
-        state = self.state
-
-        # ── Weather effects ──
-        if state.weather == "sandstorm":
-            for pet in state.team_a + state.team_b:
-                if pet.is_fainted:
-                    continue
-                if is_sandstorm_immune(pet.element_primary):
-                    continue
-                dmg = sandstorm_chip_damage(pet.max_hp)
-                pet.current_hp = max(0, pet.current_hp - dmg)
-                state.log.append(BattleEvent(
-                    turn=state.turn_number, actor=pet.name,
-                    action="status_tick",
-                    detail={"weather": "sandstorm", "damage": dmg},
-                ))
-                if pet.current_hp <= 0:
-                    self._handle_faint(pet, state)
-
-        elif state.weather == "snow":
-            for pet in state.team_a + state.team_b:
-                if pet.is_fainted:
-                    continue
-                frost = snow_frostbite_damage(pet.max_hp)
-                pet.frostbite_damage += frost
-                # Snow also applies 2 freeze stacks
-                pet.status_stacks["冻结"] = pet.status_stacks.get("冻结", 0) + 2
-                state.log.append(BattleEvent(
-                    turn=state.turn_number, actor=pet.name,
-                    action="status_tick",
-                    detail={"weather": "snow", "frostbite": frost},
-                ))
-
-        # ── Weather duration ──
-        if state.weather and state.weather_turns > 0:
-            state.weather_turns -= 1
-            if state.weather_turns <= 0:
-                state.weather = None
-
-        # ── Per-pet status & mark ticks ──
-        for team_id, team in (("a", state.team_a), ("b", state.team_b)):
-            marks = state.marks_a if team_id == "a" else state.marks_b
-            for pet in team:
-                if pet.is_fainted:
-                    continue
-
-                # Burn tick
-                if "灼烧" in pet.status_stacks:
-                    stacks = pet.status_stacks["灼烧"]
-                    type_mult = get_type_multiplier("火", pet.defender_types)
-                    dmg = calc_burn_damage(pet.max_hp, stacks, type_mult, mid_turn=False)
-                    pet.current_hp = max(0, pet.current_hp - dmg)
-                    state.log.append(BattleEvent(
-                        turn=state.turn_number, actor=pet.name,
-                        action="status_tick",
-                        detail={"status": "灼烧", "damage": dmg, "stacks_before": stacks},
-                    ))
-                    pet.status_stacks["灼烧"] = calc_burn_decay(stacks)
-
-                # Poison (individual status)
-                if "中毒" in pet.status_stacks:
-                    stacks = pet.status_stacks["中毒"]
-                    dmg = calc_poison_damage(pet.max_hp, stacks)
-                    pet.current_hp = max(0, pet.current_hp - dmg)
-                    state.log.append(BattleEvent(
-                        turn=state.turn_number, actor=pet.name,
-                        action="status_tick",
-                        detail={"status": "中毒", "damage": dmg},
-                    ))
-
-                # Mark end-of-turn effects (poison mark, solar mark)
-                mark_hp_loss, mark_energy = tick_marks_end_of_turn(pet, marks)
-                if mark_hp_loss > 0:
-                    pet.current_hp = max(0, pet.current_hp - mark_hp_loss)
-                if mark_energy > 0:
-                    pet.current_energy = min(ENERGY_CAP, pet.current_energy + mark_energy)
-
-                if pet.current_hp <= 0:
-                    self._handle_faint(pet, state)
 
     def _check_win(self, state: BattleState) -> None:
         a_magic = state.magic_a <= 0
         b_magic = state.magic_b <= 0
         a_wipe = all(p.is_fainted for p in state.team_a)
         b_wipe = all(p.is_fainted for p in state.team_b)
-
-        # Loss conditions: magic depleted OR all 6 fainted with no bench
-        a_lost = a_magic or a_wipe
-        b_lost = b_magic or b_wipe
-
-        # Also check if active fainted but no switch available
         a_active = state.team_a[state.active_a]
         b_active = state.team_b[state.active_b]
-        if a_active.is_fainted and not self.get_available_switches("a"):
-            a_lost = True
-        if b_active.is_fainted and not self.get_available_switches("b"):
-            b_lost = True
+
+        a_lost = a_magic or a_wipe or (
+            a_active.is_fainted and not self.get_available_switches("a"))
+        b_lost = b_magic or b_wipe or (
+            b_active.is_fainted and not self.get_available_switches("b"))
 
         if a_lost and b_lost:
             state.winner = "draw"

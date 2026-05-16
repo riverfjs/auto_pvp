@@ -93,7 +93,7 @@ def execute_move(
     elif skill.category == "防御":
         _execute_defense(attacker, skill, state)
 
-    # ── Post-execution effects ──
+    # ── Post-execution effects (still needed for non-bus path in tests) ──
     _apply_post_effects(attacker, defender, skill, state)
 
     # ── Cooldown ──
@@ -308,3 +308,55 @@ def _apply_post_effects(
     # Leech stacks
     if skill.leech_stacks > 0:
         defender.status_stacks["寄生"] = defender.status_stacks.get("寄生", 0) + skill.leech_stacks
+
+
+# ── Event bus registration ─────────────────────────────────────
+
+def register_skill_handlers(bus: "EventBus") -> None:
+    """Register skill-effect post-processing handlers on the event bus."""
+    from roco.engine.events import GameEvent, EventCtx
+
+    def on_after_damage(ctx: EventCtx) -> None:
+        """Post-damage effects: life drain, heal, energy steal."""
+        attacker = ctx.actor
+        defender = ctx.target
+        if not attacker or not defender:
+            return
+        skill_data = ctx.data.get("skill")
+        if not skill_data:
+            return
+
+        # Life drain
+        if skill_data.life_drain > 0:
+            dmg = ctx.data.get("damage", 0)
+            heal = int(dmg * skill_data.life_drain)
+            attacker.current_hp = min(attacker.max_hp, attacker.current_hp + heal)
+
+        # Self heal HP
+        if skill_data.self_heal_hp > 0:
+            heal = int(attacker.max_hp * skill_data.self_heal_hp)
+            attacker.current_hp = min(attacker.max_hp, attacker.current_hp + heal)
+
+        # Self heal energy
+        if skill_data.self_heal_energy > 0:
+            from roco.config.constants import MAX_ENERGY
+            attacker.current_energy = min(MAX_ENERGY,
+                attacker.current_energy + skill_data.self_heal_energy)
+
+        # Steal energy
+        if skill_data.steal_energy > 0:
+            stolen = min(skill_data.steal_energy, defender.current_energy)
+            defender.current_energy -= stolen
+            from roco.config.constants import MAX_ENERGY
+            attacker.current_energy = min(MAX_ENERGY, attacker.current_energy + stolen)
+
+        # Enemy lose energy
+        if skill_data.enemy_lose_energy > 0:
+            defender.current_energy = max(0, defender.current_energy - skill_data.enemy_lose_energy)
+
+        # Leech stacks
+        if skill_data.leech_stacks > 0:
+            defender.status_stacks["寄生"] = (
+                defender.status_stacks.get("寄生", 0) + skill_data.leech_stacks)
+
+    bus.on(GameEvent.AFTER_DAMAGE, on_after_damage, priority=60, source="skill")

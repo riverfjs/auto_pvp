@@ -128,3 +128,39 @@ def calc_meteor_extra_damage(marks: dict[str, float]) -> int:
     if stacks <= 0:
         return 0
     return stacks * METEOR_EXTRA_DMG
+
+
+# ── Event bus registration ─────────────────────────────────────
+
+def register_mark_handlers(bus: "EventBus") -> None:
+    """Register mark effects on the event bus."""
+    from roco.engine.events import GameEvent, EventCtx
+    from roco.config.constants import MAX_ENERGY
+
+    def on_switch_in(ctx: EventCtx) -> None:
+        pet = ctx.actor
+        if not pet:
+            return
+        team = ctx.data.get("team", "a")
+        marks = ctx.state.marks_a if team == "a" else ctx.state.marks_b
+        hp_loss, energy_loss = apply_marks_on_enter(pet, marks)
+        if hp_loss > 0:
+            pet.current_hp = max(0, pet.current_hp - hp_loss)
+        if energy_loss > 0:
+            pet.current_energy = max(0, pet.current_energy - energy_loss)
+
+    def on_turn_end(ctx: EventCtx) -> None:
+        state = ctx.state
+        for team_id, team in (("a", state.team_a), ("b", state.team_b)):
+            marks = state.marks_a if team_id == "a" else state.marks_b
+            for pet in team:
+                if pet.is_fainted:
+                    continue
+                hp_loss, energy_gain = tick_marks_end_of_turn(pet, marks)
+                if hp_loss > 0:
+                    pet.current_hp = max(0, pet.current_hp - hp_loss)
+                if energy_gain > 0:
+                    pet.current_energy = min(MAX_ENERGY, pet.current_energy + energy_gain)
+
+    bus.on(GameEvent.SWITCH_IN, on_switch_in, priority=80, source="marks")
+    bus.on(GameEvent.TURN_END, on_turn_end, priority=200, source="marks")

@@ -39,3 +39,39 @@ def sandstorm_chip_damage(max_hp: int) -> int:
 def snow_frostbite_damage(max_hp: int) -> int:
     """Snow end-of-turn frostbite accumulation: floor(max_hp / 12)."""
     return max_hp // SNOW_FROSTBITE_FRACTION
+
+
+# ── Event bus registration ─────────────────────────────────────
+
+def register_weather_handlers(bus: "EventBus") -> None:
+    """Register weather effects on the event bus."""
+    from roco.engine.events import GameEvent, EventCtx
+
+    def weather_tick(ctx: EventCtx) -> None:
+        state = ctx.state
+        weather = state.weather
+        if not weather:
+            return
+
+        # Weather duration
+        if state.weather_turns > 0:
+            state.weather_turns -= 1
+            if state.weather_turns <= 0:
+                state.weather = None
+                return
+
+        if weather == "sandstorm":
+            for pet in state.team_a + state.team_b:
+                if pet.is_fainted or is_sandstorm_immune(pet.element_primary):
+                    continue
+                dmg = sandstorm_chip_damage(pet.max_hp)
+                pet.current_hp = max(0, pet.current_hp - dmg)
+        elif weather == "snow":
+            for pet in state.team_a + state.team_b:
+                if pet.is_fainted:
+                    continue
+                frost = snow_frostbite_damage(pet.max_hp)
+                pet.frostbite_damage += frost
+                pet.status_stacks["冻结"] = pet.status_stacks.get("冻结", 0) + 2
+
+    bus.on(GameEvent.TURN_END, weather_tick, priority=250, source="weather")
