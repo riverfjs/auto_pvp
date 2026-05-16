@@ -7,7 +7,7 @@ Usage:
 """
 
 import re
-from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.utils import RAW_DIR, PARSED_DIR, load_json, save_json
 
 # Mapping: SMW printout key → English field name (used as flat key in raw data)
 SMW_TO_EN = {

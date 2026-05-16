@@ -17,7 +17,7 @@ Usage:
 """
 
 import re
-from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.utils import RAW_DIR, PARSED_DIR, load_json, save_json
 
 # Extract section text between a heading and the next heading
 SECTION_RE = re.compile(r"===?\s*(.+?)\s*===?\s*\n(.*?)(?=\n===|\Z)", re.DOTALL)

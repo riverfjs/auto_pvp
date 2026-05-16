@@ -17,16 +17,11 @@ import random
 import sys
 import argparse
 from collections import Counter
-from scripts.battle import (
-    BattleEngine,
-    BattleState,
-    MoveDecision,
-    PetState,
-    SkillRef,
-)
-from scripts.damage import compute_stats
-from scripts.utils import DB_DIR
-from scripts.battle_config import DEFAULT_MAX_TURNS
+from roco.engine.battle import BattleEngine
+from roco.engine.state import BattleState, MoveDecision, PetState, SkillRef
+from roco.engine.damage import compute_stats
+from roco.data.utils import DB_DIR
+from roco.config.constants import DEFAULT_MAX_TURNS
 
 
 # ── Team loading ───────────────────────────────────────────────
@@ -168,7 +163,7 @@ class GreedyPolicy(Policy):
 class TypeAdvantagePolicy(Policy):
     """Pick the move with the best type matchup against the opponent."""
     def select_move(self, state: BattleState, team: str) -> MoveDecision:
-        from scripts.damage import get_type_multiplier
+        from roco.damage import get_type_multiplier
 
         pet = _get_active(state, team)
         opp_team = "b" if team == "a" else "a"

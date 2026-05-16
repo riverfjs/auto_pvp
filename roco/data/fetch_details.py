@@ -11,7 +11,7 @@ import sys
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from roco.data.utils import INDEX_DIR, RAW_DIR, fetch_page_wikitext, load_json, save_json
+from roco.utils import INDEX_DIR, RAW_DIR, fetch_page_wikitext, load_json, save_json
 
 
 def fetch_one(title: str) -> tuple[str, str | None, str | None]:

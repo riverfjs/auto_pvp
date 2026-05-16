@@ -1,7 +1,7 @@
 """Unit tests for type_chart.py — verified against WIKI 克制计算器."""
 
 import pytest
-from scripts.type_chart import (
+from roco.engine.type_chart import (
     TYPES,
     CHART,
     STRONG_MULT,

@@ -7,7 +7,7 @@ Usage:
 
 import sqlite3
 import argparse
-from roco.data.utils import DB_DIR
+from roco.utils import DB_DIR
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS pets (

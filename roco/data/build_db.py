@@ -6,7 +6,7 @@ Usage:
     python scripts/build_db.py
 """
 
-from roco.data.utils import PARSED_DIR, DB_DIR, load_json, save_json
+from roco.utils import PARSED_DIR, DB_DIR, load_json, save_json
 
 
 def main() -> None:

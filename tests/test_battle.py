@@ -1,14 +1,11 @@
 """Integration tests for the battle engine."""
 
 import pytest
-from scripts.battle import (
-    BattleEngine,
-    BattleState,
-    MoveDecision,
-    PetState,
-    SkillRef,
+from roco.engine.battle import BattleEngine
+from roco.engine.state import (
+    BattleState, MoveDecision, PetState, SkillRef,
 )
-from scripts.damage import compute_stats
+from roco.engine.damage import compute_stats
 
 
 # ── Fixtures ───────────────────────────────────────────────────

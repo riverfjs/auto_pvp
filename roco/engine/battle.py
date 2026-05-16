@@ -7,143 +7,30 @@ Randomness comes from the policy layer, NOT the engine.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from scripts.damage import (
-    compute_stats,
-    calc_attack_damage,
-    calc_burn_damage,
-    calc_burn_decay,
-    calc_poison_damage,
-    get_type_multiplier,
-    get_stab,
-    can_use_skill,
-    calc_energy_after_gain,
-    calc_energy_after_use,
-    apply_buff_stages,
-    clamp_stage,
+from roco.engine.damage import (
+    compute_stats, calc_attack_damage, calc_burn_damage, calc_burn_decay,
+    calc_poison_damage, get_type_multiplier, get_stab, can_use_skill,
+    calc_energy_after_gain, calc_energy_after_use, apply_buff_stages, clamp_stage,
 )
-from scripts.battle_config import (
-    ENERGY_GAIN_PER_TURN,
-    STARTING_ENERGY,
-    ENERGY_CAP,
-    MAX_ENERGY,
-    DEFAULT_MAX_TURNS,
-    STATUS_ELEMENT_IMMUNITY,
-    COUNTER_DAMAGE_BONUS,
+from roco.engine.state import (
+    SkillRef, PetState, BattleEvent, MoveDecision, BattleState,
+    DEFAULT_MAGIC_POWER,
 )
-from scripts.systems.weather import (
-    weather_damage_mult,
-    sandstorm_chip_damage,
-    snow_frostbite_damage,
-    is_sandstorm_immune,
+from roco.config.constants import (
+    ENERGY_GAIN_PER_TURN, STARTING_ENERGY, MAX_ENERGY,
+    DEFAULT_MAX_TURNS, COUNTER_DAMAGE_BONUS,
 )
-from scripts.systems.marks import (
-    apply_marks_to_speed,
-    apply_marks_to_skill_cost,
-    apply_marks_to_attack_power,
-    apply_marks_on_enter,
-    tick_marks_end_of_turn,
-    calc_meteor_extra_damage,
+from roco.systems.weather import (
+    weather_damage_mult, sandstorm_chip_damage,
+    snow_frostbite_damage, is_sandstorm_immune,
 )
-from scripts.systems.counter import resolve_counter
-from scripts.type_chart import TYPES
-
-
-# ── Data classes ───────────────────────────────────────────────
-
-@dataclass
-class SkillRef:
-    name: str
-    element: str
-    category: str       # 物攻 / 魔攻 / 防御 / 状态
-    energy: int
-    power: int
-    effect: str = ""
-
-
-@dataclass
-class PetState:
-    """Runtime state of a single pet during battle."""
-    name: str
-    base_stats: dict[str, int]          # raw from DB
-    effective_stats: dict[str, int]     # after nature + IV + buffs
-    element_primary: str
-    element_secondary: str = ""
-    bloodline: str = ""
-    nature: str = ""
-    ivs: list[str] = field(default_factory=list)
-    moves: list[SkillRef] = field(default_factory=list)
-    current_hp: int = 0
-    current_energy: int = STARTING_ENERGY
-    buff_stages: dict[str, int] = field(default_factory=dict)
-    status_stacks: dict[str, int] = field(default_factory=dict)
-    frostbite_damage: int = 0          # 冻伤不可恢复伤害 (snow weather)
-    power_multiplier: float = 1.0      # 独立威力乘层
-    charging_skill_idx: int = -1        # -1=无蓄力, >=0=正在蓄力的招式index
-    cooldowns: dict[int, int] = field(default_factory=dict)  # {skill_idx: remaining_cooldown}
-    is_fainted: bool = False
-    slot: int = 0
-    ability_name: str = ""
-    ability_desc: str = ""
-
-    @property
-    def max_hp(self) -> int:
-        return self.effective_stats.get("hp", 1)
-
-    @property
-    def speed(self) -> int:
-        return self.effective_stats.get("speed", 0)
-
-    @property
-    def hp_pct(self) -> float:
-        return self.current_hp / self.max_hp if self.max_hp > 0 else 0
-
-    @property
-    def defender_types(self) -> tuple[str, ...]:
-        types = [self.element_primary]
-        if self.element_secondary:
-            types.append(self.element_secondary)
-        return tuple(types)
-
-    def is_immune_to_status(self, status: str) -> bool:
-        for elem, sname in STATUS_ELEMENT_IMMUNITY.items():
-            if sname == status and elem in self.defender_types:
-                return True
-        return False
-
-
-@dataclass
-class BattleEvent:
-    turn: int
-    actor: str           # pet name
-    action: str           # "attack", "switch", "faint", "status_tick", "energy_gain", "buff"
-    detail: dict = field(default_factory=dict)
-
-
-@dataclass
-class MoveDecision:
-    """A player's decision for one turn."""
-    action: str           # "move" or "switch"
-    skill_index: int | None = None   # 0-3 for "move"
-    switch_slot: int | None = None   # 0-5 for "switch"
-
-
-DEFAULT_MAGIC_POWER: int = 4    # first to lose 4 KOs loses
-
-@dataclass
-class BattleState:
-    team_a: list[PetState]
-    team_b: list[PetState]
-    active_a: int        # index into team_a
-    active_b: int        # index into team_b
-    magic_a: int = DEFAULT_MAGIC_POWER
-    magic_b: int = DEFAULT_MAGIC_POWER
-    weather: str | None = None
-    weather_turns: int = 0
-    marks_a: dict[str, float] = field(default_factory=dict)
-    marks_b: dict[str, float] = field(default_factory=dict)
-    turn_number: int = 0
-    log: list[BattleEvent] = field(default_factory=list)
-    winner: str | None = None   # "a", "b", "draw"
+from roco.systems.marks import (
+    apply_marks_to_speed, apply_marks_to_skill_cost,
+    apply_marks_to_attack_power, apply_marks_on_enter,
+    tick_marks_end_of_turn, calc_meteor_extra_damage,
+)
+from roco.systems.counter import resolve_counter
+from roco.engine.type_chart import TYPES
 
 
 # ── Battle engine ──────────────────────────────────────────────

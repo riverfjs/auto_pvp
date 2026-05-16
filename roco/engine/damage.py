@@ -8,23 +8,15 @@ Uses type_chart.py for type effectiveness (additive: 单克2x, 双克3x).
 
 from __future__ import annotations
 
-from scripts.battle_config import (
-    BURN_HP_CAP,
-    BURN_DAMAGE_PCT,
-    POISON_DAMAGE_PCT,
-    ENERGY_GAIN_PER_TURN,
-    MAX_ENERGY,
-    NATURE_BOOST,
-    NATURE_REDUCE,
-    IV_BONUS,
-    IV_STAT_MAP,
-    MIN_DAMAGE,
-    NATURE_MOD,
-    DAMAGE_FORMULA_CONSTANT,
-    STAB_MULTIPLIER,
+from roco.config.constants import (
+    BURN_HP_CAP, BURN_DAMAGE_PCT, POISON_DAMAGE_PCT,
+    ENERGY_GAIN_PER_TURN, MAX_ENERGY, MIN_DAMAGE,
+    NATURE_BOOST, NATURE_REDUCE, IV_BONUS,
+    DAMAGE_FORMULA_CONSTANT, STAB_MULTIPLIER,
 )
-from scripts.systems.weather import weather_damage_mult
-from scripts.type_chart import effectiveness_v2
+from roco.config.natures import NATURE_MOD, IV_STAT_MAP
+from roco.systems.weather import weather_damage_mult
+from roco.engine.type_chart import effectiveness_v2
 
 
 # ── Stat computation ───────────────────────────────────────────

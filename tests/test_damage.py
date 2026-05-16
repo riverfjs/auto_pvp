@@ -1,7 +1,7 @@
 """Unit tests for damage.py — stat computation & damage formulas."""
 
 import pytest
-from scripts.damage import (
+from roco.engine.damage import (
     compute_stats,
     apply_iv_mod,
     apply_nature_mod,
@@ -17,7 +17,7 @@ from scripts.damage import (
     clamp_stage,
     apply_buff_stages,
 )
-from scripts.battle_config import NATURE_MOD
+from roco.config.natures import NATURE_MOD
 
 
 # ── Stat computation ───────────────────────────────────────────

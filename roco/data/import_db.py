@@ -9,7 +9,7 @@ Usage:
 
 import json
 import sqlite3
-from roco.data.utils import PARSED_DIR, DB_DIR, load_json
+from roco.utils import PARSED_DIR, DB_DIR, load_json
 
 
 def _safe_int(val: str | None) -> int | None:
