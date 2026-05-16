@@ -301,3 +301,73 @@ def test_full_6v6_battle():
 
     assert engine.get_winner() in ("a", "b", "draw")
     assert turns > 0
+
+
+# ── Magic power (4-KO win condition) ───────────────────────────
+
+def test_magic_power_decrements_on_faint():
+    """Each KO costs 1 magic. Start at 4."""
+    killer = _mk_pet("K", hp=200, atk=500, spd=200, element="火", moves=[_ember()])
+    sacks = [_mk_pet(f"S{i}", hp=10, atk=50, spd=10, element="草", moves=[_tackle()])
+             for i in range(6)]
+
+    engine = BattleEngine([killer], sacks)
+    assert engine.state.magic_b == 4
+
+    engine.step(_move(0), _move(0))  # kill sack 1
+    assert engine.state.magic_b == 3
+    assert engine.state.team_b[0].is_fainted
+    assert not engine.is_finished()  # still 3 more to go
+
+    engine.step(_move(0), _move(0))  # kill sack 2
+    assert engine.state.magic_b == 2
+    engine.step(_move(0), _move(0))  # kill sack 3
+    assert engine.state.magic_b == 1
+    engine.step(_move(0), _move(0))  # kill sack 4 → magic = 0
+    assert engine.state.magic_b == 0
+    assert engine.is_finished()
+    assert engine.get_winner() == "a"
+
+
+def test_fake_death_no_magic_cost():
+    """卡瓦重's 诈死: fainting costs 0 magic."""
+    killer = _mk_pet("K", hp=200, atk=500, spd=200, element="火", moves=[_ember()])
+    fake_death = _mk_pet("卡瓦重", hp=50, atk=50, spd=10, element="地", moves=[_tackle()])
+    fake_death.ability_name = "诈死"
+
+    engine = BattleEngine([killer], [fake_death])
+    assert engine.state.magic_b == 4
+
+    engine.step(_move(0), _move(0))  # kill 卡瓦重
+    assert engine.state.magic_b == 4  # unchanged! 诈死
+    assert engine.state.team_b[0].is_fainted
+    assert engine.is_finished()  # no bench → loss
+    assert engine.get_winner() == "a"
+
+
+def test_fake_death_mixed_with_normal():
+    """卡瓦重 + normal pets: only normal faints cost magic."""
+    killer = _mk_pet("K", hp=200, atk=500, spd=200, element="火", moves=[_ember()])
+    fake = _mk_pet("卡瓦重", hp=50, atk=50, spd=10, element="地", moves=[_tackle()])
+    fake.ability_name = "诈死"
+    normal = _mk_pet("炮灰", hp=10, atk=50, spd=50, element="草", moves=[_tackle()])
+
+    engine = BattleEngine([killer], [fake, normal])
+    assert engine.state.magic_b == 4
+
+    # First KO: 卡瓦重 dies → no cost
+    engine.step(_move(0), _move(0))
+    assert engine.state.magic_b == 4
+
+    # Second KO: 炮灰 dies → costs 1
+    engine.step(_move(0), _move(0))
+    assert engine.state.magic_b == 3
+
+
+def test_magic_power_state_display():
+    """Verify BattleState includes magic fields."""
+    a = [_mk_pet("A", hp=100, atk=50, spd=50, moves=[_tackle()])]
+    b = [_mk_pet("B", hp=100, atk=50, spd=50, moves=[_tackle()])]
+    engine = BattleEngine(a, b)
+    assert engine.state.magic_a == 4
+    assert engine.state.magic_b == 4

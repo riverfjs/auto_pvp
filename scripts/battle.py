@@ -105,12 +105,16 @@ class MoveDecision:
     switch_slot: int | None = None   # 0-5 for "switch"
 
 
+DEFAULT_MAGIC_POWER: int = 4    # first to lose 4 KOs loses
+
 @dataclass
 class BattleState:
     team_a: list[PetState]
     team_b: list[PetState]
     active_a: int        # index into team_a
     active_b: int        # index into team_b
+    magic_a: int = DEFAULT_MAGIC_POWER
+    magic_b: int = DEFAULT_MAGIC_POWER
     turn_number: int = 0
     log: list[BattleEvent] = field(default_factory=list)
     winner: str | None = None   # "a", "b", "draw"
@@ -357,15 +361,30 @@ class BattleEngine:
     def _handle_faint(self, pet: PetState, state: BattleState) -> None:
         pet.is_fainted = True
         pet.current_hp = 0
+
+        # Determine which team and apply magic_power cost
+        team = state.team_a if pet in state.team_a else state.team_b
+        is_a = team is state.team_a
+
+        # "诈死" ability: fainting doesn't cost magic power
+        magic_cost = 1
+        if "诈死" in pet.ability_name:
+            magic_cost = 0
+
+        if is_a:
+            state.magic_a = max(0, state.magic_a - magic_cost)
+        else:
+            state.magic_b = max(0, state.magic_b - magic_cost)
+
         state.log.append(BattleEvent(
             turn=state.turn_number,
             actor=pet.name,
             action="faint",
+            detail={"magic_cost": magic_cost,
+                    "magic_remaining": state.magic_a if is_a else state.magic_b},
         ))
 
         # Auto-switch to first available bench pet
-        team = state.team_a if pet in state.team_a else state.team_b
-        is_a = team is state.team_a
         active_idx = state.active_a if is_a else state.active_b
 
         # Only auto-switch if this was the active pet
@@ -424,14 +443,28 @@ class BattleEngine:
                     self._handle_faint(pet, state)
 
     def _check_win(self, state: BattleState) -> None:
-        a_alive = any(not p.is_fainted for p in state.team_a)
-        b_alive = any(not p.is_fainted for p in state.team_b)
+        a_magic = state.magic_a <= 0
+        b_magic = state.magic_b <= 0
+        a_wipe = all(p.is_fainted for p in state.team_a)
+        b_wipe = all(p.is_fainted for p in state.team_b)
 
-        if not a_alive and not b_alive:
+        # Loss conditions: magic depleted OR all 6 fainted with no bench
+        a_lost = a_magic or a_wipe
+        b_lost = b_magic or b_wipe
+
+        # Also check if active fainted but no switch available
+        a_active = state.team_a[state.active_a]
+        b_active = state.team_b[state.active_b]
+        if a_active.is_fainted and not self.get_available_switches("a"):
+            a_lost = True
+        if b_active.is_fainted and not self.get_available_switches("b"):
+            b_lost = True
+
+        if a_lost and b_lost:
             state.winner = "draw"
-        elif not a_alive:
+        elif a_lost:
             state.winner = "b"
-        elif not b_alive:
+        elif b_lost:
             state.winner = "a"
         elif state.turn_number >= self.max_turns:
             state.winner = "draw"
