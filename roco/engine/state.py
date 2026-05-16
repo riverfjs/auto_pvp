@@ -3,8 +3,49 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import IntFlag, auto
 from roco.config.constants import STARTING_ENERGY
 from roco.config.status import STATUS_ELEMENT_IMMUNITY
+
+
+# ── Bitfield enums ─────────────────────────────────────────────
+
+class EffectFlag(IntFlag):
+    """Skill effect flags — O(1) bitmask lookup, no string matching."""
+    NONE = 0
+    DRAIN = auto()          # 吸血
+    HEAL_HP = auto()        # 回血
+    HEAL_ENERGY = auto()    # 回能
+    STEAL_ENERGY = auto()   # 偷能量
+    DEFENSE = auto()        # 减伤
+    BURN = auto()           # 灼烧
+    POISON = auto()         # 中毒
+    FREEZE = auto()         # 冻结
+    LEECH = auto()          # 寄生
+    STAT_CHANGE = auto()    # 属性变化
+    FORCE_SWITCH = auto()   # 强制换人
+    CHARGE = auto()         # 蓄力
+    ENERGY_ALL_IN = auto()  # 全额投入
+    WEATHER = auto()        # 天气设置
+    COUNTER = auto()        # 应对效果
+    CONDITIONAL = auto()    # 条件触发
+    MIRROR_DAMAGE = auto()  # 镜反伤害
+    ENEMY_COST_UP = auto()  # 敌方能耗+
+    HP_FOR_ENERGY = auto()  # HP换能
+    PERMANENT_MOD = auto()  # 永久修改
+    PURE_DAMAGE = auto()    # 纯伤害
+    BURST = auto()          # 迸发
+    AGILITY = auto()        # 迅捷
+    IS_MARK = auto()        # 印记技能
+
+
+class StatusFlag(IntFlag):
+    """Persistent status effects — bitmask on PetState."""
+    NONE = 0
+    BURN = auto()           # 灼烧
+    POISON = auto()         # 中毒
+    FREEZE = auto()         # 冻结
+    LEECH = auto()          # 寄生
 
 
 @dataclass
@@ -40,7 +81,7 @@ class SkillRef:
     poison_stacks: int = 0
     burn_stacks: int = 0
     freeze_stacks: int = 0
-    tags: list[str] = field(default_factory=list)
+    effect_flags: int = EffectFlag.NONE  # bitmask replacing tags list
     # Pre-parsed effect values (set at import time, zero runtime regex)
     weather_type: str = ""           # "sandstorm"|"rain"|"snow"|""
     enemy_cost_up_amount: int = 0
@@ -91,7 +132,8 @@ class PetState:
     current_hp: int = 0
     current_energy: int = STARTING_ENERGY
     buff_stages: dict[str, int] = field(default_factory=dict)
-    status_stacks: dict[str, int] = field(default_factory=dict)
+    status_flags: int = StatusFlag.NONE   # bitmask for burn/poison/freeze/leech
+    status_counts: dict[str, int] = field(default_factory=dict)  # stack counts
     frostbite_damage: int = 0
     power_multiplier: float = 1.0
     charging_skill_idx: int = -1
@@ -135,11 +177,21 @@ class PetState:
             types.append(self.element_secondary)
         return tuple(types)
 
-    def is_immune_to_status(self, status: str) -> bool:
+    def is_immune_to_status(self, flag: StatusFlag) -> bool:
+        """Check if pet's element grants immunity to a status effect."""
+        name = _STATUS_FLAG_TO_NAME.get(flag, "")
+        if not name:
+            return False
         for elem, sname in STATUS_ELEMENT_IMMUNITY.items():
-            if sname == status and elem in self.defender_types:
+            if sname == name and elem in self.defender_types:
                 return True
         return False
+
+
+_STATUS_FLAG_TO_NAME: dict[StatusFlag, str] = {
+    StatusFlag.BURN: "灼烧", StatusFlag.POISON: "中毒",
+    StatusFlag.FREEZE: "冻结", StatusFlag.LEECH: "寄生",
+}
 
 
 @dataclass

@@ -9,7 +9,7 @@ from roco.engine.damage import (
     calc_energy_after_gain, can_use_skill,
 )
 from roco.engine.state import (
-    PetState, BattleEvent as BEvent, MoveDecision, BattleState,
+    PetState, BattleEvent as BEvent, MoveDecision, BattleState, StatusFlag,
 )
 from roco.engine.skill_exec import execute_move, get_skill_category
 from roco.engine.skill_exec import execute_move, get_skill_category
@@ -44,7 +44,7 @@ class BattleEngine:
             pet.current_hp = pet.max_hp
             pet.current_energy = STARTING_ENERGY
             pet.buff_stages = {}
-            pet.status_stacks = {}
+            pet.status_flags = StatusFlag.NONE; pet.status_counts = {}
             pet.is_fainted = False
             register_ability_handlers(self.bus, pet)
 
@@ -107,18 +107,18 @@ class BattleEngine:
         for pet in state.team_a + state.team_b:
             if pet.is_fainted:
                 continue
-            if "灼烧" in pet.status_stacks:
-                stacks = pet.status_stacks["灼烧"]
+            if pet.status_flags & StatusFlag.BURN:
+                stacks = pet.status_counts.get("灼烧", 0)
                 tm = get_type_multiplier("火", pet.defender_types)
                 dmg = calc_burn_damage(pet.max_hp, stacks, tm, mid_turn=False)
                 pet.current_hp = max(0, pet.current_hp - dmg)
-                pet.status_stacks["灼烧"] = calc_burn_decay(stacks)
+                pet.status_counts["灼烧"] = calc_burn_decay(stacks)
                 state.log.append(BEvent(
                     turn=state.turn_number, actor=pet.name, action="status_tick",
                     detail={"status": "灼烧", "damage": dmg, "stacks_before": stacks},
                 ))
-            if "中毒" in pet.status_stacks:
-                stacks = pet.status_stacks["中毒"]
+            if pet.status_flags & StatusFlag.POISON:
+                stacks = pet.status_counts.get("中毒", 0)
                 dmg = calc_poison_damage(pet.max_hp, stacks)
                 pet.current_hp = max(0, pet.current_hp - dmg)
                 state.log.append(BEvent(

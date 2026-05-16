@@ -107,14 +107,17 @@ def _stat_field(name: str, prefix: str = "self_") -> str:
 
 
 def classify(skill: SkillRef) -> SkillRef:
-    """Classify a skill and assign tags + numeric fields. Returns the same object."""
+    """Classify a skill and assign effect_flags + numeric fields."""
+    from roco.engine.state import EffectFlag
     eff = skill.effect
-    tags: list[str] = []
+    flags = EffectFlag.NONE
+    _tag_to_flag: dict[str, EffectFlag] = {f.name.lower(): f for f in EffectFlag if f.name != "NONE"}
 
     for tag, keyword, field, default in _CLASSIFIERS:
         if keyword and keyword in eff:
-            if tag not in tags:
-                tags.append(tag)
+            flag = _tag_to_flag.get(tag)
+            if flag:
+                flags |= flag
             if field and default is not None and getattr(skill, field) == 0:
                 setattr(skill, field, default)
 
@@ -125,13 +128,13 @@ def classify(skill: SkillRef) -> SkillRef:
 
     if m := _RE_HEAL_HP.search(eff):
         skill.self_heal_hp = int(m.group(1)) / 100.0
-        if "heal_hp" not in tags:
-            tags.append("heal_hp")
+        if not (flags & EffectFlag.HEAL_HP):
+            flags |= EffectFlag.HEAL_HP
 
     if m := _RE_HEAL_NRG.search(eff):
         skill.self_heal_energy = int(m.group(1))
-        if "heal_energy" not in tags:
-            tags.append("heal_energy")
+        if not (flags & EffectFlag.HEAL_ENERGY):
+            flags |= EffectFlag.HEAL_ENERGY
     if m := _RE_STEAL_NRG.search(eff):
         skill.steal_energy = int(m.group(1))
 
@@ -158,29 +161,29 @@ def classify(skill: SkillRef) -> SkillRef:
         field = _stat_field(m.group(1))
         pct = int(m.group(2)) / 100.0
         setattr(skill, field, getattr(skill, field, 0) + pct)
-        if "stat_change" not in tags:
-            tags.append("stat_change")
+        if not (flags & EffectFlag.STAT_CHANGE):
+            flags |= EffectFlag.STAT_CHANGE
     for m in _RE_STAT_DOWN.finditer(eff):
         field = _stat_field(m.group(1))
         pct = -int(m.group(2)) / 100.0
         cur = getattr(skill, field, 0)
         if cur == 0:
             setattr(skill, field, pct)
-        if "stat_change" not in tags:
-            tags.append("stat_change")
+        if not (flags & EffectFlag.STAT_CHANGE):
+            flags |= EffectFlag.STAT_CHANGE
     for m in _RE_ENEMY_DOWN.finditer(eff):
         field = _stat_field(m.group(1), "enemy_")
         pct = int(m.group(2)) / 100.0
         setattr(skill, field, pct)
-        if "stat_change" not in tags:
-            tags.append("stat_change")
+        if not (flags & EffectFlag.STAT_CHANGE):
+            flags |= EffectFlag.STAT_CHANGE
 
     # ── Parse weather type ──
     for kw, wt in _WEATHER_MAP.items():
         if kw in eff:
             skill.weather_type = wt
-            if "weather" not in tags:
-                tags.append("weather")
+            if not (flags & EffectFlag.WEATHER):
+                flags |= EffectFlag.WEATHER
             break
 
     # ── Parse numeric effect values ──
@@ -190,20 +193,20 @@ def classify(skill: SkillRef) -> SkillRef:
         skill.hp_cost_pct = int(m.group(1)) / 100.0
     if m := _RE_HIT_GROWTH.search(eff):
         skill.permanent_hit_growth = int(m.group(1))
-        if "permanent_mod" not in tags:
-            tags.append("permanent_mod")
+        if not (flags & EffectFlag.PERMANENT_MOD):
+            flags |= EffectFlag.PERMANENT_MOD
     if m := _RE_POWER_GROWTH.search(eff):
         skill.permanent_power_growth = int(m.group(1))
-        if "permanent_mod" not in tags:
-            tags.append("permanent_mod")
+        if not (flags & EffectFlag.PERMANENT_MOD):
+            flags |= EffectFlag.PERMANENT_MOD
 
     # ── Ability tag classification ──
-    if "应对" in eff and "counter" not in tags:
-        tags.append("counter")
+    if "应对" in eff and not (flags & EffectFlag.COUNTER):
+        flags |= EffectFlag.COUNTER
 
     # Pure damage: no other tags assigned
-    if not tags and skill.power > 0:
-        tags.append("pure_damage")
+    if flags == EffectFlag.NONE and skill.power > 0:
+        flags |= EffectFlag.PURE_DAMAGE
 
-    skill.tags = tags
+    skill.effect_flags = flags
     return skill

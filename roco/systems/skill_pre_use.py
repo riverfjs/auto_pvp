@@ -1,4 +1,5 @@
 """PRE_USE skill handlers — charge, energy mods, defense setup."""
+from roco.engine.state import StatusFlag, EffectFlag
 from roco.engine.events import GameEvent, EventCtx
 from roco.engine.state import BattleEvent
 from roco.config.constants import MAX_ENERGY
@@ -7,7 +8,7 @@ from roco.config.constants import MAX_ENERGY
 def register(bus: "EventBus") -> None:
     def h_charge(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
-        if not skill or "charge" not in skill.tags:
+        if not skill or not (skill.effect_flags & EffectFlag.CHARGE):
             return
         ctx.actor.charging_skill_idx = ctx.actor.moves.index(skill)
         ctx.cancelled = True
@@ -17,7 +18,7 @@ def register(bus: "EventBus") -> None:
 
     def h_energy_all_in(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
-        if not skill or "energy_all_in" not in skill.tags:
+        if not skill or not (skill.effect_flags & EffectFlag.ENERGY_ALL_IN):
             return
         remaining = ctx.actor.current_energy
         if remaining > 0:

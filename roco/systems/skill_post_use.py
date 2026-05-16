@@ -1,4 +1,5 @@
 """POST_USE skill handlers — status, stat change, force switch, weather, perma mods."""
+from roco.engine.state import EffectFlag, StatusFlag
 from roco.engine.events import GameEvent, EventCtx
 from roco.engine.damage import clamp_stage
 
@@ -8,33 +9,33 @@ def register(bus: "EventBus") -> None:
         skill = ctx.data.get("skill")
         if not skill or skill.burn_stacks <= 0:
             return
-        if not ctx.target.is_immune_to_status("灼烧"):
-            ctx.target.status_stacks["灼烧"] = ctx.target.status_stacks.get("灼烧", 0) + skill.burn_stacks
+        if not ctx.target.is_immune_to_status(StatusFlag.BURN):
+            ctx.target.status_flags |= StatusFlag.BURN; ctx.target.status_counts["灼烧"] = ctx.target.status_counts.get("灼烧", 0) + skill.burn_stacks
 
     def h_poison(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
         if not skill or skill.poison_stacks <= 0:
             return
-        if not ctx.target.is_immune_to_status("中毒"):
-            ctx.target.status_stacks["中毒"] = ctx.target.status_stacks.get("中毒", 0) + skill.poison_stacks
+        if not ctx.target.is_immune_to_status(StatusFlag.POISON):
+            ctx.target.status_flags |= StatusFlag.POISON; ctx.target.status_counts["中毒"] = ctx.target.status_counts.get("中毒", 0) + skill.poison_stacks
 
     def h_freeze(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
         if not skill or skill.freeze_stacks <= 0:
             return
-        if not ctx.target.is_immune_to_status("冻结"):
-            ctx.target.status_stacks["冻结"] = ctx.target.status_stacks.get("冻结", 0) + skill.freeze_stacks
+        if not ctx.target.is_immune_to_status(StatusFlag.FREEZE):
+            ctx.target.status_flags |= StatusFlag.FREEZE; ctx.target.status_counts["冻结"] = ctx.target.status_counts.get("冻结", 0) + skill.freeze_stacks
 
     def h_leech(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
         if not skill or skill.leech_stacks <= 0:
             return
-        ctx.target.status_stacks["寄生"] = ctx.target.status_stacks.get("寄生", 0) + skill.leech_stacks
+        ctx.target.status_flags |= StatusFlag.LEECH; ctx.target.status_counts["寄生"] = ctx.target.status_counts.get("寄生", 0) + skill.leech_stacks
         ctx.target.leech_source = ctx.actor.name
 
     def h_stat_change(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
-        if not skill or "stat_change" not in skill.tags:
+        if not skill or not (skill.effect_flags & EffectFlag.STAT_CHANGE):
             return
         for stat_key, field_name in [
             ("atk_phys", "self_atk"), ("atk_mag", "self_spatk"),

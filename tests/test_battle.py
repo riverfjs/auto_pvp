@@ -3,7 +3,7 @@
 import pytest
 from roco.engine.battle import BattleEngine
 from roco.engine.state import (
-    BattleState, MoveDecision, PetState, SkillRef,
+    BattleState, MoveDecision, PetState, SkillRef, StatusFlag,
 )
 from roco.engine.damage import compute_stats
 from roco.engine.skill_tags import classify
@@ -201,7 +201,7 @@ def test_burn_application():
 
     engine = BattleEngine([attacker], [defender])
     engine.step(_move(0), _move(0))
-    assert "灼烧" in engine.state.team_b[0].status_stacks
+    assert engine.state.team_b[0].status_flags & StatusFlag.BURN
 
 
 def test_burn_end_of_turn_damage():
@@ -223,7 +223,7 @@ def test_fire_type_burn_immune():
 
     engine = BattleEngine([attacker], [defender])
     engine.step(_move(0), _move(0))
-    assert "灼烧" not in engine.state.team_b[0].status_stacks
+    assert not (engine.state.team_b[0].status_flags & StatusFlag.BURN)
 
 
 # ── Type effectiveness in damage ───────────────────────────────

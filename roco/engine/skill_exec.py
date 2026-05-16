@@ -15,7 +15,7 @@ from roco.engine.damage import (
     calc_attack_damage, get_type_multiplier, get_stab,
     calc_energy_after_use, can_use_skill, apply_buff_stages,
 )
-from roco.engine.state import SkillRef, PetState, BattleEvent, BattleState
+from roco.engine.state import SkillRef, PetState, BattleEvent, BattleState, EffectFlag, StatusFlag
 from roco.config.constants import COUNTER_DAMAGE_BONUS, MAX_ENERGY
 from roco.systems.weather import weather_damage_mult
 from roco.systems.marks import (
@@ -79,7 +79,7 @@ def execute_move(attacker: PetState, defender: PetState,
 
     # Cooldown
     new_cd = {i: c - 1 for i, c in attacker.cooldowns.items() if c > 1}
-    if "counter" in exec_skill.tags:
+    if exec_skill.effect_flags & EffectFlag.COUNTER:
         new_cd[exec_index] = 2
     attacker.cooldowns = new_cd
 

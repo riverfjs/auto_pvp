@@ -1,4 +1,5 @@
 """ON_DAMAGE skill handlers — drain, heal, steal, reflect."""
+from roco.engine.state import StatusFlag, EffectFlag
 from roco.engine.events import GameEvent, EventCtx
 from roco.engine.state import BattleEvent
 from roco.config.constants import MAX_ENERGY
@@ -35,7 +36,7 @@ def register(bus: "EventBus") -> None:
 
     def h_mirror_damage(ctx: EventCtx) -> None:
         skill = ctx.data.get("skill")
-        if not skill or not ctx.data.get("countered") or "mirror_damage" not in skill.tags:
+        if not skill or not ctx.data.get("countered") or not (skill.effect_flags & EffectFlag.MIRROR_DAMAGE):
             return
         reflect_dmg = skill.power
         ctx.target.current_hp = max(0, ctx.target.current_hp - reflect_dmg)

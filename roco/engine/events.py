@@ -33,15 +33,20 @@ class GameEvent(Enum):
     TURN_START = auto()        # start of turn, before energy gain
     TURN_END = auto()          # end of turn, after status/weather ticks
 
-    # ── Move-level (phase-based execution) ──
-    BEFORE_MOVE = auto()       # before move executes (charge, energy, defense)
-    AFTER_DAMAGE = auto()      # damage just applied (drain, steal, reflect)
-    AFTER_MOVE = auto()        # after full move (status, stat change, weather)
-    PRE_USE = BEFORE_MOVE      # alias
-    ON_DAMAGE = AFTER_DAMAGE   # alias
-    POST_USE = AFTER_MOVE      # alias
-    MOVE_MISS = auto()         # move failed (no energy, cooldown, etc.)
-    CHARGE_START = auto()      # charge move started (蓄力)
+    # ── Move pipeline (pkmn-inspired explicit steps) ──
+    BEFORE_MOVE = auto()       # setup: charge, energy mod, defense (can cancel)
+    CHECK_HIT = auto()         # accuracy/immune check
+    CALC_DAMAGE = auto()       # compute raw damage
+    ADJUST_DAMAGE = auto()     # modify damage (defense reduction, barrel, etc.)
+    APPLY_DAMAGE = auto()      # apply to HP
+    AFTER_MOVE = auto()        # post-move effects: drain, status, stat change, weather
+    # Aliases for backward compat
+    PRE_USE = BEFORE_MOVE
+    AFTER_DAMAGE = APPLY_DAMAGE
+    ON_DAMAGE = APPLY_DAMAGE
+    POST_USE = AFTER_MOVE
+    MOVE_MISS = auto()
+    CHARGE_START = auto()
 
     # ── Pet lifecycle ──
     SWITCH_IN = auto()         # pet enters battle

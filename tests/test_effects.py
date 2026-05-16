@@ -1,7 +1,7 @@
 """Tests for skill classification (pre-parse via classify())."""
 
 from roco.engine.skill_tags import classify
-from roco.engine.state import SkillRef
+from roco.engine.state import SkillRef, EffectFlag
 
 
 def _clsfy(effect: str, name: str = "test", element: str = "普通",
@@ -14,13 +14,13 @@ def _clsfy(effect: str, name: str = "test", element: str = "普通",
 def test_life_drain():
     sk = _clsfy("造成物伤，吸血50%")
     assert sk.life_drain == 0.5
-    assert "drain" in sk.tags
+    assert sk.effect_flags & EffectFlag.DRAIN
 
 
 def test_self_heal_hp():
     sk = _clsfy("回复60%生命")
     assert sk.self_heal_hp == 0.6
-    assert "heal_hp" in sk.tags
+    assert sk.effect_flags & EffectFlag.HEAL_HP
 
 
 def test_self_heal_energy():
@@ -36,7 +36,7 @@ def test_steal_energy():
 def test_damage_reduction():
     sk = _clsfy("减伤70%")
     assert sk.damage_reduction == 0.7
-    assert "defense" in sk.tags
+    assert sk.effect_flags & EffectFlag.DEFENSE
 
 
 def test_hit_count():
@@ -93,7 +93,7 @@ def test_steal_energy_amount():
 
 def test_empty():
     sk = _clsfy("")
-    assert sk.tags == ["pure_damage"] or sk.tags == []
+    assert sk.effect_flags == EffectFlag.PURE_DAMAGE or sk.effect_flags == EffectFlag.NONE
 
 
 def test_burn_keyword():
@@ -109,13 +109,13 @@ def test_classify_preserves_name():
 
 def test_pure_damage_tag():
     sk = _clsfy("对敌方精灵造成物理伤害", name="撞击")
-    assert "pure_damage" in sk.tags
+    assert sk.effect_flags & EffectFlag.PURE_DAMAGE
 
 
 def test_weather_type():
     sk = _clsfy("沙涌")
     assert sk.weather_type == "sandstorm"
-    assert "weather" in sk.tags
+    assert sk.effect_flags & EffectFlag.WEATHER
 
 
 def test_weather_rain():
@@ -150,4 +150,4 @@ def test_permanent_power_growth():
 
 def test_counter_tag():
     sk = _clsfy("造成物伤，应对状态：本次技能威力翻倍")
-    assert "counter" in sk.tags
+    assert sk.effect_flags & EffectFlag.COUNTER
