@@ -17,7 +17,6 @@ from roco.systems.marks import (
     calc_meteor_extra_damage,
 )
 from roco.systems.counter import resolve_counter
-from roco.engine.ability import trigger, AbilityTiming
 
 
 def get_skill_category(pet: PetState, skill_index: int) -> str:
@@ -147,9 +146,6 @@ def _execute_damage(
             ))
 
     defender.current_hp = max(0, defender.current_hp - damage)
-
-    # Trigger ON_TAKE_HIT on defender
-    trigger(defender, AbilityTiming.ON_TAKE_HIT, state, damage=damage, attacker=attacker)
 
     state.log.append(BattleEvent(
         turn=state.turn_number, actor=attacker.name, action="attack",

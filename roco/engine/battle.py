@@ -19,10 +19,10 @@ from roco.config.constants import (
 from roco.systems.marks import apply_marks_to_speed, apply_marks_to_skill_cost
 from roco.systems.counter import resolve_counter
 
-# Import subsystem registration functions
 from roco.systems.weather import register_weather_handlers
 from roco.systems.marks import register_mark_handlers
 from roco.engine.skill import register_skill_handlers
+from roco.engine.ability import register_ability_handlers
 
 
 class BattleEngine:
@@ -44,13 +44,14 @@ class BattleEngine:
         register_skill_handlers(self.bus)
         self._register_engine_handlers()
 
-        # Init pets
+        # Init pets + register their abilities
         for pet in team_a + team_b:
             pet.current_hp = pet.max_hp
             pet.current_energy = STARTING_ENERGY
             pet.buff_stages = {}
             pet.status_stacks = {}
             pet.is_fainted = False
+            register_ability_handlers(self.bus, pet)
 
         # Emit SWITCH_IN for starting active pets (triggers ON_ENTER abilities)
         for team, pet in (("a", team_a[0]), ("b", team_b[0])):
@@ -214,6 +215,9 @@ class BattleEngine:
                 self.bus.emit(EventCtx(GameEvent.AFTER_DAMAGE, state,
                     actor=actor, target=target,
                     data={"damage": dmg_taken, "skill": skill}))
+                self.bus.emit(EventCtx(GameEvent.TAKE_DAMAGE, state,
+                    actor=target, target=actor,
+                    data={"damage": dmg_taken}))
             if target.current_hp <= 0:
                 self._handle_faint(target, state)
 
