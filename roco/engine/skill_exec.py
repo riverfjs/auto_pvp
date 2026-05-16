@@ -1,16 +1,19 @@
-"""Tag-driven skill execution — each tag maps to a handler function.
+"""Phase-based skill execution — event-driven, not tag-driven.
 
-Ordered execution: tags execute in priority order defined by TAG_ORDER.
-All handlers are pure ((PetState, PetState, SkillRef, ...) -> side effects).
+Each phase fires an event. Subsystems register handlers on the EventBus
+for specific phases. Handlers check their own preconditions (skill fields).
+
+Phases:
+  PRE_USE  — charge, energy mod, defense setup (can cancel)
+  ON_DAMAGE — damage calculation + application
+  POST_USE — effects after damage: drain, heal, status, stat change, etc.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
-
 from roco.engine.damage import (
     calc_attack_damage, get_type_multiplier, get_stab,
-    calc_energy_after_use, can_use_skill, apply_buff_stages, clamp_stage,
+    calc_energy_after_use, can_use_skill, apply_buff_stages,
 )
 from roco.engine.state import SkillRef, PetState, BattleEvent, BattleState
 from roco.config.constants import COUNTER_DAMAGE_BONUS, MAX_ENERGY
@@ -19,88 +22,96 @@ from roco.systems.marks import (
     apply_marks_to_skill_cost, apply_marks_to_attack_power, calc_meteor_extra_damage,
 )
 
-if TYPE_CHECKING:
-    pass
 
-# Handler signature
-SkillHandler = Callable[["PetState", "PetState", SkillRef, "BattleState", bool], None]
-
-# ── Tag execution order (lower = earlier). Grouped by phase ────
-# Phase PRE (0-9):    setup — charge, energy mods, defense
-# Phase CORE (10-19):  damage calculation
-# Phase POST (20+):    effects after damage — drain, heal, status, etc.
-
-TAG_ORDER: dict[str, int] = {
-    # PRE phase
-    "charge":        0,
-    "energy_all_in": 5,
-    "hp_for_energy": 5,
-    "defense":       8,
-    # CORE phase
-    "pure_damage":   15,
-    # POST phase
-    "drain":         20,
-    "heal_hp":       25,
-    "heal_energy":   25,
-    "steal_energy":  30,
-    "burn":          35,
-    "poison":        35,
-    "freeze":        35,
-    "leech":         35,
-    "stat_change":   40,
-    "force_switch":  45,
-    "enemy_cost_up": 45,
-    "weather":       50,
-    "counter":       55,
-    "conditional":   60,
-    "conditional_buff": 60,
-    "scaling":       65,
-    "mirror_damage": 70,
-    "permanent_mod": 75,
-    # handled elsewhere
-    "multi_hit":     -1,
-    "priority":      -1,
-}
-
-# ── Handlers ────────────────────────────────────────────────────
-
-def _exec_charge(attacker: PetState, _defender: PetState,
-                 skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    """Charge: skip execution this turn, auto-execute next turn."""
-    attacker.charging_skill_idx = attacker.moves.index(skill)
-    state.log.append(BattleEvent(
-        turn=state.turn_number, actor=attacker.name,
-        action="buff", detail={"move": skill.name, "charge": True},
-    ))
+def get_skill_category(pet: PetState, skill_index: int) -> str:
+    if skill_index < 0 or skill_index >= len(pet.moves):
+        return ""
+    return pet.moves[skill_index].category
 
 
-def _exec_energy_all_in(attacker: PetState, _defender: PetState,
-                        _skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Drain all energy, add power bonus (25% per energy)."""
-    remaining = attacker.current_energy
-    if remaining > 0:
-        attacker._turn_power_mod = getattr(attacker, "_turn_power_mod", 1.0) + remaining * 0.25
-        attacker.current_energy = 0
+def execute_move(attacker: PetState, defender: PetState,
+                 skill_index: int, state: BattleState,
+                 countered: bool = False) -> None:
+    """Phase-based skill execution. Emits events, handlers react to data fields."""
+    if skill_index < 0 or skill_index >= len(attacker.moves):
+        return
+    skill = attacker.moves[skill_index]
+
+    # Cooldown check
+    if attacker.cooldowns.get(skill_index, 0) > 0:
+        return
+
+    # Energy check
+    team_marks = state.marks_a if attacker in state.team_a else state.marks_b
+    effective_cost = apply_marks_to_skill_cost(skill.energy, team_marks)
+    if not can_use_skill(attacker.current_energy, effective_cost):
+        return
+
+    # Charge resolution
+    exec_skill = skill
+    exec_index = skill_index
+    if attacker.charging_skill_idx >= 0:
+        ci = attacker.charging_skill_idx
+        attacker.charging_skill_idx = -1
+        if ci < len(attacker.moves):
+            exec_skill = attacker.moves[ci]
+            exec_index = ci
+
+    # Pay energy
+    attacker.current_energy = calc_energy_after_use(attacker.current_energy, effective_cost)
+
+    # We need the bus — it's on the engine. Use a module-level reference.
+    bus = _get_bus()
+
+    # ── Phase: PRE_USE ──
+    ctx = _emit(bus, "PRE_USE", state, attacker, defender,
+                {"skill": exec_skill, "countered": countered})
+    if ctx.cancelled:
+        return
+
+    # ── Phase: ON_DAMAGE (damage calculation) ──
+    if exec_skill.category in ("物攻", "魔攻"):
+        _calc_and_apply_damage(attacker, defender, exec_skill, state, countered, bus)
+
+    # ── Phase: POST_USE ──
+    _emit(bus, "POST_USE", state, attacker, defender,
+          {"skill": exec_skill, "countered": countered})
+
+    # Cooldown
+    new_cd = {i: c - 1 for i, c in attacker.cooldowns.items() if c > 1}
+    if "counter" in exec_skill.tags:
+        new_cd[exec_index] = 2
+    attacker.cooldowns = new_cd
 
 
-def _exec_defense(attacker: PetState, _defender: PetState,
-                  skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    """Defense: apply % damage reduction on damage taken this turn, or +3 def stages."""
-    if skill.damage_reduction > 0:
-        # Store reduction for the damage handler to apply when taking hits
-        attacker._defense_reduction = skill.damage_reduction
-        state.log.append(BattleEvent(
-            turn=state.turn_number, actor=attacker.name, action="buff",
-            detail={"move": skill.name, "defense": f"{skill.damage_reduction:.0%}"},
-        ))
-    else:
-        attacker.buff_stages["def_phys"] = clamp_stage(attacker.buff_stages.get("def_phys", 0) + 1)
-        attacker.buff_stages["def_mag"] = clamp_stage(attacker.buff_stages.get("def_mag", 0) + 1)
+# ── Internal helpers ───────────────────────────────────────────
+
+_bus_instance: "EventBus | None" = None
 
 
-def _exec_pure_damage(attacker: PetState, defender: PetState,
-                      skill: SkillRef, state: BattleState, countered: bool) -> None:
-    """Calculate and apply attack damage with full formula."""
+def _get_bus() -> "EventBus":
+    if _bus_instance is None:
+        raise RuntimeError("EventBus not set — call set_bus() from BattleEngine.__init__")
+    return _bus_instance
+
+
+def set_bus(bus: "EventBus") -> None:
+    """Called by BattleEngine.__init__ to inject the bus."""
+    global _bus_instance
+    _bus_instance = bus
+
+
+def _emit(bus, event_name: str, state, actor, target, data) -> "EventCtx":
+    from roco.engine.events import GameEvent, EventCtx
+    evt = getattr(GameEvent, event_name)
+    ctx = EventCtx(evt, state, actor=actor, target=target, data=data)
+    bus.emit(ctx)
+    return ctx
+
+
+def _calc_and_apply_damage(attacker: PetState, defender: PetState,
+                           skill: SkillRef, state: BattleState,
+                           countered: bool, bus: "EventBus") -> None:
     phys = skill.category == "物攻"
     atk = float(attacker.effective_stats["atk_phys" if phys else "atk_mag"])
     dfn = float(defender.effective_stats["def_phys" if phys else "def_mag"])
@@ -134,7 +145,7 @@ def _exec_pure_damage(attacker: PetState, defender: PetState,
         if meteor > 0:
             damage += meteor
 
-    # % damage reduction on TAKEN damage (from defense skills on the defender)
+    # Defense reduction (set by PRE_USE handler)
     reduction = getattr(defender, "_defense_reduction", 0.0)
     if reduction > 0:
         damage = max(1, int(damage * (1.0 - reduction)))
@@ -149,275 +160,200 @@ def _exec_pure_damage(attacker: PetState, defender: PetState,
                 "target_hp_pct": round(defender.hp_pct * 100, 1)},
     ))
 
-
-def _exec_drain(attacker: PetState, _defender: PetState,
-                skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    """Life drain: heal for % of last damage dealt."""
-    if skill.life_drain <= 0:
-        return
-    last_dmg = 0
-    for ev in reversed(state.log):
-        if ev.actor == attacker.name and ev.action == "attack" and "damage" in ev.detail:
-            last_dmg = ev.detail["damage"]
-            break
-    heal = int(last_dmg * skill.life_drain)
-    attacker.current_hp = min(attacker.max_hp, attacker.current_hp + heal)
+    # ON_DAMAGE event for post-damage reactions (drain, steal, etc.)
+    _emit(bus, "ON_DAMAGE", state, attacker, defender,
+          {"skill": skill, "damage": damage, "countered": countered})
 
 
-def _exec_self_heal(attacker: PetState, _defender: PetState,
-                    skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    if skill.self_heal_hp > 0:
-        heal = int(attacker.max_hp * skill.self_heal_hp)
-        attacker.current_hp = min(attacker.max_hp, attacker.current_hp + heal)
-    if skill.self_heal_energy > 0:
-        attacker.current_energy = min(MAX_ENERGY, attacker.current_energy + skill.self_heal_energy)
-
-
-def _exec_steal_energy(attacker: PetState, defender: PetState,
-                       skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    if skill.steal_energy > 0:
-        stolen = min(skill.steal_energy, defender.current_energy)
-        defender.current_energy -= stolen
-        attacker.current_energy = min(MAX_ENERGY, attacker.current_energy + stolen)
-    if skill.enemy_lose_energy > 0:
-        defender.current_energy = max(0, defender.current_energy - skill.enemy_lose_energy)
-
-
-def _exec_burn(attacker: PetState, defender: PetState,
-               skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    if not defender.is_immune_to_status("灼烧") and skill.burn_stacks > 0:
-        defender.status_stacks["灼烧"] = defender.status_stacks.get("灼烧", 0) + skill.burn_stacks
-        state.log.append(BattleEvent(
-            turn=state.turn_number, actor=attacker.name, action="status_tick",
-            detail={"status": "灼烧", "stacks": skill.burn_stacks, "target": defender.name},
-        ))
-
-
-def _exec_poison(attacker: PetState, defender: PetState,
-                 skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    if not defender.is_immune_to_status("中毒") and skill.poison_stacks > 0:
-        defender.status_stacks["中毒"] = defender.status_stacks.get("中毒", 0) + skill.poison_stacks
-
-
-def _exec_freeze(attacker: PetState, defender: PetState,
-                 skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    if not defender.is_immune_to_status("冻结") and skill.freeze_stacks > 0:
-        defender.status_stacks["冻结"] = defender.status_stacks.get("冻结", 0) + skill.freeze_stacks
-
-
-def _exec_leech(attacker: PetState, defender: PetState,
-                skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    if skill.leech_stacks > 0:
-        defender.status_stacks["寄生"] = defender.status_stacks.get("寄生", 0) + skill.leech_stacks
-        defender.leech_source = attacker.name
-
-
-def _exec_stat_change(attacker: PetState, defender: PetState,
-                      skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Apply self/enemy stat buffs from parsed effect data."""
-    for stat_key, field_name in [
-        ("atk_phys", "self_atk"), ("atk_mag", "self_spatk"),
-        ("def_phys", "self_def"), ("def_mag", "self_spdef"),
-    ]:
-        val = getattr(skill, field_name, 0)
-        if val != 0:
-            stage = clamp_stage(attacker.buff_stages.get(stat_key, 0) + round(val / 0.10))
-            attacker.buff_stages[stat_key] = stage
-    spd = skill.self_speed
-    if spd != 0:
-        attacker.buff_stages["speed"] = clamp_stage(attacker.buff_stages.get("speed", 0) + round(spd / 0.10))
-    for stat_key, field_name in [
-        ("atk_phys", "enemy_atk"), ("atk_mag", "enemy_spatk"),
-        ("def_phys", "enemy_def"), ("def_mag", "enemy_spdef"),
-    ]:
-        val = getattr(skill, field_name, 0)
-        if val != 0:
-            stage = clamp_stage(defender.buff_stages.get(stat_key, 0) - round(abs(val) / 0.10))
-            defender.buff_stages[stat_key] = stage
-    if skill.enemy_speed != 0:
-        defender.buff_stages["speed"] = clamp_stage(defender.buff_stages.get("speed", 0) - round(abs(skill.enemy_speed) / 0.10))
-
-
-def _exec_force_switch(attacker: PetState, _defender: PetState,
-                       _skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    """Self-pivot after move: switch to first alive bench."""
-    team = state.team_a if attacker in state.team_a else state.team_b
-    is_a = team is state.team_a
-    alive = [i for i, p in enumerate(team) if not p.is_fainted and p != attacker]
-    if not alive:
-        return
-    new_idx = alive[0]
-    if is_a:
-        state.active_a = new_idx
-    else:
-        state.active_b = new_idx
-    state.log.append(BattleEvent(
-        turn=state.turn_number, actor=attacker.name, action="switch",
-        detail={"from": attacker.name, "to": team[new_idx].name, "force": True},
-    ))
-
-
-def _exec_set_weather(_attacker: PetState, _defender: PetState,
-                      skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    if skill.weather_type:
-        state.weather, state.weather_turns = skill.weather_type, 5
-
-
-def _exec_counter_effect(attacker: PetState, _defender: PetState,
-                         _skill: SkillRef, _state: BattleState, countered: bool) -> None:
-    """Counter tag: mark for counter success effects (interrupt, power boost)."""
-    if countered:
-        attacker.power_multiplier *= 1.0  # power boost handled in damage via counter_buff
-
-
-def _exec_conditional(_attacker: PetState, _defender: PetState,
-                      _skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Conditional effects are resolved at event time via BEFORE_MOVE handlers."""
-    pass
-
-
-def _exec_scaling(_attacker: PetState, _defender: PetState,
-                  _skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Scaling (per-use permanent growth): handled by permanent_mod tag."""
-
-
-def _exec_mirror_damage(_attacker: PetState, defender: PetState,
-                        skill: SkillRef, state: BattleState, countered: bool) -> None:
-    """Mirror/reflect damage (听桥): reflect countered skill's power back as damage."""
-    if not countered:
-        return
-    # Reflect: deal the countered skill's power as fixed damage to the attacker
-    # (attacker here is the one who got countered — they take mirror damage)
-    reflect_dmg = skill.power
-    defender.current_hp = max(0, defender.current_hp - reflect_dmg)
-    state.log.append(BattleEvent(
-        turn=state.turn_number, actor=defender.name, action="attack",
-        detail={"move": "reflect", "damage": reflect_dmg, "mirror": True},
-    ))
-
-
-def _exec_enemy_cost_up(attacker: PetState, defender: PetState,
-                        skill: SkillRef, state: BattleState, _countered: bool) -> None:
-    """Enemy energy cost up: increase opponent's skill energy costs."""
-    delta = skill.enemy_cost_up_amount or 1
-    defender._cost_mod = getattr(defender, "_cost_mod", 0) + delta
-    defender._cost_mod_turns = 3
-    state.log.append(BattleEvent(
-        turn=state.turn_number, actor=attacker.name, action="status_tick",
-        detail={"enemy_cost_up": delta, "target": defender.name},
-    ))
-
-
-def _exec_hp_for_energy(attacker: PetState, _defender: PetState,
-                        skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """HP for energy: pay HP % instead of energy."""
-    pct = skill.hp_cost_pct or 0.10
-    hp_cost = int(attacker.max_hp * pct)
-    attacker.current_hp = max(0, attacker.current_hp - hp_cost)
-
-
-def _exec_permanent_mod(attacker: PetState, _defender: PetState,
-                        skill: SkillRef, _state: BattleState, _countered: bool) -> None:
-    """Permanent skill modification: per-use growth (e.g. 连击数永久+2)."""
-    if skill.permanent_hit_growth:
-        skill.hit_count += skill.permanent_hit_growth
-    if skill.permanent_power_growth:
-        skill.power += skill.permanent_power_growth
-
-
-# ── Tag → handler map ──────────────────────────────────────────
-
-TAG_HANDLERS: dict[str, SkillHandler] = {
-    "charge":        _exec_charge,
-    "energy_all_in": _exec_energy_all_in,
-    "defense":       _exec_defense,
-    "pure_damage":   _exec_pure_damage,
-    "drain":         _exec_drain,
-    "heal_hp":       _exec_self_heal,
-    "heal_energy":   _exec_self_heal,
-    "steal_energy":  _exec_steal_energy,
-    "burn":          _exec_burn,
-    "poison":        _exec_poison,
-    "freeze":        _exec_freeze,
-    "leech":         _exec_leech,
-    "stat_change":   _exec_stat_change,
-    "force_switch":  _exec_force_switch,
-    "weather":       _exec_set_weather,
-    "counter":           _exec_counter_effect,
-    "conditional":       _exec_conditional,
-    "conditional_buff":  _exec_conditional,
-    "scaling":           _exec_scaling,
-    "mirror_damage":     _exec_mirror_damage,
-    "enemy_cost_up":     _exec_enemy_cost_up,
-    "hp_for_energy":     _exec_hp_for_energy,
-    "permanent_mod":     _exec_permanent_mod,
-}
-
-
-# ── Main dispatch ──────────────────────────────────────────────
-
-def execute_move(attacker: PetState, defender: PetState,
-                 skill_index: int, state: BattleState,
-                 countered: bool = False) -> None:
-    """Tag-driven skill execution. Dispatches to handlers by tag order."""
-    if skill_index < 0 or skill_index >= len(attacker.moves):
-        return
-    skill = attacker.moves[skill_index]
-
-    # Cooldown check
-    if attacker.cooldowns.get(skill_index, 0) > 0:
-        return
-
-    # Energy check (with mark cost reduction)
-    team_marks = state.marks_a if attacker in state.team_a else state.marks_b
-    effective_cost = apply_marks_to_skill_cost(skill.energy, team_marks)
-    if not can_use_skill(attacker.current_energy, effective_cost):
-        return
-
-    # Charge resolution: if charging from last turn, auto-execute stored skill
-    exec_skill = skill
-    exec_index = skill_index
-    if attacker.charging_skill_idx >= 0:
-        ci = attacker.charging_skill_idx
-        attacker.charging_skill_idx = -1
-        if ci < len(attacker.moves):
-            exec_skill = attacker.moves[ci]
-            exec_index = ci
-
-    # Pay energy
-    attacker.current_energy = calc_energy_after_use(attacker.current_energy, effective_cost)
-
-    # Sort tags by execution order, remove handled-elsewhere tags
-    ordered = sorted(
-        [t for t in exec_skill.tags if t in TAG_ORDER],
-        key=lambda t: TAG_ORDER.get(t, 99),
-    )
-
-    # Execute each tag's handler
-    for tag in ordered:
-        handler = TAG_HANDLERS.get(tag)
-        if handler:
-            handler(attacker, defender, exec_skill, state, countered)
-
-    # Cooldown
-    new_cd = {i: c - 1 for i, c in attacker.cooldowns.items() if c > 1}
-    if "counter" in exec_skill.tags:
-        new_cd[exec_index] = 2
-    attacker.cooldowns = new_cd
-
-
-def get_skill_category(pet: PetState, skill_index: int) -> str:
-    if skill_index < 0 or skill_index >= len(pet.moves):
-        return ""
-    return pet.moves[skill_index].category
-
+# ── Event handlers registered on the bus ───────────────────────
 
 def register_skill_handlers(bus: "EventBus") -> None:
-    """Register skill-related event handlers on the bus."""
+    """Register all skill effect handlers on phase events.
+    Each handler checks its own precondition from skill data fields.
+    No tag dispatch needed."""
     from roco.engine.events import GameEvent, EventCtx
-    from roco.config.constants import MAX_ENERGY
+    set_bus(bus)
 
-    def on_leech_tick(ctx: EventCtx) -> None:
+    # ── PRE_USE handlers ──
+
+    def h_charge(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or "charge" not in skill.tags:
+            return
+        ctx.actor.charging_skill_idx = ctx.actor.moves.index(skill)
+        ctx.cancelled = True
+        ctx.state.log.append(BattleEvent(
+            turn=ctx.state.turn_number, actor=ctx.actor.name,
+            action="buff", detail={"move": skill.name, "charge": True},
+        ))
+
+    def h_energy_all_in(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or "energy_all_in" not in skill.tags:
+            return
+        remaining = ctx.actor.current_energy
+        if remaining > 0:
+            ctx.actor._turn_power_mod = getattr(ctx.actor, "_turn_power_mod", 1.0) + remaining * 0.25
+            ctx.actor.current_energy = 0
+
+    def h_defense(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.damage_reduction <= 0:
+            return
+        ctx.actor._defense_reduction = skill.damage_reduction
+        ctx.state.log.append(BattleEvent(
+            turn=ctx.state.turn_number, actor=ctx.actor.name, action="buff",
+            detail={"move": skill.name, "defense": f"{skill.damage_reduction:.0%}"},
+        ))
+
+    def h_hp_for_energy(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.hp_cost_pct <= 0:
+            return
+        hp_cost = int(ctx.actor.max_hp * skill.hp_cost_pct)
+        ctx.actor.current_hp = max(0, ctx.actor.current_hp - hp_cost)
+
+    # ── ON_DAMAGE handlers ──
+
+    def h_life_drain(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.life_drain <= 0:
+            return
+        dmg = ctx.data.get("damage", 0)
+        heal = int(dmg * skill.life_drain)
+        ctx.actor.current_hp = min(ctx.actor.max_hp, ctx.actor.current_hp + heal)
+
+    def h_self_heal(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill:
+            return
+        if skill.self_heal_hp > 0:
+            heal = int(ctx.actor.max_hp * skill.self_heal_hp)
+            ctx.actor.current_hp = min(ctx.actor.max_hp, ctx.actor.current_hp + heal)
+        if skill.self_heal_energy > 0:
+            ctx.actor.current_energy = min(MAX_ENERGY, ctx.actor.current_energy + skill.self_heal_energy)
+
+    def h_steal_energy(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill:
+            return
+        if skill.steal_energy > 0:
+            stolen = min(skill.steal_energy, ctx.target.current_energy)
+            ctx.target.current_energy -= stolen
+            ctx.actor.current_energy = min(MAX_ENERGY, ctx.actor.current_energy + stolen)
+        if skill.enemy_lose_energy > 0:
+            ctx.target.current_energy = max(0, ctx.target.current_energy - skill.enemy_lose_energy)
+
+    def h_mirror_damage(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        countered = ctx.data.get("countered", False)
+        if not skill or not countered or "mirror_damage" not in skill.tags:
+            return
+        reflect_dmg = skill.power
+        ctx.target.current_hp = max(0, ctx.target.current_hp - reflect_dmg)
+        ctx.state.log.append(BattleEvent(
+            turn=ctx.state.turn_number, actor=ctx.target.name, action="attack",
+            detail={"move": "reflect", "damage": reflect_dmg, "mirror": True},
+        ))
+
+    # ── POST_USE handlers ──
+
+    def h_burn(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.burn_stacks <= 0:
+            return
+        if not ctx.target.is_immune_to_status("灼烧"):
+            ctx.target.status_stacks["灼烧"] = ctx.target.status_stacks.get("灼烧", 0) + skill.burn_stacks
+
+    def h_poison(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.poison_stacks <= 0:
+            return
+        if not ctx.target.is_immune_to_status("中毒"):
+            ctx.target.status_stacks["中毒"] = ctx.target.status_stacks.get("中毒", 0) + skill.poison_stacks
+
+    def h_freeze(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.freeze_stacks <= 0:
+            return
+        if not ctx.target.is_immune_to_status("冻结"):
+            ctx.target.status_stacks["冻结"] = ctx.target.status_stacks.get("冻结", 0) + skill.freeze_stacks
+
+    def h_leech(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.leech_stacks <= 0:
+            return
+        ctx.target.status_stacks["寄生"] = ctx.target.status_stacks.get("寄生", 0) + skill.leech_stacks
+        ctx.target.leech_source = ctx.actor.name
+
+    def h_stat_change(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or "stat_change" not in skill.tags:
+            return
+        from roco.engine.damage import clamp_stage
+        for stat_key, field_name in [
+            ("atk_phys", "self_atk"), ("atk_mag", "self_spatk"),
+            ("def_phys", "self_def"), ("def_mag", "self_spdef"),
+        ]:
+            val = getattr(skill, field_name, 0)
+            if val != 0:
+                stage = clamp_stage(ctx.actor.buff_stages.get(stat_key, 0) + round(val / 0.10))
+                ctx.actor.buff_stages[stat_key] = stage
+        spd = skill.self_speed
+        if spd != 0:
+            ctx.actor.buff_stages["speed"] = clamp_stage(ctx.actor.buff_stages.get("speed", 0) + round(spd / 0.10))
+        for stat_key, field_name in [
+            ("atk_phys", "enemy_atk"), ("atk_mag", "enemy_spatk"),
+            ("def_phys", "enemy_def"), ("def_mag", "enemy_spdef"),
+        ]:
+            val = getattr(skill, field_name, 0)
+            if val != 0:
+                stage = clamp_stage(ctx.target.buff_stages.get(stat_key, 0) - round(abs(val) / 0.10))
+                ctx.target.buff_stages[stat_key] = stage
+        if skill.enemy_speed != 0:
+            ctx.target.buff_stages["speed"] = clamp_stage(ctx.target.buff_stages.get("speed", 0) - round(abs(skill.enemy_speed) / 0.10))
+
+    def h_force_switch(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or not skill.force_switch:
+            return
+        state = ctx.state
+        team = state.team_a if ctx.actor in state.team_a else state.team_b
+        is_a = team is state.team_a
+        alive = [i for i, p in enumerate(team) if not p.is_fainted and p != ctx.actor]
+        if not alive:
+            return
+        new_idx = alive[0]
+        if is_a:
+            state.active_a = new_idx
+        else:
+            state.active_b = new_idx
+
+    def h_weather(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or not skill.weather_type:
+            return
+        ctx.state.weather, ctx.state.weather_turns = skill.weather_type, 5
+
+    def h_enemy_cost_up(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill or skill.enemy_cost_up_amount <= 0:
+            return
+        ctx.target._cost_mod = getattr(ctx.target, "_cost_mod", 0) + skill.enemy_cost_up_amount
+        ctx.target._cost_mod_turns = 3
+
+    def h_permanent_mod(ctx: EventCtx) -> None:
+        skill = ctx.data.get("skill")
+        if not skill:
+            return
+        if skill.permanent_hit_growth:
+            skill.hit_count += skill.permanent_hit_growth
+        if skill.permanent_power_growth:
+            skill.power += skill.permanent_power_growth
+
+    # ── TURN_END / leech tick ──
+
+    def h_leech_tick(ctx: EventCtx) -> None:
         state = ctx.state
         for pet in state.team_a + state.team_b:
             stacks = pet.status_stacks.get("寄生", 0)
@@ -430,40 +366,34 @@ def register_skill_handlers(bus: "EventBus") -> None:
                     if p.name == pet.leech_source and not p.is_fainted:
                         p.current_hp = min(p.max_hp, p.current_hp + dmg)
                         break
-            state.log.append(BattleEvent(
-                turn=state.turn_number, actor=pet.name, action="status_tick",
-                detail={"status": "寄生", "damage": dmg, "stacks": stacks},
-            ))
 
-    def on_force_switch(ctx: EventCtx) -> None:
-        skill = ctx.data.get("skill")
-        if not skill or not skill.force_switch:
-            return
-        attacker = ctx.actor
-        if not attacker or attacker.is_fainted:
-            return
-        state = ctx.state
-        team = state.team_a if attacker in state.team_a else state.team_b
-        is_a = team is state.team_a
-        alive = [i for i, p in enumerate(team) if not p.is_fainted and p != attacker]
-        if not alive:
-            return
-        new_idx = alive[0]
-        if is_a:
-            state.active_a = new_idx
-        else:
-            state.active_b = new_idx
-        state.log.append(BattleEvent(
-            turn=state.turn_number, actor=attacker.name, action="switch",
-            detail={"from": attacker.name, "to": team[new_idx].name, "force": True},
-        ))
+    # ── Register all handlers on phase events ──
 
-    def on_weather_skill(ctx: EventCtx) -> None:
-        skill = ctx.data.get("skill")
-        if not skill or not skill.weather_type:
-            return
-        ctx.state.weather, ctx.state.weather_turns = skill.weather_type, 5
+    # PRE_USE (priority order matters: charge must run first to cancel)
+    bus.on(GameEvent.PRE_USE, h_charge, priority=0, source="skill")
+    bus.on(GameEvent.PRE_USE, h_energy_all_in, priority=5, source="skill")
+    bus.on(GameEvent.PRE_USE, h_hp_for_energy, priority=5, source="skill")
+    bus.on(GameEvent.PRE_USE, h_defense, priority=8, source="skill")
 
-    bus.on(GameEvent.TURN_END, on_leech_tick, priority=180, source="skill")
-    bus.on(GameEvent.AFTER_MOVE, on_force_switch, priority=50, source="skill")
-    bus.on(GameEvent.AFTER_MOVE, on_weather_skill, priority=30, source="skill")
+    # ON_DAMAGE
+    bus.on(GameEvent.ON_DAMAGE, h_life_drain, priority=20, source="skill")
+    bus.on(GameEvent.ON_DAMAGE, h_self_heal, priority=25, source="skill")
+    bus.on(GameEvent.ON_DAMAGE, h_steal_energy, priority=30, source="skill")
+    bus.on(GameEvent.ON_DAMAGE, h_mirror_damage, priority=35, source="skill")
+
+    # POST_USE
+    bus.on(GameEvent.POST_USE, h_burn, priority=40, source="skill")
+    bus.on(GameEvent.POST_USE, h_poison, priority=40, source="skill")
+    bus.on(GameEvent.POST_USE, h_freeze, priority=40, source="skill")
+    bus.on(GameEvent.POST_USE, h_leech, priority=40, source="skill")
+    bus.on(GameEvent.POST_USE, h_stat_change, priority=45, source="skill")
+    bus.on(GameEvent.POST_USE, h_force_switch, priority=50, source="skill")
+    bus.on(GameEvent.POST_USE, h_weather, priority=55, source="skill")
+    bus.on(GameEvent.POST_USE, h_enemy_cost_up, priority=50, source="skill")
+    bus.on(GameEvent.POST_USE, h_permanent_mod, priority=60, source="skill")
+
+    # TURN_END
+    bus.on(GameEvent.TURN_END, h_leech_tick, priority=180, source="skill")
+
+    # AFTER_MOVE (force switch + weather also via this)
+    # Force switch already handled in POST_USE, weather in POST_USE. Keep empty.

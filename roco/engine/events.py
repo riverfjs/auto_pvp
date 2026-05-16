@@ -33,10 +33,13 @@ class GameEvent(Enum):
     TURN_START = auto()        # start of turn, before energy gain
     TURN_END = auto()          # end of turn, after status/weather ticks
 
-    # ── Move-level ──
-    BEFORE_MOVE = auto()       # before a move executes (can cancel)
-    AFTER_DAMAGE = auto()      # after damage is applied (life drain etc.)
-    AFTER_MOVE = auto()        # after full move execution
+    # ── Move-level (phase-based execution) ──
+    BEFORE_MOVE = auto()       # before move executes (charge, energy, defense)
+    AFTER_DAMAGE = auto()      # damage just applied (drain, steal, reflect)
+    AFTER_MOVE = auto()        # after full move (status, stat change, weather)
+    PRE_USE = BEFORE_MOVE      # alias
+    ON_DAMAGE = AFTER_DAMAGE   # alias
+    POST_USE = AFTER_MOVE      # alias
     MOVE_MISS = auto()         # move failed (no energy, cooldown, etc.)
     CHARGE_START = auto()      # charge move started (蓄力)
 
