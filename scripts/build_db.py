@@ -1,6 +1,6 @@
 """Merge parsed pets, skills & yinji into the final PVP database.
 
-Output: _db/pvp_db.json
+Output: _db/data.json
 
 Usage:
     python scripts/build_db.py
@@ -59,7 +59,7 @@ def main() -> None:
         "yinji": yinji,
     }
 
-    out_path = DB_DIR / "pvp_db.json"
+    out_path = DB_DIR / "data.json"
     save_json(db, out_path)
     print(f"Built → {out_path}")
     if missing_skills:

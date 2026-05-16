@@ -1,7 +1,7 @@
 """Create / reset the SQLite database schema.
 
 Usage:
-    python scripts/migrate.py          # create _db/pvp.db
+    python scripts/migrate.py          # create _db/data.db
     python scripts/migrate.py --reset  # drop all tables and recreate
 """
 
@@ -78,7 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_yinji_skills_yinji ON yinji_skills(yinji_id);
 
 
 def migrate(reset: bool = False) -> sqlite3.Connection:
-    db_path = DB_DIR / "pvp.db"
+    db_path = DB_DIR / "data.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     conn = sqlite3.connect(str(db_path))
@@ -103,7 +103,7 @@ def main() -> None:
     args = parser.parse_args()
 
     conn = migrate(args.reset)
-    print(f"Migrated → {DB_DIR / 'pvp.db'}")
+    print(f"Migrated → {DB_DIR / 'data.db'}")
     conn.close()
 
 

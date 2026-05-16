@@ -1,6 +1,6 @@
 """Load parsed JSON data into the SQLite database.
 
-Reads _data/parsed/{pets,skills,yinji}.json and inserts into _db/pvp.db.
+Reads _data/parsed/{pets,skills,yinji}.json and inserts into _db/data.db.
 Run scripts/migrate.py first to create the tables.
 
 Usage:
@@ -160,7 +160,7 @@ def import_yinji(conn: sqlite3.Connection, yinji: dict[str, dict]) -> None:
 
 
 def main() -> None:
-    db_path = DB_DIR / "pvp.db"
+    db_path = DB_DIR / "data.db"
     if not db_path.exists():
         print(f"Database not found: {db_path}")
         print("Run 'python scripts/migrate.py' first.")
