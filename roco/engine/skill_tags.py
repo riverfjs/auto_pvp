@@ -29,7 +29,7 @@ Tag taxonomy:
 from __future__ import annotations
 
 import re
-from roco.engine.state import SkillRef
+from roco.engine.state import SkillData
 
 # ── Classification rules: (tag, pattern, field_to_set, value) ──
 
@@ -106,7 +106,7 @@ def _stat_field(name: str, prefix: str = "self_") -> str:
     return prefix + m.get(name, name)
 
 
-def classify(skill: SkillRef) -> SkillRef:
+def classify(skill: SkillData) -> SkillData:
     """Classify a skill and assign effect_flags + numeric fields."""
     from roco.engine.state import EffectFlag, SkillCategory
     eff = skill.effect

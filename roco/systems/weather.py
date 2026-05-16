@@ -73,6 +73,6 @@ def register_weather_handlers(bus: "EventBus") -> None:
                     continue
                 frost = snow_frostbite_damage(pet.max_hp)
                 pet.frostbite_damage += frost
-                pet.status_flags |= StatusFlag.FREEZE; pet.status_counts[StatusType.FREEZE] = pet.status_counts.get(StatusType.FREEZE, 0) + 2
+                pet.status_flags |= StatusFlag.FREEZE; pet.set_status_count(StatusType.FREEZE,  pet.get_status_count(StatusType.FREEZE) + 2)
 
     bus.on(GameEvent.TURN_END, weather_tick, priority=250, source="weather")

@@ -1,46 +1,30 @@
-"""COUNTER_SUCCESS skill handlers — counter drain, energy, status, reflect, buffs."""
-from roco.engine.state import EffectFlag
-from roco.engine.state import StatusType
+"""COUNTER_SUCCESS handlers."""
+from roco.engine.state import EffectFlag, StatusFlag, StatusType, BattleEvent
 from roco.engine.events import GameEvent, EventCtx
-from roco.engine.state import BattleEvent
 from roco.engine.damage import clamp_stage
 from roco.config.constants import MAX_ENERGY
 
-
-def register(bus: "EventBus") -> None:
-    def h_counter_effects(ctx: EventCtx) -> None:
-        skill = ctx.data.get("skill")
-        if not skill:
-            return
-        attacker = ctx.actor
-        defender = ctx.target
-        if not attacker or not defender:
-            return
-
-        if skill.counter_physical_drain > 0:
-            heal = int(defender.current_hp * skill.counter_physical_drain)
-            defender.current_hp = min(defender.max_hp, defender.current_hp + heal)
-        if skill.counter_physical_energy_drain > 0:
-            stolen = min(skill.counter_physical_energy_drain, attacker.current_energy)
-            attacker.current_energy -= stolen
-            defender.current_energy = min(MAX_ENERGY, defender.current_energy + stolen)
-        if skill.counter_status_burn_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.BURN):
-            attacker.status_flags |= StatusFlag.BURN; attacker.status_counts[StatusType.BURN] = attacker.status_counts.get(StatusType.BURN, 0) + skill.counter_status_burn_stacks
-        if skill.counter_status_poison_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.POISON):
-            attacker.status_flags |= StatusFlag.POISON; attacker.status_counts[StatusType.POISON] = attacker.status_counts.get(StatusType.POISON, 0) + skill.counter_status_poison_stacks
-        if skill.counter_status_freeze_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.FREEZE):
-            attacker.status_flags |= StatusFlag.FREEZE; attacker.status_counts[StatusType.FREEZE] = attacker.status_counts.get(StatusType.FREEZE, 0) + skill.counter_status_freeze_stacks
-        if skill.counter_damage_reflect > 0:
-            reflect = int(ctx.data.get("damage", 0) * skill.counter_damage_reflect)
-            attacker.current_hp = max(0, attacker.current_hp - reflect)
-            ctx.state.log.append(BattleEvent(
-                turn=ctx.state.turn_number, actor=defender.name, action="attack",
-                detail={"move": "reflect", "damage": reflect, "counter": True}))
-        if skill.counter_physical_self_atk:
-            defender.buff_stages["atk_phys"] = clamp_stage(
-                defender.buff_stages.get("atk_phys", 0) + round(skill.counter_physical_self_atk / 0.10))
-        if skill.counter_defense_enemy_def:
-            attacker.buff_stages["def_phys"] = clamp_stage(
-                attacker.buff_stages.get("def_phys", 0) - round(skill.counter_defense_enemy_def / 0.10))
-
-    bus.on(GameEvent.COUNTER_SUCCESS, h_counter_effects, priority=50, source="skill")
+def register(bus):
+    def h(ctx):
+        sk = ctx.data.get("skill")
+        if not sk: return
+        a, d = ctx.actor, ctx.target
+        if not a or not d: return
+        if sk.counter_physical_drain > 0:
+            d.current_hp = min(d.max_hp, d.current_hp + int(d.current_hp * sk.counter_physical_drain))
+        if sk.counter_physical_energy_drain > 0:
+            s = min(sk.counter_physical_energy_drain, a.current_energy)
+            a.current_energy -= s; d.current_energy = min(MAX_ENERGY, d.current_energy + s)
+        if sk.counter_status_burn_stacks > 0 and not a.is_immune_to(StatusFlag.BURN):
+            a.status_flags |= StatusFlag.BURN; a.set_status_count(StatusType.BURN, a.get_status_count(StatusType.BURN) + sk.counter_status_burn_stacks)
+        if sk.counter_status_poison_stacks > 0 and not a.is_immune_to(StatusFlag.POISON):
+            a.status_flags |= StatusFlag.POISON; a.set_status_count(StatusType.POISON, a.get_status_count(StatusType.POISON) + sk.counter_status_poison_stacks)
+        if sk.counter_status_freeze_stacks > 0 and not a.is_immune_to(StatusFlag.FREEZE):
+            a.status_flags |= StatusFlag.FREEZE; a.set_status_count(StatusType.FREEZE, a.get_status_count(StatusType.FREEZE) + sk.counter_status_freeze_stacks)
+        if sk.counter_damage_reflect > 0:
+            rf = int(ctx.data.get("damage", 0) * sk.counter_damage_reflect)
+            a.current_hp = max(0, a.current_hp - rf)
+            ctx.state.log.append(BattleEvent(turn=ctx.state.turn_number, actor=d.persistent.name, action="attack", detail={"move":"reflect","damage":rf,"counter":True}))
+        if sk.counter_physical_self_atk: d.set_buff(0, clamp_stage(d.get_buff(0) + round(sk.counter_physical_self_atk / 0.10)))
+        if sk.counter_defense_enemy_def: a.set_buff(1, clamp_stage(a.get_buff(1) - round(sk.counter_defense_enemy_def / 0.10)))
+    bus.on(GameEvent.COUNTER_SUCCESS, h, priority=50, source="skill")

@@ -24,7 +24,7 @@ def register_burst_handlers(bus: "EventBus") -> None:
         team = ctx.data.get("team", "a")
         state = ctx.state
         entry = state.burst_entry_turn_a if team == "a" else state.burst_entry_turn_b
-        entry[pet.name] = state.turn_number
+        entry[pet.persistent.name] = state.turn_number
 
     def on_before_move(ctx: EventCtx) -> None:
         """Burst: if this is entry turn and skill has burst tag, +40 power."""
@@ -35,7 +35,7 @@ def register_burst_handlers(bus: "EventBus") -> None:
         state = ctx.state
         team = "a" if pet in state.team_a else "b"
         entry = state.burst_entry_turn_a if team == "a" else state.burst_entry_turn_b
-        if entry.get(pet.name) == state.turn_number:
+        if entry.get(pet.persistent.name) == state.turn_number:
             ctx.power_mod += 0.40  # +40% power on burst
 
     bus.on(GameEvent.SWITCH_IN, on_switch_in, priority=90, source="burst")

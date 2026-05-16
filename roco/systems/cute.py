@@ -24,25 +24,25 @@ def register_cute_handlers(bus: "EventBus") -> None:
         target = ctx.target
         if not killer or not target:
             return
-        if target.cute_stacks > 0:
-            killer.cute_stacks += target.cute_stacks
-            target.cute_stacks = 0
+        if target.cute > 0:
+            killer.cute += target.cute
+            target.cute = 0
 
     def on_before_move(ctx: EventCtx) -> None:
         """Cute stacks give +5% power per stack."""
         pet = ctx.actor
-        if not pet or pet.cute_stacks <= 0:
+        if not pet or pet.cute <= 0:
             return
-        ctx.power_mod += pet.cute_stacks * 0.05
+        ctx.power_mod += pet.cute * 0.05
 
     def on_take_damage(ctx: EventCtx) -> None:
         """Lethal shield: if cute >= 5 and would die, survive at 1 HP."""
         pet = ctx.actor
-        if not pet or pet.cute_stacks < 5:
+        if not pet or pet.cute < 5:
             return
         if pet.current_hp <= 0:
             pet.current_hp = 1
-            pet.cute_stacks -= 5  # consume 5 stacks
+            pet.cute -= 5  # consume 5 stacks
             ctx.data["_cute_saved"] = True
 
     bus.on(GameEvent.KILL, on_kill_transfer, priority=80, source="cute")

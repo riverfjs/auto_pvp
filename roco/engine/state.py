@@ -1,222 +1,242 @@
-"""Battle state data classes — pure data, no behavior beyond properties."""
+"""pkmn-inspired data model — two-tier (Persistent/Battle) + packed bitfields."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntFlag, IntEnum, auto
-from roco.config.constants import STARTING_ENERGY
-from roco.config.status import STATUS_ELEMENT_IMMUNITY
 
+# ── Enums ───────────────────────────────────────────────────────
 
-# ── Bitfield enums ─────────────────────────────────────────────
 
 class EffectFlag(IntFlag):
-    """Skill effect flags — O(1) bitmask lookup, no string matching."""
-    NONE = 0
-    DRAIN = auto()          # 吸血
-    HEAL_HP = auto()        # 回血
-    HEAL_ENERGY = auto()    # 回能
-    STEAL_ENERGY = auto()   # 偷能量
-    DEFENSE = auto()        # 减伤
-    BURN = auto()           # 灼烧
-    POISON = auto()         # 中毒
-    FREEZE = auto()         # 冻结
-    LEECH = auto()          # 寄生
-    STAT_CHANGE = auto()    # 属性变化
-    FORCE_SWITCH = auto()   # 强制换人
-    CHARGE = auto()         # 蓄力
-    ENERGY_ALL_IN = auto()  # 全额投入
-    WEATHER = auto()        # 天气设置
-    COUNTER = auto()        # 应对效果
-    CONDITIONAL = auto()    # 条件触发
-    MIRROR_DAMAGE = auto()  # 镜反伤害
-    ENEMY_COST_UP = auto()  # 敌方能耗+
-    HP_FOR_ENERGY = auto()  # HP换能
-    PERMANENT_MOD = auto()  # 永久修改
-    PURE_DAMAGE = auto()    # 纯伤害
-    BURST = auto()          # 迸发
-    AGILITY = auto()        # 迅捷
-    IS_MARK = auto()        # 印记技能
+    NONE = 0; DRAIN = auto(); HEAL_HP = auto(); HEAL_ENERGY = auto()
+    STEAL_ENERGY = auto(); DEFENSE = auto(); BURN = auto(); POISON = auto()
+    FREEZE = auto(); LEECH = auto(); STAT_CHANGE = auto(); FORCE_SWITCH = auto()
+    CHARGE = auto(); ENERGY_ALL_IN = auto(); WEATHER = auto(); COUNTER = auto()
+    CONDITIONAL = auto(); MIRROR_DAMAGE = auto(); ENEMY_COST_UP = auto()
+    HP_FOR_ENERGY = auto(); PERMANENT_MOD = auto(); PURE_DAMAGE = auto()
+    BURST = auto(); AGILITY = auto(); IS_MARK = auto()
 
 
 class StatusFlag(IntFlag):
-    """Persistent status effects — bitmask on PetState."""
-    NONE = 0
-    BURN = auto()
-    POISON = auto()
-    FREEZE = auto()
-    LEECH = auto()
+    NONE = 0; BURN = auto(); POISON = auto(); FREEZE = auto(); LEECH = auto()
 
 
 class StatusType(IntEnum):
-    """String-free status type keys for status_counts dict."""
-    BURN = 1; POISON = 2; FREEZE = 3; LEECH = 4
-
-
-class Stats(IntEnum):
-    """String-free stat keys for buff_stages and effective_stats."""
-    HP = 0; ATK_PHYS = 1; ATK_MAG = 2; DEF_PHYS = 3; DEF_MAG = 4; SPEED = 5
+    BURN = 0; POISON = 1; FREEZE = 2; LEECH = 3
+    @property
+    def flag(self) -> StatusFlag: return StatusFlag(1 << self.value)
 
 
 class SkillCategory(IntEnum):
-    """String-free skill category."""
-    PHYSICAL = 1   # 物攻
-    MAGICAL = 2    # 魔攻
-    DEFENSE = 3    # 防御
-    STATUS = 4     # 状态
+    PHYSICAL = 1; MAGICAL = 2; DEFENSE = 3; STATUS = 4
 
 
-@dataclass
-class SkillRef:
+class Stats(IntEnum):
+    HP = 0; ATK_PHYS = 1; ATK_MAG = 2; DEF_PHYS = 3; DEF_MAG = 4; SPEED = 5
+
+
+class WeatherType(IntEnum):
+    NONE = 0; RAIN = 1; SANDSTORM = 2; SNOW = 3
+
+
+# ── Packed buff stage helpers ─────────────────────────────────
+
+def _pack_buff(atk_p=0, atk_m=0, def_p=0, def_m=0, spd=4, acc=0, eva=0) -> int:
+    """Pack 7 buff stages into u32. Each 4 bits, signed (-6 to +6)."""
+    def s(v): return (v + 6) & 0xF
+    return (s(atk_p) | s(def_p) << 4 | s(spd) << 8 | s(atk_m) << 12 |
+            s(def_m) << 16 | s(acc) << 20 | s(eva) << 24)
+
+
+def _unpack_buff(packed: int, idx: int) -> int:
+    """Unpack one buff stage (signed). idx 0=atk_phys,1=def_phys,2=speed,3=atk_mag,4=def_mag,5=acc,6=eva."""
+    return ((packed >> (idx * 4)) & 0xF) - 6
+
+
+def _set_buff(packed: int, idx: int, val: int) -> int:
+    clamped = max(-6, min(6, val))
+    shift = idx * 4
+    packed &= ~(0xF << shift)
+    return packed | ((clamped + 6) & 0xF) << shift
+
+
+def buff_multiplier(stage: int) -> float:
+    """Buff stage → multiplier. +6=1.6, -6=0.625."""
+    return 1.0 + stage * 0.10 if stage >= 0 else 1.0 / (1.0 + abs(stage) * 0.10)
+
+
+# ── Packed status counts ──────────────────────────────────────
+
+def _pack_status(burn=0, poison=0, freeze=0, leech=0) -> int:
+    return (burn & 0xFF) | (poison & 0xFF) << 8 | (freeze & 0xFF) << 16 | (leech & 0xFF) << 24
+
+
+def _unpack_status(packed: int, t: StatusType) -> int:
+    return (packed >> (t.value * 8)) & 0xFF
+
+
+def _set_status(packed: int, t: StatusType, val: int) -> int:
+    shift = t.value * 8
+    packed &= ~(0xFF << shift)
+    return packed | ((val & 0xFF) << shift)
+
+
+# ── Weather pack ───────────────────────────────────────────────
+
+def _pack_weather(wtype: WeatherType, turns: int) -> int:
+    return (wtype.value & 0xF) | (turns & 0xF) << 4
+
+
+def _unpack_weather(packed: int) -> tuple[WeatherType, int]:
+    return WeatherType(packed & 0xF), (packed >> 4) & 0xF
+
+
+# ── Cooldown pack ─────────────────────────────────────────────
+
+def _pack_cooldown(cds: dict[int, int]) -> int:
+    r = 0
+    for idx, cd in cds.items():
+        if 0 <= idx < 8 and cd > 0:
+            r |= (min(cd, 15) & 0xF) << (idx * 4)
+    return r
+
+
+def _unpack_cooldown(packed: int) -> dict[int, int]:
+    return {i: v for i in range(8) if (v := (packed >> (i * 4)) & 0xF) > 0}
+
+
+# ── Dataclasses ────────────────────────────────────────────────
+
+
+@dataclass(slots=True)
+class SkillData:
+    """Immutable skill definition — loaded from DB, never modified."""
+    name: str; element: str; category: SkillCategory
+    energy: int; power: int; effect: str
+    effect_flags: int = EffectFlag.NONE
+    # Pre-parsed effect values
+    life_drain: float = 0; self_heal_hp: float = 0; self_heal_energy: int = 0
+    steal_energy: int = 0; enemy_lose_energy: int = 0
+    damage_reduction: float = 0; hit_count: int = 1
+    force_switch: bool = False; priority_mod: int = 0
+    burn_stacks: int = 0; poison_stacks: int = 0; freeze_stacks: int = 0
+    leech_stacks: int = 0; meteor_stacks: int = 0
+    self_atk: float = 0; self_spatk: float = 0; self_def: float = 0; self_spdef: float = 0; self_speed: float = 0
+    enemy_atk: float = 0; enemy_def: float = 0; enemy_spatk: float = 0; enemy_spdef: float = 0; enemy_speed: float = 0
+    weather_type: str = ""; enemy_cost_up_amount: int = 0; hp_cost_pct: float = 0
+    permanent_hit_growth: int = 0; permanent_power_growth: int = 0
+    burst: bool = False; agility: bool = False; is_mark: bool = False; devotion_affected: bool = False; charge: bool = False
+    # Counter effects
+    counter_physical_drain: float = 0; counter_physical_energy_drain: int = 0
+    counter_physical_self_atk: float = 0; counter_defense_enemy_def: float = 0
+    counter_status_burn_stacks: int = 0; counter_status_poison_stacks: int = 0
+    counter_status_freeze_stacks: int = 0; counter_damage_reflect: float = 0
+
+
+@dataclass(slots=True)
+class PersistentPokemon:
+    """Immutable pet definition — loaded from DB, shared across simulations."""
     name: str
-    element: str
-    category: str       # 物攻 / 魔攻 / 防御 / 状态
-    energy: int
-    power: int
-    effect: str = ""
-    # Extended effect fields (populated by effect parser)
-    life_drain: float = 0
-    self_heal_hp: float = 0
-    self_heal_energy: int = 0
-    steal_energy: int = 0
-    enemy_lose_energy: int = 0
-    damage_reduction: float = 0
-    force_switch: bool = False
-    priority_mod: int = 0
-    hit_count: int = 1
-    leech_stacks: int = 0
-    meteor_stacks: int = 0
-    self_atk: float = 0
-    self_spatk: float = 0
-    self_def: float = 0
-    self_spdef: float = 0
-    self_speed: float = 0
-    enemy_atk: float = 0
-    enemy_def: float = 0
-    enemy_spatk: float = 0
-    enemy_spdef: float = 0
-    enemy_speed: float = 0
-    poison_stacks: int = 0
-    burn_stacks: int = 0
-    freeze_stacks: int = 0
-    effect_flags: int = EffectFlag.NONE  # bitmask replacing tags list
-    # Pre-parsed effect values (set at import time, zero runtime regex)
-    weather_type: str = ""           # "sandstorm"|"rain"|"snow"|""
-    enemy_cost_up_amount: int = 0
-    hp_cost_pct: float = 0.0
-    permanent_hit_growth: int = 0
-    permanent_power_growth: int = 0
-    # Combined stat modifiers
-    self_all_atk: float = 0      # 双攻+
-    self_all_def: float = 0      # 双防+
-    enemy_all_atk: float = 0     # 敌方双攻-
-    enemy_all_def: float = 0     # 敌方双防-
-    # Mechanic flags
-    is_mark: bool = False        # 印记技能 (vs 临时buff)
-    agility: bool = False        # 迅捷入场自动释放
-    burst: bool = False          # 迸发技能
-    devotion_affected: bool = False
-    charge: bool = False           # 蓄力技能
-    # Counter effects (triggered on COUNTER_SUCCESS)
-    counter_physical_drain: float = 0
-    counter_physical_energy_drain: int = 0
-    counter_physical_self_atk: float = 0
-    counter_physical_enemy_def: float = 0
-    counter_defense_self_atk: float = 0
-    counter_defense_self_def: float = 0
-    counter_defense_enemy_def: float = 0
-    counter_defense_enemy_energy_cost: int = 0
-    counter_status_power_mult: float = 0
-    counter_status_enemy_lose_energy: int = 0
-    counter_status_poison_stacks: int = 0
-    counter_status_burn_stacks: int = 0
-    counter_status_freeze_stacks: int = 0
-    counter_skill_cooldown: int = 0
-    counter_damage_reflect: float = 0
-
-
-@dataclass
-class PetState:
-    """Runtime state of a single pet during battle."""
-    name: str
-    base_stats: dict[str, int]
-    effective_stats: dict[str, int]
-    element_primary: str
-    element_secondary: str = ""
-    bloodline: str = ""
-    nature: str = ""
-    ivs: list[str] = field(default_factory=list)
-    moves: list[SkillRef] = field(default_factory=list)
-    current_hp: int = 0
-    current_energy: int = STARTING_ENERGY
-    buff_stages: dict[str, int] = field(default_factory=dict)
-    status_flags: int = StatusFlag.NONE   # bitmask for burn/poison/freeze/leech
-    status_counts: dict[str, int] = field(default_factory=dict)  # stack counts
-    frostbite_damage: int = 0
-    power_multiplier: float = 1.0
-    charging_skill_idx: int = -1
-    cooldowns: dict[int, int] = field(default_factory=dict)
-    is_fainted: bool = False
-    leech_source: str = ""              # name of pet that applied leech
-    slot: int = 0
+    stats: dict[int, int]     # Stats enum → value
+    types: tuple[str, str]    # (primary, secondary)
+    moves: list[SkillData]
     ability_name: str = ""
     ability_desc: str = ""
     ability_tags: list[str] = field(default_factory=list)
-    ability_state: dict = field(default_factory=dict)    # runtime KV store
-    meteor_countdown: int = 0
-    meteor_stacks: int = 0
-    cute_stacks: int = 0
-    # Runtime modifiers (reset on switch-out)
-    life_drain_mod: float = 0
-    skill_power_bonus: int = 0
-    skill_power_pct_mod: float = 0
-    skill_cost_mod: int = 0
-    hit_count_mod: int = 0
-    priority_stage: int = 0
-    next_attack_power_bonus: int = 0
-    next_attack_power_pct: float = 0  # pre-classified
+    bloodline: str = ""
+    nature: str = ""
+    ivs: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ActivePokemon:
+    """Battle-only mutable state — reset on every switch-in."""
+    persistent: PersistentPokemon
+    current_hp: int = 0
+    current_energy: int = 10
+    buff_stages: int = _pack_buff()   # packed u32
+    status_flags: int = StatusFlag.NONE
+    status_counts: int = 0            # packed u32
+    volt_flags: int = 0               # temporary volatile effects
+    frostbite: int = 0; cute: int = 0
+    power_mult: int = 100             # fixed-point ×100 (1.0 = 100)
+    charging_skill: int = -1
+    cooldowns: int = 0               # packed
+    leech_source: str = ""
+    ability_state: dict = field(default_factory=dict)
+    is_fainted: bool = False
+    slot: int = 0
+    # Runtime scratch
+    _power_mod: float = 1.0
+    _defense_reduction: float = 0.0
+    _cost_mod: int = 0
+    _cost_mod_turns: int = 0
 
     @property
-    def max_hp(self) -> int:
-        return self.effective_stats.get("hp", 1)
+    def max_hp(self) -> int: return self.persistent.stats.get(Stats.HP, 1)
+    @property
+    def speed(self) -> int: return self.persistent.stats.get(Stats.SPEED, 0)
+    @property
+    def hp_pct(self) -> float: return self.current_hp / max(1, self.max_hp)
+
+    def _stat(self, s: Stats) -> int:
+        base = self.persistent.stats.get(s, 0)
+        idx = {Stats.ATK_PHYS:0, Stats.DEF_PHYS:1, Stats.SPEED:2, Stats.ATK_MAG:3, Stats.DEF_MAG:4}.get(s, 0)
+        stage = _unpack_buff(self.buff_stages, idx)
+        return int(base * buff_multiplier(stage))
 
     @property
-    def speed(self) -> int:
-        return self.effective_stats.get("speed", 0)
+    def atk_phys(self) -> int: return self._stat(Stats.ATK_PHYS)
+    @property
+    def atk_mag(self) -> int: return self._stat(Stats.ATK_MAG)
+    @property
+    def def_phys(self) -> int: return self._stat(Stats.DEF_PHYS)
+    @property
+    def def_mag(self) -> int: return self._stat(Stats.DEF_MAG)
 
     @property
-    def hp_pct(self) -> float:
-        return self.current_hp / self.max_hp if self.max_hp > 0 else 0
+    def elements(self) -> tuple[str, ...]:
+        t = self.persistent.types
+        return (t[0], t[1]) if t[1] else (t[0],)
 
-    @property
-    def defender_types(self) -> tuple[str, ...]:
-        types = [self.element_primary]
-        if self.element_secondary:
-            types.append(self.element_secondary)
-        return tuple(types)
+    def set_buff(self, idx: int, val: int) -> None:
+        self.buff_stages = _set_buff(self.buff_stages, idx, val)
 
-    def is_immune_to_status(self, flag: StatusFlag) -> bool:
-        """Check if pet's element grants immunity to a status effect."""
-        name = _STATUS_FLAG_TO_NAME.get(flag, "")
-        if not name:
-            return False
-        for elem, sname in STATUS_ELEMENT_IMMUNITY.items():
-            if sname == name and elem in self.defender_types:
+    def get_buff(self, idx: int) -> int:
+        return _unpack_buff(self.buff_stages, idx)
+
+    def get_status_count(self, t: StatusType) -> int:
+        return _unpack_status(self.status_counts, t)
+
+    def set_status_count(self, t: StatusType, val: int) -> None:
+        self.status_counts = _set_status(self.status_counts, t, val)
+
+    def has_status(self, f: StatusFlag) -> bool:
+        return bool(self.status_flags & f)
+
+    def is_immune_to(self, f: StatusFlag) -> bool:
+        IMMUNITY = {"火": StatusFlag.BURN, "草": StatusFlag.LEECH, "毒": StatusFlag.POISON, "冰": StatusFlag.FREEZE}
+        for elem in self.elements:
+            if IMMUNITY.get(elem) == f:
                 return True
         return False
 
-
-_STATUS_FLAG_TO_NAME: dict[StatusFlag, str] = {
-    StatusFlag.BURN: "灼烧", StatusFlag.POISON: "中毒",
-    StatusFlag.FREEZE: "冻结", StatusFlag.LEECH: "寄生",
-}
+    def reset_volatile(self) -> None:
+        """Reset battle-only state (called on switch-out)."""
+        self.buff_stages = _pack_buff()
+        self.volt_flags = 0
+        self.power_mult = 100
+        self.charging_skill = -1
+        self._power_mod = 1.0
+        self._defense_reduction = 0.0
+        self._cost_mod = 0
+        self._cost_mod_turns = 0
 
 
 @dataclass
 class BattleEvent:
-    turn: int
-    actor: str
-    action: str
+    turn: int; actor: str; action: str
     detail: dict = field(default_factory=dict)
 
 
@@ -227,34 +247,37 @@ class MoveDecision:
     switch_slot: int | None = None
 
 
-DEFAULT_MAGIC_POWER: int = 4
-
-
 @dataclass
 class BattleState:
-    team_a: list[PetState]
-    team_b: list[PetState]
-    active_a: int = 0
-    active_b: int = 0
-    magic_a: int = DEFAULT_MAGIC_POWER
-    magic_b: int = DEFAULT_MAGIC_POWER
-    weather: str | None = None
-    weather_turns: int = 0
-    marks_a: dict[str, float] = field(default_factory=dict)
-    marks_b: dict[str, float] = field(default_factory=dict)
-    # Subsystem state
-    devotion_a: dict[str, int] = field(default_factory=dict)
-    devotion_b: dict[str, int] = field(default_factory=dict)
-    burst_entry_turn_a: dict[str, int] = field(default_factory=dict)
-    burst_entry_turn_b: dict[str, int] = field(default_factory=dict)
-    barrel_pending_a: bool = False
-    barrel_pending_b: bool = False
-    counter_count_a: int = 0
-    counter_count_b: int = 0
-    switch_this_turn_a: bool = False
-    switch_this_turn_b: bool = False
-    skill_use_counts_a: dict[str, int] = field(default_factory=dict)
-    skill_use_counts_b: dict[str, int] = field(default_factory=dict)
+    team_a: list[ActivePokemon]
+    team_b: list[ActivePokemon]
+    active_a: int = 0; active_b: int = 0
+    magic_a: int = 4; magic_b: int = 4
+    weather: int = 0               # packed weather: type(4)|turns(4)
+    marks_a: dict = field(default_factory=dict)
+    marks_b: dict = field(default_factory=dict)
+    devotion_a: dict = field(default_factory=dict)
+    devotion_b: dict = field(default_factory=dict)
+    burst_a: dict = field(default_factory=dict)
+    burst_b: dict = field(default_factory=dict)
+    burst_entry_turn_a: dict = field(default_factory=dict)
+    burst_entry_turn_b: dict = field(default_factory=dict)
+    barrel_pending_a: bool = False; barrel_pending_b: bool = False
+    counter_count_a: int = 0; counter_count_b: int = 0
+    switch_this_turn_a: bool = False; switch_this_turn_b: bool = False
+    skill_counts_a: dict = field(default_factory=dict)
+    skill_counts_b: dict = field(default_factory=dict)
     turn_number: int = 0
     log: list[BattleEvent] = field(default_factory=list)
     winner: str | None = None
+
+    @property
+    def weather_type(self) -> WeatherType: return WeatherType(self.weather & 0xF)
+    @weather_type.setter
+    def weather_type(self, w: WeatherType) -> None:
+        self.weather = (self.weather & ~0xF) | (w.value & 0xF)
+    @property
+    def weather_turns(self) -> int: return (self.weather >> 4) & 0xF
+    @weather_turns.setter
+    def weather_turns(self, t: int) -> None:
+        self.weather = (self.weather & 0xF) | ((t & 0xF) << 4)

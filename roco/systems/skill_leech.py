@@ -1,25 +1,18 @@
-"""Leech tick handler — end-of-turn leech damage + heal caster."""
+"""Leech tick handler."""
+from roco.engine.state import StatusFlag, StatusType, BattleEvent
 from roco.engine.events import GameEvent, EventCtx
-from roco.engine.state import BattleEvent
-from roco.engine.state import StatusType
 
-
-def register(bus: "EventBus") -> None:
-    def h_leech_tick(ctx: EventCtx) -> None:
-        state = ctx.state
-        for pet in state.team_a + state.team_b:
-            stacks = pet.status_counts.get(StatusType.LEECH, 0)
-            if stacks <= 0 or pet.is_fainted or not pet.leech_source:
-                continue
+def register(bus):
+    def h(ctx):
+        for pet in ctx.state.team_a + ctx.state.team_b:
+            if pet.is_fainted or not pet.leech_source: continue
+            stacks = pet.get_status_count(StatusType.LEECH)
+            if stacks <= 0: continue
             dmg = int(pet.max_hp * 0.08 * stacks)
             pet.current_hp = max(0, pet.current_hp - dmg)
-            for team in (state.team_a, state.team_b):
+            for team in (ctx.state.team_a, ctx.state.team_b):
                 for p in team:
-                    if p.name == pet.leech_source and not p.is_fainted:
+                    if p.persistent.name == pet.leech_source and not p.is_fainted:
                         p.current_hp = min(p.max_hp, p.current_hp + dmg)
                         break
-            state.log.append(BattleEvent(
-                turn=state.turn_number, actor=pet.name, action="status_tick",
-                detail={"status": "寄生", "damage": dmg, "stacks": stacks}))
-
-    bus.on(GameEvent.TURN_END, h_leech_tick, priority=180, source="skill")
+    bus.on(GameEvent.TURN_END, h, priority=180, source="skill")
