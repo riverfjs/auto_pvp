@@ -59,18 +59,20 @@ LAST_REQUEST = 0.0
 MIN_INTERVAL = 0.05  # seconds between requests (serial mode)
 
 
-def api_get(params: dict) -> dict:
-    """GET the MediaWiki API with rate limiting. Returns parsed JSON."""
+def api_get(params: dict, use_post: bool = False) -> dict:
+    """GET (or POST) the MediaWiki API with rate limiting. Returns parsed JSON."""
     global LAST_REQUEST
     elapsed = time.monotonic() - LAST_REQUEST
     if elapsed < MIN_INTERVAL:
         time.sleep(MIN_INTERVAL - elapsed)
-    resp = SESSION.get(API_BASE, params=params, timeout=30)
+    if use_post:
+        resp = SESSION.post(API_BASE, data=params, timeout=30)
+    else:
+        resp = SESSION.get(API_BASE, params=params, timeout=30)
     LAST_REQUEST = time.monotonic()
     resp.raise_for_status()
     data = resp.json()
     if "query" not in data and "parse" not in data:
-        # Unexpected response — dump keys for debugging
         raise RuntimeError(f"Unexpected API response keys: {list(data.keys())} — {resp.url}")
     return data
 

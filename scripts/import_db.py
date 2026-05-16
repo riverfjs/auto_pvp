@@ -159,6 +159,52 @@ def import_yinji(conn: sqlite3.Connection, yinji: dict[str, dict]) -> None:
     print(f"  yinji_skills: {cnt} links inserted")
 
 
+def import_teams(conn: sqlite3.Connection, teams: dict[str, dict]) -> None:
+    """Insert all teams and their pet slots."""
+    team_rows: list[tuple] = []
+    pet_rows: list[tuple] = []
+
+    for tid, team in teams.items():
+        team_rows.append((
+            tid,
+            team.get("title", ""),
+            team.get("author", ""),
+            team.get("type", ""),
+            team.get("bloodline_magic", ""),
+            team.get("description", ""),
+            team.get("upload_date", ""),
+        ))
+        for pet in team.get("pets", []):
+            moves = pet.get("moves", [])
+            pet_rows.append((
+                tid,
+                pet.get("slot", 0),
+                pet.get("name", ""),
+                pet.get("name_short", ""),
+                pet.get("bloodline", ""),
+                pet.get("nature", ""),
+                ",".join(pet.get("ivs", [])),
+                moves[0] if len(moves) > 0 else "",
+                moves[1] if len(moves) > 1 else "",
+                moves[2] if len(moves) > 2 else "",
+                moves[3] if len(moves) > 3 else "",
+            ))
+
+    conn.executemany(
+        "INSERT INTO teams (id, title, author, type, bloodline_magic, description, upload_date) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        team_rows,
+    )
+    conn.executemany(
+        "INSERT INTO team_pets (team_id, slot, pet_name, name_short, bloodline, nature, ivs, "
+        "move1, move2, move3, move4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        pet_rows,
+    )
+
+    print(f"  teams: {len(team_rows)} inserted")
+    print(f"  team_pets: {len(pet_rows)} slots inserted")
+
+
 def main() -> None:
     db_path = DB_DIR / "data.db"
     if not db_path.exists():
@@ -183,6 +229,12 @@ def main() -> None:
         yinji: dict[str, dict] = load_json(yinji_path)
         import_yinji(conn, yinji)
 
+    # Teams
+    teams_path = PARSED_DIR / "teams.json"
+    if teams_path.exists():
+        teams: dict[str, dict] = load_json(teams_path)
+        import_teams(conn, teams)
+
     conn.commit()
     # Summary
     counts = conn.execute(
@@ -190,7 +242,9 @@ def main() -> None:
         "SELECT 'skills', COUNT(*) FROM skills UNION ALL "
         "SELECT 'pet_skills', COUNT(*) FROM pet_skills UNION ALL "
         "SELECT 'yinji', COUNT(*) FROM yinji UNION ALL "
-        "SELECT 'yinji_skills', COUNT(*) FROM yinji_skills"
+        "SELECT 'yinji_skills', COUNT(*) FROM yinji_skills UNION ALL "
+        "SELECT 'teams', COUNT(*) FROM teams UNION ALL "
+        "SELECT 'team_pets', COUNT(*) FROM team_pets"
     ).fetchall()
     for name, cnt in counts:
         print(f"  {name}: {cnt}")

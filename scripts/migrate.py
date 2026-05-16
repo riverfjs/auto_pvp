@@ -74,6 +74,33 @@ CREATE TABLE IF NOT EXISTS yinji_skills (
     description TEXT    DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_yinji_skills_yinji ON yinji_skills(yinji_id);
+
+CREATE TABLE IF NOT EXISTS teams (
+    id              TEXT    PRIMARY KEY,
+    title           TEXT    NOT NULL,
+    author          TEXT    DEFAULT '',
+    type            TEXT    NOT NULL,              -- pvp / pve
+    bloodline_magic TEXT    DEFAULT '',
+    description     TEXT    DEFAULT '',
+    upload_date     TEXT    DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS team_pets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id     TEXT    NOT NULL REFERENCES teams(id),
+    slot        INTEGER NOT NULL,                  -- 1-6
+    pet_name    TEXT    NOT NULL,
+    name_short  TEXT    DEFAULT '',
+    bloodline   TEXT    DEFAULT '',
+    nature      TEXT    DEFAULT '',
+    ivs         TEXT    DEFAULT '',                -- comma-separated
+    move1       TEXT    DEFAULT '',
+    move2       TEXT    DEFAULT '',
+    move3       TEXT    DEFAULT '',
+    move4       TEXT    DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_team_pets_team ON team_pets(team_id);
+CREATE INDEX IF NOT EXISTS idx_team_pets_name ON team_pets(pet_name);
 """
 
 
@@ -86,6 +113,8 @@ def migrate(reset: bool = False) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode = WAL")
 
     if reset:
+        conn.executescript("DROP TABLE IF EXISTS team_pets")
+        conn.executescript("DROP TABLE IF EXISTS teams")
         conn.executescript("DROP TABLE IF EXISTS yinji_skills")
         conn.executescript("DROP TABLE IF EXISTS yinji")
         conn.executescript("DROP TABLE IF EXISTS pet_skills")
