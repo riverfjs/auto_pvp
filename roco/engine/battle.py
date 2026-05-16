@@ -9,9 +9,8 @@ from roco.engine.damage import (
     calc_energy_after_gain, can_use_skill,
 )
 from roco.engine.state import (
-    PetState, BattleEvent as BEvent, MoveDecision, BattleState, StatusFlag,
+    PetState, BattleEvent as BEvent, MoveDecision, BattleState, StatusFlag, StatusType,
 )
-from roco.engine.skill_exec import execute_move, get_skill_category
 from roco.engine.skill_exec import execute_move, get_skill_category
 from roco.engine.events import EventBus, EventCtx, GameEvent
 from roco.config.constants import (
@@ -108,17 +107,17 @@ class BattleEngine:
             if pet.is_fainted:
                 continue
             if pet.status_flags & StatusFlag.BURN:
-                stacks = pet.status_counts.get("灼烧", 0)
+                stacks = pet.status_counts.get(StatusType.BURN, 0)
                 tm = get_type_multiplier("火", pet.defender_types)
                 dmg = calc_burn_damage(pet.max_hp, stacks, tm, mid_turn=False)
                 pet.current_hp = max(0, pet.current_hp - dmg)
-                pet.status_counts["灼烧"] = calc_burn_decay(stacks)
+                pet.status_counts[StatusType.BURN] = calc_burn_decay(stacks)
                 state.log.append(BEvent(
                     turn=state.turn_number, actor=pet.name, action="status_tick",
                     detail={"status": "灼烧", "damage": dmg, "stacks_before": stacks},
                 ))
             if pet.status_flags & StatusFlag.POISON:
-                stacks = pet.status_counts.get("中毒", 0)
+                stacks = pet.status_counts.get(StatusType.POISON, 0)
                 dmg = calc_poison_damage(pet.max_hp, stacks)
                 pet.current_hp = max(0, pet.current_hp - dmg)
                 state.log.append(BEvent(

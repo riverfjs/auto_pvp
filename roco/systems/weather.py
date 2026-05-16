@@ -1,3 +1,4 @@
+from roco.engine.state import StatusFlag, StatusType
 """Weather system for Roco Kingdom PVP simulation.
 
 Supported weathers: rain (水系+50%), sandstorm (非地/钢/机械受1/16伤害),
@@ -72,6 +73,6 @@ def register_weather_handlers(bus: "EventBus") -> None:
                     continue
                 frost = snow_frostbite_damage(pet.max_hp)
                 pet.frostbite_damage += frost
-                pet.status_stacks["冻结"] = pet.status_stacks.get("冻结", 0) + 2
+                pet.status_flags |= StatusFlag.FREEZE; pet.status_counts[StatusType.FREEZE] = pet.status_counts.get(StatusType.FREEZE, 0) + 2
 
     bus.on(GameEvent.TURN_END, weather_tick, priority=250, source="weather")

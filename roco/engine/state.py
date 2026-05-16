@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import IntFlag, auto
+from enum import IntFlag, IntEnum, auto
 from roco.config.constants import STARTING_ENERGY
 from roco.config.status import STATUS_ELEMENT_IMMUNITY
 
@@ -42,10 +42,28 @@ class EffectFlag(IntFlag):
 class StatusFlag(IntFlag):
     """Persistent status effects — bitmask on PetState."""
     NONE = 0
-    BURN = auto()           # 灼烧
-    POISON = auto()         # 中毒
-    FREEZE = auto()         # 冻结
-    LEECH = auto()          # 寄生
+    BURN = auto()
+    POISON = auto()
+    FREEZE = auto()
+    LEECH = auto()
+
+
+class StatusType(IntEnum):
+    """String-free status type keys for status_counts dict."""
+    BURN = 1; POISON = 2; FREEZE = 3; LEECH = 4
+
+
+class Stats(IntEnum):
+    """String-free stat keys for buff_stages and effective_stats."""
+    HP = 0; ATK_PHYS = 1; ATK_MAG = 2; DEF_PHYS = 3; DEF_MAG = 4; SPEED = 5
+
+
+class SkillCategory(IntEnum):
+    """String-free skill category."""
+    PHYSICAL = 1   # 物攻
+    MAGICAL = 2    # 魔攻
+    DEFENSE = 3    # 防御
+    STATUS = 4     # 状态
 
 
 @dataclass

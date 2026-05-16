@@ -15,7 +15,7 @@ from roco.engine.damage import (
     calc_attack_damage, get_type_multiplier, get_stab,
     calc_energy_after_use, can_use_skill, apply_buff_stages,
 )
-from roco.engine.state import SkillRef, PetState, BattleEvent, BattleState, EffectFlag, StatusFlag
+from roco.engine.state import SkillRef, PetState, BattleEvent, BattleState, EffectFlag, StatusFlag, SkillCategory
 from roco.config.constants import COUNTER_DAMAGE_BONUS, MAX_ENERGY
 from roco.systems.weather import weather_damage_mult
 from roco.systems.marks import (
@@ -23,7 +23,7 @@ from roco.systems.marks import (
 )
 
 
-def get_skill_category(pet: PetState, skill_index: int) -> str:
+def get_skill_category(pet: PetState, skill_index: int) -> int:
     if skill_index < 0 or skill_index >= len(pet.moves):
         return ""
     return pet.moves[skill_index].category
@@ -70,7 +70,7 @@ def execute_move(attacker: PetState, defender: PetState,
         return
 
     # ── Phase: ON_DAMAGE (damage calculation) ──
-    if exec_skill.category in ("物攻", "魔攻"):
+    if exec_skill.category in (SkillCategory.PHYSICAL, SkillCategory.MAGICAL):
         _calc_and_apply_damage(attacker, defender, exec_skill, state, countered, bus)
 
     # ── Phase: POST_USE ──
@@ -112,7 +112,7 @@ def _emit(bus, event_name: str, state, actor, target, data) -> "EventCtx":
 def _calc_and_apply_damage(attacker: PetState, defender: PetState,
                            skill: SkillRef, state: BattleState,
                            countered: bool, bus: "EventBus") -> None:
-    phys = skill.category == "物攻"
+    phys = skill.category == SkillCategory.PHYSICAL
     atk = float(attacker.effective_stats["atk_phys" if phys else "atk_mag"])
     dfn = float(defender.effective_stats["def_phys" if phys else "def_mag"])
 

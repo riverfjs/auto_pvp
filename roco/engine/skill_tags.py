@@ -108,9 +108,14 @@ def _stat_field(name: str, prefix: str = "self_") -> str:
 
 def classify(skill: SkillRef) -> SkillRef:
     """Classify a skill and assign effect_flags + numeric fields."""
-    from roco.engine.state import EffectFlag
+    from roco.engine.state import EffectFlag, SkillCategory
     eff = skill.effect
     flags = EffectFlag.NONE
+
+    # Normalize category to enum
+    _cat_map = {"物攻": SkillCategory.PHYSICAL, "魔攻": SkillCategory.MAGICAL,
+                "防御": SkillCategory.DEFENSE, "状态": SkillCategory.STATUS}
+    skill.category = _cat_map.get(skill.category, skill.category)
     _tag_to_flag: dict[str, EffectFlag] = {f.name.lower(): f for f in EffectFlag if f.name != "NONE"}
 
     for tag, keyword, field, default in _CLASSIFIERS:

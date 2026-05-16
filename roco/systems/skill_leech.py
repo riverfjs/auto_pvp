@@ -1,13 +1,14 @@
 """Leech tick handler — end-of-turn leech damage + heal caster."""
 from roco.engine.events import GameEvent, EventCtx
 from roco.engine.state import BattleEvent
+from roco.engine.state import StatusType
 
 
 def register(bus: "EventBus") -> None:
     def h_leech_tick(ctx: EventCtx) -> None:
         state = ctx.state
         for pet in state.team_a + state.team_b:
-            stacks = pet.status_counts.get("寄生", 0)
+            stacks = pet.status_counts.get(StatusType.LEECH, 0)
             if stacks <= 0 or pet.is_fainted or not pet.leech_source:
                 continue
             dmg = int(pet.max_hp * 0.08 * stacks)

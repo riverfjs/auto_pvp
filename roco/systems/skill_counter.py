@@ -1,5 +1,6 @@
 """COUNTER_SUCCESS skill handlers — counter drain, energy, status, reflect, buffs."""
 from roco.engine.state import EffectFlag
+from roco.engine.state import StatusType
 from roco.engine.events import GameEvent, EventCtx
 from roco.engine.state import BattleEvent
 from roco.engine.damage import clamp_stage
@@ -24,11 +25,11 @@ def register(bus: "EventBus") -> None:
             attacker.current_energy -= stolen
             defender.current_energy = min(MAX_ENERGY, defender.current_energy + stolen)
         if skill.counter_status_burn_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.BURN):
-            attacker.status_flags |= StatusFlag.BURN; attacker.status_counts["灼烧"] = attacker.status_counts.get("灼烧", 0) + skill.counter_status_burn_stacks
+            attacker.status_flags |= StatusFlag.BURN; attacker.status_counts[StatusType.BURN] = attacker.status_counts.get(StatusType.BURN, 0) + skill.counter_status_burn_stacks
         if skill.counter_status_poison_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.POISON):
-            attacker.status_flags |= StatusFlag.POISON; attacker.status_counts["中毒"] = attacker.status_counts.get("中毒", 0) + skill.counter_status_poison_stacks
+            attacker.status_flags |= StatusFlag.POISON; attacker.status_counts[StatusType.POISON] = attacker.status_counts.get(StatusType.POISON, 0) + skill.counter_status_poison_stacks
         if skill.counter_status_freeze_stacks > 0 and not attacker.is_immune_to_status(StatusFlag.FREEZE):
-            attacker.status_flags |= StatusFlag.FREEZE; attacker.status_counts["冻结"] = attacker.status_counts.get("冻结", 0) + skill.counter_status_freeze_stacks
+            attacker.status_flags |= StatusFlag.FREEZE; attacker.status_counts[StatusType.FREEZE] = attacker.status_counts.get(StatusType.FREEZE, 0) + skill.counter_status_freeze_stacks
         if skill.counter_damage_reflect > 0:
             reflect = int(ctx.data.get("damage", 0) * skill.counter_damage_reflect)
             attacker.current_hp = max(0, attacker.current_hp - reflect)
