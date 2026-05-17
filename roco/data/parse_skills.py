@@ -6,11 +6,12 @@ Usage:
     python scripts/parse_skills.py
 """
 
+import argparse
 import re
 from typing import Any
 
 from roco.data.effect_classifier import classify_skill_record, load_manual_rules
-from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, with_canonical_hash, write_jsonl
 
 TEMPLATE_RE = re.compile(r"^\|(.+?)=(.+)", re.MULTILINE)
 INT_FIELDS = ("耗能", "威力")
@@ -56,25 +57,62 @@ def parse_one(name: str, text: str, manual_rules: dict[str, dict[str, Any]] | No
     return record
 
 
+def _canonical_key(row: dict) -> str:
+    return str(row.get("source_title") or row.get("name", ""))
+
+
+def _existing_canonical(path) -> dict[str, dict]:
+    if not path.exists():
+        return {}
+    return {_canonical_key(row): row for row in iter_jsonl(path)}
+
+
+def _keep_existing(existing: dict[str, dict], row: dict, *, force: bool) -> dict | None:
+    key = str(row.get("source_title") or row.get("name", ""))
+    previous = existing.get(key)
+    if (
+        previous is not None
+        and not force
+        and previous.get("canonical_hash")
+        and previous.get("source_hash")
+        and previous.get("source_hash") == row.get("source_hash")
+        and previous.get("missing_from_index") == row.get("missing_from_index")
+    ):
+        return previous
+    return None
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
     raw_path = RAW_DIR / "skills_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_details.py skills first.")
         return
 
+    out_path = CANONICAL_DIR / "skills.jsonl"
+    existing = _existing_canonical(out_path)
     manual_rules = load_manual_rules("skill")
     skills: list[dict] = []
     errors: list[str] = []
 
     for row in iter_jsonl(raw_path):
+        if row.get("missing_source_page"):
+            errors.append(str(row.get("name", "")))
+            continue
+        kept = _keep_existing(existing, row, force=args.force)
+        if kept is not None:
+            skills.append(kept)
+            continue
         name = str(row.get("name", ""))
         sk = parse_one(name, str(row.get("raw_text", "")), manual_rules)
         if sk is None:
             errors.append(name)
         else:
-            skills.append(sk)
+            skills.append(with_canonical_hash(sk, row))
 
-    out_path = CANONICAL_DIR / "skills.jsonl"
     count = write_jsonl(skills, out_path)
     print(f"Parsed {count} skills -> {out_path}")
     if errors:

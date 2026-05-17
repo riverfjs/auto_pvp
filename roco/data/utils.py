@@ -2,6 +2,10 @@
 
 import time
 import json
+import hashlib
+import threading
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterable, Iterator
 
@@ -58,22 +62,53 @@ SESSION.cookies.update(
 )
 
 LAST_REQUEST = 0.0
-MIN_INTERVAL = 0.05  # seconds between requests (serial mode)
+MIN_INTERVAL = 0.12  # seconds between BWiki requests
+REQUEST_LOCK = threading.Lock()
+
+
+class WikiPageMissing(RuntimeError):
+    """Raised when a BWiki index links to a page that does not exist."""
+
+    def __init__(self, title: str, info: str):
+        super().__init__(f"missingtitle: {title}: {info}")
+        self.title = title
+        self.info = info
 
 
 def api_get(params: dict, use_post: bool = False) -> dict:
     """GET (or POST) the MediaWiki API with rate limiting. Returns parsed JSON."""
     global LAST_REQUEST
-    elapsed = time.monotonic() - LAST_REQUEST
-    if elapsed < MIN_INTERVAL:
-        time.sleep(MIN_INTERVAL - elapsed)
-    if use_post:
-        resp = SESSION.post(API_BASE, data=params, timeout=30)
-    else:
-        resp = SESSION.get(API_BASE, params=params, timeout=30)
-    LAST_REQUEST = time.monotonic()
-    resp.raise_for_status()
-    data = resp.json()
+    last_error: Exception | None = None
+    with REQUEST_LOCK:
+        for attempt in range(3):
+            elapsed = time.monotonic() - LAST_REQUEST
+            if elapsed < MIN_INTERVAL:
+                time.sleep(MIN_INTERVAL - elapsed)
+            if use_post:
+                resp = SESSION.post(API_BASE, data=params, timeout=30)
+            else:
+                resp = SESSION.get(API_BASE, params=params, timeout=30)
+            LAST_REQUEST = time.monotonic()
+            resp.raise_for_status()
+            try:
+                data = resp.json()
+                break
+            except ValueError as exc:
+                last_error = exc
+                if attempt == 2:
+                    snippet = resp.text[:200].replace("\n", " ")
+                    ctype = resp.headers.get("content-type", "")
+                    raise RuntimeError(f"BWiki returned non-JSON content-type={ctype!r} prefix={snippet!r}") from exc
+                time.sleep(0.5 * (attempt + 1))
+        else:
+            raise RuntimeError(f"Failed to parse API response: {last_error}")
+    if "error" in data:
+        error = data["error"]
+        code = str(error.get("code", ""))
+        info = str(error.get("info", ""))
+        if code == "missingtitle":
+            raise WikiPageMissing(str(params.get("page", "")), info)
+        raise RuntimeError(f"BWiki API error {code}: {info}")
     if "query" not in data and "parse" not in data:
         raise RuntimeError(f"Unexpected API response keys: {list(data.keys())} — {resp.url}")
     return data
@@ -138,6 +173,89 @@ def write_jsonl(records: Iterable[dict], path: Path) -> int:
             f.write("\n")
             count += 1
     return count
+
+
+def stable_json(data: object) -> str:
+    """Serialize data deterministically for hashes and stable JSONL diffs."""
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def content_hash(data: object) -> str:
+    """SHA-256 hash of deterministic JSON content."""
+    return hashlib.sha256(stable_json(data).encode("utf-8")).hexdigest()
+
+
+def utc_now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def canonical_hash(record: Mapping[str, object]) -> str:
+    payload = {key: value for key, value in record.items() if key != "canonical_hash"}
+    return content_hash(payload)
+
+
+def with_canonical_hash(record: dict, source: Mapping[str, object] | None = None) -> dict:
+    """Attach source_hash and canonical_hash to a canonical JSONL record."""
+    if source is not None:
+        if source_hash := source.get("source_hash"):
+            record["source_hash"] = source_hash
+        source_title = (
+            source.get("source_title")
+            or source.get("name")
+            or source.get("fulltext")
+            or source.get("page_id")
+            or ""
+        )
+        if source_title:
+            record["source_title"] = source_title
+        if source_kind := source.get("source_kind", source.get("kind", "")):
+            record["source_kind"] = source_kind
+        if source.get("missing_from_index"):
+            record["missing_from_index"] = True
+    record["canonical_hash"] = canonical_hash(record)
+    return record
+
+
+def merge_by_key(
+    existing: Iterable[dict],
+    incoming: Iterable[dict],
+    key_fn: Callable[[dict], str],
+    *,
+    current_keys: set[str] | None = None,
+    force: bool = False,
+    mark_missing: bool = False,
+) -> list[dict]:
+    """Merge JSONL rows by key, preserving unchanged existing rows."""
+    old = {key_fn(row): row for row in existing if key_fn(row)}
+    result: list[dict] = []
+    emitted: set[str] = set()
+    for row in incoming:
+        key = key_fn(row)
+        if not key:
+            continue
+        previous = old.get(key)
+        if (
+            previous is not None
+            and not force
+            and previous.get("source_hash")
+            and previous.get("source_hash") == row.get("source_hash")
+        ):
+            kept = dict(previous)
+            kept.pop("missing_from_index", None)
+            result.append(kept)
+        else:
+            result.append(row)
+        emitted.add(key)
+    for key, row in old.items():
+        if key in emitted:
+            continue
+        if force:
+            continue
+        kept = dict(row)
+        if mark_missing and (current_keys is None or key not in current_keys):
+            kept["missing_from_index"] = True
+        result.append(kept)
+    return result
 
 
 def iter_jsonl(path: Path) -> Iterator[dict]:

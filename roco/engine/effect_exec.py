@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from roco.engine.effect_model import EffectTag, Timing
-from roco.engine.effects import HANDLER_TABLE
+from roco.engine.effects import OP_TABLE
 from roco.engine.events import EventCtx
 from roco.engine.state import ActivePet
 
@@ -14,7 +14,7 @@ def run_skill_effects(ctx: EventCtx, timing: Timing) -> None:
         return
     for item in skill.effects:
         if item.effect.timing is timing:
-            apply_effect(ctx, item.effect.tag, item.effect.params, source=f"skill:{skill.name}")
+            execute_effect_op(ctx, item.effect.tag, item.effect.params, source=f"skill:{skill.name}")
 
 
 def run_ability_effects(ctx: EventCtx, pet: ActivePet, timing: Timing) -> None:
@@ -22,7 +22,7 @@ def run_ability_effects(ctx: EventCtx, pet: ActivePet, timing: Timing) -> None:
         if item.effect.timing is timing:
             if not _matches_filter(ctx, item.effect.params):
                 continue
-            apply_effect(
+            execute_effect_op(
                 ctx,
                 item.effect.tag,
                 item.effect.params,
@@ -31,7 +31,7 @@ def run_ability_effects(ctx: EventCtx, pet: ActivePet, timing: Timing) -> None:
             )
 
 
-def apply_effect(
+def execute_effect_op(
     ctx: EventCtx,
     tag: EffectTag,
     params,
@@ -41,12 +41,12 @@ def apply_effect(
     actor = owner or ctx.actor
     if actor is None:
         return
-    handler = HANDLER_TABLE[tag.value] if tag.value < len(HANDLER_TABLE) else None
-    if handler is None:
+    op = OP_TABLE[tag.value] if tag.value < len(OP_TABLE) else None
+    if op is None:
         if tag is EffectTag.UNSUPPORTED:
             raise NotImplementedError(f"unsupported runtime effect: {dict(params)} from {source}")
         raise NotImplementedError(f"unhandled runtime effect: {tag.name} from {source}")
-    handler(ctx, actor, params, source)
+    op(ctx, actor, params, source)
 
 
 def _matches_filter(ctx: EventCtx, params) -> bool:

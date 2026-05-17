@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from roco.engine.events import EventBus
 
 
-def register_barrel_handlers(bus: "EventBus") -> None:
+def register_barrel_stage_hooks(bus: "EventBus") -> None:
     from roco.engine.events import GameEvent, EventCtx
 
     def on_switch_out(ctx: EventCtx) -> None:

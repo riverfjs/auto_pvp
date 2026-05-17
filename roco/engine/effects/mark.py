@@ -1,4 +1,4 @@
-"""Concrete mark primitive handlers backed by packed mark fields."""
+"""Concrete mark primitive ops backed by packed mark fields."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from roco.engine.events import EventCtx
 from roco.engine.packing import MarkIdx, _set_mark, _unpack_mark
 from roco.engine.state import ActivePet
 
-from .common import EffectHandler, EffectParams, add_status, heal_hp, team_of
+from .common import EffectOp, EffectParams, add_status, heal_hp, team_of
 
 
 ALL_MARKS = tuple(MarkIdx)
@@ -83,11 +83,11 @@ def _add_mark_to_team(ctx: EventCtx, team: str, idx: MarkIdx, stacks: int) -> No
     _set_team_marks(ctx, team, _set_mark(marks, idx, min(15, _unpack_mark(marks, idx) + stacks)))
 
 
-def _make_mark_handler(idx: MarkIdx) -> EffectHandler:
-    def handler(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
+def _make_mark_op(idx: MarkIdx) -> EffectOp:
+    def op(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
         _add_mark_to_team(ctx, _target_team(ctx, actor, params), idx, int(params.get("stacks", 1)))
 
-    return handler
+    return op
 
 
 def _mark_total(marks: int) -> int:
@@ -210,20 +210,20 @@ def h_mark_stack_debuffs(ctx: EventCtx, actor: ActivePet, params: EffectParams, 
     return
 
 
-HANDLER_ROWS: tuple[tuple[EffectTag, EffectHandler], ...] = (
-    (EffectTag.POISON_MARK, _make_mark_handler(MarkIdx.POISON)),
-    (EffectTag.MOISTURE_MARK, _make_mark_handler(MarkIdx.MOISTURE)),
-    (EffectTag.DRAGON_MARK, _make_mark_handler(MarkIdx.DRAGON)),
-    (EffectTag.WIND_MARK, _make_mark_handler(MarkIdx.WIND)),
-    (EffectTag.CHARGE_MARK, _make_mark_handler(MarkIdx.CHARGE)),
-    (EffectTag.SOLAR_MARK, _make_mark_handler(MarkIdx.SOLAR)),
-    (EffectTag.ATTACK_MARK, _make_mark_handler(MarkIdx.ATTACK)),
-    (EffectTag.SLOW_MARK, _make_mark_handler(MarkIdx.SLOW)),
-    (EffectTag.SLUGGISH_MARK, _make_mark_handler(MarkIdx.SLUGGISH)),
-    (EffectTag.SPIRIT_MARK, _make_mark_handler(MarkIdx.SPIRIT)),
-    (EffectTag.METEOR_MARK, _make_mark_handler(MarkIdx.METEOR)),
-    (EffectTag.THORN_MARK, _make_mark_handler(MarkIdx.THORN)),
-    (EffectTag.MOMENTUM_MARK, _make_mark_handler(MarkIdx.MOMENTUM)),
+OP_ROWS: tuple[tuple[EffectTag, EffectOp], ...] = (
+    (EffectTag.POISON_MARK, _make_mark_op(MarkIdx.POISON)),
+    (EffectTag.MOISTURE_MARK, _make_mark_op(MarkIdx.MOISTURE)),
+    (EffectTag.DRAGON_MARK, _make_mark_op(MarkIdx.DRAGON)),
+    (EffectTag.WIND_MARK, _make_mark_op(MarkIdx.WIND)),
+    (EffectTag.CHARGE_MARK, _make_mark_op(MarkIdx.CHARGE)),
+    (EffectTag.SOLAR_MARK, _make_mark_op(MarkIdx.SOLAR)),
+    (EffectTag.ATTACK_MARK, _make_mark_op(MarkIdx.ATTACK)),
+    (EffectTag.SLOW_MARK, _make_mark_op(MarkIdx.SLOW)),
+    (EffectTag.SLUGGISH_MARK, _make_mark_op(MarkIdx.SLUGGISH)),
+    (EffectTag.SPIRIT_MARK, _make_mark_op(MarkIdx.SPIRIT)),
+    (EffectTag.METEOR_MARK, _make_mark_op(MarkIdx.METEOR)),
+    (EffectTag.THORN_MARK, _make_mark_op(MarkIdx.THORN)),
+    (EffectTag.MOMENTUM_MARK, _make_mark_op(MarkIdx.MOMENTUM)),
     (EffectTag.DISPEL_ENEMY_MARKS, h_dispel_enemy_marks),
     (EffectTag.CONVERT_MARKS_TO_BURN, h_convert_marks_to_burn),
     (EffectTag.DISPEL_MARKS_TO_BURN, h_dispel_marks_to_burn),

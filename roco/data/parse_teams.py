@@ -6,8 +6,9 @@ Usage:
     python scripts/parse_teams.py
 """
 
+import argparse
 import re
-from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, with_canonical_hash, write_jsonl
 
 # Mapping: SMW printout key → English field name (used as flat key in raw data)
 SMW_TO_EN = {
@@ -69,6 +70,7 @@ def parse_one(raw_team: dict) -> dict | None:
 
     team["pets"] = pets
     team["team_url"] = raw_team.get("fullurl", "")
+    team["source_page_id"] = raw_team.get("page_id", "")
     team["kind"] = "team"
     return team
 
@@ -77,24 +79,57 @@ def _parse_csv(val: str) -> list[str]:
     return [v.strip() for v in val.split(",") if v.strip()] if val else []
 
 
+def _canonical_key(row: dict) -> str:
+    return str(row.get("source_page_id") or row.get("id") or row.get("source_title", ""))
+
+
+def _existing_canonical(path) -> dict[str, dict]:
+    if not path.exists():
+        return {}
+    return {_canonical_key(row): row for row in iter_jsonl(path)}
+
+
+def _keep_existing(existing: dict[str, dict], row: dict, *, force: bool) -> dict | None:
+    previous = existing.get(str(row.get("page_id", "")))
+    if (
+        previous is not None
+        and not force
+        and previous.get("canonical_hash")
+        and previous.get("source_hash")
+        and previous.get("source_hash") == row.get("source_hash")
+        and previous.get("missing_from_index") == row.get("missing_from_index")
+    ):
+        return previous
+    return None
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
     raw_path = RAW_DIR / "teams_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_teams.py first.")
         return
 
+    out_path = CANONICAL_DIR / "teams.jsonl"
+    existing = _existing_canonical(out_path)
     teams: list[dict] = []
     errors: list[str] = []
 
     for raw_team in iter_jsonl(raw_path):
+        kept = _keep_existing(existing, raw_team, force=args.force)
+        if kept is not None:
+            teams.append(kept)
+            continue
         page_id = str(raw_team.get("page_id", ""))
         team = parse_one(raw_team)
         if team is None:
             errors.append(page_id)
         else:
-            teams.append(team)
+            teams.append(with_canonical_hash(team, raw_team))
 
-    out_path = CANONICAL_DIR / "teams.jsonl"
     count = write_jsonl(teams, out_path)
     print(f"Parsed {count} teams -> {out_path}")
     if errors:

@@ -36,11 +36,11 @@ class BattleEngine:
 
         self.bus = EventBus()
         self._init_systems()
-        self._register_engine_handlers()
+        self._register_engine_stage_hooks()
 
         for pet in act_a + act_b:
-            from roco.engine.ability import register_ability_handlers
-            register_ability_handlers(self.bus, pet)
+            from roco.engine.ability import register_ability_stage_hooks
+            register_ability_stage_hooks(self.bus, pet)
 
         self.bus.emit(EventCtx(GameEvent.BATTLE_START, self.state))
         for pet in act_a + act_b:
@@ -51,18 +51,18 @@ class BattleEngine:
     def _init_systems(self):
         import importlib
         for mod_name, fn_name in [
-            ("roco.systems.weather", "register_weather_handlers"),
-            ("roco.systems.marks", "register_mark_handlers"),
-            ("roco.engine.skill_exec", "register_skill_handlers"),
-            ("roco.systems.burst", "register_burst_handlers"),
-            ("roco.systems.barrel", "register_barrel_handlers"),
-            ("roco.systems.devotion", "register_devotion_handlers"),
-            ("roco.systems.cute", "register_cute_handlers"),
+            ("roco.systems.weather", "register_weather_stage_hooks"),
+            ("roco.systems.marks", "register_mark_stage_hooks"),
+            ("roco.engine.skill_exec", "register_skill_stage_hooks"),
+            ("roco.systems.burst", "register_burst_stage_hooks"),
+            ("roco.systems.barrel", "register_barrel_stage_hooks"),
+            ("roco.systems.devotion", "register_devotion_stage_hooks"),
+            ("roco.systems.cute", "register_cute_stage_hooks"),
         ]:
             mod = importlib.import_module(mod_name)
             getattr(mod, fn_name)(self.bus)
 
-    def _register_engine_handlers(self):
+    def _register_engine_stage_hooks(self):
         self.bus.on(GameEvent.FAINT, self._on_faint, priority=999, source="engine")
         self.bus.on(GameEvent.TURN_END, self._on_turn_end_status, priority=300, source="engine")
 

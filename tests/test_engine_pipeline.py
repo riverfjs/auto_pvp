@@ -123,6 +123,20 @@ def test_extra_poison_tick_flag_doubles_poison_damage():
 
 def test_engine_hot_path_has_no_dynamic_registry_or_cooldown_dict_unpack():
     root = Path(__file__).resolve().parents[1]
+    old_term = "handler"
+    forbidden_terms = (
+        "_unpack_cooldown",
+        "EventCtx.data",
+        "HANDLERS" + ".get",
+        "_" + old_term + "s: dict",
+        "default_factory",
+        "HANDLER" + "_TABLE",
+        "HANDLER" + "_ROWS",
+        "Effect" + old_term.title(),
+        "apply_" + "effect",
+        "Event" + old_term.title(),
+        old_term + "_count",
+    )
     for rel in (
         "roco/engine/battle.py",
         "roco/engine/skill_exec.py",
@@ -130,8 +144,8 @@ def test_engine_hot_path_has_no_dynamic_registry_or_cooldown_dict_unpack():
         "roco/engine/events.py",
     ):
         text = (root / rel).read_text(encoding="utf-8")
-        assert "_unpack_cooldown" not in text
-        assert "EventCtx.data" not in text
-        assert "HANDLERS.get" not in text
-        assert "_handlers: dict" not in text
-        assert "default_factory" not in text
+        for term in forbidden_terms:
+            assert term not in text
+    effect_exec = (root / "roco/engine/effect_exec.py").read_text(encoding="utf-8")
+    assert "OP_TABLE[tag.value]" in effect_exec
+    assert "OP_TABLE.get" not in effect_exec

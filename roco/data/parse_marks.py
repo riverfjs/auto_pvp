@@ -16,8 +16,9 @@ Usage:
     python scripts/parse_marks.py
 """
 
+import argparse
 import re
-from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, with_canonical_hash, write_jsonl
 
 # Extract section text between a heading and the next heading
 SECTION_RE = re.compile(r"===?\s*(.+?)\s*===?\s*\n(.*?)(?=\n===|\Z)", re.DOTALL)
@@ -38,24 +39,8 @@ MARK_DEFS = {
     "中毒印记": ("poison", 10, "negative"),
     "棘刺印记": ("thorn", 11, "negative"),
     "荆刺印记": ("thorn", 11, "negative"),
+    "迟缓印记": ("sluggish", 12, "positive"),
 }
-
-TAG_TO_MARK_NAME = {
-    "POISON_MARK": "中毒印记",
-    "MOISTURE_MARK": "湿润印记",
-    "DRAGON_MARK": "龙噬印记",
-    "WIND_MARK": "风起印记",
-    "CHARGE_MARK": "蓄电印记",
-    "SOLAR_MARK": "光合印记",
-    "ATTACK_MARK": "攻击印记",
-    "SLOW_MARK": "减速印记",
-    "SLUGGISH_MARK": "迟缓印记",
-    "SPIRIT_MARK": "降灵印记",
-    "METEOR_MARK": "星陨印记",
-    "THORN_MARK": "棘刺印记",
-    "MOMENTUM_MARK": "蓄势印记",
-}
-
 
 def parse_one(name: str, text: str) -> dict | None:
     code, packed_index, default_polarity = MARK_DEFS.get(name, ("", -1, ""))
@@ -101,68 +86,44 @@ def parse_one(name: str, text: str) -> dict | None:
     return result
 
 
-def _empty_mark(name: str) -> dict:
-    code, packed_index, polarity = MARK_DEFS[name]
-    return {
-        "kind": "mark",
-        "code": code,
-        "name": name,
-        "polarity": polarity,
-        "packed_index": packed_index,
-        "stacking": "stack_same_mark_replace_same_polarity",
-        "effect_text": "",
-        "effects": [],
-        "mechanism": [],
-        "source_skills": [],
-    }
-
-
-def _augment_sources_from_skills(marks: list[dict]) -> list[dict]:
-    skills_path = CANONICAL_DIR / "skills.jsonl"
-    if not skills_path.exists():
-        return marks
-    by_name = {str(mark["name"]): mark for mark in marks}
-    seen = {
-        (str(mark["name"]), str(source.get("skill", "")))
-        for mark in marks
-        for source in mark.get("source_skills", ()) or ()
-    }
-    for skill in iter_jsonl(skills_path):
-        skill_name = str(skill.get("name", ""))
-        effect_text = str(skill.get("effect_text", ""))
-        for effect in skill.get("effects", ()) or ():
-            mark_name = TAG_TO_MARK_NAME.get(str(effect.get("tag", "")))
-            if not mark_name:
-                continue
-            mark = by_name.setdefault(mark_name, _empty_mark(mark_name))
-            key = (mark_name, skill_name)
-            if key in seen:
-                continue
-            mark["source_skills"].append({"skill": skill_name, "description": effect_text})
-            seen.add(key)
-    return sorted(by_name.values(), key=lambda row: int(row.get("packed_index", 99)))
-
-
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
     raw_path = RAW_DIR / "marks_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_details.py marks first.")
         return
 
+    out_path = CANONICAL_DIR / "marks.jsonl"
+    existing = {
+        str(row.get("name", "")): row
+        for row in iter_jsonl(out_path)
+    } if out_path.exists() else {}
     marks: list[dict] = []
+    seen: set[str] = set()
     errors: list[str] = []
 
     for row in iter_jsonl(raw_path):
+        if row.get("missing_source_page"):
+            errors.append(str(row.get("name", "")))
+            continue
         name = str(row.get("name", ""))
-        yj = parse_one(name, str(row.get("raw_text", "")))
-        if yj is None:
+        mark = parse_one(name, str(row.get("raw_text", "")))
+        if mark is None:
             errors.append(name)
         else:
-            marks.append(yj)
+            marks.append(with_canonical_hash(mark, row))
+            seen.add(name)
 
-    marks = _augment_sources_from_skills(marks)
+    if not args.force:
+        for name, mark in existing.items():
+            if name and name not in seen:
+                marks.append(with_canonical_hash(dict(mark)))
 
-    out_path = CANONICAL_DIR / "marks.jsonl"
+    marks = sorted(marks, key=lambda row: int(row.get("packed_index", 99)))
+
     count = write_jsonl(marks, out_path)
     print(f"Parsed {count} 印记 -> {out_path}")
     if errors:

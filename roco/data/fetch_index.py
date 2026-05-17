@@ -7,8 +7,8 @@ Usage:
     python scripts/fetch_index.py all
 """
 
+import argparse
 import re
-import sys
 from roco.data.utils import (
     CATEGORY_PETS,
     CATEGORY_SKILLS,
@@ -16,6 +16,7 @@ from roco.data.utils import (
     INDEX_DIR,
     fetch_category_members,
     fetch_page_wikitext,
+    iter_jsonl,
     write_jsonl,
 )
 
@@ -52,28 +53,72 @@ def fetch_marks() -> list[str]:
     return names
 
 
+def _index_record(target: str, title: str, sort_order: int) -> dict:
+    return {
+        "kind": "index",
+        "target": target,
+        "title": title,
+        "sort_order": sort_order,
+    }
+
+
+def _merge_index_records(target: str, titles: list[str], *, force: bool = False) -> list[dict]:
+    out_path = INDEX_DIR / f"{target}.jsonl"
+    incoming = [_index_record(target, title, i) for i, title in enumerate(titles)]
+    if force or not out_path.exists():
+        return incoming
+
+    old = {str(row.get("title", "")): row for row in iter_jsonl(out_path) if row.get("title")}
+    result: list[dict] = []
+    seen: set[str] = set()
+    for row in incoming:
+        title = str(row["title"])
+        previous = old.get(title, {})
+        merged = dict(previous)
+        merged.update(row)
+        merged.pop("missing_from_index", None)
+        result.append(merged)
+        seen.add(title)
+
+    missing = []
+    for title, row in old.items():
+        if title in seen:
+            continue
+        kept = dict(row)
+        kept["missing_from_index"] = True
+        missing.append(kept)
+    missing.sort(key=lambda row: (int(row.get("sort_order", len(titles))), str(row.get("title", ""))))
+    return result + missing
+
+
+def fetch_target(target: str, *, force: bool = False) -> None:
+    if target == "pets":
+        titles = fetch_pets()
+    elif target == "skills":
+        titles = fetch_skills()
+    elif target == "marks":
+        titles = fetch_marks()
+    else:
+        raise ValueError(f"Unknown target: {target}")
+
+    out_path = INDEX_DIR / f"{target}.jsonl"
+    records = _merge_index_records(target, titles, force=force)
+    count = write_jsonl(records, out_path)
+    print(f"Saved {count} index rows -> {out_path}")
+
+
 def main() -> None:
-    targets = sys.argv[1:] if len(sys.argv) > 1 else ["all"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("targets", nargs="*", default=["all"], choices=["pets", "skills", "marks", "all"])
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
+    targets = args.targets
     if "all" in targets:
         targets = ["pets", "skills", "marks"]
 
     for target in targets:
-        if target == "pets":
-            titles = fetch_pets()
-        elif target == "skills":
-            titles = fetch_skills()
-        elif target == "marks":
-            titles = fetch_marks()
-        else:
-            print(f"Unknown target: {target} (use pets / skills / marks / all)")
-            sys.exit(1)
-        records = (
-            {"kind": "index", "target": target, "title": title, "sort_order": i}
-            for i, title in enumerate(titles)
-        )
-        out_path = INDEX_DIR / f"{target}.jsonl"
-        count = write_jsonl(records, out_path)
-        print(f"Saved {count} index rows -> {out_path}")
+        fetch_target(target, force=args.force)
 
     print("Done.")
 

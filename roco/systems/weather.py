@@ -42,9 +42,9 @@ def snow_frostbite_damage(max_hp: int) -> int:
     return max_hp // SNOW_FROSTBITE_FRACTION
 
 
-# ── Event bus registration ─────────────────────────────────────
+# ── Event bus stage hooks ──────────────────────────────────────
 
-def register_weather_handlers(bus: "EventBus") -> None:
+def register_weather_stage_hooks(bus: "EventBus") -> None:
     """Register weather effects on the event bus."""
     from roco.engine.events import GameEvent, EventCtx
 

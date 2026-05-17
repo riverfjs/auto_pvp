@@ -57,7 +57,7 @@ ACTOR_SCOPED_MASK = sum(1 << timing.value for timing in (
 ))
 
 
-def register_ability_handlers(bus, pet) -> None:
+def register_ability_stage_hooks(bus, pet) -> None:
     if not pet.persistent.ability_effects:
         return
     timings = tuple(sorted({item.effect.timing for item in pet.persistent.ability_effects}, key=int))
@@ -66,9 +66,9 @@ def register_ability_handlers(bus, pet) -> None:
         if event is None:
             continue
 
-        def handler(ctx, pet=pet, timing=timing):
+        def hook(ctx, pet=pet, timing=timing):
             if ACTOR_SCOPED_MASK & (1 << timing.value) and ctx.actor is not pet:
                 return
             run_ability_effects(ctx, pet, timing)
 
-        bus.on(event, handler, priority=100, source=f"ability:{pet.persistent.ability_id}:{timing.name}")
+        bus.on(event, hook, priority=100, source=f"ability:{pet.persistent.ability_id}:{timing.name}")

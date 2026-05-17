@@ -1,4 +1,4 @@
-"""Ability and subsystem flag effect handlers."""
+"""Ability and subsystem flag effect ops."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from roco.engine.enums import AbilityFlag
 from roco.engine.events import EventCtx
 from roco.engine.state import ActivePet
 
-from .common import EffectHandler, EffectParams, force_switch
+from .common import EffectOp, EffectParams, force_switch
 
 
 def h_faint_no_mp_loss(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
@@ -42,11 +42,11 @@ def h_leave_energy_refill(ctx: EventCtx, actor: ActivePet, params: EffectParams,
     actor.current_energy = min(MAX_ENERGY, actor.current_energy + int(params.get("amount", 10)))
 
 
-def h_set_ability_flag(flag: AbilityFlag) -> EffectHandler:
-    def handler(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
+def h_set_ability_flag(flag: AbilityFlag) -> EffectOp:
+    def op(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
         actor.set_ability_flag(flag)
 
-    return handler
+    return op
 
 
 def h_extra_freeze_on_freeze(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str) -> None:
@@ -85,7 +85,7 @@ def h_cute_enemy_gain(ctx: EventCtx, actor: ActivePet, params: EffectParams, sou
         ctx.target.cute += int(params.get("stacks", 1))
 
 
-HANDLER_ROWS: tuple[tuple[EffectTag, EffectHandler], ...] = (
+OP_ROWS: tuple[tuple[EffectTag, EffectOp], ...] = (
     (EffectTag.FAINT_NO_MP_LOSS, h_faint_no_mp_loss),
     (EffectTag.ENERGY_REGEN_PER_TURN, h_energy_regen_per_turn),
     (EffectTag.POWER_MULTIPLIER_BUFF, h_power_multiplier_buff),

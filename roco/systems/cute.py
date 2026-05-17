@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from roco.engine.events import EventBus
 
 
-def register_cute_handlers(bus: "EventBus") -> None:
+def register_cute_stage_hooks(bus: "EventBus") -> None:
     from roco.engine.events import GameEvent, EventCtx
 
     def on_kill_transfer(ctx: EventCtx) -> None:

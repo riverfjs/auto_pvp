@@ -41,7 +41,7 @@ class TestEventBus:
         bus.emit(EventCtx(GameEvent.BEFORE_MOVE, state=None))
         assert called == ["cancel"]
 
-    def test_handler_modifies_context(self):
+    def test_stage_hook_modifies_context(self):
         bus = EventBus()
 
         def doubler(ctx):
@@ -73,9 +73,9 @@ class TestEventBus:
         bus = EventBus()
         bus.on(GameEvent.TURN_START, lambda c: None, source="a")
         bus.on(GameEvent.TURN_END, lambda c: None, source="b")
-        assert bus.handler_count() == 2
+        assert bus.stage_hook_count() == 2
         bus.clear()
-        assert bus.handler_count() == 0
+        assert bus.stage_hook_count() == 0
 
     def test_different_events_independent(self):
         bus = EventBus()
@@ -89,15 +89,15 @@ class TestEventBus:
         assert a_calls == [1]
         assert b_calls == []
 
-    def test_handler_count(self):
+    def test_stage_hook_count(self):
         bus = EventBus()
         bus.on(GameEvent.TURN_START, lambda c: None, source="a")
         bus.on(GameEvent.TURN_START, lambda c: None, source="b")
         bus.on(GameEvent.TURN_END, lambda c: None, source="c")
 
-        assert bus.handler_count(GameEvent.TURN_START) == 2
-        assert bus.handler_count(GameEvent.TURN_END) == 1
-        assert bus.handler_count() == 3
+        assert bus.stage_hook_count(GameEvent.TURN_START) == 2
+        assert bus.stage_hook_count(GameEvent.TURN_END) == 1
+        assert bus.stage_hook_count() == 3
 
     def test_event_ctx_defaults(self):
         ctx = EventCtx(GameEvent.TURN_START, state=None)
@@ -109,11 +109,11 @@ class TestEventBus:
         assert ctx.power_mod == 1.0
         assert ctx.energy_delta == 0
 
-    def test_handlers_are_stored_as_fixed_event_table(self):
+    def test_stage_hooks_are_stored_as_fixed_event_table(self):
         bus = EventBus()
         bus.on(GameEvent.TURN_START, lambda c: None, source="a")
-        assert isinstance(bus._handlers, tuple)
-        assert isinstance(bus._handlers[GameEvent.TURN_START.value], tuple)
+        assert isinstance(bus._stage_hooks, tuple)
+        assert isinstance(bus._stage_hooks[GameEvent.TURN_START.value], tuple)
 
     def test_multiple_emit_same_context(self):
         bus = EventBus()

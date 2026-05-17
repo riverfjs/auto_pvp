@@ -8,11 +8,12 @@ Usage:
     python scripts/parse_pets.py
 """
 
+import argparse
 import re
 from typing import Any
 
 from roco.data.effect_classifier import classify_ability_record, load_manual_rules
-from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, content_hash, iter_jsonl, with_canonical_hash, write_jsonl
 
 TEMPLATE_RE = re.compile(r"^\|(.+?)=(.+)", re.MULTILINE)
 
@@ -100,6 +101,51 @@ def _ability_record(name: str, description: str, manual_rules: dict[str, dict[st
     return record
 
 
+def _ability_source(name: str, description: str) -> dict:
+    return {
+        "source_hash": content_hash({"name": name, "description": description}),
+        "source_title": name,
+        "source_kind": "ability",
+    }
+
+
+def _canonical_key(row: dict) -> str:
+    return str(row.get("source_title") or row.get("name", ""))
+
+
+def _existing_canonical(path) -> dict[str, dict]:
+    if not path.exists():
+        return {}
+    return {_canonical_key(row): row for row in iter_jsonl(path)}
+
+
+def _keep_existing(existing: dict[str, dict], row: dict, *, force: bool) -> dict | None:
+    key = str(row.get("source_title") or row.get("name", ""))
+    previous = existing.get(key)
+    if (
+        previous is not None
+        and not force
+        and previous.get("canonical_hash")
+        and previous.get("source_hash")
+        and previous.get("source_hash") == row.get("source_hash")
+        and previous.get("missing_from_index") == row.get("missing_from_index")
+    ):
+        return previous
+    return None
+
+
+def _keep_existing_ability(existing: dict[str, dict], source: dict, *, force: bool) -> dict | None:
+    previous = existing.get(str(source.get("source_title", "")))
+    if (
+        previous is not None
+        and not force
+        and previous.get("canonical_hash")
+        and previous.get("source_hash") == source.get("source_hash")
+    ):
+        return previous
+    return None
+
+
 def _safe_int(val: object) -> int | None:
     try:
         if val is None or val == "":
@@ -110,33 +156,52 @@ def _safe_int(val: object) -> int | None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
     raw_path = RAW_DIR / "pets_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_details.py pets first.")
         return
 
+    pets_path = CANONICAL_DIR / "pets.jsonl"
+    abilities_path = CANONICAL_DIR / "abilities.jsonl"
+    existing_pets = _existing_canonical(pets_path)
+    existing_abilities = _existing_canonical(abilities_path)
     pets: list[dict] = []
     abilities: dict[str, dict] = {}
     manual_rules = load_manual_rules("ability")
     errors: list[str] = []
 
     for row in iter_jsonl(raw_path):
-        name = str(row.get("name", ""))
-        pet = parse_one(name, str(row.get("raw_text", "")))
-        if pet is None:
-            errors.append(name)
+        if row.get("missing_source_page"):
+            errors.append(str(row.get("name", "")))
+            continue
+        kept = _keep_existing(existing_pets, row, force=args.force)
+        if kept is not None:
+            pets.append(kept)
+            raw_fields = kept.get("source_fields", {})
         else:
+            raw_fields = {}
+            name = str(row.get("name", ""))
+            pet = parse_one(name, str(row.get("raw_text", "")))
+            if pet is None:
+                errors.append(name)
+                continue
+            pet = with_canonical_hash(pet, row)
             pets.append(pet)
             raw_fields = pet.get("source_fields", {})
-            ability_name = str(raw_fields.get("特性", "")).strip()
-            if ability_name:
-                abilities.setdefault(
-                    ability_name,
-                    _ability_record(ability_name, str(raw_fields.get("特性描述", "")), manual_rules),
-                )
 
-    pets_path = CANONICAL_DIR / "pets.jsonl"
-    abilities_path = CANONICAL_DIR / "abilities.jsonl"
+        ability_name = str(raw_fields.get("特性", "")).strip()
+        if ability_name and ability_name not in abilities:
+            description = str(raw_fields.get("特性描述", ""))
+            source = _ability_source(ability_name, description)
+            ability = _keep_existing_ability(existing_abilities, source, force=args.force)
+            if ability is None:
+                ability = with_canonical_hash(_ability_record(ability_name, description, manual_rules), source)
+            abilities[ability_name] = ability
+
     pet_count = write_jsonl(pets, pets_path)
     ability_count = write_jsonl((abilities[name] for name in sorted(abilities)), abilities_path)
     print(f"Parsed {pet_count} pets -> {pets_path}")

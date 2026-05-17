@@ -1,4 +1,4 @@
-"""Core skill and status effect handlers."""
+"""Core skill and status effect ops."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from roco.engine.events import EventCtx
 from roco.engine.state import ActivePet
 
 from .common import (
-    EffectHandler,
+    EffectOp,
     EffectParams,
     add_meteor_mark,
     add_status,
@@ -171,7 +171,7 @@ def h_agility(ctx: EventCtx, actor: ActivePet, params: EffectParams, source: str
     return
 
 
-HANDLER_ROWS: tuple[tuple[EffectTag, EffectHandler], ...] = (
+OP_ROWS: tuple[tuple[EffectTag, EffectOp], ...] = (
     (EffectTag.DAMAGE, h_damage),
     (EffectTag.DAMAGE_REDUCTION, h_damage_reduction),
     (EffectTag.ENERGY_ALL_IN, h_energy_all_in),

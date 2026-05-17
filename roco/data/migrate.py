@@ -242,24 +242,6 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
         ],
     )
     conn.executemany(
-        "INSERT OR IGNORE INTO marks (id, code, name, packed_index, polarity, stacking) VALUES (?, ?, ?, ?, ?, ?)",
-        [
-            (0, "moisture", "湿润印记", 0, "positive", "stack_same_mark_replace_same_polarity"),
-            (1, "dragon", "龙噬印记", 1, "positive", "stack_same_mark_replace_same_polarity"),
-            (2, "momentum", "蓄势印记", 2, "positive", "stack_same_mark_replace_same_polarity"),
-            (3, "wind", "风起印记", 3, "positive", "stack_same_mark_replace_same_polarity"),
-            (4, "charge", "蓄电印记", 4, "positive", "stack_same_mark_replace_same_polarity"),
-            (5, "solar", "光合印记", 5, "positive", "stack_same_mark_replace_same_polarity"),
-            (6, "attack", "攻击印记", 6, "positive", "stack_same_mark_replace_same_polarity"),
-            (7, "slow", "减速印记", 7, "negative", "stack_same_mark_replace_same_polarity"),
-            (8, "spirit", "降灵印记", 8, "negative", "stack_same_mark_replace_same_polarity"),
-            (9, "meteor", "星陨印记", 9, "negative", "stack_same_mark_replace_same_polarity"),
-            (10, "poison", "中毒印记", 10, "negative", "stack_same_mark_replace_same_polarity"),
-            (11, "thorn", "棘刺印记", 11, "negative", "stack_same_mark_replace_same_polarity"),
-            (12, "sluggish", "迟缓印记", 12, "positive", "stack_same_mark_replace_same_polarity"),
-        ],
-    )
-    conn.executemany(
         "INSERT OR IGNORE INTO weathers (id, code, name, packed_value) VALUES (?, ?, ?, ?)",
         [
             (0, "none", "无天气", 0),

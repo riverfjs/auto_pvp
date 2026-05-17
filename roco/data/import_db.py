@@ -192,7 +192,7 @@ def _effect_rows(
             gaps.append(_gap_row(source_type, source_name, str(raw.get("tag", "")), timing, params, "effect_tag_not_defined"))
             continue
         if tag not in IMPLEMENTED_EFFECT_TAGS:
-            gaps.append(_gap_row(source_type, source_name, tag.name, timing, params, "runtime_handler_missing"))
+            gaps.append(_gap_row(source_type, source_name, tag.name, timing, params, "runtime_op_missing"))
             continue
         rows.append((owner_id, timing.value, tag.value, int(raw.get("flags", default_flags)), _json(params), condition, sort_order))
     return rows, gaps

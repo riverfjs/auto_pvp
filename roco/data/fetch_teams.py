@@ -6,7 +6,9 @@ Usage:
     python scripts/fetch_teams.py
 """
 
-from roco.data.utils import API_BASE, RAW_DIR, write_jsonl, api_get
+import argparse
+
+from roco.data.utils import RAW_DIR, api_get, content_hash, iter_jsonl, merge_by_key, utc_now_iso, write_jsonl
 
 # All relevant SMW properties — fetched in a single ask query
 PROPS = [
@@ -35,7 +37,26 @@ PROP_STR = "|?" + "|?".join(PROPS)
 QUERY = f"[[分类:精灵阵容]]{PROP_STR}|limit=500|sort=阵容上传日期|order=desc"
 
 
-def fetch_teams() -> list[dict]:
+def _team_raw_record(page_id: str, raw_team: dict, fetched_at: str) -> dict:
+    fulltext = raw_team.get("fulltext", "")
+    fullurl = raw_team.get("fullurl", "")
+    printouts = raw_team.get("printouts", {})
+    payload = {"fulltext": fulltext, "fullurl": fullurl, "printouts": printouts}
+    return {
+        "kind": "team_raw",
+        "page_id": page_id,
+        "source_title": fulltext or page_id,
+        "source_kind": "team_raw",
+        "source": "wiki:smw_ask",
+        "fulltext": fulltext,
+        "fullurl": fullurl,
+        "printouts": printouts,
+        "source_hash": content_hash(payload),
+        "fetched_at": fetched_at,
+    }
+
+
+def fetch_teams(*, fetched_at: str | None = None) -> list[dict]:
     """Fetch all teams via SMW ask. Returns raw printouts dict."""
     params = {
         "action": "ask",
@@ -45,20 +66,29 @@ def fetch_teams() -> list[dict]:
     data = api_get(params, use_post=True)
     results = data.get("query", {}).get("results", {})
     print(f"Fetched {len(results)} teams")
-    return [
-        {
-            "kind": "team_raw",
-            "page_id": page_id,
-            "fulltext": raw_team.get("fulltext", ""),
-            "fullurl": raw_team.get("fullurl", ""),
-            "printouts": raw_team.get("printouts", {}),
-        }
-        for page_id, raw_team in results.items()
-    ]
+    fetched_at = fetched_at or utc_now_iso()
+    return [_team_raw_record(page_id, raw_team, fetched_at) for page_id, raw_team in results.items()]
+
+
+def _merge_team_records(incoming: list[dict], *, force: bool = False) -> list[dict]:
+    out = RAW_DIR / "teams_raw.jsonl"
+    existing = list(iter_jsonl(out)) if out.exists() else []
+    return merge_by_key(
+        existing,
+        incoming,
+        lambda row: str(row.get("page_id", "")),
+        current_keys={str(row.get("page_id", "")) for row in incoming},
+        force=force,
+        mark_missing=True,
+    )
 
 
 def main() -> None:
-    records = fetch_teams()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+
+    records = _merge_team_records(fetch_teams(), force=args.force)
     out = RAW_DIR / "teams_raw.jsonl"
     count = write_jsonl(records, out)
     print(f"Saved {count} rows -> {out}")

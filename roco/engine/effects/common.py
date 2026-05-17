@@ -1,4 +1,4 @@
-"""Shared helpers for compiled effect handlers."""
+"""Shared helpers for compiled effect ops."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from roco.engine.state import ActivePet, BattleEvent, record_event
 
 
 EffectParams = Mapping[str, object]
-EffectHandler = Callable[[EventCtx, ActivePet, EffectParams, str], None]
+EffectOp = Callable[[EventCtx, ActivePet, EffectParams, str], None]
 
 STAT_TO_BUFF_IDX = {
     "atk": 0,

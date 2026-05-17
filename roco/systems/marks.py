@@ -66,7 +66,7 @@ def calc_meteor_extra_damage(marks: int) -> int:
     return stacks * METEOR_EXTRA_DMG if stacks > 0 else 0
 
 
-def register_mark_handlers(bus):
+def register_mark_stage_hooks(bus):
     from roco.engine.events import GameEvent, EventCtx
     from roco.config.constants import MAX_ENERGY
 

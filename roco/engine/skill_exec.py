@@ -304,7 +304,7 @@ def _calculate_damage(
     return damage, {"type_mult": type_mult, "stab": stab}
 
 
-def register_skill_handlers(bus) -> None:
+def register_skill_stage_hooks(bus) -> None:
     set_bus(bus)
     import importlib
 

@@ -1,4 +1,4 @@
-"""Leech tick handler."""
+"""Leech tick stage hook."""
 from roco.engine.state import StatusFlag, StatusType, BattleEvent
 from roco.engine.events import GameEvent, EventCtx
 

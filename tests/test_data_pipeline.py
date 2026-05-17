@@ -1,12 +1,17 @@
+import sys
 from pathlib import Path
 
 import pytest
 
+import roco.data.fetch_details as fetch_details
+import roco.data.fetch_index as fetch_index
+import roco.data.fetch_teams as fetch_teams
+import roco.data.parse_skills as parse_skills
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
-from roco.data.utils import load_jsonl, write_jsonl
+from roco.data.utils import content_hash, load_jsonl, with_canonical_hash, write_jsonl
 from roco.engine.battle import BattleEngine
 from roco.engine.state import EffectTag, MoveDecision
 
@@ -115,6 +120,116 @@ def test_jsonl_roundtrip_is_one_entity_per_line(tmp_path: Path):
     assert count == 2
     assert path.read_text(encoding="utf-8").count("\n") == 2
     assert load_jsonl(path) == [{"kind": "skill", "name": "火花"}, {"kind": "skill", "name": "拍击"}]
+
+
+def test_fetch_index_incremental_marks_missing_and_force_rewrites(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(fetch_index, "INDEX_DIR", tmp_path)
+    write_jsonl([
+        {"kind": "index", "target": "skills", "title": "火花", "sort_order": 0},
+        {"kind": "index", "target": "skills", "title": "旧技能", "sort_order": 1},
+    ], tmp_path / "skills.jsonl")
+
+    merged = fetch_index._merge_index_records("skills", ["火花", "新技能"], force=False)
+    assert [row["title"] for row in merged] == ["火花", "新技能", "旧技能"]
+    assert merged[2]["missing_from_index"] is True
+
+    forced = fetch_index._merge_index_records("skills", ["火花"], force=True)
+    assert [row["title"] for row in forced] == ["火花"]
+    assert all("missing_from_index" not in row for row in forced)
+
+
+def test_fetch_details_incremental_preserves_unchanged_rows(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(fetch_details, "RAW_DIR", tmp_path)
+    old = {
+        "kind": "skill",
+        "name": "火花",
+        "source_title": "火花",
+        "source_kind": "skill",
+        "raw_text": "same",
+        "source_hash": content_hash({"raw_text": "same"}),
+        "fetched_at": "old",
+    }
+    write_jsonl([old], tmp_path / "skills_raw.jsonl")
+
+    merged = fetch_details._merge_raw_records(
+        "skills",
+        ["火花", "拍击"],
+        ["火花", "拍击"],
+        {"火花": "same", "拍击": "new"},
+        force=False,
+        fetched_at="new",
+    )
+    assert merged[0]["fetched_at"] == "old"
+    assert merged[1]["fetched_at"] == "new"
+
+    changed = fetch_details._merge_raw_records(
+        "skills",
+        ["火花"],
+        ["火花"],
+        {"火花": "changed"},
+        force=False,
+        fetched_at="newer",
+    )
+    assert changed[0]["source_hash"] == content_hash({"raw_text": "changed"})
+    assert changed[0]["fetched_at"] == "newer"
+
+
+def test_fetch_teams_incremental_merges_by_page_id(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(fetch_teams, "RAW_DIR", tmp_path)
+    unchanged = fetch_teams._team_raw_record(
+        "101",
+        {"fulltext": "队伍A", "fullurl": "url-a", "printouts": {"阵容标题": ["队伍A"]}},
+        "old",
+    )
+    missing = fetch_teams._team_raw_record(
+        "102",
+        {"fulltext": "队伍B", "fullurl": "url-b", "printouts": {"阵容标题": ["队伍B"]}},
+        "old",
+    )
+    write_jsonl([unchanged, missing], tmp_path / "teams_raw.jsonl")
+    incoming = [
+        fetch_teams._team_raw_record(
+            "101",
+            {"fulltext": "队伍A", "fullurl": "url-a", "printouts": {"阵容标题": ["队伍A"]}},
+            "new",
+        )
+    ]
+
+    merged = fetch_teams._merge_team_records(incoming, force=False)
+    assert merged[0]["fetched_at"] == "old"
+    assert merged[1]["page_id"] == "102"
+    assert merged[1]["missing_from_index"] is True
+
+    forced = fetch_teams._merge_team_records(incoming, force=True)
+    assert [row["page_id"] for row in forced] == ["101"]
+
+
+def test_parse_skills_preserves_unchanged_canonical_rows(tmp_path: Path, monkeypatch):
+    raw_dir = tmp_path / "raw"
+    canonical_dir = tmp_path / "canonical"
+    monkeypatch.setattr(parse_skills, "RAW_DIR", raw_dir)
+    monkeypatch.setattr(parse_skills, "CANONICAL_DIR", canonical_dir)
+    monkeypatch.setattr(sys, "argv", ["parse_skills.py"])
+    raw_text = "{{技能信息\n|技能名称=火花\n|属性=火\n|技能类别=魔攻\n|耗能=1\n|威力=60\n|效果=造成魔伤\n}}"
+    source = {
+        "kind": "skill",
+        "name": "火花",
+        "source_title": "火花",
+        "source_kind": "skill",
+        "raw_text": raw_text,
+        "source_hash": content_hash({"raw_text": raw_text}),
+    }
+    write_jsonl([source], raw_dir / "skills_raw.jsonl")
+    existing = with_canonical_hash(parse_skills.parse_one("火花", raw_text), source)
+    existing["sentinel"] = "kept"
+    existing = with_canonical_hash(existing)
+    write_jsonl([existing], canonical_dir / "skills.jsonl")
+
+    parse_skills.main()
+
+    rows = load_jsonl(canonical_dir / "skills.jsonl")
+    assert rows[0]["sentinel"] == "kept"
+    assert rows[0]["source_hash"] == source["source_hash"]
 
 
 def test_import_db_does_not_read_legacy_parsed_json():

@@ -8,7 +8,7 @@ DEVOTION_TYPES = {
     "虫群过境": DevotionIdx.CHONGQUN,
 }
 
-def register_devotion_handlers(bus):
+def register_devotion_stage_hooks(bus):
     from roco.engine.events import GameEvent, EventCtx
 
     def on_before_move(ctx):

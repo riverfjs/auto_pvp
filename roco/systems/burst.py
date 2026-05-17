@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from roco.engine.events import EventBus
 
 
-def register_burst_handlers(bus: "EventBus") -> None:
+def register_burst_stage_hooks(bus: "EventBus") -> None:
     from roco.engine.events import GameEvent, EventCtx
     from roco.engine.state import EffectFlag, _unpack_burst_entry, _set_burst_entry
 

@@ -1,4 +1,4 @@
-"""Fixed event table for the battle hook system."""
+"""Fixed event table for battle stage hooks."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ _EVENT_COUNT = max(event.value for event in GameEvent)
 
 @dataclass(slots=True)
 class EventCtx:
-    """Context passed to event handlers. Handlers may modify mutable fields."""
+    """Context passed to stage hooks. Hooks may modify mutable fields."""
     event: GameEvent
     state: "BattleState | None"
     actor: "ActivePet | None" = None
@@ -79,51 +79,50 @@ class EventCtx:
     hit_count_mult: float = 1.0
     cancelled: bool = False
 
-    # Mutable modifiers that handlers can adjust
+    # Mutable modifiers that stage hooks can adjust
     damage_mult: float = 1.0
     heal_mult: float = 1.0
     power_mod: float = 1.0
     energy_delta: int = 0
 
 
-# Handler: (EventCtx) -> None
-EventHandler = Callable[[EventCtx], None]
-HandlerRow = tuple[int, str, EventHandler]
+StageHook = Callable[[EventCtx], None]
+StageHookRow = tuple[int, str, StageHook]
 
 
 class EventBus:
     """Priority-ordered event dispatcher. Lower priority runs first."""
 
     def __init__(self):
-        self._handlers: tuple[tuple[HandlerRow, ...], ...] = tuple(() for _ in range(_EVENT_COUNT + 1))
+        self._stage_hooks: tuple[tuple[StageHookRow, ...], ...] = tuple(() for _ in range(_EVENT_COUNT + 1))
 
-    def on(self, event: GameEvent, handler: EventHandler,
+    def on(self, event: GameEvent, hook: StageHook,
            priority: int = 100, source: str = "unknown") -> None:
-        """Register a handler for an event. Lower priority = earlier execution."""
+        """Register a stage hook for an event. Lower priority = earlier execution."""
         idx = event.value
-        rows = tuple(sorted(self._handlers[idx] + ((priority, source, handler),), key=lambda row: row[0]))
-        self._handlers = self._handlers[:idx] + (rows,) + self._handlers[idx + 1:]
+        rows = tuple(sorted(self._stage_hooks[idx] + ((priority, source, hook),), key=lambda row: row[0]))
+        self._stage_hooks = self._stage_hooks[:idx] + (rows,) + self._stage_hooks[idx + 1:]
 
     def off(self, event: GameEvent, source: str) -> None:
-        """Remove all handlers from a source for an event."""
+        """Remove all hooks from a source for an event."""
         idx = event.value
-        rows = tuple(row for row in self._handlers[idx] if row[1] != source)
-        self._handlers = self._handlers[:idx] + (rows,) + self._handlers[idx + 1:]
+        rows = tuple(row for row in self._stage_hooks[idx] if row[1] != source)
+        self._stage_hooks = self._stage_hooks[:idx] + (rows,) + self._stage_hooks[idx + 1:]
 
     def emit(self, ctx: EventCtx) -> EventCtx:
-        """Fire all handlers for ctx.event in priority order. Returns modified ctx."""
-        for _pri, _src, handler in self._handlers[ctx.event.value]:
+        """Fire all stage hooks for ctx.event in priority order. Returns modified ctx."""
+        for _pri, _src, hook in self._stage_hooks[ctx.event.value]:
             if ctx.cancelled:
                 break
-            handler(ctx)
+            hook(ctx)
         return ctx
 
     def clear(self) -> None:
-        """Remove all handlers."""
-        self._handlers = tuple(() for _ in range(_EVENT_COUNT + 1))
+        """Remove all stage hooks."""
+        self._stage_hooks = tuple(() for _ in range(_EVENT_COUNT + 1))
 
-    def handler_count(self, event: GameEvent | None = None) -> int:
-        """Count registered handlers. If event is None, count all."""
+    def stage_hook_count(self, event: GameEvent | None = None) -> int:
+        """Count registered stage hooks. If event is None, count all."""
         if event:
-            return len(self._handlers[event.value])
-        return sum(len(rows) for rows in self._handlers)
+            return len(self._stage_hooks[event.value])
+        return sum(len(rows) for rows in self._stage_hooks)
