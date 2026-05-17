@@ -4,36 +4,62 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from roco.config.constants import ENERGY_GAIN_PER_TURN, MAX_ENERGY
-from roco.engine.common.choices import ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
-from roco.engine.common.packing import DevotionIdx, _unpack_devotion
+from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
+from roco.engine.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
+from roco.engine.common.rules import (
+    BPS,
+    FOCUS_ENERGY_GAIN,
+    HP_FOR_ENERGY_PCT_BPS,
+    BLOODLINE_LEADER,
+    MAGIC_LEADER_TRANSFORM,
+    MAGIC_WILLPOWER,
+    MAX_ENERGY,
+    WILLPOWER_COUNTER_STATUS_BPS,
+    WILLPOWER_POWER,
+)
 from roco.engine.common.rng import next_rng
-from roco.engine.enums import SkillCategory, WeatherType
+from roco.engine.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_GROUND,
+    PET_ABILITY,
     SKILL_CATEGORY,
     SKILL_ELEMENT,
     SKILL_ENERGY,
+    SKILL_FLAG_AGILITY,
     SKILL_FLAG_DEVOTION,
     SKILL_FLAGS,
     SKILL_HIT_COUNT,
     SKILL_POWER,
+    STAT_HP,
     STAT_SPEED,
+    PET_PRIMARY,
+    PET_SECONDARY,
     validate_catalog,
 )
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.damage import damage, marked_skill_cost, marked_speed
-from roco.engine.kernel.ops import TIMING_AFTER_MOVE, TIMING_CALC_DAMAGE, run_skill_timing
-from roco.engine.kernel.residual import apply_after_move, end_turn
+from roco.engine.kernel.ops import (
+    TAG_BORROW_TEAM_SKILL,
+    TAG_SKILL_MOD,
+    TIMING_AFTER_MOVE,
+    TIMING_BEFORE_MOVE,
+    TIMING_CALC_DAMAGE,
+    TIMING_TAKE_DAMAGE,
+    run_skill_timing,
+)
+from roco.engine.kernel.residual import apply_after_move, end_turn, share_gains_on_side
 from roco.engine.kernel.state import (
+    COST_SCOPE_CURRENT_SLOT,
     KernelState,
     PetState,
-    SideState,
     active_pet,
+    cost_mod_amount,
+    pack_cost_mod,
     replace_pet,
     replace_side,
     side,
+    status_stack,
     weather_type,
 )
 from roco.engine.kernel.switch import check_winner, clear_barrel_after_action, faint_pet, switch
@@ -56,40 +82,56 @@ def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResu
     ctx = StageCtx()
     damage_a = 0
     damage_b = 0
+    category_a = _choice_category(state, SIDE_A, c1)
+    category_b = _choice_category(state, SIDE_B, c2)
     if first_side == SIDE_A:
         second_slot = state.side_b.active
-        state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, True)
+        state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, True, category_b, c2.data)
         if state.side_b.pets[second_slot].fainted == 0:
-            state, damage_b = _execute(state, SIDE_B, c2, SIDE_A, ctx, False)
+            state, damage_b = _execute(state, SIDE_B, c2, SIDE_A, ctx, False, category_a, c1.data)
     else:
         second_slot = state.side_a.active
-        state, damage_b = _execute(state, SIDE_B, c2, SIDE_A, ctx, True)
+        state, damage_b = _execute(state, SIDE_B, c2, SIDE_A, ctx, True, category_a, c1.data)
         if state.side_a.pets[second_slot].fainted == 0:
-            state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, False)
+            state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, False, category_b, c2.data)
     state = end_turn(state)
     state = check_winner(state)
     return KernelResult(state, state.winner, first_side, damage_a, damage_b)
 
 
 def _start_turn(state: KernelState) -> KernelState:
-    side_a = _gain_energy(state.side_a)
-    side_b = _gain_energy(state.side_b)
-    return state._replace(turn=state.turn + 1, side_a=side_a, side_b=side_b)
+    state = state._replace(turn=state.turn + 1)
+    state, rng = _start_turn_side(state, SIDE_A, state.rng)
+    state, rng = _start_turn_side(state._replace(rng=rng), SIDE_B, rng)
+    return state._replace(rng=rng)
 
 
-def _gain_energy(side_state: SideState) -> SideState:
-    pets = []
-    for pet in side_state.pets:
-        if pet.fainted:
-            pets.append(pet)
-        else:
-            pets.append(pet._replace(current_energy=min(MAX_ENERGY, pet.current_energy + ENERGY_GAIN_PER_TURN)))
-    return side_state._replace(pets=tuple(pets))
+def _start_turn_side(state: KernelState, side_id: int, rng: int) -> tuple[KernelState, int]:
+    side_state = side(state, side_id)
+    slot = side_state.active
+    pet = side_state.pets[slot]
+    if pet.fainted or not (pet.ability_flags & int(AbilityFlag.SHUFFLE_SKILLS_REDUCE_LAST)):
+        return state, rng
+    moves, rng = _shuffle_four(side_state.moves[slot], rng)
+    side_state = side_state._replace(
+        moves=side_state.moves[:slot] + (moves,) + side_state.moves[slot + 1:],
+        cost_mods=pack_cost_mod(4, 1, COST_SCOPE_CURRENT_SLOT, 3),
+    )
+    return replace_side(state, side_id, side_state), rng
+
+
+def _shuffle_four(values: tuple[int, int, int, int], rng: int) -> tuple[tuple[int, int, int, int], int]:
+    data = [values[0], values[1], values[2], values[3]]
+    for idx in (3, 2, 1):
+        rng = next_rng(rng)
+        swap = rng % (idx + 1)
+        data[idx], data[swap] = data[swap], data[idx]
+    return (data[0], data[1], data[2], data[3]), rng
 
 
 def _order(state: KernelState, c1: Choice, c2: Choice) -> tuple[int, int]:
-    pri_a = _priority(c1)
-    pri_b = _priority(c2)
+    pri_a = _priority(state, SIDE_A, c1)
+    pri_b = _priority(state, SIDE_B, c2)
     if pri_a != pri_b:
         return (SIDE_A if pri_a > pri_b else SIDE_B, state.rng)
     speed_a = marked_speed(_speed(active_pet(state.side_a)), state.side_a.marks)
@@ -100,10 +142,34 @@ def _order(state: KernelState, c1: Choice, c2: Choice) -> tuple[int, int]:
     return (SIDE_A if rng & 1 else SIDE_B, rng)
 
 
-def _priority(choice: Choice) -> int:
+def _priority(state: KernelState, side_id: int, choice: Choice) -> int:
     if choice.action_code == ACTION_SWITCH:
         return 6
-    return 0
+    side_state = side(state, side_id)
+    pet = side_state.pets[side_state.active]
+    priority = pet.priority_boost
+    if choice.action_code == ACTION_MOVE and 0 <= choice.data < 4:
+        skill_id = side_state.moves[side_state.active][choice.data]
+        if skill_id > 0 and hot.SKILLS[skill_id][SKILL_FLAGS] & SKILL_FLAG_AGILITY:
+            priority += 1
+        priority += _ability_slot_priority(pet, choice.data)
+    return priority
+
+
+def _choice_category(state: KernelState, side_id: int, choice: Choice) -> int:
+    if choice.action_code == ACTION_MAGIC:
+        if side(state, side_id).bloodline_magic_id == MAGIC_LEADER_TRANSFORM:
+            return 0
+        return SkillCategory.MAGICAL.value
+    if choice.action_code != ACTION_MOVE:
+        return 0
+    side_state = side(state, side_id)
+    if choice.data < 0 or choice.data >= 4:
+        return 0
+    skill_id = side_state.moves[side_state.active][choice.data]
+    if skill_id <= 0:
+        return 0
+    return hot.SKILLS[skill_id][SKILL_CATEGORY]
 
 
 def _execute(
@@ -113,6 +179,8 @@ def _execute(
     target_side_id: int,
     ctx: StageCtx,
     first_strike: bool,
+    target_category: int,
+    target_choice_slot: int,
 ) -> tuple[KernelState, int]:
     actor_side = side(state, actor_side_id)
     target_side = side(state, target_side_id)
@@ -122,16 +190,42 @@ def _execute(
     target = target_side.pets[target_slot]
     if actor.fainted:
         return state, 0
+    if actor.priority_boost:
+        actor = actor._replace(priority_boost=0)
+        actor_side = replace_pet(actor_side, actor_slot, actor)
+        state = replace_side(state, actor_side_id, actor_side)
     if choice.action_code == ACTION_SWITCH:
         return switch(state, actor_side_id, choice.data), 0
-    if choice.action_code != ACTION_MOVE:
+    if choice.action_code == ACTION_FOCUS:
+        return _focus(state, actor_side_id), 0
+    if choice.action_code == ACTION_MAGIC:
+        if actor_side.bloodline_magic_id == MAGIC_LEADER_TRANSFORM:
+            return _leader_transform(state, actor_side_id, actor_slot), 0
+        if actor_side.bloodline_magic_id != MAGIC_WILLPOWER or actor_side.willpower_uses <= 0:
+            return state, 0
+        bloodline = actor_side.bloodlines[actor_slot] if actor_slot < len(actor_side.bloodlines) else -1
+        if bloodline < 0 or bloodline >= hot.ELEMENT_COUNT:
+            return state, 0
+        skill_id = 0
+        skill = (0, bloodline, SkillCategory.MAGICAL.value, 0, WILLPOWER_POWER, 0, 1)
+        actor_side = actor_side._replace(willpower_uses=actor_side.willpower_uses - 1)
+        state = replace_side(state, actor_side_id, actor_side)
+    elif choice.action_code != ACTION_MOVE:
         return state, 0
-    if choice.data < 0 or choice.data >= 4:
-        return state, 0
-    skill_id = actor_side.moves[actor_slot][choice.data]
-    if skill_id <= 0:
-        return state, 0
-    skill = hot.SKILLS[skill_id]
+    else:
+        if choice.data < 0 or choice.data >= 4:
+            return state, 0
+        skill_id = actor_side.moves[actor_slot][choice.data]
+        if skill_id <= 0:
+            return state, 0
+        if _cooldown_at(actor.cooldowns, choice.data) > 0:
+            return _focus(state, actor_side_id), 0
+        borrowed = _borrowed_skill_id(actor_side, actor_slot, skill_id, state.rng)
+        if borrowed > 0:
+            skill_id = borrowed
+        if actor.ability_flags & int(AbilityFlag.SKILL_SLOT_LOCK) and choice.data != 0:
+            return _focus(state, actor_side_id), 0
+        skill = hot.SKILLS[skill_id]
     cost = skill[SKILL_ENERGY]
     is_attack = skill[SKILL_CATEGORY] in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value)
     cost = marked_skill_cost(cost, actor_side.marks, is_attack)
@@ -140,23 +234,72 @@ def _execute(
         cost = max(0, cost - _unpack_devotion(actor_side.devotion, DevotionIdx.JIAMEI))
     if weather_type(state.weather) == WeatherType.SANDSTORM.value and skill[SKILL_ELEMENT] == ELEMENT_GROUND:
         cost //= 2
-    if actor.current_energy < cost:
-        return state, 0
-    actor = actor._replace(current_energy=max(0, actor.current_energy - cost))
-    actor_side = replace_pet(actor_side, actor_slot, actor)
-    state = replace_side(state, actor_side_id, actor_side)
+    cost += actor.global_cost_delta
+    cost += cost_mod_amount(actor_side.cost_mods, choice.data if choice.action_code == ACTION_MOVE else -1, skill[SKILL_CATEGORY])
     dealt = 0
     ctx.reset(actor_side_id, actor_slot, target_side_id, target_slot, skill_id)
-    ctx.power = skill[SKILL_POWER]
-    ctx.hit_count = skill[SKILL_HIT_COUNT]
+    ctx.skill_slot = choice.data if choice.action_code == ACTION_MOVE and 0 <= choice.data < 4 else -1
+    actor_row = hot.PETS[actor.pet_id]
+    target_row = hot.PETS[target.pet_id]
+    ctx.skill_element = skill[SKILL_ELEMENT]
+    ctx.skill_category = skill[SKILL_CATEGORY]
+    ctx.skill_energy = skill[SKILL_ENERGY]
+    ctx.skill_flags = skill[SKILL_FLAGS]
+    ctx.actor_primary = actor_row[PET_PRIMARY]
+    ctx.actor_secondary = actor_row[PET_SECONDARY]
+    ctx.actor_bloodline = actor_side.bloodlines[actor_slot] if actor_slot < len(actor_side.bloodlines) else -1
+    ctx.actor_energy = actor.current_energy
+    ctx.actor_cute = actor.cute
+    ctx.actor_counter_count = actor.counter_success_count
+    ctx.actor_hp_lost_quarters = max(0, actor_row[STAT_HP] - actor.current_hp) * 4 // max(1, actor_row[STAT_HP])
+    ctx.side_skill_counts = actor_side.skill_counts
+    ctx.side_counter_count = actor_side.counter_count
+    ctx.side_status_skill_count = actor_side.status_skill_count
+    ctx.target_primary = target_row[PET_PRIMARY]
+    ctx.target_secondary = target_row[PET_SECONDARY]
+    ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
+    ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
+    ctx.target_skill_energy = _target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
+    ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
+    ctx.power = skill[SKILL_POWER] + actor.global_power_bonus
+    ctx.hit_count = max(1, skill[SKILL_HIT_COUNT] + actor.hit_delta)
+    ctx.counter_category = 2 if target_category in (SkillCategory.DEFENSE.value, SkillCategory.STATUS.value) else 1
+    ctx.counter_success = 1 if choice.action_code == ACTION_MAGIC and ctx.counter_category == 2 else 0
+    ctx.first_strike = 1 if first_strike else 0
     if devotion_active:
         ctx.power_bps += _unpack_devotion(actor_side.devotion, DevotionIdx.FEIDUAN) * 1000
         ctx.hit_count += _unpack_devotion(actor_side.devotion, DevotionIdx.CHONGQUN)
+    _run_ability_timing(actor, TIMING_BEFORE_MOVE, ctx)
+    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_BEFORE_MOVE, ctx)
+    cost = max(0, cost - ctx.cost_delta if actor.ability_flags & int(AbilityFlag.COST_INVERT) else cost + ctx.cost_delta)
+    if choice.action_code == ACTION_MAGIC and ctx.counter_success:
+        ctx.power_bps = ctx.power_bps * WILLPOWER_COUNTER_STATUS_BPS // BPS
+    if actor.current_energy < cost:
+        hp_for_energy = ctx.hp_for_energy
+        if actor.ability_flags & int(AbilityFlag.HP_FOR_ENERGY):
+            hp_for_energy = hp_for_energy or HP_FOR_ENERGY_PCT_BPS
+        if hp_for_energy and _can_pay_hp_for_energy(actor, cost - actor.current_energy, hp_for_energy):
+            actor = _pay_skill_cost_with_hp(actor, cost, hp_for_energy)
+            actor_side = replace_pet(actor_side, actor_slot, actor)
+            state = replace_side(state, actor_side_id, actor_side)
+        else:
+            return _focus(state, actor_side_id), 0
+    else:
+        actor = actor._replace(current_energy=max(0, actor.current_energy - cost))
+        actor_side = replace_pet(actor_side, actor_slot, actor)
+        state = replace_side(state, actor_side_id, actor_side)
     if is_attack:
+        if first_strike:
+            _run_ability_timing(actor, TIMING_CALC_DAMAGE, ctx)
         run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_CALC_DAMAGE, ctx)
         dealt = damage(actor, target, skill, ctx, state.weather, actor_side.marks, target_side.marks, first_strike)
+        ctx.damage_dealt = dealt
+        if dealt > 0:
+            _run_ability_timing(target, TIMING_TAKE_DAMAGE, ctx)
         next_hp = target.current_hp - dealt
-        if next_hp <= 0 and target.cute >= 5:
+        if next_hp <= 0 and target.ability_flags & int(AbilityFlag.CUTE_LETHAL_SHIELD):
+            target = target._replace(current_hp=1, cute=target.cute + 1)
+        elif next_hp <= 0 and target.cute >= 5:
             target = target._replace(current_hp=1, cute=target.cute - 5)
         else:
             target = target._replace(current_hp=max(0, next_hp))
@@ -164,7 +307,29 @@ def _execute(
         state = replace_side(state, target_side_id, target_side)
         if target.current_hp <= 0:
             state = faint_pet(state, target_side_id, target_slot, actor_side_id, actor_slot)
+    if skill_id > 0:
+        actor_side = side(state, actor_side_id)
+        actor = actor_side.pets[actor_slot]
+        uses = 1
+        if actor.ability_flags & int(AbilityFlag.FIRST_ACTION_EXTRA_USE) and actor.first_action_done == 0:
+            uses += 1
+            actor = actor._replace(first_action_done=1)
+            actor_side = replace_pet(actor_side, actor_slot, actor)
+        skill_counts = actor_side.skill_counts
+        for _ in range(uses):
+            skill_counts = _inc_skill_count(skill_counts, Element(skill[SKILL_ELEMENT]))
+        status_count = actor_side.status_skill_count + (uses if skill[SKILL_CATEGORY] == SkillCategory.STATUS.value else 0)
+        actor_side = actor_side._replace(skill_counts=skill_counts, status_skill_count=min(255, status_count))
+        state = replace_side(state, actor_side_id, actor_side)
+    if ctx.counter_success:
+        actor_side = side(state, actor_side_id)
+        actor = actor_side.pets[actor_slot]
+        actor = actor._replace(counter_success_count=min(255, actor.counter_success_count + 1))
+        ctx.actor_counter_count = actor.counter_success_count
+        actor_side = replace_pet(actor_side, actor_slot, actor)._replace(counter_count=min(255, actor_side.counter_count + 1))
+        state = replace_side(state, actor_side_id, actor_side)
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_AFTER_MOVE, ctx)
+    _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)
     return state, dealt
@@ -172,3 +337,120 @@ def _execute(
 
 def _speed(pet: PetState) -> int:
     return hot.PETS[pet.pet_id][STAT_SPEED]
+
+
+def _run_ability_timing(actor: PetState, timing: int, ctx: StageCtx) -> None:
+    ability_id = hot.PETS[actor.pet_id][PET_ABILITY]
+    if ability_id <= 0 or ability_id >= len(hot.ABILITY_EFFECT_RANGES):
+        return
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], timing, ctx)
+
+
+def _target_skill_energy(target_side, target_slot: int, target_skill_slot: int) -> int:
+    if target_skill_slot < 0 or target_skill_slot >= 4:
+        return 0
+    skill_id = target_side.moves[target_slot][target_skill_slot]
+    if skill_id <= 0:
+        return 0
+    return hot.SKILLS[skill_id][SKILL_ENERGY]
+
+
+def _ability_slot_priority(actor: PetState, slot_idx: int) -> int:
+    ability_id = hot.PETS[actor.pet_id][PET_ABILITY]
+    if ability_id <= 0 or ability_id >= len(hot.ABILITY_EFFECT_RANGES):
+        return 0
+    start, end = hot.ABILITY_EFFECT_RANGES[ability_id]
+    priority = 0
+    for idx in range(start, end):
+        row = hot.ABILITY_EFFECT_ROWS[idx]
+        if row[0] == TAG_SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
+            priority += row[6]
+    return priority
+
+
+def _borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> int:
+    start, end = hot.SKILL_EFFECT_RANGES[skill_id]
+    has_borrow = 0
+    for idx in range(start, end):
+        if hot.SKILL_EFFECT_ROWS[idx][0] == TAG_BORROW_TEAM_SKILL:
+            has_borrow = 1
+    if not has_borrow:
+        return 0
+    count = 0
+    fallback = 0
+    target_index = rng & 0xF
+    for slot, moves in enumerate(side_state.moves):
+        if slot == actor_slot:
+            continue
+        for candidate in moves:
+            if candidate <= 0:
+                continue
+            if count == target_index:
+                return candidate
+            fallback = candidate
+            count += 1
+    return fallback
+
+
+def _focus(state: KernelState, side_id: int) -> KernelState:
+    side_state = side(state, side_id)
+    slot = side_state.active
+    pet = side_state.pets[slot]
+    if pet.fainted:
+        return state
+    before = pet.current_energy
+    pet = pet._replace(current_energy=_energy_cap(pet, pet.current_energy + FOCUS_ENERGY_GAIN))
+    side_state = replace_pet(side_state, slot, pet)
+    gained = pet.current_energy - before
+    if gained > 0 and pet.ability_flags & int(AbilityFlag.SHARE_GAINS):
+        side_state, rng = share_gains_on_side(side_state, slot, 0, gained, state.rng)
+        state = state._replace(rng=rng)
+    return replace_side(state, side_id, side_state)
+
+
+def _leader_transform(state: KernelState, side_id: int, slot: int) -> KernelState:
+    side_state = side(state, side_id)
+    if side_state.leader_uses <= 0 or slot >= len(side_state.bloodlines):
+        return state
+    if side_state.bloodlines[slot] != BLOODLINE_LEADER:
+        return state
+    pet = side_state.pets[slot]
+    if pet.fainted or pet.pet_id >= len(hot.LEADER_FORM_BY_PET):
+        return state
+    target_pet_id = hot.LEADER_FORM_BY_PET[pet.pet_id]
+    if target_pet_id <= 0 or target_pet_id == pet.pet_id:
+        return state
+    old_hp = max(1, hot.PETS[pet.pet_id][STAT_HP])
+    new_hp = max(1, hot.PETS[target_pet_id][STAT_HP])
+    scaled_hp = max(1, min(new_hp, pet.current_hp * new_hp // old_hp))
+    ability_id = hot.PETS[target_pet_id][PET_ABILITY]
+    ability_flags = hot.ABILITY_FLAGS[ability_id] if ability_id < len(hot.ABILITY_FLAGS) else 0
+    transformed = pet._replace(
+        pet_id=target_pet_id,
+        current_hp=scaled_hp,
+        ability_flags=ability_flags,
+    )
+    side_state = replace_pet(side_state, slot, transformed)
+    side_state = side_state._replace(leader_uses=side_state.leader_uses - 1)
+    return replace_side(state, side_id, side_state)
+
+
+def _energy_cap(pet: PetState, value: int) -> int:
+    if pet.ability_flags & int(AbilityFlag.ENERGY_NO_CAP):
+        return max(0, value)
+    return max(0, min(MAX_ENERGY, value))
+
+
+def _can_pay_hp_for_energy(pet: PetState, missing: int, pct_bps: int) -> bool:
+    if missing <= 0:
+        return True
+    max_hp = hot.PETS[pet.pet_id][STAT_HP]
+    cost = max(1, max_hp * pct_bps // BPS) * missing
+    return pet.current_hp > cost
+
+
+def _pay_skill_cost_with_hp(pet: PetState, cost: int, pct_bps: int) -> PetState:
+    missing = max(0, cost - pet.current_energy)
+    max_hp = hot.PETS[pet.pet_id][STAT_HP]
+    hp_cost = max(1, max_hp * pct_bps // BPS) * missing
+    return pet._replace(current_hp=max(1, pet.current_hp - hp_cost), current_energy=0)

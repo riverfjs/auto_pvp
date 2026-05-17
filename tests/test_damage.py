@@ -208,7 +208,7 @@ def test_can_use_skill_no():
 
 
 def test_energy_gain():
-    assert calc_energy_after_gain(3) == 5
+    assert calc_energy_after_gain(3) == 8
 
 
 def test_energy_gain_capped():

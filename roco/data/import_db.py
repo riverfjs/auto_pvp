@@ -9,7 +9,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
+from roco.data.utils import CANONICAL_DIR, DB_DIR, RULES_DIR, content_hash, iter_jsonl, load_jsonl
 from roco.compiler.effect_model import EffectTag, Timing
 from roco.compiler.effect_registry import IMPLEMENTED_EFFECT_TAGS
 from roco.engine.enums import SkillCategory, normalize_element_name
@@ -56,6 +56,39 @@ def _maybe_element_id(conn: sqlite3.Connection, raw: str | None) -> int | None:
     if not raw:
         return None
     return _element_id(conn, raw)
+
+
+def _bloodline_id(conn: sqlite3.Connection, raw: str | None) -> int | None:
+    text = str(raw or "").replace("血脉", "").strip()
+    if not text:
+        return None
+    if text == "污染":
+        raise ValueError("污染血脉不能参与 PVP 队伍导入")
+    if text == "首领":
+        name = "首领"
+    else:
+        name = normalize_element_name(text)
+    row = conn.execute("SELECT id FROM bloodlines WHERE name = ?", (name,)).fetchone()
+    if row is None:
+        raise ValueError(f"bloodline not seeded: {name}")
+    return int(row[0])
+
+
+def _bloodline_magic_id(conn: sqlite3.Connection, raw: str | None) -> int:
+    name = str(raw or "").strip() or "愿力冲击"
+    code = {
+        "愿力冲击": "willpower_strike",
+        "进化之力": "leader_transform",
+    }.get(name, f"magic_{content_hash(name)[:12]}")
+    uses = 2 if name == "愿力冲击" else 1 if name == "进化之力" else 0
+    conn.execute(
+        "INSERT OR IGNORE INTO bloodline_magics (code, name, uses_per_battle, description) VALUES (?, ?, ?, ?)",
+        (code, name, uses, ""),
+    )
+    row = conn.execute("SELECT id FROM bloodline_magics WHERE name = ?", (name,)).fetchone()
+    if row is None:
+        raise ValueError(f"bloodline magic not inserted: {name}")
+    return int(row[0])
 
 
 def _category(raw: object) -> tuple[int, str]:
@@ -317,14 +350,19 @@ def import_pets(
         elements = tuple(record.get("elements", ())) + ("", "")
         stats = record.get("stats", {}) or {}
         ability_name = str(record.get("ability", "")).strip()
+        ability_description = str(record.get("ability_description", ""))
+        if ability_name and not ability_description.strip():
+            raise ValueError(f"pet {record['name']} has ability {ability_name!r} but empty ability_description")
         rows.append((
             str(record["name"]),
             str(record.get("form_name", "")),
             str(record.get("stage", "")),
             str(record.get("form_type", "")),
+            str(record.get("lineage_key", "")),
             _element_id(conn, str(elements[0] or "普通")),
             _maybe_element_id(conn, str(elements[1] or "")),
             ability_lookup.get(ability_name),
+            ability_description,
             _required_int(stats.get("hp"), 1),
             _required_int(stats.get("atk_phys"), 0),
             _required_int(stats.get("atk_mag"), 0),
@@ -340,9 +378,9 @@ def import_pets(
             str(record.get("source_version", "")),
         ))
     conn.executemany(
-        "INSERT INTO pets (name, form_name, stage, form_type, element_primary_id, element_secondary_id, ability_id, "
-        "hp, atk_phys, atk_mag, def_phys, def_mag, speed, height, weight, distribution, description, is_shiny, evolution_cond, source_version) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO pets (name, form_name, stage, form_type, lineage_key, element_primary_id, element_secondary_id, ability_id, "
+        "ability_description, hp, atk_phys, atk_mag, def_phys, def_mag, speed, height, weight, distribution, description, is_shiny, evolution_cond, source_version) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
     pet_lookup = {name: pid for pid, name in conn.execute("SELECT id, name FROM pets")}
@@ -366,9 +404,64 @@ def import_pets(
         "VALUES (?, ?, ?, ?, ?, ?)",
         link_rows,
     )
+    transform_rows = _leader_transform_rows(conn)
+    if transform_rows:
+        conn.executemany(
+            "INSERT OR REPLACE INTO pet_transforms (source_pet_id, leader_pet_id, reason) VALUES (?, ?, ?)",
+            transform_rows,
+        )
     print(f"  pets: {len(pet_lookup)} inserted")
     print(f"  pet_skills: {len(link_rows)} links inserted")
+    print(f"  pet_transforms: {len(transform_rows)} inserted")
     return pet_lookup
+
+
+def _leader_transform_rows(conn: sqlite3.Connection) -> list[tuple[int, int, str]]:
+    pet_rows = [
+        {
+            "id": int(row[0]),
+            "name": str(row[1]),
+            "lineage_key": str(row[2] or ""),
+            "form_type": str(row[3] or ""),
+        }
+        for row in conn.execute("SELECT id, name, lineage_key, form_type FROM pets ORDER BY id")
+    ]
+    pets_by_name = {row["name"]: row for row in pet_rows}
+    rows_by_lineage: dict[str, list[dict[str, object]]] = {}
+    for row in pet_rows:
+        key = str(row["lineage_key"] or row["name"])
+        rows_by_lineage.setdefault(key, []).append(row)
+
+    result: dict[int, tuple[int, int, str]] = {}
+    for source_name, leader_name in _leader_transform_manual().items():
+        source = pets_by_name.get(source_name)
+        leader = pets_by_name.get(leader_name)
+        if source is None or leader is None:
+            continue
+        result[int(source["id"])] = (int(source["id"]), int(leader["id"]), "manual")
+
+    for lineage_rows in rows_by_lineage.values():
+        leaders = [row for row in lineage_rows if row["form_type"] == "首领形态"]
+        if len(leaders) != 1:
+            continue
+        leader_id = int(leaders[0]["id"])
+        for row in lineage_rows:
+            source_id = int(row["id"])
+            result.setdefault(source_id, (source_id, leader_id, "auto_lineage"))
+    return [result[key] for key in sorted(result)]
+
+
+def _leader_transform_manual() -> dict[str, str]:
+    path = RULES_DIR / "leader_transforms_manual.jsonl"
+    if not path.exists():
+        return {}
+    rules: dict[str, str] = {}
+    for record in iter_jsonl(path):
+        source = str(record.get("source", "") or record.get("name", "")).strip()
+        target = str(record.get("target", "") or record.get("leader", "")).strip()
+        if source and target:
+            rules[source] = target
+    return rules
 
 
 def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
@@ -462,18 +555,21 @@ def import_teams(
     skill_rows: list[tuple] = []
 
     for team in records:
+        magic_name = str(team.get("bloodline_magic", "") or "愿力冲击")
+        magic_id = _bloodline_magic_id(conn, magic_name)
         team_rows.append((
             str(team.get("id", "")),
             str(team.get("title", "")),
             str(team.get("author", "")),
             str(team.get("type", "")),
-            str(team.get("bloodline_magic", "")),
+            magic_name,
+            magic_id,
             str(team.get("description", "")),
             str(team.get("upload_date", "")),
         ))
     conn.executemany(
-        "INSERT INTO teams (id, title, author, team_type, bloodline_magic, description, upload_date) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO teams (id, title, author, team_type, bloodline_magic, bloodline_magic_id, description, upload_date) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         team_rows,
     )
 
@@ -487,12 +583,13 @@ def import_teams(
                 str(pet.get("name", "")),
                 str(pet.get("name_short", "")),
                 str(pet.get("bloodline", "")),
+                _bloodline_id(conn, str(pet.get("bloodline", ""))),
                 str(pet.get("nature", "")),
                 _json(pet.get("ivs", [])),
             ))
     conn.executemany(
-        "INSERT INTO team_pets (team_id, slot, pet_id, pet_name, name_short, bloodline, nature, ivs_json) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO team_pets (team_id, slot, pet_id, pet_name, name_short, bloodline, bloodline_id, nature, ivs_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         pet_rows,
     )
 
@@ -512,6 +609,7 @@ def import_teams(
     )
     refresh_effect_gap_usage(conn)
     if fail_used_gaps:
+        assert_no_missing_leader_transforms(conn)
         assert_no_blocking_effect_gaps(conn)
     print(f"  teams: {len(team_rows)} inserted")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
@@ -561,6 +659,33 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
         return
     details = ", ".join(f"{row[0]}:{row[1]} used={row[4]} reason={row[3]}" for row in rows)
     raise RuntimeError(f"used skills/abilities have unclassified effect gaps: {details}")
+
+
+def assert_no_missing_leader_transforms(conn: sqlite3.Connection) -> None:
+    magic = conn.execute("SELECT id FROM bloodline_magics WHERE code = 'leader_transform'").fetchone()
+    bloodline = conn.execute("SELECT id FROM bloodlines WHERE code = 'leader'").fetchone()
+    if magic is None or bloodline is None:
+        return
+    rows = conn.execute(
+        """
+        SELECT t.title, tp.pet_name
+        FROM teams t
+        JOIN team_pets tp ON tp.team_id = t.id
+        WHERE t.bloodline_magic_id = ?
+          AND tp.bloodline_id = ?
+          AND tp.pet_id IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM pet_transforms pt WHERE pt.source_pet_id = tp.pet_id
+          )
+        ORDER BY t.title, tp.pet_name
+        LIMIT 20
+        """,
+        (int(magic[0]), int(bloodline[0])),
+    ).fetchall()
+    if not rows:
+        return
+    details = ", ".join(f"{row[0]}:{row[1]}" for row in rows)
+    raise RuntimeError(f"leader bloodline pets have no leader transform mapping: {details}")
 
 
 def _load_required(name: str) -> list[dict]:

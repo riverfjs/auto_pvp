@@ -5,7 +5,7 @@ from __future__ import annotations
 from roco.config.constants import (
     DAMAGE_FORMULA_CONSTANT, STAB_MULTIPLIER, MIN_DAMAGE,
     BURN_HP_CAP, BURN_DAMAGE_PCT, POISON_DAMAGE_PCT,
-    ENERGY_GAIN_PER_TURN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
+    FOCUS_ENERGY_GAIN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
 from roco.config.natures import IV_STAT_MAP, NATURE_MOD
 from roco.engine.common.packing import buff_multiplier as _bm
@@ -16,7 +16,7 @@ def can_use_skill(current_energy: int, cost: int) -> bool:
     return current_energy >= cost
 
 def energy_after_gain(current: int) -> int:
-    return min(current + ENERGY_GAIN_PER_TURN, MAX_ENERGY)
+    return min(current + FOCUS_ENERGY_GAIN, MAX_ENERGY)
 
 def energy_after_use(current: int, cost: int) -> int:
     return max(current - cost, 0)

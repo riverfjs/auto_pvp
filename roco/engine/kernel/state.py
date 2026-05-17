@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from roco.config.constants import STARTING_ENERGY
+from roco.engine.common.rules import LEADER_USES, SIDE_LIVES, STARTING_ENERGY, WILLPOWER_USES
 from roco.engine.generated import catalog_hot as hot
-from roco.engine.enums import StatusFlag, StatusType, WeatherType
+from roco.engine.enums import AbilityFlag, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import NO_WINNER, SIDE_A
 from roco.engine.common.packing import _pack_buff, _set_status, _unpack_status
+
+COST_SCOPE_NONE = 0
+COST_SCOPE_ALL = 1
+COST_SCOPE_CURRENT_SLOT = 2
+COST_SCOPE_OTHER_SLOTS = 3
+COST_SCOPE_ATTACK = 4
+
 
 class PetState(NamedTuple):
     pet_id: int
@@ -19,6 +26,14 @@ class PetState(NamedTuple):
     status_counts: int
     cooldowns: int
     ability_flags: int
+    priority_boost: int
+    lifedrain_bps: int
+    hit_delta: int
+    global_cost_delta: int
+    global_power_bonus: int
+    anti_heal_multiplier: int
+    first_action_done: int
+    counter_success_count: int
     frostbite: int
     cute: int
     leech_source_side: int
@@ -28,14 +43,21 @@ class PetState(NamedTuple):
 
 class SideState(NamedTuple):
     active: int
-    magic: int
+    side_lives: int
+    willpower_uses: int
+    leader_uses: int
+    bloodline_magic_id: int
     marks: int
     devotion: int
     burst_entries: int
     barrel_pending: int
     skill_counts: int
+    status_skill_count: int
+    counter_count: int
+    cost_mods: int
     pets: tuple[PetState, ...]
     moves: tuple[tuple[int, int, int, int], ...]
+    bloodlines: tuple[int, ...]
 
 
 class KernelState(NamedTuple):
@@ -57,6 +79,35 @@ def weather_type(weather: int) -> int:
 
 def weather_turns(weather: int) -> int:
     return (weather >> 4) & 0xF
+
+
+def pack_cost_mod(amount: int, turns: int, scope: int, slot: int) -> int:
+    return (max(0, min(15, amount)) | (max(0, min(15, turns)) << 4) | ((scope & 0xF) << 8) | ((slot & 0xF) << 12))
+
+
+def cost_mod_amount(packed: int, slot: int, category: int) -> int:
+    turns = (packed >> 4) & 0xF
+    if turns <= 0:
+        return 0
+    amount = packed & 0xF
+    scope = (packed >> 8) & 0xF
+    stored_slot = (packed >> 12) & 0xF
+    if scope == COST_SCOPE_ALL:
+        return amount
+    if scope == COST_SCOPE_CURRENT_SLOT and slot == stored_slot:
+        return amount
+    if scope == COST_SCOPE_OTHER_SLOTS and 0 <= slot != stored_slot:
+        return amount
+    if scope == COST_SCOPE_ATTACK and category in (1, 2):
+        return amount
+    return 0
+
+
+def tick_cost_mod(packed: int) -> int:
+    turns = (packed >> 4) & 0xF
+    if turns <= 1:
+        return 0
+    return pack_cost_mod(packed & 0xF, turns - 1, (packed >> 8) & 0xF, (packed >> 12) & 0xF)
 
 
 def status_stack(pet: PetState, status: StatusType) -> int:
@@ -91,15 +142,25 @@ def has_status(pet: PetState, flag: StatusFlag) -> bool:
 def _pet_state(pet_id: int) -> PetState:
     row = hot.PETS[pet_id]
     ability_id = row[9]
+    ability_flags = hot.ABILITY_FLAGS[ability_id] if ability_id < len(hot.ABILITY_FLAGS) else 0
+    energy = 0 if ability_flags & int(AbilityFlag.START_ZERO_ENERGY) else STARTING_ENERGY
     return PetState(
         pet_id=pet_id,
         current_hp=row[1],
-        current_energy=STARTING_ENERGY,
+        current_energy=energy,
         buff_stages=_pack_buff(),
         status_flags=0,
         status_counts=0,
         cooldowns=0,
-        ability_flags=hot.ABILITY_FLAGS[ability_id] if ability_id < len(hot.ABILITY_FLAGS) else 0,
+        ability_flags=ability_flags,
+        priority_boost=0,
+        lifedrain_bps=0,
+        hit_delta=0,
+        global_cost_delta=0,
+        global_power_bonus=0,
+        anti_heal_multiplier=0,
+        first_action_done=0,
+        counter_success_count=0,
         frostbite=0,
         cute=0,
         leech_source_side=-1,
@@ -113,11 +174,26 @@ def _move_row(pet_id: int, override: tuple[int, ...] | None) -> tuple[int, int, 
     return tuple((tuple(ids) + (0, 0, 0, 0))[:4])  # type: ignore[return-value]
 
 
-def make_side(pet_ids: tuple[int, ...], move_rows: tuple[tuple[int, ...], ...] | None = None) -> SideState:
+def _bloodline_row(pet_id: int, override: int | None) -> int:
+    if override is not None and override >= 0:
+        return override
+    return hot.PETS[pet_id][7]
+
+
+def make_side(
+    pet_ids: tuple[int, ...],
+    move_rows: tuple[tuple[int, ...], ...] | None = None,
+    bloodlines: tuple[int, ...] | None = None,
+    bloodline_magic_id: int = 1,
+) -> SideState:
     pets = tuple(_pet_state(pet_id) for pet_id in pet_ids)
     moves = tuple(_move_row(pet_id, move_rows[idx] if move_rows and idx < len(move_rows) else None)
                   for idx, pet_id in enumerate(pet_ids))
-    return SideState(0, 4, 0, 0, 0, 0, 0, pets, moves)
+    bloodline_rows = tuple(
+        _bloodline_row(pet_id, bloodlines[idx] if bloodlines and idx < len(bloodlines) else None)
+        for idx, pet_id in enumerate(pet_ids)
+    )
+    return SideState(0, SIDE_LIVES, WILLPOWER_USES, LEADER_USES, bloodline_magic_id, 0, 0, 0, 0, 0, 0, 0, 0, pets, moves, bloodline_rows)
 
 
 def make_state(
@@ -126,6 +202,10 @@ def make_state(
     *,
     team_a_moves: tuple[tuple[int, ...], ...] | None = None,
     team_b_moves: tuple[tuple[int, ...], ...] | None = None,
+    team_a_bloodlines: tuple[int, ...] | None = None,
+    team_b_bloodlines: tuple[int, ...] | None = None,
+    team_a_bloodline_magic_id: int = 1,
+    team_b_bloodline_magic_id: int = 1,
     weather: int = WeatherType.NONE.value,
     weather_duration: int = 0,
     rng_seed: int = 1,
@@ -135,33 +215,47 @@ def make_state(
         weather=pack_weather(weather, weather_duration),
         rng=rng_seed & 0xFFFFFFFF,
         winner=NO_WINNER,
-        side_a=make_side(team_a, team_a_moves),
-        side_b=make_side(team_b, team_b_moves),
+        side_a=make_side(team_a, team_a_moves, team_a_bloodlines, team_a_bloodline_magic_id),
+        side_b=make_side(team_b, team_b_moves, team_b_bloodlines, team_b_bloodline_magic_id),
     )
 
 
 def copy_state(state: KernelState) -> KernelState:
     side_a = SideState(
         state.side_a.active,
-        state.side_a.magic,
+        state.side_a.side_lives,
+        state.side_a.willpower_uses,
+        state.side_a.leader_uses,
+        state.side_a.bloodline_magic_id,
         state.side_a.marks,
         state.side_a.devotion,
         state.side_a.burst_entries,
         state.side_a.barrel_pending,
         state.side_a.skill_counts,
+        state.side_a.status_skill_count,
+        state.side_a.counter_count,
+        state.side_a.cost_mods,
         tuple(PetState(*pet) for pet in state.side_a.pets),
         tuple(tuple(row) for row in state.side_a.moves),
+        tuple(state.side_a.bloodlines),
     )
     side_b = SideState(
         state.side_b.active,
-        state.side_b.magic,
+        state.side_b.side_lives,
+        state.side_b.willpower_uses,
+        state.side_b.leader_uses,
+        state.side_b.bloodline_magic_id,
         state.side_b.marks,
         state.side_b.devotion,
         state.side_b.burst_entries,
         state.side_b.barrel_pending,
         state.side_b.skill_counts,
+        state.side_b.status_skill_count,
+        state.side_b.counter_count,
+        state.side_b.cost_mods,
         tuple(PetState(*pet) for pet in state.side_b.pets),
         tuple(tuple(row) for row in state.side_b.moves),
+        tuple(state.side_b.bloodlines),
     )
     return KernelState(state.turn, state.weather, state.rng, state.winner, side_a, side_b)
 

@@ -215,3 +215,22 @@ def test_canonical_ability_missing_effect_is_explicit_gap():
 
     assert record["classification"]["status"] == "needs_manual"
     assert record["classification"]["gaps"][0]["reason"] == "structured_effect_missing"
+
+
+def test_bwiki_ability_rules_cover_used_structured_semantics():
+    examples = {
+        "共鸣": ("携带的【虫鸣】技能威力+20。", "SPECIFIC_SKILL_POWER_BONUS"),
+        "拨浪鼓": ("己方精灵每使用1次状态技能，自己入场时毒系和萌系技能威力+10。", "POWER_BY_STATUS_COUNT_ELEMENTS"),
+        "盲拧": ("回合开始时，技能顺序打乱，4号位的技能能耗-4。", "SHUFFLE_SKILLS_REDUCE_LAST"),
+        "腾挪": ("攻击技能应对1次后，回满状态，变为棋绮后。", "COUNTER_ACCUMULATE_TRANSFORM"),
+        "系统发育": ("获得能量或生命时，会将等量的能量或生命随机分配给场下的精灵。", "SHARE_GAINS"),
+    }
+
+    for name, (description, expected_tag) in examples.items():
+        record = refresh_ability_classification({
+            "kind": "ability",
+            "name": name,
+            "description": description,
+        })
+        assert record["classification"]["status"] == "ok"
+        assert any(effect["tag"] == expected_tag for effect in record["effects"])

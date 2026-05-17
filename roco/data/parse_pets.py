@@ -65,8 +65,10 @@ def parse_one(name: str, text: str) -> dict | None:
         "form_name": pet.get("地区形态名称", ""),
         "stage": pet.get("精灵阶段", ""),
         "form_type": pet.get("精灵形态", ""),
+        "lineage_key": _lineage_key(pet.get("精灵初阶名称", name)),
         "elements": [pet.get("主属性", "普通"), pet.get("2属性", "")],
         "ability": pet.get("特性", "").strip(),
+        "ability_description": pet.get("特性描述", "").strip(),
         "stats": {
             "hp": _safe_int(pet.get("生命")) or 1,
             "atk_phys": _safe_int(pet.get("物攻")) or 0,
@@ -125,6 +127,8 @@ def _keep_existing(existing: dict[str, dict], row: dict, *, force: bool) -> dict
     if (
         previous is not None
         and not force
+        and "ability_description" in previous
+        and "lineage_key" in previous
         and previous.get("canonical_hash")
         and previous.get("source_hash")
         and previous.get("source_hash") == row.get("source_hash")
@@ -153,6 +157,12 @@ def _safe_int(val: object) -> int | None:
         return int(val)
     except (ValueError, TypeError):
         return None
+
+
+def _lineage_key(raw: object) -> str:
+    text = str(raw or "").strip()
+    text = re.sub(r"[（(][^）)]*[）)]", "", text)
+    return re.sub(r"\s+", "", text).strip()
 
 
 def main() -> None:

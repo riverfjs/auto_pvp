@@ -6,6 +6,8 @@ from typing import NamedTuple
 
 ACTION_MOVE = 1
 ACTION_SWITCH = 2
+ACTION_FOCUS = 3
+ACTION_MAGIC = 4
 SIDE_A = 0
 SIDE_B = 1
 NO_WINNER = 0
@@ -25,3 +27,11 @@ def move_choice(skill_index: int) -> Choice:
 
 def switch_choice(slot_index: int) -> Choice:
     return Choice(ACTION_SWITCH, slot_index)
+
+
+def focus_choice() -> Choice:
+    return Choice(ACTION_FOCUS, 0)
+
+
+def magic_choice(magic_index: int = 0) -> Choice:
+    return Choice(ACTION_MAGIC, magic_index)

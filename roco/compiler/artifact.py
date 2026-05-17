@@ -11,7 +11,9 @@ from typing import Any
 
 from roco.data.utils import DB_DIR, ROOT, content_hash
 from roco.compiler.effect_model import EffectTag
-from roco.engine.enums import AbilityFlag, WeatherType
+from roco.engine.enums import AbilityFlag, Element, SkillCategory, WeatherType
+from roco.engine.common.packing import _add_buff_bps
+from roco.engine.common.rules import BPS, HP_FOR_ENERGY_PCT_BPS
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS
 from roco.compiler.type_chart import effectiveness_v2
 
@@ -28,7 +30,7 @@ TARGET_CODES = {
     "team": 4,
     "enemy_team": 5,
 }
-COND_CODES = {"": 0}
+COND_CODES = {"": 0, "counter": 1, "counter_status": 2, "status": 2, "not_blocked": 3}
 KERNEL_SUPPORTED_TAG_SET = frozenset(KERNEL_SUPPORTED_TAGS)
 WEATHER_CODES = {
     "rain": WeatherType.RAIN.value,
@@ -41,6 +43,31 @@ ABILITY_FLAG_TAGS = {
     EffectTag.FAINT_NO_MP_LOSS.value: AbilityFlag.FAKE_DEATH,
     EffectTag.BURN_NO_DECAY.value: AbilityFlag.BURN_NO_DECAY,
     EffectTag.EXTRA_POISON_TICK.value: AbilityFlag.EXTRA_POISON_TICK,
+    EffectTag.ENERGY_NO_CAP.value: AbilityFlag.ENERGY_NO_CAP,
+    EffectTag.HP_FOR_ENERGY.value: AbilityFlag.HP_FOR_ENERGY,
+    EffectTag.EXTRA_FREEZE_ON_FREEZE.value: AbilityFlag.EXTRA_FREEZE_ON_FREEZE,
+    EffectTag.CUTE_LETHAL_SHIELD.value: AbilityFlag.CUTE_LETHAL_SHIELD,
+    EffectTag.KILL_MP_PENALTY.value: AbilityFlag.KILL_MP_PENALTY,
+    EffectTag.COST_INVERT.value: AbilityFlag.COST_INVERT,
+    EffectTag.SKILL_SLOT_LOCK.value: AbilityFlag.SKILL_SLOT_LOCK,
+    EffectTag.IMMUNE_ZERO_ENERGY_ATTACKER.value: AbilityFlag.IMMUNE_ZERO_ENERGY_ATTACKER,
+    EffectTag.IMMUNE_LOW_COST_ATTACK.value: AbilityFlag.IMMUNE_LOW_COST_ATTACK,
+    EffectTag.FIXED_HIT_COUNT_ALL.value: AbilityFlag.FIXED_HIT_COUNT_ALL,
+    EffectTag.START_ZERO_ENERGY.value: AbilityFlag.START_ZERO_ENERGY,
+    EffectTag.TURN_END_SKIP.value: AbilityFlag.TURN_END_SKIP,
+    EffectTag.COPY_SWITCH_STATE.value: AbilityFlag.COPY_SWITCH_STATE,
+    EffectTag.HEAL_ON_BURN_DAMAGE.value: AbilityFlag.HEAL_ON_BURN_DAMAGE,
+    EffectTag.HEAL_ON_POISON_DAMAGE.value: AbilityFlag.HEAL_ON_POISON_DAMAGE,
+    EffectTag.CUTE_NO_CAP.value: AbilityFlag.CUTE_NO_CAP,
+    EffectTag.MARK_STACK_NO_REPLACE.value: AbilityFlag.MARK_STACK_NO_REPLACE,
+    EffectTag.SHARE_GAINS.value: AbilityFlag.SHARE_GAINS,
+    EffectTag.SHUFFLE_SKILLS_REDUCE_LAST.value: AbilityFlag.SHUFFLE_SKILLS_REDUCE_LAST,
+    EffectTag.HALF_METEOR_FULL_DAMAGE.value: AbilityFlag.HALF_METEOR_FULL_DAMAGE,
+    EffectTag.CHARGE_FREE_SKILL.value: AbilityFlag.CHARGE_FREE_SKILL,
+    EffectTag.FIRST_ACTION_EXTRA_USE.value: AbilityFlag.FIRST_ACTION_EXTRA_USE,
+    EffectTag.BUFF_EXTRA_LAYERS.value: AbilityFlag.BUFF_EXTRA_LAYERS,
+    EffectTag.HEAL_HP_PER_ENERGY_GAIN.value: AbilityFlag.HEAL_HP_PER_ENERGY_GAIN,
+    EffectTag.BURST_EXTEND.value: AbilityFlag.BURST_EXTEND,
 }
 
 
@@ -57,11 +84,14 @@ def _rows(conn: sqlite3.Connection, sql: str) -> list[sqlite3.Row]:
 def _source_payload(conn: sqlite3.Connection) -> dict[str, Any]:
     return {
         "elements": [tuple(row) for row in _rows(conn, "SELECT id, code, name FROM elements ORDER BY id")],
-        "pets": [tuple(row) for row in _rows(conn, "SELECT id, name, element_primary_id, element_secondary_id, ability_id, hp, atk_phys, atk_mag, def_phys, def_mag, speed FROM pets ORDER BY id")],
+        "pets": [tuple(row) for row in _rows(conn, "SELECT id, name, lineage_key, form_type, element_primary_id, element_secondary_id, ability_id, hp, atk_phys, atk_mag, def_phys, def_mag, speed FROM pets ORDER BY id")],
+        "pet_transforms": [tuple(row) for row in _rows(conn, "SELECT source_pet_id, leader_pet_id, reason FROM pet_transforms ORDER BY source_pet_id")],
         "skills": [tuple(row) for row in _rows(conn, "SELECT id, name, element_id, category_code, energy, power, flags FROM skills ORDER BY id")],
         "pet_skills": [tuple(row) for row in _rows(conn, "SELECT pet_id, skill_id, sort_order FROM pet_skills WHERE skill_id IS NOT NULL ORDER BY pet_id, sort_order, id")],
         "skill_effects": [tuple(row) for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id")],
         "ability_effects": [tuple(row) for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id")],
+        "bloodlines": [tuple(row) for row in _rows(conn, "SELECT id, code, name, kind, element_id FROM bloodlines ORDER BY id")],
+        "bloodline_magics": [tuple(row) for row in _rows(conn, "SELECT id, code, name, uses_per_battle FROM bloodline_magics ORDER BY id")],
     }
 
 
@@ -72,7 +102,7 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
     return tuple(rows)
 
 
-def _effect_args(tag: int, params: dict[str, Any]) -> tuple[int, int, int, int]:
+def _effect_args(tag: int, params: dict[str, Any], skill_ids: dict[str, int] | None = None) -> tuple[int, int, int, int]:
     if tag == EffectTag.DAMAGE.value:
         return (int(params.get("power", 0) or 0), int(params.get("hit_count", 1) or 1), 0, 0)
     if tag in {
@@ -86,6 +116,171 @@ def _effect_args(tag: int, params: dict[str, Any]) -> tuple[int, int, int, int]:
         weather = WEATHER_CODES.get(str(params.get("type", "")), 0)
         turns = max(1, min(15, int(params.get("turns", 5) or 5))) if weather else 0
         return (weather, turns, 0, 0)
+    if tag in {EffectTag.SELF_BUFF.value, EffectTag.SELF_DEBUFF.value, EffectTag.ENEMY_DEBUFF.value}:
+        return (_pack_buff_params(params), 0, 0, 0)
+    if tag == EffectTag.DAMAGE_REDUCTION.value:
+        pct = params.get("pct")
+        reduce_bps = int(float(pct or 0) * BPS)
+        return (max(0, BPS - reduce_bps), 0, 0, 0)
+    if tag == EffectTag.LIFE_DRAIN.value:
+        pct = params.get("pct")
+        return (int(float(pct or 0) * BPS), 0, 0, 0)
+    if tag == EffectTag.CONSUME_MARKS_HEAL.value:
+        pct = params.get("pct", params.get("heal_pct", 0.1))
+        return (int(float(pct or 0) * BPS), 0, 0, 0)
+    if tag == EffectTag.POWER_DYNAMIC.value:
+        multiplier = params.get("multiplier", 0)
+        bonus = params.get("bonus", 0)
+        return (int(float(multiplier or 0) * BPS), int(bonus or 0), 0, 0)
+    if tag == EffectTag.PERMANENT_MOD.value:
+        target = {"cost": 1, "power": 2, "hit_count": 3}.get(str(params.get("target", "")), 0)
+        return (target, int(params.get("delta", 0) or 0), 0, 0)
+    if tag == EffectTag.NEXT_ATTACK_MOD.value:
+        return (int(params.get("power_bonus", 0) or 0), 0, 0, 0)
+    if tag == EffectTag.HP_FOR_ENERGY.value:
+        pct = params.get("pct")
+        return (int(float(pct) * BPS) if pct is not None else HP_FOR_ENERGY_PCT_BPS, 0, 0, 0)
+    if tag in {EffectTag.FIRST_STRIKE_POWER_BONUS.value, EffectTag.POWER_MULTIPLIER_BUFF.value}:
+        pct = params.get("bonus_pct")
+        if pct is not None:
+            return (BPS + int(float(pct) * BPS), 0, 0, 0)
+    if tag in {EffectTag.FIRST_STRIKE_HIT_COUNT.value, EffectTag.HIT_COUNT_PER_POISON.value}:
+        return (int(params.get("amount", params.get("hits", params.get("per", 1))) or 1), 0, 0, 0)
+    if tag == EffectTag.STAT_SCALE_HITS_PER_HP_LOST.value:
+        return (int(params.get("amount", params.get("hits", 1)) or 1), 0, 0, 0)
+    if tag == EffectTag.ENEMY_ENERGY_COST_UP.value:
+        return (
+            int(params.get("amount", 0) or 0),
+            int(params.get("turns", 0) or 0),
+            _cost_scope_param(params),
+            _cost_trigger_param(params),
+        )
+    if tag == EffectTag.ENEMY_ALL_COST_UP.value:
+        return (int(params.get("amount", 0) or 0), int(params.get("turns", 15) or 15), 1, 0)
+    if tag == EffectTag.COUNTER_SUCCESS_SPEED_PRIORITY.value:
+        return (int(params.get("priority", params.get("amount", 1)) or 1), 0, 0, 0)
+    if tag == EffectTag.ENTRY_SELF_DAMAGE.value:
+        pct = params.get("pct_current", params.get("pct", 0.5))
+        return (int(float(pct or 0) * BPS), 0, 0, 0)
+    if tag == EffectTag.GRANT_LIFE_DRAIN.value:
+        pct = params.get("pct", 0.5)
+        return (int(float(pct or 0) * BPS), 0, 0, 0)
+    if tag == EffectTag.SKILL_MOD.value:
+        return (
+            _slot_mask_param(params),
+            int(params.get("priority", 0) or 0),
+            int(params.get("power_bonus", params.get("bonus", 0)) or 0),
+            int(params.get("hit_delta", params.get("drive", 0)) or 0),
+        )
+    if tag == EffectTag.SPECIFIC_SKILL_POWER_BONUS.value:
+        skill_id = int(params.get("skill_id", 0) or 0)
+        if skill_id <= 0 and skill_ids is not None:
+            skill_id = skill_ids.get(str(params.get("skill", "")).strip(), 0)
+        return (skill_id, int(params.get("power_bonus", params.get("bonus", 0)) or 0), 0, 0)
+    if tag == EffectTag.POWER_BY_STATUS_COUNT_ELEMENTS.value:
+        mask = 0
+        raw = params.get("elements", ())
+        if isinstance(raw, str):
+            raw = [raw]
+        if isinstance(raw, list):
+            for element in raw:
+                idx = _element_id_param({"element": element})
+                if idx >= 0:
+                    mask |= 1 << idx
+        return (mask, int(params.get("power_bonus", params.get("bonus", 0)) or 0), 0, 0)
+    if tag == EffectTag.PASSIVE_ENERGY_REDUCE.value:
+        return (int(params.get("amount", params.get("reduce", 0)) or 0), 0, 0, 0)
+    if tag == EffectTag.CHARGE_COST_REDUCE.value:
+        return (int(params.get("reduce", params.get("amount", 0)) or 0), 0, 0, 0)
+    if tag in {
+        EffectTag.DAMAGE_MOD_NON_STAB.value,
+        EffectTag.DAMAGE_MOD_NON_LIGHT.value,
+        EffectTag.DAMAGE_MOD_NON_WEAKNESS.value,
+        EffectTag.DAMAGE_MOD_POLLUTANT_BLOOD.value,
+        EffectTag.DAMAGE_MOD_LEADER_BLOOD.value,
+    }:
+        return (_bonus_bps(params, default=0.5), 0, 0, 0)
+    if tag == EffectTag.LOW_COST_SKILL_POWER_BONUS.value:
+        threshold = int(params.get("cost_threshold", params.get("value", 1)) or 1)
+        return (threshold, _bonus_bps(params, default=0.5), 0, 0)
+    if tag == EffectTag.ON_SUPER_EFFECTIVE_BUFF.value:
+        return (_pack_buff_params(params.get("buff", {}) if isinstance(params.get("buff"), dict) else params), int(params.get("energy", params.get("amount", 0)) or 0), 0, 0)
+    if tag == EffectTag.TEAM_SYNERGY_BUG_SWARM_ATTACK.value:
+        return (int(float(params.get("bonus_pct", params.get("pct", 0.15)) or 0.15) * BPS), 0, 0, 0)
+    if tag == EffectTag.CARRY_SKILL_POWER_BONUS.value:
+        condition = {"": 0, "cost_eq": 1, "cost_gt": 2, "cost_le": 3, "cost_lte": 3}.get(str(params.get("condition", "")), 0)
+        value = int(params.get("value", params.get("cost_threshold", 0)) or 0)
+        return (condition, value, _bonus_bps(params, default=0.4), 0)
+    if tag in {EffectTag.CARRY_SKILL_COST_REDUCE.value, EffectTag.SKILL_COST_REDUCTION_TYPE.value}:
+        category = {"physical": 1, "magical": 2, "attack": 1, "defense": 3, "status": 4, "防御": 3, "状态": 4}.get(str(params.get("category", "")), 0)
+        return (category, int(params.get("reduce", params.get("cost_reduction", 0)) or 0), 0, 0)
+    if tag == EffectTag.HEAL_ON_GRASS_SKILL.value:
+        return (int(float(params.get("heal_pct", params.get("pct", 0.1)) or 0.1) * BPS), 0, 0, 0)
+    if tag == EffectTag.ON_SKILL_ELEMENT_BUFF.value:
+        return (_element_id_param(params), _pack_buff_params(params.get("buff", {}) if isinstance(params.get("buff"), dict) else params), 0, 0)
+    if tag in {EffectTag.ON_SKILL_ELEMENT_POISON.value, EffectTag.ON_SKILL_ELEMENT_BURN.value, EffectTag.ON_SKILL_ELEMENT_FREEZE.value}:
+        return (_element_id_param(params), int(params.get("stacks", 1) or 1), 0, 0)
+    if tag == EffectTag.ON_SKILL_ELEMENT_HIT_COUNT.value:
+        return (_element_id_param(params), int(params.get("amount", params.get("hits", 1)) or 1), 0, 0)
+    if tag == EffectTag.ENTRY_ENERGY_FROM_ELEMENT_COUNT.value:
+        return (_element_id_param(params), int(params.get("amount", params.get("energy", 0)) or 0), 0, 0)
+    if tag == EffectTag.ENTRY_ENERGY_FROM_COUNTER_COUNT.value:
+        return (int(params.get("amount", params.get("energy", 0)) or 0), 0, 0, 0)
+    if tag == EffectTag.ENTRY_BUFF_PER_SKILL_COUNT.value:
+        mode = {"cost": 1, "power": 2}.get(str(params.get("mode", "")), 0)
+        return (_element_id_param(params), mode, int(params.get("amount", params.get("delta", 0)) or 0), 0)
+    if tag == EffectTag.ENERGY_DRAIN_BY_COST_DIFF.value:
+        return (0, 0, 0, 0)
+    if tag == EffectTag.COUNTER_ACCUMULATE_TRANSFORM.value:
+        category = {"attack": 1, "攻击": 1, "status": 2, "defense": 2, "防御": 2, "状态": 2}.get(str(params.get("category", "")), 0)
+        return (int(params.get("count", params.get("required", 1)) or 1), category, int(bool(params.get("heal_full", True))), 0)
+    if tag in {EffectTag.MIRROR_ENEMY_BUFFS.value, EffectTag.CONVERT_POISON_TO_MARK.value}:
+        return (0, 0, 0, 0)
+    if tag in {EffectTag.EXCHANGE_MOVES.value, EffectTag.EXCHANGE_HP_RATIO.value, EffectTag.BORROW_TEAM_SKILL.value, EffectTag.TRANSFER_MODS.value}:
+        return (0, 0, 0, 0)
+    if tag == EffectTag.HIT_COUNT_DELTA.value:
+        return (int(params.get("delta", params.get("amount", 0)) or 0), 0, 0, 0)
+    if tag == EffectTag.ANTI_HEAL.value:
+        return (int(params.get("multiplier", 2) or 2), 0, 0, 0)
+    if tag == EffectTag.CONTRACT_ENTRY.value:
+        return (_pack_buff_params({"speed": float(params.get("speed", 0.5) or 0.5)}), int(params.get("poison", 1) or 1), 0, 0)
+    if tag == EffectTag.COUNTER_ATTACK.value:
+        return (int(params.get("power", 50) or 50), 0, 0, 0)
+    if tag == EffectTag.ON_INTERRUPT_COOLDOWN.value:
+        return (int(params.get("turns", 2) or 2), 0, 0, 0)
+    if tag == EffectTag.ON_SKILL_ELEMENT_COST_REDUCE.value:
+        return (_element_id_param(params), int(params.get("reduce", 0) or 0), 0, 0)
+    if tag == EffectTag.ON_SKILL_ELEMENT_ENEMY_ENERGY.value:
+        return (_element_id_param(params), int(params.get("amount", 0) or 0), 0, 0)
+    if tag == EffectTag.POISON_ON_SKILL_APPLY.value:
+        return (int(params.get("cost_threshold", params.get("threshold", 1)) or 1), int(params.get("stacks", 1) or 1), 0, 0)
+    if tag == EffectTag.BLOODLINE_ENTRY.value:
+        return (_element_id_param(params), _pack_buff_params({"atk": -0.6, "spatk": -0.6}), 0, 0)
+    if tag in {EffectTag.CUTE_GAIN.value, EffectTag.CUTE_ENEMY_GAIN.value, EffectTag.CUTE_BOTH.value, EffectTag.CUTE_LETHAL_SHIELD.value}:
+        return (int(params.get("stacks", 1) or 1), 0, 0, 0)
+    if tag == EffectTag.CUTE_IF_POWER_BONUS.value:
+        return (int(params.get("bonus", 0) or 0), 0, 0, 0)
+    if tag == EffectTag.CUTE_ON_GAIN_POWER_PERM.value:
+        return (int(params.get("stacks", 1) or 1), int(params.get("delta", 0) or 0), 0, 0)
+    if tag == EffectTag.CUTE_ON_GAIN_COST_REDUCE.value:
+        return (int(params.get("stacks", 1) or 1), int(params.get("reduce", 0) or 0), 0, 0)
+    if tag == EffectTag.CUTE_ON_GAIN_SPEED_PERM.value:
+        speed = float(params.get("speed", 0) or 0)
+        return (int(params.get("stacks", 1) or 1), _pack_buff_params({"speed": speed / 100.0}), 0, 0)
+    if tag in {EffectTag.CUTE_TEAM_POWER.value, EffectTag.CUTE_HIT_PER_STACK.value}:
+        return (int(params.get("per", params.get("hits", 1)) or 1), 0, 0, 0)
+    if tag == EffectTag.CUTE_BENCH_COST_REDUCE.value:
+        return (int(params.get("reduce", params.get("amount", 1)) or 1), 0, 0, 0)
+    if tag == EffectTag.DEBUFF_EXTRA_LAYERS.value:
+        return (int(params.get("layers", params.get("amount", 0)) or 0) * 1000, 0, 0, 0)
+    if tag in {EffectTag.ENERGY_REGEN_PER_TURN.value, EffectTag.LEAVE_ENERGY_REFILL.value, EffectTag.STEAL_ALL_ENEMY_ENERGY.value}:
+        return (int(params.get("amount", 0) or 0), 0, 0, 0)
+    if tag == EffectTag.LEAVE_HEAL_ALLY.value:
+        return (int(float(params.get("pct", 0.0) or 0.0) * BPS), 0, 0, 0)
+    if tag == EffectTag.ENEMY_SWITCH_SELF_COST_REDUCE.value:
+        return (int(params.get("reduce", params.get("amount", 0)) or 0), 0, 0, 0)
+    if tag == EffectTag.DEVOTION_GRANT_RANDOM.value:
+        return (int(params.get("amount", params.get("count", 1)) or 1), 0, 0, 0)
     pct = params.get("pct")
     if pct is not None:
         return (int(float(pct) * 10000), 0, 0, 0)
@@ -98,12 +293,79 @@ def _effect_args(tag: int, params: dict[str, Any]) -> tuple[int, int, int, int]:
     return (0, 0, 0, 0)
 
 
-def _effect_row(row: sqlite3.Row) -> tuple[int, int, int, int, int, int, int, int, int]:
+def _pack_buff_params(params: dict[str, Any]) -> int:
+    stat_index = {"atk": 0, "spatk": 1, "def": 2, "spdef": 3, "speed": 4}
+    packed = 0
+    for key, idx in stat_index.items():
+        value = float(params.get(key, 0) or 0)
+        if value:
+            packed = _add_buff_bps(packed, idx, int(value * BPS))
+    return packed
+
+
+def _bonus_bps(params: dict[str, Any], *, default: float) -> int:
+    bonus = params.get("bonus_pct", params.get("pct", default))
+    return BPS + int(float(bonus or 0) * BPS)
+
+
+def _element_id_param(params: dict[str, Any]) -> int:
+    raw = str(params.get("element", "") or params.get("target_element", "") or "")
+    if not raw:
+        return 0
+    return Element.from_str(raw).value
+
+
+def _slot_mask_param(params: dict[str, Any]) -> int:
+    raw = params.get("slots", params.get("slot", ()))
+    if isinstance(raw, int):
+        values = (raw,)
+    elif isinstance(raw, (list, tuple)):
+        values = tuple(raw)
+    else:
+        values = (raw,)
+    mask = 0
+    for value in values:
+        try:
+            idx = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= idx < 4:
+            mask |= 1 << idx
+        elif 1 <= idx <= 4:
+            mask |= 1 << (idx - 1)
+    return mask
+
+
+def _cost_scope_param(params: dict[str, Any]) -> int:
+    scope = str(params.get("scope", "all"))
+    return {
+        "all": 1,
+        "current_skill": 2,
+        "current": 2,
+        "other_skills": 3,
+        "other": 3,
+        "attack": 4,
+    }.get(scope, 1)
+
+
+def _cost_trigger_param(params: dict[str, Any]) -> int:
+    trigger = str(params.get("trigger", ""))
+    required = str(params.get("requires_skill_category", ""))
+    if trigger == "inflict_freeze":
+        return 1
+    if required in {"status", "状态"}:
+        return 2
+    if required in {"attack", "攻击"}:
+        return 3
+    return 0
+
+
+def _effect_row(row: sqlite3.Row, skill_ids: dict[str, int] | None = None) -> tuple[int, int, int, int, int, int, int, int, int]:
     params = json.loads(row["params_json"] or "{}")
     target = TARGET_CODES.get(str(params.get("target", "")), 0)
     condition = str(row["condition"] or params.get("condition", ""))
     cond_code = COND_CODES.get(condition, -1)
-    arg0, arg1, arg2, arg3 = _effect_args(int(row["tag_code"]), params)
+    arg0, arg1, arg2, arg3 = _effect_args(int(row["tag_code"]), params, skill_ids)
     return (
         int(row["tag_code"]),
         int(row["timing_code"]),
@@ -170,6 +432,7 @@ def compile_artifacts(
 
         skills: list[tuple[int, int, int, int, int, int, int]] = [(0, 0, 0, 0, 0, 0, 1)] * (max_skill_id + 1)
         skill_names: list[str] = [""] * (max_skill_id + 1)
+        skill_ids_by_name: dict[str, int] = {}
         for row in _rows(conn, "SELECT id, name, element_id, category_code, energy, power, flags FROM skills ORDER BY id"):
             skills[row["id"]] = (
                 row["id"],
@@ -181,6 +444,7 @@ def compile_artifacts(
                 1,
             )
             skill_names[row["id"]] = row["name"]
+            skill_ids_by_name[row["name"]] = row["id"]
 
         pet_skills: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (max_pet_id + 1)
         skill_accum: list[list[int]] = [[] for _ in range(max_pet_id + 1)]
@@ -190,10 +454,23 @@ def compile_artifacts(
         for pet_id, ids in enumerate(skill_accum):
             pet_skills[pet_id] = tuple((ids + [0, 0, 0, 0])[:4])  # type: ignore[assignment]
 
+        leader_form_by_pet = [0] * (max_pet_id + 1)
+        for row in _rows(conn, "SELECT source_pet_id, leader_pet_id FROM pet_transforms ORDER BY source_pet_id"):
+            if 0 <= row["source_pet_id"] <= max_pet_id:
+                leader_form_by_pet[row["source_pet_id"]] = row["leader_pet_id"]
+
+        pet_ids_by_name = {name: idx for idx, name in enumerate(pet_names) if name}
+        form_transform_by_pet = [0] * (max_pet_id + 1)
+        for name, pet_id in pet_ids_by_name.items():
+            if "棋骑士" not in name:
+                continue
+            target = name.replace("棋骑士", "棋绮后")
+            form_transform_by_pet[pet_id] = pet_ids_by_name.get(target, 0)
+
         skipped: dict[int, int] = {}
         skill_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
         for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id"):
-            effect = _effect_row(row)
+            effect = _effect_row(row, skill_ids_by_name)
             if effect[4] < 0 or effect[0] not in KERNEL_SUPPORTED_TAG_SET:
                 skipped[effect[0]] = skipped.get(effect[0], 0) + 1
             else:
@@ -203,10 +480,11 @@ def compile_artifacts(
         ability_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
         ability_flags = [0] * (max_ability_id + 1)
         for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id"):
-            effect = _effect_row(row)
+            effect = _effect_row(row, skill_ids_by_name)
             flag = ABILITY_FLAG_TAGS.get(effect[0])
             if flag is not None:
                 ability_flags[row["ability_id"]] |= int(flag)
+                continue
             if effect[4] < 0 or effect[0] not in KERNEL_SUPPORTED_TAG_SET:
                 skipped[effect[0]] = skipped.get(effect[0], 0) + 1
             else:
@@ -222,6 +500,8 @@ def compile_artifacts(
             PETS=tuple(pets),
             SKILLS=tuple(skills),
             PET_SKILLS=tuple(pet_skills),
+            LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
+            FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
             TYPE_CHART_BPS=_type_chart_bps(elements),
             SKILL_EFFECT_ROWS=skill_effect_rows,
             SKILL_EFFECT_RANGES=_ranges(max_skill_id, skill_effect_keyed),
@@ -239,6 +519,10 @@ def compile_artifacts(
             SKILL_NAMES=tuple(skill_names),
             PET_IDS_BY_NAME={name: idx for idx, name in enumerate(pet_names) if name},
             SKILL_IDS_BY_NAME={name: idx for idx, name in enumerate(skill_names) if name},
+            LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
+            FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
+            BLOODLINE_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodlines ORDER BY id")},
+            BLOODLINE_MAGIC_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodline_magics ORDER BY id")},
             SKIPPED_EFFECT_STATS=tuple(
                 (EffectTag(tag).name if tag in EffectTag._value2member_map_ else str(tag), count)
                 for tag, count in skipped_effect_stats

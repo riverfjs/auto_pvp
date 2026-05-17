@@ -41,9 +41,11 @@ CREATE TABLE IF NOT EXISTS pets (
     form_name TEXT DEFAULT '',
     stage TEXT DEFAULT '',
     form_type TEXT DEFAULT '',
+    lineage_key TEXT DEFAULT '',
     element_primary_id INTEGER NOT NULL REFERENCES elements(id),
     element_secondary_id INTEGER REFERENCES elements(id),
     ability_id INTEGER REFERENCES abilities(id),
+    ability_description TEXT DEFAULT '',
     hp INTEGER NOT NULL,
     atk_phys INTEGER NOT NULL,
     atk_mag INTEGER NOT NULL,
@@ -84,6 +86,13 @@ CREATE TABLE IF NOT EXISTS pet_skills (
 );
 CREATE INDEX IF NOT EXISTS idx_pet_skills_pet ON pet_skills(pet_id);
 CREATE INDEX IF NOT EXISTS idx_pet_skills_skill ON pet_skills(skill_id);
+
+CREATE TABLE IF NOT EXISTS pet_transforms (
+    source_pet_id INTEGER PRIMARY KEY REFERENCES pets(id) ON DELETE CASCADE,
+    leader_pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+    reason TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_pet_transforms_leader ON pet_transforms(leader_pet_id);
 
 CREATE TABLE IF NOT EXISTS skill_effects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,12 +174,38 @@ CREATE TABLE IF NOT EXISTS weather_effects (
     sort_order INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS bloodlines (
+    id INTEGER PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL,
+    element_id INTEGER REFERENCES elements(id)
+);
+
+CREATE TABLE IF NOT EXISTS bloodline_magics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE,
+    uses_per_battle INTEGER NOT NULL DEFAULT 0,
+    description TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS bloodline_magic_effects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    magic_id INTEGER NOT NULL REFERENCES bloodline_magics(id) ON DELETE CASCADE,
+    timing_code INTEGER NOT NULL,
+    tag_code INTEGER NOT NULL,
+    params_json TEXT NOT NULL DEFAULT '{}',
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS teams (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     author TEXT DEFAULT '',
     team_type TEXT NOT NULL,
     bloodline_magic TEXT DEFAULT '',
+    bloodline_magic_id INTEGER REFERENCES bloodline_magics(id),
     description TEXT DEFAULT '',
     upload_date TEXT DEFAULT ''
 );
@@ -183,6 +218,7 @@ CREATE TABLE IF NOT EXISTS team_pets (
     pet_name TEXT NOT NULL,
     name_short TEXT DEFAULT '',
     bloodline TEXT DEFAULT '',
+    bloodline_id INTEGER REFERENCES bloodlines(id),
     nature TEXT DEFAULT '',
     ivs_json TEXT NOT NULL DEFAULT '[]',
     UNIQUE(team_id, slot)
@@ -205,6 +241,9 @@ DROP_ORDER = (
     "team_pet_skills",
     "team_pets",
     "teams",
+    "bloodline_magic_effects",
+    "bloodline_magics",
+    "bloodlines",
     "weather_effects",
     "weathers",
     "mark_sources",
@@ -213,6 +252,7 @@ DROP_ORDER = (
     "effect_gaps",
     "ability_effects",
     "skill_effects",
+    "pet_transforms",
     "pet_skills",
     "skills",
     "pets",
@@ -257,6 +297,20 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
             (1, Timing.ON_DAMAGE.value, EffectTag.DAMAGE.value, '{"element":"水","mult":1.5}', 0),
             (2, Timing.TURN_END.value, EffectTag.DAMAGE.value, '{"fraction":0.0625,"immune":["地","机械"]}', 0),
             (3, Timing.TURN_END.value, EffectTag.FREEZE.value, '{"stacks":2}', 0),
+        ],
+    )
+    conn.executemany(
+        "INSERT OR IGNORE INTO bloodlines (id, code, name, kind, element_id) VALUES (?, ?, ?, ?, ?)",
+        [(i, code, name, "element", i) for i, (code, name) in enumerate(zip(ELEMENT_CODES, ELEMENT_NAMES))]
+        + [
+            (18, "leader", "首领", "leader", None),
+        ],
+    )
+    conn.executemany(
+        "INSERT OR IGNORE INTO bloodline_magics (id, code, name, uses_per_battle, description) VALUES (?, ?, ?, ?, ?)",
+        [
+            (1, "willpower_strike", "愿力冲击", 2, "以当前精灵血脉属性发动愿力冲击。"),
+            (2, "leader_transform", "进化之力", 1, "首领血脉进化接口，形态数据缺失时由 audit 暴露。"),
         ],
     )
 

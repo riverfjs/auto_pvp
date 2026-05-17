@@ -53,7 +53,7 @@ def classify(skill: SkillData) -> SkillData:
         flags |= EffectFlag.PERMANENT_MOD
     if "迸发" in text:
         flags |= EffectFlag.BURST
-    if "迅捷" in text:
+    if "迅捷" in text or "先手+1" in text:
         flags |= EffectFlag.AGILITY
     if "印记" in text:
         flags |= EffectFlag.IS_MARK

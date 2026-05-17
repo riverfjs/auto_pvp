@@ -6,7 +6,6 @@ from roco.config.constants import DEFAULT_MAX_TURNS
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW, Choice
-from roco.engine.kernel.catalog import SKILL_ENERGY
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.state import (
     KernelState,
@@ -35,6 +34,10 @@ class BattleEngine:
         *,
         team_a_moves: tuple[tuple[int, ...], ...] | None = None,
         team_b_moves: tuple[tuple[int, ...], ...] | None = None,
+        team_a_bloodlines: tuple[int, ...] | None = None,
+        team_b_bloodlines: tuple[int, ...] | None = None,
+        team_a_bloodline_magic_id: int = 1,
+        team_b_bloodline_magic_id: int = 1,
         rng_seed: int = 1,
         max_turns: int = DEFAULT_MAX_TURNS,
     ) -> "BattleEngine":
@@ -44,6 +47,10 @@ class BattleEngine:
                 team_b,
                 team_a_moves=team_a_moves,
                 team_b_moves=team_b_moves,
+                team_a_bloodlines=team_a_bloodlines,
+                team_b_bloodlines=team_b_bloodlines,
+                team_a_bloodline_magic_id=team_a_bloodline_magic_id,
+                team_b_bloodline_magic_id=team_b_bloodline_magic_id,
                 rng_seed=rng_seed,
             ),
             max_turns=max_turns,
@@ -103,11 +110,10 @@ class BattleEngine:
 
     def get_valid_moves(self, side_id: int) -> tuple[int, ...]:
         side = self.side(side_id)
-        pet = side.pets[side.active]
         moves = side.moves[side.active]
         valid: list[int] = []
         for idx, skill_id in enumerate(moves):
-            if skill_id > 0 and hot.SKILLS[skill_id][SKILL_ENERGY] <= pet.current_energy:
+            if skill_id > 0:
                 valid.append(idx)
         return tuple(valid)
 

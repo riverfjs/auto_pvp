@@ -13,12 +13,12 @@ from roco.data.utils import DB_DIR
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.facade.battle import BattleEngine
-from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, move_choice, switch_choice
+from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, focus_choice, move_choice, switch_choice
+from roco.engine.common.rules import TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS
 from roco.engine.kernel.catalog import (
     PET_PRIMARY,
     PET_SECONDARY,
     SKILL_ELEMENT,
-    SKILL_ENERGY,
     SKILL_POWER,
 )
 from roco.engine.kernel.ctx import BPS
@@ -28,6 +28,8 @@ from roco.engine.kernel.state import KernelState
 class TeamSpec(NamedTuple):
     pet_ids: tuple[int, ...]
     move_rows: tuple[tuple[int, ...], ...]
+    bloodlines: tuple[int, ...]
+    bloodline_magic_id: int
 
 
 class Policy:
@@ -43,14 +45,14 @@ class RandomPolicy(Policy):
             return move_choice(random.choice(valid_moves))
         if switches:
             return switch_choice(random.choice(switches))
-        return move_choice(random.choice(valid_moves) if valid_moves else 0)
+        return focus_choice()
 
 
 class GreedyPolicy(Policy):
     def select_move(self, state: KernelState, side_id: int) -> Choice:
         valid = _get_valid_moves(state, side_id)
         if not valid:
-            return move_choice(0)
+            return focus_choice()
         side = _side(state, side_id)
         moves = side.moves[side.active]
         return move_choice(max(valid, key=lambda idx: hot.SKILLS[moves[idx]][SKILL_POWER]))
@@ -60,7 +62,7 @@ class TypeAdvantagePolicy(Policy):
     def select_move(self, state: KernelState, side_id: int) -> Choice:
         valid = _get_valid_moves(state, side_id)
         if not valid:
-            return move_choice(0)
+            return focus_choice()
         side = _side(state, side_id)
         target = _active_pet(state, SIDE_B if side_id == SIDE_A else SIDE_A)
         target_row = hot.PETS[target.pet_id]
@@ -84,7 +86,7 @@ class FixedPolicy(Policy):
     def select_move(self, state: KernelState, side_id: int) -> Choice:
         valid = _get_valid_moves(state, side_id)
         if not valid:
-            return move_choice(0)
+            return focus_choice()
         idx = self._counter.get(side_id, 0)
         self._counter[side_id] = idx + 1
         return move_choice(valid[idx % len(valid)])
@@ -99,12 +101,14 @@ POLICIES: dict[str, type[Policy]] = {
 
 
 def load_team_from_db(team_id: str, conn: sqlite3.Connection) -> TeamSpec | None:
+    team_row = conn.execute("SELECT bloodline_magic_id FROM teams WHERE id = ?", (team_id,)).fetchone()
     slots = conn.execute(
-        "SELECT id, slot, pet_id, pet_name FROM team_pets WHERE team_id = ? ORDER BY slot",
+        "SELECT id, slot, pet_id, pet_name, bloodline_id FROM team_pets WHERE team_id = ? ORDER BY slot",
         (team_id,),
     ).fetchall()
     pet_ids: list[int] = []
     move_rows: list[tuple[int, ...]] = []
+    bloodlines: list[int] = []
     for slot in slots:
         pet_id = slot["pet_id"] or debug.PET_IDS_BY_NAME.get(slot["pet_name"], 0)
         if not pet_id or pet_id >= len(hot.PETS):
@@ -123,9 +127,11 @@ def load_team_from_db(team_id: str, conn: sqlite3.Connection) -> TeamSpec | None
         )
         pet_ids.append(pet_id)
         move_rows.append(tuple((moves or hot.PET_SKILLS[pet_id])[:4]))
+        bloodlines.append(slot["bloodline_id"] if slot["bloodline_id"] is not None else hot.PETS[pet_id][PET_PRIMARY])
     if not pet_ids:
         return None
-    return TeamSpec(tuple(pet_ids), tuple(move_rows))
+    magic_id = int(team_row["bloodline_magic_id"] or 1) if team_row else 1
+    return TeamSpec(tuple(pet_ids), tuple(move_rows), tuple(bloodlines), magic_id)
 
 
 def load_all_pvp_teams(conn: sqlite3.Connection) -> dict[str, tuple[str, TeamSpec]]:
@@ -152,6 +158,10 @@ def run_single_battle(
         team_b.pet_ids,
         team_a_moves=team_a.move_rows,
         team_b_moves=team_b.move_rows,
+        team_a_bloodlines=team_a.bloodlines,
+        team_b_bloodlines=team_b.bloodlines,
+        team_a_bloodline_magic_id=team_a.bloodline_magic_id,
+        team_b_bloodline_magic_id=team_b.bloodline_magic_id,
         rng_seed=random.getrandbits(32),
         max_turns=max_turns,
     )
@@ -227,13 +237,8 @@ def _active_pet(state: KernelState, side_id: int):
 
 def _get_valid_moves(state: KernelState, side_id: int) -> tuple[int, ...]:
     side = _side(state, side_id)
-    pet = side.pets[side.active]
     moves = side.moves[side.active]
-    return tuple(
-        idx
-        for idx, skill_id in enumerate(moves)
-        if skill_id > 0 and hot.SKILLS[skill_id][SKILL_ENERGY] <= pet.current_energy
-    )
+    return tuple(idx for idx, skill_id in enumerate(moves) if skill_id > 0)
 
 
 def _get_switches(state: KernelState, side_id: int) -> tuple[int, ...]:
@@ -251,9 +256,9 @@ def _type_bps(move_element: int, primary: int, secondary: int) -> int:
         return first
     second = hot.TYPE_CHART_BPS[move_element][secondary]
     if first > BPS and second > BPS:
-        return 30000
+        return TYPE_DOUBLE_WEAK_BPS
     if first < BPS and second < BPS:
-        return 2500
+        return TYPE_DOUBLE_RESIST_BPS
     if (first > BPS and second < BPS) or (first < BPS and second > BPS):
         return BPS
     return first if first != BPS else second

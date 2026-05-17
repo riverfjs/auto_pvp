@@ -6,6 +6,11 @@ import argparse
 
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
+from roco.data.effect_classifier import (
+    load_manual_rules,
+    refresh_ability_classification,
+    refresh_skill_classification,
+)
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
@@ -24,8 +29,16 @@ def main() -> None:
     args = parser.parse_args()
 
     conn = migrate(reset=True)
-    skills = _load_required("skills.jsonl")
-    abilities = _load_required("abilities.jsonl")
+    skill_rules = load_manual_rules("skill")
+    ability_rules = load_manual_rules("ability")
+    skills = [
+        refresh_skill_classification(row, skill_rules)
+        for row in _load_required("skills.jsonl")
+    ]
+    abilities = [
+        refresh_ability_classification(row, ability_rules)
+        for row in _load_required("abilities.jsonl")
+    ]
     pets = _load_required("pets.jsonl")
 
     ability_lookup = import_abilities(conn, abilities)

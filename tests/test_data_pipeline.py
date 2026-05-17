@@ -10,6 +10,7 @@ import roco.data.parse_skills as parse_skills
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
+from roco.compiler.nrc_compare import project_report
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, with_canonical_hash, write_jsonl
@@ -24,7 +25,7 @@ def _sample_data():
     abilities = [
         refresh_ability_classification({"kind": "ability", "name": "诈死", "description": "力竭不扣MP"}),
         refresh_ability_classification({"kind": "ability", "name": "顺风", "description": "若先于敌方攻击，本次技能威力+50%"}),
-        refresh_ability_classification({"kind": "ability", "name": "未映射", "description": "这条描述暂未映射到NRC_AI原语"}),
+        refresh_ability_classification({"kind": "ability", "name": "未映射", "description": "这条描述暂未映射到本项目原语"}),
     ]
     pets = [
         _pet("火火", "火", "诈死", 90, "火花", atk_mag=100),
@@ -37,14 +38,21 @@ def _sample_data():
 
 
 def _pet(name, element, ability, speed, skill, *, atk=80, atk_mag=70):
+    ability_descriptions = {
+        "诈死": "力竭不扣MP",
+        "顺风": "若先于敌方攻击，本次技能威力+50%",
+        "未映射": "这条描述暂未映射到本项目原语",
+    }
     return {
         "kind": "pet",
         "name": name,
         "form_name": "",
         "stage": "",
         "form_type": "",
+        "lineage_key": name,
         "elements": [element, ""],
         "ability": ability,
+        "ability_description": ability_descriptions.get(ability, ""),
         "stats": {"hp": 100, "atk_phys": atk, "atk_mag": atk_mag, "def_phys": 70, "def_mag": 70, "speed": speed},
         "height": "",
         "weight": "",
@@ -106,6 +114,7 @@ def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
     assert "SOURCE_HASH = ''" not in hot_text
     assert "PETS =" in hot_text
     assert "SKILL_EFFECT_ROWS =" in hot_text
+    assert "LEADER_FORM_BY_PET =" in hot_text
     assert "PET_NAMES" not in hot_text
     assert "PET_NAMES =" in debug_text
     assert "PET_IDS_BY_NAME =" in debug_text
@@ -251,6 +260,50 @@ def test_import_db_does_not_read_legacy_parsed_json():
         assert "effects.json" not in text
         assert "_data/parsed" not in text
         assert ("yin" + "ji") not in text
+
+
+def test_build_db_has_no_fallback_classifier_path():
+    root = Path(__file__).resolve().parents[1]
+    text = (root / "roco/data/build_db.py").read_text(encoding="utf-8")
+    classifier = (root / "roco/data/effect_classifier.py").read_text(encoding="utf-8")
+    assert "allow_fallback" not in text
+    assert "allow_fallback" not in classifier
+
+
+def test_effect_classifier_entrypoints_stay_thin():
+    root = Path(__file__).resolve().parents[1]
+    facade = (root / "roco/data/effect_classifier.py").read_text(encoding="utf-8")
+    abilities = (root / "roco/compiler/classifiers/abilities.py").read_text(encoding="utf-8")
+    rules_path = root / "roco/compiler/classifiers/ability_rules.py"
+    assert rules_path.exists()
+    assert len(facade.splitlines()) < 80
+    assert len(abilities.splitlines()) < 120
+    assert "def generated_ability_effects" not in abilities
+
+
+def test_optional_nrc_compare_report_is_outside_build(tmp_path: Path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "effect_data.py").write_text('SKILL_EFFECTS = {\n    "火花": [],\n}\n', encoding="utf-8")
+    (src / "skill_effects_generated.py").write_text('SKILL_EFFECTS_GENERATED = {\n    "不存在技能": [],\n}\n', encoding="utf-8")
+
+    report = project_report(tmp_path)
+
+    assert report["nrc_root"] == str(tmp_path)
+    assert report["nrc_skill_name_count"] == 2
+    assert "火花" not in report["project_skill_gaps"]
+
+
+def test_pets_with_ability_require_description(tmp_path: Path):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    bad = dict(pets[0])
+    bad["ability_description"] = ""
+    with pytest.raises(ValueError, match="empty ability_description"):
+        import_pets(conn, [bad], skill_lookup, ability_lookup)
+    conn.close()
 
 
 def test_used_effect_gaps_fail_after_team_import(tmp_path: Path):

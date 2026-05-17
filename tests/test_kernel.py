@@ -8,7 +8,8 @@ from roco.engine.generated import catalog_hot as hot
 from roco.compiler.scalar_damage import calc_attack_damage
 from roco.compiler.effect_model import EffectTag, Timing
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
-from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice, switch_choice
+from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
+from roco.engine.common.rules import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
 from roco.engine.kernel.catalog import (
     SKILL_CATEGORY,
     SKILL_ELEMENT,
@@ -43,6 +44,7 @@ def test_hot_and_debug_catalog_artifacts_are_physically_split():
     assert hot.SOURCE_HASH == debug.SOURCE_HASH
     assert hasattr(hot, "PETS")
     assert hasattr(hot, "SKILL_EFFECT_ROWS")
+    assert hasattr(hot, "LEADER_FORM_BY_PET")
     assert not hasattr(hot, "PET_NAMES")
     assert hasattr(debug, "PET_NAMES")
     assert load_hot_catalog() is hot
@@ -52,7 +54,7 @@ def test_hot_catalog_excludes_kernel_unsupported_effect_rows():
     supported = set(KERNEL_SUPPORTED_TAGS)
     assert all(row[0] in supported for row in hot.SKILL_EFFECT_ROWS)
     assert all(row[0] in supported for row in hot.ABILITY_EFFECT_ROWS)
-    assert hasattr(hot, "SKIPPED_EFFECT_STATS")
+    assert hot.SKIPPED_EFFECT_STATS == ()
 
 
 def test_catalog_validation_rejects_version_schema_and_empty_hash():
@@ -281,7 +283,7 @@ def test_kernel_weather_cost_damage_and_lifecycle():
         move_choice(0),
     ).state
     assert weather_type(sand_state.weather) == WeatherType.SANDSTORM.value
-    assert weather_turns(sand_state.weather) == 4
+    assert weather_turns(sand_state.weather) == 7
     assert sand_state.side_a.pets[0].current_hp == hot.PETS[fire][1] - hot.PETS[fire][1] // 16
     assert sand_state.side_b.pets[0].current_hp == hot.PETS[water][1] - hot.PETS[water][1] // 16
 
@@ -317,7 +319,7 @@ def test_kernel_snow_and_leech_turn_end_ticks():
     ).state
     assert weather_type(snow_state.weather) == WeatherType.SNOW.value
     assert weather_turns(snow_state.weather) == 1
-    assert snow_state.side_a.pets[0].frostbite == hot.PETS[fire][1] // 12
+    assert snow_state.side_a.pets[0].frostbite == 0
     assert status_stack(snow_state.side_a.pets[0], StatusType.FREEZE) == 2
 
     leech_state = make_state((fire,), (water,), team_a_moves=((leech_skill,),))
@@ -397,7 +399,7 @@ def test_kernel_mark_turn_end_poison_and_solar_ticks():
     result = update(state, move_choice(0), move_choice(0)).state.side_a.pets[0]
 
     assert result.current_hp == hot.PETS[fire][1] - hot.PETS[fire][1] * 2 * 300 // BPS
-    assert result.current_energy == 8
+    assert result.current_energy == 6
 
 
 def test_kernel_barrel_neutralizes_type_and_transfers_on_switch():
@@ -466,14 +468,38 @@ def test_kernel_faint_reduces_magic_auto_switches_and_skips_replacement_action()
 
     assert result.state.side_b.pets[0].fainted == 1
     assert result.state.side_b.active == 1
-    assert result.state.side_b.magic == 3
+    assert result.state.side_b.side_lives == 3
     assert result.damage_b == 0
 
     fake_state = make_state((fire,), (water, cat), team_a_moves=((impact,),), team_b_moves=((0,), (0,)))
     fake = fake_state.side_b.pets[0]._replace(current_hp=1, ability_flags=int(AbilityFlag.FAKE_DEATH))
     fake_state = fake_state._replace(side_b=replace_pet(fake_state.side_b, 0, fake))
     fake_result = update(fake_state, move_choice(0), move_choice(0))
-    assert fake_result.state.side_b.magic == 4
+    assert fake_result.state.side_b.side_lives == 4
+
+
+def test_kernel_leader_transform_magic_changes_pet_id_and_scales_hp():
+    fire = _pet_id("火花")
+    leader = _pet_id("烈火战神")
+    water = _pet_id("水蓝蓝")
+    state = make_state(
+        (fire,),
+        (water,),
+        team_a_bloodlines=(BLOODLINE_LEADER,),
+        team_a_bloodline_magic_id=MAGIC_LEADER_TRANSFORM,
+        team_b_moves=((0,),),
+    )
+    half_hp = hot.PETS[fire][1] // 2
+    weakened = state.side_a.pets[0]._replace(current_hp=half_hp)
+    state = state._replace(side_a=replace_pet(state.side_a, 0, weakened))
+
+    result = update(state, magic_choice(), focus_choice()).state
+    transformed = result.side_a.pets[0]
+
+    assert hot.LEADER_FORM_BY_PET[fire] == leader
+    assert transformed.pet_id == leader
+    assert transformed.current_hp == max(1, half_hp * hot.PETS[leader][1] // hot.PETS[fire][1])
+    assert result.side_a.leader_uses == 0
 
 
 def test_kernel_cute_boosts_damage_shields_and_transfers_on_faint():
@@ -544,6 +570,17 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
     effect_exec = (root / "roco/engine/kernel/ops.py").read_text(encoding="utf-8")
     assert "OP_TABLE[row[ROW_TAG]]" in effect_exec
     assert "OP_TABLE.get" not in effect_exec
+    assert len(effect_exec.splitlines()) < 300
+    for rel in (
+        "op_rows.py",
+        "op_tags.py",
+        "op_resources.py",
+        "op_status.py",
+        "op_marks.py",
+        "op_cute.py",
+        "op_mods.py",
+    ):
+        assert (root / "roco/engine/kernel" / rel).exists()
 
 
 def test_retired_root_engine_modules_are_not_legacy_entrypoints():

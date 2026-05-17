@@ -27,7 +27,7 @@ class EffectFlag(IntFlag):
 
 
 class Timing(IntEnum):
-    """NRC_AI-style effect trigger points, stored as compact integer codes."""
+    """Effect trigger points stored as compact integer codes."""
 
     PASSIVE = 0
     BATTLE_START = 1
@@ -53,7 +53,7 @@ class Timing(IntEnum):
 
 
 class EffectTag(IntEnum):
-    """NRC_AI-compatible primitive ids used by skill and ability effect rows."""
+    """Project-owned primitive ids used by unified effect rows."""
 
     UNSUPPORTED = 0
     DAMAGE = 1
@@ -253,6 +253,23 @@ class EffectTag(IntEnum):
     CUTE_NO_CAP = auto()
     CUTE_HIT_PER_STACK = auto()
     CUTE_BENCH_COST_REDUCE = auto()
+    ON_SKILL_ELEMENT_BURN = auto()
+    ON_SKILL_ELEMENT_FREEZE = auto()
+    ON_SKILL_ELEMENT_HIT_COUNT = auto()
+    START_ZERO_ENERGY = auto()
+    ENTRY_ENERGY_FROM_ELEMENT_COUNT = auto()
+    ENTRY_ENERGY_FROM_COUNTER_COUNT = auto()
+    EXCHANGE_MOVES = auto()
+    EXCHANGE_HP_RATIO = auto()
+    BORROW_TEAM_SKILL = auto()
+    HIT_COUNT_DELTA = auto()
+    HEAL_ON_BURN_DAMAGE = auto()
+    HEAL_ON_POISON_DAMAGE = auto()
+    ANTI_HEAL = auto()
+    FIRST_ACTION_EXTRA_USE = auto()
+    POWER_BY_STATUS_COUNT_ELEMENTS = auto()
+    DEBUFF_EXTRA_LAYERS = auto()
+    HEAL_HP_PER_ENERGY_GAIN = auto()
 
 
 @dataclass(slots=True)
