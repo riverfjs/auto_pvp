@@ -1,8 +1,9 @@
-"""Shared utilities for Roco Kingdom WIKI scraping."""
+"""Shared utilities for Roco Kingdom WIKI scraping and data files."""
 
 import time
 import json
 from pathlib import Path
+from typing import Iterable, Iterator
 
 import requests
 
@@ -11,12 +12,13 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "_data"
 INDEX_DIR = DATA_DIR / "index"
 RAW_DIR = DATA_DIR / "raw"
-PARSED_DIR = DATA_DIR / "parsed"
+CANONICAL_DIR = DATA_DIR / "canonical"
+RULES_DIR = DATA_DIR / "rules"
 DB_DIR = ROOT / "_db"
 
 CATEGORY_PETS = "Category:精灵"
 CATEGORY_SKILLS = "Category:技能"
-YINJI_SOURCE_PAGE = "印记"  # 印记 names are extracted from this page's wikitext
+MARK_SOURCE_PAGE = "印记"  # mark names are extracted from this page's wikitext
 
 SESSION = requests.Session()
 SESSION.headers.update(
@@ -122,3 +124,35 @@ def load_json(path: Path) -> dict | list:
     """Load JSON from path."""
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def write_jsonl(records: Iterable[dict], path: Path) -> int:
+    """Write one JSON object per line and return the record count."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with open(path, "w", encoding="utf-8") as f:
+        for record in records:
+            if not isinstance(record, dict):
+                raise TypeError(f"JSONL records must be objects, got {type(record).__name__}")
+            f.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
+            f.write("\n")
+            count += 1
+    return count
+
+
+def iter_jsonl(path: Path) -> Iterator[dict]:
+    """Yield JSON objects from a JSONL file, skipping blank lines."""
+    with open(path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            record = json.loads(line)
+            if not isinstance(record, dict):
+                raise ValueError(f"{path}:{line_no} is not a JSON object")
+            yield record
+
+
+def load_jsonl(path: Path) -> list[dict]:
+    """Load a JSONL file into a list of object records."""
+    return list(iter_jsonl(path))

@@ -13,17 +13,32 @@ def apply_marks_to_speed(speed: int, marks: int) -> int:
     return max(1, speed - stacks * SLOW_SPEED_REDUCE)
 
 
-def apply_marks_to_skill_cost(cost: int, marks: int) -> int:
+def apply_marks_to_skill_cost(cost: int, marks: int, *, is_attack: bool = False) -> int:
     stacks = _unpack_mark(marks, MarkIdx.MOISTURE)
-    return max(0, cost - stacks * MOISTURE_COST_REDUCE)
+    momentum = _unpack_mark(marks, MarkIdx.MOMENTUM) if is_attack else 0
+    return max(0, cost - stacks * MOISTURE_COST_REDUCE + momentum)
 
 
-def apply_marks_to_attack_power(power: int, element: str, marks: int, atk_element: str) -> float:
+def apply_marks_to_attack_power(
+    power: int,
+    element: str,
+    marks: int,
+    atk_element: str,
+    *,
+    first_strike: bool = False,
+    base_energy: int = 0,
+) -> float:
     mult = 1.0
     a = _unpack_mark(marks, MarkIdx.ATTACK)
     if a > 0: mult += a * 0.10
-    c = _unpack_mark(marks, MarkIdx.CHARGE)
-    if c > 0: mult += c * 0.30
+    m = _unpack_mark(marks, MarkIdx.MOMENTUM)
+    if m > 0: mult += m * 0.30
+    w = _unpack_mark(marks, MarkIdx.WIND)
+    if w > 0 and first_strike: mult += w * 0.20
+    sg = _unpack_mark(marks, MarkIdx.SLUGGISH)
+    if sg > 0 and not first_strike: mult += sg * 0.30
+    d = _unpack_mark(marks, MarkIdx.DRAGON)
+    if d > 0 and base_energy == 5: mult += d * 0.40
     return mult
 
 
@@ -58,20 +73,20 @@ def register_mark_handlers(bus):
     def on_switch_in(ctx):
         pet = ctx.actor
         if not pet: return
-        marks = ctx.state.marks_a if ctx.data.get("team","a") == "a" else ctx.state.marks_b
+        marks = ctx.state.marks_a if (ctx.team or "a") == "a" else ctx.state.marks_b
         hp_loss, energy_loss = apply_marks_on_enter(pet, marks)
         if hp_loss > 0: pet.current_hp = max(0, pet.current_hp - hp_loss)
         if energy_loss > 0: pet.current_energy = max(0, pet.current_energy - energy_loss)
 
     def on_turn_end(ctx):
         s = ctx.state
-        for tid, team in (("a", s.team_a), ("b", s.team_b)):
+        for tid, team, active in (("a", s.team_a, s.active_a), ("b", s.team_b, s.active_b)):
             marks = s.marks_a if tid == "a" else s.marks_b
-            for pet in team:
-                if pet.is_fainted: continue
-                hp_loss, energy_gain = tick_marks_end_of_turn(pet, marks)
-                if hp_loss > 0: pet.current_hp = max(0, pet.current_hp - hp_loss)
-                if energy_gain > 0: pet.current_energy = min(MAX_ENERGY, pet.current_energy + energy_gain)
+            pet = team[active]
+            if pet.is_fainted: continue
+            hp_loss, energy_gain = tick_marks_end_of_turn(pet, marks)
+            if hp_loss > 0: pet.current_hp = max(0, pet.current_hp - hp_loss)
+            if energy_gain > 0: pet.current_energy = min(MAX_ENERGY, pet.current_energy + energy_gain)
 
     bus.on(GameEvent.SWITCH_IN, on_switch_in, priority=80, source="marks")
     bus.on(GameEvent.TURN_END, on_turn_end, priority=200, source="marks")

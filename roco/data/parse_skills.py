@@ -1,21 +1,22 @@
-"""Parse raw skill wikitext → classified JSON with tags and pre-parsed fields.
+"""Parse raw skill wikitext into canonical skill JSONL records.
 
-Output: _data/parsed/skills.json  →  {"猛烈撞击": {..., "tags": [...], ...}}
+Output: _data/canonical/skills.jsonl
 
 Usage:
     python scripts/parse_skills.py
 """
 
 import re
-from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
-from roco.engine.skill_tags import classify
-from roco.engine.state import SkillRef
+from typing import Any
+
+from roco.data.effect_classifier import classify_skill_record, load_manual_rules
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
 
 TEMPLATE_RE = re.compile(r"^\|(.+?)=(.+)", re.MULTILINE)
 INT_FIELDS = ("耗能", "威力")
 
 
-def parse_one(name: str, text: str) -> dict | None:
+def parse_one(name: str, text: str, manual_rules: dict[str, dict[str, Any]] | None = None) -> dict | None:
     start = text.find("{{技能信息")
     if start == -1:
         return None
@@ -36,46 +37,46 @@ def parse_one(name: str, text: str) -> dict | None:
             except (ValueError, TypeError):
                 pass
 
-    # Classify at parse time — store tags + parsed fields in JSON
-    sref = SkillRef(
-        name=skill.get("技能名称", name),
-        element=skill.get("属性", ""),
-        category=skill.get("技能类别", ""),
-        energy=skill.get("耗能", 0),
-        power=skill.get("威力", 0),
-        effect=skill.get("效果", ""),
-    )
-    classify(sref)
-    skill["effect_flags"] = int(sref.effect_flags)
-    skill["weather_type"] = sref.weather_type
-    skill["enemy_cost_up_amount"] = sref.enemy_cost_up_amount
-    skill["hp_cost_pct"] = sref.hp_cost_pct
-    skill["permanent_hit_growth"] = sref.permanent_hit_growth
-    skill["permanent_power_growth"] = sref.permanent_power_growth
-
-    return skill
+    record = {
+        "kind": "skill",
+        "name": skill.get("技能名称", name),
+        "element": skill.get("属性", "普通"),
+        "category": skill.get("技能类别", "物攻"),
+        "energy": skill.get("耗能", 0),
+        "power": skill.get("威力", 0),
+        "effect_text": skill.get("效果", ""),
+        "flavor_text": skill.get("描述", ""),
+        "source_version": skill.get("技能版本", ""),
+        "source_fields": skill,
+    }
+    result = classify_skill_record(record, manual_rules)
+    record["flags"] = result.flags
+    record["effects"] = list(result.effects)
+    record["classification"] = result.meta()
+    return record
 
 
 def main() -> None:
-    raw_path = RAW_DIR / "skills_raw.json"
+    raw_path = RAW_DIR / "skills_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_details.py skills first.")
         return
 
-    raw: dict[str, str] = load_json(raw_path)
-    skills: dict[str, dict] = {}
+    manual_rules = load_manual_rules("skill")
+    skills: list[dict] = []
     errors: list[str] = []
 
-    for name, wikitext in raw.items():
-        sk = parse_one(name, wikitext)
+    for row in iter_jsonl(raw_path):
+        name = str(row.get("name", ""))
+        sk = parse_one(name, str(row.get("raw_text", "")), manual_rules)
         if sk is None:
             errors.append(name)
         else:
-            skills[name] = sk
+            skills.append(sk)
 
-    out_path = PARSED_DIR / "skills.json"
-    save_json(skills, out_path)
-    print(f"Parsed {len(skills)} skills → {out_path}")
+    out_path = CANONICAL_DIR / "skills.jsonl"
+    count = write_jsonl(skills, out_path)
+    print(f"Parsed {count} skills -> {out_path}")
     if errors:
         print(f"Skipped ({len(errors)}): {', '.join(errors[:10])}")
 

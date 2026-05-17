@@ -150,7 +150,7 @@ def test_burn_damage_zero_stacks():
 def test_burn_decay():
     assert calc_burn_decay(10) == 5
     assert calc_burn_decay(9) == 5   # ceil(9/2) = 5
-    assert calc_burn_decay(1) == 1
+    assert calc_burn_decay(1) == 0
 
 
 # ── Poison damage ──────────────────────────────────────────────

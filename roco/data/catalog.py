@@ -34,6 +34,7 @@ class RuntimeCatalog:
     pets_by_name: dict[str, PetData]
     pet_skill_ids: dict[int, tuple[int, ...]]
     ability_effects: dict[int, tuple[AbilityEffect, ...]]
+    unsupported_effect_stats: tuple[tuple[str, int], ...] = ()
 
     def build_pet(self, name: str, skill_names: list[str] | None = None) -> PersistentPet:
         data = self.pets_by_name[name]
@@ -41,7 +42,7 @@ class RuntimeCatalog:
             moves = tuple(self.skills_by_name[s] for s in skill_names if s in self.skills_by_name)
         else:
             moves = tuple(self.skills_by_id[sid] for sid in self.pet_skill_ids.get(data.pet_id, ())[:4])
-        return PersistentPet.from_data(data, moves)
+        return PersistentPet.from_data(data, moves, ability_effects=self.ability_effects.get(data.ability_id, ()))
 
 
 def _connect(path_or_conn: str | Path | sqlite3.Connection | None) -> tuple[sqlite3.Connection, bool]:
@@ -92,6 +93,7 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
         for row in conn.execute(
             "SELECT s.*, e.name AS element_name FROM skills s JOIN elements e ON e.id = s.element_id"
         ):
+            effects = skill_effects.get(row["id"], ())
             skill = SkillData(
                 name=row["name"],
                 element=row["element_name"],
@@ -102,7 +104,8 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
                 skill_id=row["id"],
                 element_id=row["element_id"],
                 effect_flags=row["flags"],
-                effects=skill_effects.get(row["id"], ()),
+                effects=effects,
+                hit_count=_damage_hit_count(effects),
             )
             skills_by_id[row["id"]] = skill
         skills_by_name = {skill.name: skill for skill in skills_by_id.values()}
@@ -144,6 +147,45 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
                 pets_by_id[pet_id].skill_ids = skill_ids
 
         ability_effects = _load_ability_effects(conn)
+        unsupported: dict[str, int] = {}
+        for items in tuple(skill_effects.values()) + tuple(ability_effects.values()):
+            for item in items:
+                if item.effect.tag is EffectTag.UNSUPPORTED:
+                    kind = str(item.effect.params.get("primitive", item.effect.params.get("tag", "UNSUPPORTED")))
+                    unsupported[kind] = unsupported.get(kind, 0) + 1
+        try:
+            gap_rows = conn.execute("SELECT primitive FROM effect_gaps")
+        except sqlite3.OperationalError:
+            gap_rows = ()
+        for row in gap_rows:
+            primitive = row["primitive"] if isinstance(row, sqlite3.Row) else row[0]
+            unsupported[str(primitive)] = unsupported.get(str(primitive), 0) + 1
+        try:
+            no_effect_rows = conn.execute(
+                """
+                SELECT a.name
+                FROM abilities a
+                LEFT JOIN ability_effects ae ON ae.ability_id = a.id
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM effect_gaps eg
+                    WHERE eg.source_type = 'ability' AND eg.source_name = a.name
+                )
+                GROUP BY a.id
+                HAVING COUNT(ae.id) = 0
+                """
+            )
+        except sqlite3.OperationalError:
+            no_effect_rows = conn.execute(
+                """
+                SELECT a.name
+                FROM abilities a
+                LEFT JOIN ability_effects ae ON ae.ability_id = a.id
+                GROUP BY a.id
+                HAVING COUNT(ae.id) = 0
+                """
+            )
+        for row in no_effect_rows:
+            unsupported[row["name"]] = unsupported.get(row["name"], 0) + 1
         return RuntimeCatalog(
             elements_by_id=elements_by_id,
             elements_by_name=elements_by_name,
@@ -153,6 +195,7 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
             pets_by_name=pets_by_name,
             pet_skill_ids=pet_skill_ids,
             ability_effects=ability_effects,
+            unsupported_effect_stats=tuple(sorted(unsupported.items())),
         )
     finally:
         if should_close:
@@ -160,3 +203,10 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
 
 
 load_catalog = compile_catalog
+
+
+def _damage_hit_count(effects: tuple[SkillEffect, ...]) -> int:
+    for item in effects:
+        if item.effect.tag is EffectTag.DAMAGE:
+            return max(1, int(item.effect.params.get("hit_count", 1)))
+    return 1

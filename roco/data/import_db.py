@@ -1,22 +1,21 @@
-"""Import structured JSON into the normalized SQLite data store."""
+"""Import canonical JSONL records into the normalized SQLite data store."""
 
 from __future__ import annotations
 
+import argparse
 import json
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from pathlib import Path
+from typing import Any
 
-from roco.data.utils import PARSED_DIR, DB_DIR, load_json
-from roco.engine.skill_tags import classify
-from roco.engine.state import (
-    EffectFlag,
-    EffectTag,
-    Element,
-    SkillCategory,
-    SkillData,
-    Timing,
-    normalize_element_name,
-)
+from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
+from roco.engine.effect_model import EffectTag, Timing
+from roco.engine.effect_registry import IMPLEMENTED_EFFECT_TAGS
+from roco.engine.state import SkillCategory, normalize_element_name
+
+
+Record = Mapping[str, Any]
 
 
 def _safe_int(val: object) -> int | None:
@@ -31,6 +30,18 @@ def _safe_int(val: object) -> int | None:
 def _required_int(val: object, default: int = 0) -> int:
     parsed = _safe_int(val)
     return default if parsed is None else parsed
+
+
+def _json(data: object) -> str:
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def _records(records: Iterable[Record], kind: str) -> list[Record]:
+    rows = list(records)
+    bad = [str(row.get("name", row.get("id", ""))) for row in rows if row.get("kind") != kind]
+    if bad:
+        raise ValueError(f"expected canonical kind={kind!r}, got mismatches: {', '.join(bad[:5])}")
+    return rows
 
 
 def _element_id(conn: sqlite3.Connection, raw: str) -> int:
@@ -71,114 +82,196 @@ _CATEGORY_NAMES = {
     SkillCategory.STATUS: "状态",
 }
 
+MARK_TAG_BY_CODE = {
+    "poison": EffectTag.POISON_MARK,
+    "moisture": EffectTag.MOISTURE_MARK,
+    "dragon": EffectTag.DRAGON_MARK,
+    "wind": EffectTag.WIND_MARK,
+    "charge": EffectTag.CHARGE_MARK,
+    "solar": EffectTag.SOLAR_MARK,
+    "attack": EffectTag.ATTACK_MARK,
+    "slow": EffectTag.SLOW_MARK,
+    "sluggish": EffectTag.SLUGGISH_MARK,
+    "spirit": EffectTag.SPIRIT_MARK,
+    "meteor": EffectTag.METEOR_MARK,
+    "thorn": EffectTag.THORN_MARK,
+    "momentum": EffectTag.MOMENTUM_MARK,
+}
 
-def _skill_from_raw(name: str, sk: dict) -> SkillData:
-    category_code, _category_name = _category(sk.get("技能类别", "物攻"))
-    skill = SkillData(
-        name=sk.get("技能名称", name),
-        element=normalize_element_name(sk.get("属性", "普通")),
-        category=SkillCategory(category_code),
-        energy=_required_int(sk.get("耗能"), 0),
-        power=_required_int(sk.get("威力"), 0),
-        effect=sk.get("效果", ""),
+
+def _parse_timing(raw: object) -> Timing | None:
+    if raw is None:
+        return None
+    if isinstance(raw, Timing):
+        return raw
+    if isinstance(raw, int):
+        try:
+            return Timing(raw)
+        except ValueError:
+            return None
+    if isinstance(raw, str):
+        try:
+            return Timing[raw]
+        except KeyError:
+            return None
+    return None
+
+
+def _parse_tag(raw: object) -> EffectTag | None:
+    if isinstance(raw, EffectTag):
+        return raw
+    if isinstance(raw, int):
+        try:
+            return EffectTag(raw)
+        except ValueError:
+            return None
+    if isinstance(raw, str):
+        try:
+            return EffectTag[raw]
+        except KeyError:
+            return None
+    return None
+
+
+def _gap_row(
+    source_type: str,
+    source_name: str,
+    primitive: str,
+    timing: Timing | None,
+    params: Mapping[str, Any] | None,
+    reason: str,
+) -> tuple:
+    return (
+        source_type,
+        source_name,
+        primitive,
+        timing.value if timing is not None else None,
+        _json(dict(params or {})),
+        reason,
+        0,
     )
-    return classify(skill)
 
 
-def _json(data: object) -> str:
-    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-
-
-def _effect_rows_for_skill(skill_id: int, skill: SkillData) -> list[tuple]:
+def _classification_gaps(source_type: str, record: Record) -> list[tuple]:
+    name = str(record.get("name", ""))
+    classification = record.get("classification") or {}
     rows: list[tuple] = []
-
-    def add(timing: Timing, tag: EffectTag, params: dict, sort_order: int) -> None:
-        rows.append((skill_id, timing.value, tag.value, int(skill.effect_flags), _json(params), "", sort_order))
-
-    order = 0
-    if skill.power > 0 or skill.effect_flags & EffectFlag.PURE_DAMAGE:
-        add(Timing.ON_DAMAGE, EffectTag.DAMAGE, {"power": skill.power, "hit_count": skill.hit_count}, order); order += 1
-    if skill.life_drain:
-        add(Timing.ON_DAMAGE, EffectTag.LIFE_DRAIN, {"pct": skill.life_drain}, order); order += 1
-    if skill.self_heal_hp:
-        add(Timing.AFTER_MOVE, EffectTag.HEAL_HP, {"pct": skill.self_heal_hp}, order); order += 1
-    if skill.self_heal_energy:
-        add(Timing.AFTER_MOVE, EffectTag.HEAL_ENERGY, {"amount": skill.self_heal_energy}, order); order += 1
-    if skill.steal_energy:
-        add(Timing.AFTER_MOVE, EffectTag.STEAL_ENERGY, {"amount": skill.steal_energy}, order); order += 1
-    if skill.enemy_lose_energy:
-        add(Timing.AFTER_MOVE, EffectTag.ENEMY_LOSE_ENERGY, {"amount": skill.enemy_lose_energy}, order); order += 1
-    if skill.damage_reduction:
-        add(Timing.BEFORE_MOVE, EffectTag.DAMAGE_REDUCTION, {"pct": skill.damage_reduction}, order); order += 1
-    for tag, stacks in (
-        (EffectTag.BURN, skill.burn_stacks),
-        (EffectTag.POISON, skill.poison_stacks),
-        (EffectTag.FREEZE, skill.freeze_stacks),
-        (EffectTag.LEECH, skill.leech_stacks),
-        (EffectTag.METEOR, skill.meteor_stacks),
-    ):
-        if stacks:
-            add(Timing.AFTER_MOVE, tag, {"stacks": stacks}, order); order += 1
-    if skill.force_switch:
-        add(Timing.AFTER_MOVE, EffectTag.FORCE_SWITCH, {}, order); order += 1
-    if skill.effect_flags & EffectFlag.ENERGY_ALL_IN:
-        add(Timing.BEFORE_MOVE, EffectTag.ENERGY_ALL_IN, {}, order); order += 1
-    if skill.weather_type:
-        add(Timing.AFTER_MOVE, EffectTag.WEATHER, {"type": skill.weather_type, "turns": 5}, order); order += 1
+    for gap in classification.get("gaps", ()) if isinstance(classification, Mapping) else ():
+        timing = _parse_timing(gap.get("timing"))
+        rows.append(_gap_row(
+            source_type,
+            name,
+            str(gap.get("primitive", name)),
+            timing,
+            gap.get("params", {}),
+            str(gap.get("reason", "needs_manual")),
+        ))
     return rows
 
 
-def _ability_effect_rows(ability_id: int, name: str) -> Iterable[tuple]:
-    if name == "诈死":
-        yield (ability_id, Timing.FAINT.value, EffectTag.FAINT_NO_MP_LOSS.value, 0, "{}", "", 0)
-    elif name == "蓄能":
-        yield (ability_id, Timing.TURN_END.value, EffectTag.ENERGY_REGEN_PER_TURN.value, 0, '{"amount":1}', "", 0)
+def _effect_rows(
+    *,
+    owner_id: int,
+    source_type: str,
+    source_name: str,
+    effects: Iterable[Mapping[str, Any]],
+    default_flags: int,
+) -> tuple[list[tuple], list[tuple]]:
+    rows: list[tuple] = []
+    gaps: list[tuple] = []
+    for order, raw in enumerate(effects):
+        timing = _parse_timing(raw.get("timing"))
+        tag = _parse_tag(raw.get("tag"))
+        params = dict(raw.get("params", {}) or {})
+        condition = str(raw.get("condition", "") or "")
+        sort_order = int(raw.get("sort_order", order))
+        if timing is None:
+            gaps.append(_gap_row(source_type, source_name, str(raw.get("timing", "")), None, params, "timing_not_defined"))
+            continue
+        if tag is None:
+            gaps.append(_gap_row(source_type, source_name, str(raw.get("tag", "")), timing, params, "effect_tag_not_defined"))
+            continue
+        if tag not in IMPLEMENTED_EFFECT_TAGS:
+            gaps.append(_gap_row(source_type, source_name, tag.name, timing, params, "runtime_handler_missing"))
+            continue
+        rows.append((owner_id, timing.value, tag.value, int(raw.get("flags", default_flags)), _json(params), condition, sort_order))
+    return rows, gaps
 
 
-def import_abilities(conn: sqlite3.Connection, pets: dict[str, dict]) -> dict[str, int]:
-    rows: dict[str, str] = {}
-    for pet in pets.values():
-        name = pet.get("特性", "").strip()
-        if name:
-            rows.setdefault(name, pet.get("特性描述", ""))
+def _insert_gaps(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
+    gap_rows = list(rows)
+    if gap_rows:
+        conn.executemany(
+            "INSERT INTO effect_gaps (source_type, source_name, primitive, timing_code, params_json, reason, used_count) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            gap_rows,
+        )
+    return len(gap_rows)
+
+
+def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> dict[str, int]:
+    records = _records(abilities, "ability")
+    rows = [
+        (
+            str(record["name"]),
+            str(record.get("description", "")),
+            _required_int(record.get("flags"), 0),
+            str(record.get("source_version", "")),
+        )
+        for record in records
+        if str(record.get("name", "")).strip()
+    ]
     conn.executemany(
-        "INSERT INTO abilities (name, description) VALUES (?, ?)",
-        sorted(rows.items()),
+        "INSERT INTO abilities (name, description, flags, source_version) VALUES (?, ?, ?, ?)",
+        rows,
     )
     lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
-    effect_rows = []
-    for name, aid in lookup.items():
-        effect_rows.extend(_ability_effect_rows(aid, name))
+    effect_rows: list[tuple] = []
+    gap_rows: list[tuple] = []
+    for record in records:
+        name = str(record.get("name", "")).strip()
+        if not name:
+            continue
+        built, gaps = _effect_rows(
+            owner_id=lookup[name],
+            source_type="ability",
+            source_name=name,
+            effects=record.get("effects", ()) or (),
+            default_flags=_required_int(record.get("flags"), 0),
+        )
+        effect_rows.extend(built)
+        gap_rows.extend(gaps)
+        gap_rows.extend(_classification_gaps("ability", record))
     if effect_rows:
         conn.executemany(
             "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
+    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  abilities: {len(lookup)} inserted")
+    print(f"  ability_effects: {len(effect_rows)} inserted")
+    print(f"  ability effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 
-def import_skills(conn: sqlite3.Connection, skills: dict[str, dict]) -> dict[str, int]:
-    lookup: dict[str, int] = {}
+def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[str, int]:
+    records = _records(skills, "skill")
     rows: list[tuple] = []
-    compiled: list[SkillData] = []
-    for name, raw in skills.items():
-        skill = _skill_from_raw(name, raw)
-        category_code, category_name = _category(skill.category)
+    for record in records:
+        category_code, category_name = _category(record.get("category", "物攻"))
         rows.append((
-            skill.name,
-            _element_id(conn, skill.element),
+            str(record["name"]),
+            _element_id(conn, str(record.get("element", "普通"))),
             category_code,
             category_name,
-            skill.energy,
-            skill.power,
-            skill.effect,
-            raw.get("描述", ""),
-            int(skill.effect_flags),
-            raw.get("技能版本", ""),
+            _required_int(record.get("energy"), 0),
+            _required_int(record.get("power"), 0),
+            str(record.get("effect_text", "")),
+            str(record.get("flavor_text", "")),
+            _required_int(record.get("flags"), 0),
+            str(record.get("source_version", "")),
         ))
-        compiled.append(skill)
     conn.executemany(
         "INSERT INTO skills (name, element_id, category_code, category_name, energy, power, effect_text, flavor_text, flags, source_version) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -186,50 +279,65 @@ def import_skills(conn: sqlite3.Connection, skills: dict[str, dict]) -> dict[str
     )
     lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     effect_rows: list[tuple] = []
-    for skill in compiled:
-        skill_id = lookup[skill.name]
-        effect_rows.extend(_effect_rows_for_skill(skill_id, skill))
+    gap_rows: list[tuple] = []
+    for record in records:
+        name = str(record["name"])
+        built, gaps = _effect_rows(
+            owner_id=lookup[name],
+            source_type="skill",
+            source_name=name,
+            effects=record.get("effects", ()) or (),
+            default_flags=_required_int(record.get("flags"), 0),
+        )
+        effect_rows.extend(built)
+        gap_rows.extend(gaps)
+        gap_rows.extend(_classification_gaps("skill", record))
     if effect_rows:
         conn.executemany(
             "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
+    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  skills: {len(lookup)} inserted")
     print(f"  skill_effects: {len(effect_rows)} inserted")
+    print(f"  skill effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 
 def import_pets(
     conn: sqlite3.Connection,
-    pets: dict[str, dict],
+    pets: Iterable[Record],
     skill_lookup: dict[str, int],
     ability_lookup: dict[str, int],
 ) -> dict[str, int]:
+    records = _records(pets, "pet")
     rows: list[tuple] = []
-    for name, pet in pets.items():
-        ability_name = pet.get("特性", "").strip()
+    for record in records:
+        elements = tuple(record.get("elements", ())) + ("", "")
+        stats = record.get("stats", {}) or {}
+        ability_name = str(record.get("ability", "")).strip()
         rows.append((
-            name,
-            pet.get("地区形态名称", ""),
-            pet.get("精灵阶段", ""),
-            pet.get("精灵形态", ""),
-            _element_id(conn, pet.get("主属性", "普通")),
-            _maybe_element_id(conn, pet.get("2属性")),
+            str(record["name"]),
+            str(record.get("form_name", "")),
+            str(record.get("stage", "")),
+            str(record.get("form_type", "")),
+            _element_id(conn, str(elements[0] or "普通")),
+            _maybe_element_id(conn, str(elements[1] or "")),
             ability_lookup.get(ability_name),
-            _required_int(pet.get("生命"), 1),
-            _required_int(pet.get("物攻"), 0),
-            _required_int(pet.get("魔攻"), 0),
-            _required_int(pet.get("物防"), 0),
-            _required_int(pet.get("魔防"), 0),
-            _required_int(pet.get("速度"), 0),
-            pet.get("体型", ""),
-            pet.get("重量", ""),
-            pet.get("分布地区", ""),
-            pet.get("精灵描述", ""),
-            1 if pet.get("是否有异色") == "是" else 0,
-            pet.get("进化条件", ""),
-            pet.get("更新版本", ""),
+            _required_int(stats.get("hp"), 1),
+            _required_int(stats.get("atk_phys"), 0),
+            _required_int(stats.get("atk_mag"), 0),
+            _required_int(stats.get("def_phys"), 0),
+            _required_int(stats.get("def_mag"), 0),
+            _required_int(stats.get("speed"), 0),
+            str(record.get("height", "")),
+            str(record.get("weight", "")),
+            str(record.get("distribution", "")),
+            str(record.get("description", "")),
+            1 if record.get("is_shiny") else 0,
+            str(record.get("evolution_cond", "")),
+            str(record.get("source_version", "")),
         ))
     conn.executemany(
         "INSERT INTO pets (name, form_name, stage, form_type, element_primary_id, element_secondary_id, ability_id, "
@@ -238,20 +346,21 @@ def import_pets(
         rows,
     )
     pet_lookup = {name: pid for pid, name in conn.execute("SELECT id, name FROM pets")}
-
     link_rows: list[tuple] = []
-    for field, source_type in (("技能", "技能"), ("血脉技能", "血脉技能"), ("可学技能石", "可学技能石")):
-        for name, pet in pets.items():
-            levels: list[str] = pet.get("技能解锁等级", []) if field == "技能" else []
-            for i, skill_name in enumerate(pet.get(field, [])):
-                link_rows.append((
-                    pet_lookup[name],
-                    skill_lookup.get(skill_name),
-                    skill_name,
-                    source_type,
-                    _safe_int(levels[i]) if i < len(levels) else None,
-                    i,
-                ))
+    for record in records:
+        pet_id = pet_lookup[str(record["name"])]
+        for link in record.get("skills", ()) or ():
+            skill_name = str(link.get("name", "")).strip()
+            if not skill_name:
+                continue
+            link_rows.append((
+                pet_id,
+                skill_lookup.get(skill_name),
+                skill_name,
+                str(link.get("source_type", "技能")),
+                _safe_int(link.get("unlock_level")),
+                _required_int(link.get("sort_order"), 0),
+            ))
     conn.executemany(
         "INSERT INTO pet_skills (pet_id, skill_id, skill_name, source_type, unlock_level, sort_order) "
         "VALUES (?, ?, ?, ?, ?, ?)",
@@ -262,45 +371,105 @@ def import_pets(
     return pet_lookup
 
 
-def import_yinji(conn: sqlite3.Connection, yinji: dict[str, dict]) -> None:
+def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
+    records = _records(marks, "mark")
     skill_lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
-    rows: list[tuple] = []
-    for mark_name, mark in yinji.items():
-        for skill_name, desc in mark.get("可施加技能", {}).items():
+    mark_rows: list[tuple] = []
+    source_rows: list[tuple] = []
+    gap_rows: list[tuple] = []
+    for record in records:
+        code = str(record.get("code", "")).strip()
+        name = str(record.get("name", "")).strip()
+        packed_index = _required_int(record.get("packed_index"), -1)
+        polarity = str(record.get("polarity", "")).strip()
+        if not code or packed_index < 0 or polarity not in {"positive", "negative"}:
+            raise ValueError(f"invalid mark canonical row: {name or code}")
+        mark_rows.append((
+            packed_index,
+            code,
+            name,
+            packed_index,
+            polarity,
+            str(record.get("stacking", "")),
+            str(record.get("effect_text", "")),
+            _json(record.get("mechanism", []) or []),
+            _json(record.get("effects", []) or []),
+        ))
+    conn.executemany(
+        """
+        INSERT INTO marks (id, code, name, packed_index, polarity, stacking, effect_text, mechanism_json, effects_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+            name=excluded.name,
+            packed_index=excluded.packed_index,
+            polarity=excluded.polarity,
+            stacking=excluded.stacking,
+            effect_text=excluded.effect_text,
+            mechanism_json=excluded.mechanism_json,
+            effects_json=excluded.effects_json
+        """,
+        mark_rows,
+    )
+    mark_lookup = {code: mid for mid, code in conn.execute("SELECT id, code FROM marks")}
+    for record in records:
+        code = str(record.get("code", "")).strip()
+        tag = MARK_TAG_BY_CODE.get(code)
+        for source in record.get("source_skills", ()) or ():
+            skill_name = str(source.get("skill", "")).strip()
             sid = skill_lookup.get(skill_name)
-            if sid:
-                rows.append((
-                    sid,
-                    Timing.AFTER_MOVE.value,
-                    EffectTag.MARK.value,
-                    0,
-                    _json({"mark": mark_name, "description": desc}),
-                    "",
-                    100,
+            source_rows.append((
+                mark_lookup[code],
+                skill_name,
+                str(source.get("description", "")),
+            ))
+            if not sid or tag is None:
+                continue
+            exists = conn.execute(
+                "SELECT 1 FROM skill_effects WHERE skill_id = ? AND tag_code = ? LIMIT 1",
+                (sid, tag.value),
+            ).fetchone()
+            if exists is None:
+                gap_rows.append(_gap_row(
+                    "skill",
+                    skill_name,
+                    tag.name,
+                    None,
+                    {"mark": code, "description": source.get("description", "")},
+                    "mark_source_missing_effect",
                 ))
-    if rows:
+    if source_rows:
         conn.executemany(
-            "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            rows,
+            "INSERT OR IGNORE INTO mark_sources (mark_id, skill_name, description) VALUES (?, ?, ?)",
+            source_rows,
         )
-    print(f"  yinji skill_effects: {len(rows)} inserted")
+    inserted_gaps = _insert_gaps(conn, gap_rows)
+    print(f"  marks: {len(mark_rows)} upserted")
+    print(f"  mark_sources: {len(source_rows)} inserted")
+    print(f"  mark audit effect_gaps: {inserted_gaps} inserted")
 
 
-def import_teams(conn: sqlite3.Connection, teams: dict[str, dict], pet_lookup: dict[str, int], skill_lookup: dict[str, int]) -> None:
+def import_teams(
+    conn: sqlite3.Connection,
+    teams: Iterable[Record],
+    pet_lookup: dict[str, int],
+    skill_lookup: dict[str, int],
+    *,
+    fail_used_gaps: bool = True,
+) -> None:
+    records = _records(teams, "team")
     team_rows: list[tuple] = []
     pet_rows: list[tuple] = []
     skill_rows: list[tuple] = []
 
-    for tid, team in teams.items():
+    for team in records:
         team_rows.append((
-            tid,
-            team.get("title", ""),
-            team.get("author", ""),
-            team.get("type", ""),
-            team.get("bloodline_magic", ""),
-            team.get("description", ""),
-            team.get("upload_date", ""),
+            str(team.get("id", "")),
+            str(team.get("title", "")),
+            str(team.get("author", "")),
+            str(team.get("type", "")),
+            str(team.get("bloodline_magic", "")),
+            str(team.get("description", "")),
+            str(team.get("upload_date", "")),
         ))
     conn.executemany(
         "INSERT INTO teams (id, title, author, team_type, bloodline_magic, description, upload_date) "
@@ -308,16 +477,17 @@ def import_teams(conn: sqlite3.Connection, teams: dict[str, dict], pet_lookup: d
         team_rows,
     )
 
-    for tid, team in teams.items():
-        for pet in team.get("pets", []):
+    for team in records:
+        tid = str(team.get("id", ""))
+        for pet in team.get("pets", []) or []:
             pet_rows.append((
                 tid,
                 int(pet.get("slot", 0)),
-                pet_lookup.get(pet.get("name", "")) or pet_lookup.get(pet.get("name_short", "")),
-                pet.get("name", ""),
-                pet.get("name_short", ""),
-                pet.get("bloodline", ""),
-                pet.get("nature", ""),
+                pet_lookup.get(str(pet.get("name", ""))) or pet_lookup.get(str(pet.get("name_short", ""))),
+                str(pet.get("name", "")),
+                str(pet.get("name_short", "")),
+                str(pet.get("bloodline", "")),
+                str(pet.get("nature", "")),
                 _json(pet.get("ivs", [])),
             ))
     conn.executemany(
@@ -330,8 +500,9 @@ def import_teams(conn: sqlite3.Connection, teams: dict[str, dict], pet_lookup: d
         (team_id, slot): tpid
         for tpid, team_id, slot in conn.execute("SELECT id, team_id, slot FROM team_pets")
     }
-    for tid, team in teams.items():
-        for pet in team.get("pets", []):
+    for team in records:
+        tid = str(team.get("id", ""))
+        for pet in team.get("pets", []) or []:
             tpid = team_pet_ids[(tid, int(pet.get("slot", 0)))]
             for i, move in enumerate(pet.get("moves", []), start=1):
                 skill_rows.append((tpid, i, skill_lookup.get(move), move))
@@ -339,48 +510,115 @@ def import_teams(conn: sqlite3.Connection, teams: dict[str, dict], pet_lookup: d
         "INSERT INTO team_pet_skills (team_pet_id, slot, skill_id, skill_name) VALUES (?, ?, ?, ?)",
         skill_rows,
     )
+    refresh_effect_gap_usage(conn)
+    if fail_used_gaps:
+        assert_no_blocking_effect_gaps(conn)
     print(f"  teams: {len(team_rows)} inserted")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
     print(f"  team_pet_skills: {len(skill_rows)} moves inserted")
 
 
+def refresh_effect_gap_usage(conn: sqlite3.Connection) -> None:
+    conn.execute("UPDATE effect_gaps SET used_count = 0")
+    conn.execute(
+        """
+        UPDATE effect_gaps
+        SET used_count = (
+            SELECT COUNT(*)
+            FROM team_pet_skills tps
+            JOIN skills s ON s.id = tps.skill_id
+            WHERE s.name = effect_gaps.source_name
+        )
+        WHERE source_type = 'skill'
+        """
+    )
+    conn.execute(
+        """
+        UPDATE effect_gaps
+        SET used_count = (
+            SELECT COUNT(*)
+            FROM team_pets tp
+            JOIN pets p ON p.id = tp.pet_id
+            JOIN abilities a ON a.id = p.ability_id
+            WHERE a.name = effect_gaps.source_name
+        )
+        WHERE source_type = 'ability'
+        """
+    )
+
+
+def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        """
+        SELECT source_type, source_name, primitive, reason, used_count
+        FROM effect_gaps
+        WHERE used_count > 0
+        ORDER BY used_count DESC, source_type, source_name
+        LIMIT 20
+        """
+    ).fetchall()
+    if not rows:
+        return
+    details = ", ".join(f"{row[0]}:{row[1]} used={row[4]} reason={row[3]}" for row in rows)
+    raise RuntimeError(f"used skills/abilities have unclassified effect gaps: {details}")
+
+
+def _load_required(name: str) -> list[dict]:
+    path = CANONICAL_DIR / name
+    if not path.exists():
+        raise FileNotFoundError(f"Missing canonical data file: {path}")
+    return load_jsonl(path)
+
+
 def main() -> None:
-    db_path = DB_DIR / "data.db"
-    if not db_path.exists():
-        print(f"Database not found: {db_path}")
-        print("Run 'python -m roco.data.migrate' first.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db", type=Path, default=DB_DIR / "data.db")
+    parser.add_argument("--allow-used-gaps", action="store_true")
+    args = parser.parse_args()
+
+    if not args.db.exists():
+        print(f"Database not found: {args.db}")
+        print("Run 'python -m roco.data.migrate --reset' first.")
         return
 
-    conn = sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(str(args.db))
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
 
-    print("Importing...")
-    skills: dict[str, dict] = load_json(PARSED_DIR / "skills.json")
-    pets: dict[str, dict] = load_json(PARSED_DIR / "pets.json")
+    print("Importing canonical JSONL...")
+    skills = _load_required("skills.jsonl")
+    abilities = _load_required("abilities.jsonl")
+    pets = _load_required("pets.jsonl")
 
-    ability_lookup = import_abilities(conn, pets)
+    ability_lookup = import_abilities(conn, abilities)
     skill_lookup = import_skills(conn, skills)
     pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
 
-    yinji_path = PARSED_DIR / "yinji.json"
-    if yinji_path.exists():
-        import_yinji(conn, load_json(yinji_path))
+    marks_path = CANONICAL_DIR / "marks.jsonl"
+    if marks_path.exists():
+        import_marks(conn, load_jsonl(marks_path))
 
-    teams_path = PARSED_DIR / "teams.json"
+    teams_path = CANONICAL_DIR / "teams.jsonl"
     if teams_path.exists():
-        import_teams(conn, load_json(teams_path), pet_lookup, skill_lookup)
+        import_teams(
+            conn,
+            load_jsonl(teams_path),
+            pet_lookup,
+            skill_lookup,
+            fail_used_gaps=not args.allow_used_gaps,
+        )
 
     conn.commit()
     for name, in conn.execute(
         "SELECT 'pets' UNION ALL SELECT 'skills' UNION ALL SELECT 'abilities' UNION ALL "
-        "SELECT 'pet_skills' UNION ALL SELECT 'skill_effects' UNION ALL SELECT 'teams' UNION ALL "
+        "SELECT 'pet_skills' UNION ALL SELECT 'skill_effects' UNION ALL SELECT 'ability_effects' UNION ALL "
+        "SELECT 'marks' UNION ALL SELECT 'mark_sources' UNION ALL SELECT 'effect_gaps' UNION ALL SELECT 'teams' UNION ALL "
         "SELECT 'team_pets' UNION ALL SELECT 'team_pet_skills'"
     ):
         cnt = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
         print(f"  {name}: {cnt}")
     conn.close()
-    print(f"Done -> {db_path}")
+    print(f"Done -> {args.db}")
 
 
 if __name__ == "__main__":

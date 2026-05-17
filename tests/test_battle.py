@@ -8,6 +8,7 @@ from roco.engine.state import (
     _pack_buff, _unpack_buff,
 )
 from roco.engine.damage import calc_attack_damage
+from roco.engine.effect_compile import compile_skill_effects
 from roco.engine.skill_tags import classify
 
 # ── Helpers ────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ def _mk_skill(name="撞击", element="普通", cat=SkillCategory.PHYSICAL,
               energy=1, power=50, effect=""):
     sk = SkillData(name=name, element=element, category=cat, energy=energy, power=power, effect=effect)
     classify(sk)
+    sk.effects = compile_skill_effects(0, sk)
     return sk
 
 def _mk_pet(name="A", hp=100, atk=80, spd=60, element="普通", moves=None, nature="", ivs=None):
@@ -34,7 +36,7 @@ def _act(persistent): return AP(persistent)
 _tackle = lambda: _mk_skill("撞击", "普通", SkillCategory.PHYSICAL, 1, 50)
 _ember = lambda: _mk_skill("火花", "火", SkillCategory.MAGICAL, 2, 60)
 _water_gun = lambda: _mk_skill("水枪", "水", SkillCategory.MAGICAL, 2, 60)
-_wisp = lambda: _mk_skill("鬼火", "火", SkillCategory.STATUS, 2, 0, "造成灼烧")
+_wisp = lambda: _mk_skill("鬼火", "火", SkillCategory.STATUS, 2, 0, "造成3层灼烧")
 _def_curl = lambda: _mk_skill("防御", "普通", SkillCategory.DEFENSE, 1, 0, "减伤70%")
 
 def _move(idx): return MoveDecision(action="move", skill_index=idx)
@@ -159,7 +161,7 @@ def test_fake_death_no_magic_cost():
     engine = BattleEngine(
         [_mk_pet("K", hp=200, atk=500, spd=200, element="火", moves=[_ember()])],
         [_mk_pet("卡瓦重", hp=50, atk=50, spd=10, element="地", moves=[_tackle()])])
-    engine.state.team_b[0].persistent.ability_tags.append("fake_death")
+    engine.state.team_b[0].persistent.add_ability_tag("fake_death")
     assert engine.state.magic_b == 4
     engine.step(_move(0), _move(0))
     assert engine.state.magic_b == 4

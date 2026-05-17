@@ -1,153 +1,216 @@
-"""Tests for skill classification (pre-parse via classify())."""
+"""Tests for import-time skill classification into compiled effects."""
 
+from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
+from roco.engine.effect_compile import compile_skill_effects
+from roco.engine.effect_model import EffectTag, Timing
 from roco.engine.skill_tags import classify
-from roco.engine.state import SkillRef, EffectFlag
+from roco.engine.state import EffectFlag, SkillCategory, SkillData
 
 
-def _clsfy(effect: str, name: str = "test", element: str = "普通",
-           category: str = "物攻") -> SkillRef:
-    sk = SkillRef(name=name, element=element, category=category,
-                  energy=1, power=50, effect=effect)
-    return classify(sk)
+def _compiled(effect: str, name: str = "test", element: str = "普通",
+              category: str | SkillCategory = "物攻", power: int = 50):
+    skill = SkillData(name=name, element=element, category=category,
+                      energy=1, power=power, effect=effect)
+    classify(skill)
+    rows = compile_skill_effects(0, skill)
+    return skill, rows
+
+
+def _effect(rows, tag: EffectTag):
+    return next(row.effect for row in rows if row.effect.tag is tag)
 
 
 def test_life_drain():
-    sk = _clsfy("造成物伤，吸血50%")
-    assert sk.life_drain == 0.5
-    assert sk.effect_flags & EffectFlag.DRAIN
+    _, rows = _compiled("造成物伤，吸血50%")
+    assert _effect(rows, EffectTag.LIFE_DRAIN).params["pct"] == 0.5
 
 
 def test_self_heal_hp():
-    sk = _clsfy("回复60%生命")
-    assert sk.self_heal_hp == 0.6
-    assert sk.effect_flags & EffectFlag.HEAL_HP
+    _, rows = _compiled("回复60%生命", power=0)
+    assert _effect(rows, EffectTag.HEAL_HP).params["pct"] == 0.6
 
 
 def test_self_heal_energy():
-    sk = _clsfy("回复4能量")
-    assert sk.self_heal_energy == 4
+    _, rows = _compiled("回复4能量", power=0)
+    assert _effect(rows, EffectTag.HEAL_ENERGY).params["amount"] == 4
 
 
 def test_steal_energy():
-    sk = _clsfy("偷取3能量")
-    assert sk.steal_energy == 3
+    _, rows = _compiled("偷取3能量", power=0)
+    assert _effect(rows, EffectTag.STEAL_ENERGY).params["amount"] == 3
 
 
 def test_damage_reduction():
-    sk = _clsfy("减伤70%")
-    assert sk.damage_reduction == 0.7
-    assert sk.effect_flags & EffectFlag.DEFENSE
+    _, rows = _compiled("减伤70%", power=0, category="防御")
+    assert _effect(rows, EffectTag.DAMAGE_REDUCTION).params["pct"] == 0.7
 
 
 def test_hit_count():
-    sk = _clsfy("连击3次")
+    sk, rows = _compiled("连击3次")
     assert sk.hit_count == 3
+    assert _effect(rows, EffectTag.DAMAGE).params["hit_count"] == 3
 
 
 def test_priority():
-    sk = _clsfy("先制+1")
+    sk, _ = _compiled("先制+1")
     assert sk.priority_mod == 1
 
 
 def test_force_switch():
-    sk = _clsfy("造成物伤后折返")
-    assert sk.force_switch is True
+    _, rows = _compiled("造成物伤后折返")
+    assert _effect(rows, EffectTag.FORCE_SWITCH).timing is Timing.AFTER_MOVE
 
 
 def test_burn_stacks():
-    sk = _clsfy("造成3层灼烧")
-    assert sk.burn_stacks == 3
+    _, rows = _compiled("造成3层灼烧")
+    assert _effect(rows, EffectTag.BURN).params["stacks"] == 3
 
 
 def test_poison_stacks():
-    sk = _clsfy("施加2层中毒")
-    assert sk.poison_stacks == 2
+    _, rows = _compiled("施加2层中毒", power=0)
+    assert _effect(rows, EffectTag.POISON).params["stacks"] == 2
 
 
 def test_self_atk_up():
-    sk = _clsfy("物攻+30%")
-    assert sk.self_atk == 0.3
+    _, rows = _compiled("物攻+30%", power=0)
+    assert _effect(rows, EffectTag.SELF_BUFF).params["atk"] == 0.3
 
 
 def test_self_atk_down():
-    sk = _clsfy("物攻-20%")
-    assert sk.self_atk == -0.2
+    _, rows = _compiled("物攻-20%", power=0)
+    assert _effect(rows, EffectTag.SELF_BUFF).params["atk"] == -0.2
 
 
 def test_enemy_def_down():
-    sk = _clsfy("敌方物防-40%")
-    assert sk.enemy_def == 0.4
+    _, rows = _compiled("敌方物防-40%", power=0)
+    assert _effect(rows, EffectTag.ENEMY_DEBUFF).params["def"] == 0.4
 
 
 def test_combined_effects():
-    sk = _clsfy("造成物伤，吸血50%，回复20%HP，偷取2能量")
-    assert sk.life_drain == 0.5
-    assert sk.self_heal_hp == 0.2
-    assert sk.steal_energy == 2
+    _, rows = _compiled("造成物伤，吸血50%，回复20%生命，偷取2能量")
+    assert _effect(rows, EffectTag.LIFE_DRAIN).params["pct"] == 0.5
+    assert _effect(rows, EffectTag.HEAL_HP).params["pct"] == 0.2
+    assert _effect(rows, EffectTag.STEAL_ENERGY).params["amount"] == 2
 
 
 def test_steal_energy_amount():
-    sk = _clsfy("偷取5能量")
-    assert sk.steal_energy == 5
+    _, rows = _compiled("偷取5能量", power=0)
+    assert _effect(rows, EffectTag.STEAL_ENERGY).params["amount"] == 5
 
 
 def test_empty():
-    sk = _clsfy("")
-    assert sk.effect_flags == EffectFlag.PURE_DAMAGE or sk.effect_flags == EffectFlag.NONE
+    sk, rows = _compiled("", power=0)
+    assert sk.effect_flags == EffectFlag.NONE
+    assert rows == ()
 
 
 def test_burn_keyword():
-    sk = _clsfy("造成灼烧")
-    assert sk.burn_stacks >= 1
+    _, rows = _compiled("造成灼烧", power=0)
+    assert _effect(rows, EffectTag.BURN).params["stacks"] == 1
 
 
 def test_classify_preserves_name():
-    sk = _clsfy("造成魔伤，2层灼烧", name="火球", element="火", category="魔攻")
+    sk, rows = _compiled("造成魔伤，2层灼烧", name="火球", element="火", category="魔攻")
     assert sk.name == "火球"
-    assert sk.burn_stacks == 2
+    assert _effect(rows, EffectTag.BURN).params["stacks"] == 2
 
 
 def test_pure_damage_tag():
-    sk = _clsfy("对敌方精灵造成物理伤害", name="撞击")
+    sk, rows = _compiled("对敌方精灵造成物理伤害", name="撞击")
     assert sk.effect_flags & EffectFlag.PURE_DAMAGE
+    assert _effect(rows, EffectTag.DAMAGE)
 
 
 def test_weather_type():
-    sk = _clsfy("沙涌")
-    assert sk.weather_type == "sandstorm"
-    assert sk.effect_flags & EffectFlag.WEATHER
+    _, rows = _compiled("沙涌", power=0)
+    assert _effect(rows, EffectTag.WEATHER).params["type"] == "sandstorm"
 
 
 def test_weather_rain():
-    sk = _clsfy("祈雨")
-    assert sk.weather_type == "rain"
+    _, rows = _compiled("祈雨", power=0)
+    assert _effect(rows, EffectTag.WEATHER).params["type"] == "rain"
 
 
 def test_weather_snow():
-    sk = _clsfy("雪天")
-    assert sk.weather_type == "snow"
+    _, rows = _compiled("雪天", power=0)
+    assert _effect(rows, EffectTag.WEATHER).params["type"] == "snow"
 
 
 def test_enemy_cost_up():
-    sk = _clsfy("全技能能耗+3")
-    assert sk.enemy_cost_up_amount == 3
+    _, rows = _compiled("全技能能耗+3", power=0)
+    assert _effect(rows, EffectTag.ENEMY_ENERGY_COST_UP).params["amount"] == 3
 
 
 def test_hp_for_energy():
-    sk = _clsfy("失去10%生命")
-    assert sk.hp_cost_pct == 0.1
+    _, rows = _compiled("失去10%生命", power=0)
+    assert _effect(rows, EffectTag.HP_FOR_ENERGY).params["pct"] == 0.1
 
 
 def test_permanent_hit_growth():
-    sk = _clsfy("连击数永久+2")
-    assert sk.permanent_hit_growth == 2
+    _, rows = _compiled("连击数永久+2")
+    assert _effect(rows, EffectTag.PERMANENT_MOD).params == {"target": "hit_count", "delta": 2}
 
 
 def test_permanent_power_growth():
-    sk = _clsfy("威力永久+10")
-    assert sk.permanent_power_growth == 10
+    _, rows = _compiled("威力永久+10")
+    assert _effect(rows, EffectTag.PERMANENT_MOD).params == {"target": "power", "delta": 10}
 
 
 def test_counter_tag():
-    sk = _clsfy("造成物伤，应对状态：本次技能威力翻倍")
+    sk, _ = _compiled("造成物伤，应对状态：本次技能威力翻倍")
     assert sk.effect_flags & EffectFlag.COUNTER
+
+
+def test_generated_mark_primitives_are_concrete():
+    record = refresh_skill_classification({
+        "kind": "skill",
+        "name": "打湿",
+        "element": "水",
+        "category": "状态",
+        "energy": 1,
+        "power": 0,
+        "effect_text": "自己获得1层湿润印记。",
+    })
+
+    assert any(effect["tag"] == "MOISTURE_MARK" for effect in record["effects"])
+    assert all(effect["tag"] != "MARK" for effect in record["effects"])
+
+
+def test_mark_dispel_operation_is_concrete():
+    record = refresh_skill_classification({
+        "kind": "skill",
+        "name": "倾泻",
+        "element": "水",
+        "category": "魔攻",
+        "energy": 2,
+        "power": 65,
+        "effect_text": "造成魔伤，未被防御时驱散双方所有印记。",
+    })
+
+    assert any(effect["tag"] == "DISPEL_MARKS" for effect in record["effects"])
+
+
+def test_canonical_skill_manual_rules_extend_generated_effects():
+    record = refresh_skill_classification({
+        "kind": "skill",
+        "name": "伺机而动",
+        "element": "普通",
+        "category": "状态",
+        "energy": 1,
+        "power": 0,
+        "effect_text": "",
+    })
+
+    assert record["classification"]["source"] == "manual:skill:extend"
+    assert any(effect["tag"] == "NEXT_ATTACK_MOD" for effect in record["effects"])
+
+
+def test_canonical_ability_missing_effect_is_explicit_gap():
+    record = refresh_ability_classification({
+        "kind": "ability",
+        "name": "未分类特性",
+        "description": "这条描述还没有安全分类规则",
+    })
+
+    assert record["classification"]["status"] == "needs_manual"
+    assert record["classification"]["gaps"][0]["reason"] == "structured_effect_missing"

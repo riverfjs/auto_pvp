@@ -2,37 +2,60 @@ from pathlib import Path
 
 import pytest
 
+from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
-from roco.data.import_db import import_abilities, import_pets, import_skills
+from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
+from roco.data.utils import load_jsonl, write_jsonl
 from roco.engine.battle import BattleEngine
-from roco.engine.state import MoveDecision
+from roco.engine.state import EffectTag, MoveDecision
 
 
 def _sample_data():
-    skills = {
-        "火花": {"技能名称": "火花", "属性": "火", "技能类别": "魔攻", "耗能": 1, "威力": 60, "效果": "造成魔伤"},
-        "拍击": {"技能名称": "拍击", "属性": "普通", "技能类别": "物攻", "耗能": 1, "威力": 40, "效果": "造成物伤"},
+    skills = [
+        refresh_skill_classification({"kind": "skill", "name": "火花", "element": "火", "category": "魔攻", "energy": 1, "power": 60, "effect_text": "造成魔伤"}),
+        refresh_skill_classification({"kind": "skill", "name": "拍击", "element": "普通", "category": "物攻", "energy": 1, "power": 40, "effect_text": "造成物伤"}),
+    ]
+    abilities = [
+        refresh_ability_classification({"kind": "ability", "name": "诈死", "description": "力竭不扣MP"}),
+        refresh_ability_classification({"kind": "ability", "name": "顺风", "description": "若先于敌方攻击，本次技能威力+50%"}),
+        refresh_ability_classification({"kind": "ability", "name": "未映射", "description": "这条描述暂未映射到NRC_AI原语"}),
+    ]
+    pets = [
+        _pet("火火", "火", "诈死", 90, "火花", atk_mag=100),
+        _pet("风风", "翼", "顺风", 95, "拍击", atk=90),
+        _pet("风空", "翼", "", 95, "拍击", atk=90),
+        _pet("谜谜", "普通", "未映射", 55, "拍击"),
+        _pet("地地", "地面系", "", 50, "拍击"),
+    ]
+    return skills, abilities, pets
+
+
+def _pet(name, element, ability, speed, skill, *, atk=80, atk_mag=70):
+    return {
+        "kind": "pet",
+        "name": name,
+        "form_name": "",
+        "stage": "",
+        "form_type": "",
+        "elements": [element, ""],
+        "ability": ability,
+        "stats": {"hp": 100, "atk_phys": atk, "atk_mag": atk_mag, "def_phys": 70, "def_mag": 70, "speed": speed},
+        "height": "",
+        "weight": "",
+        "distribution": "",
+        "description": "",
+        "is_shiny": False,
+        "evolution_cond": "",
+        "source_version": "",
+        "skills": [{"name": skill, "source_type": "技能", "unlock_level": 1, "sort_order": 0}],
     }
-    pets = {
-        "火火": {
-            "主属性": "火", "2属性": "", "特性": "诈死", "特性描述": "力竭不扣MP",
-            "生命": 100, "物攻": 80, "魔攻": 100, "物防": 70, "魔防": 70, "速度": 90,
-            "技能": ["火花"], "技能解锁等级": ["1"], "血脉技能": [], "可学技能石": [],
-        },
-        "地地": {
-            "主属性": "地面系", "2属性": "", "特性": "", "特性描述": "",
-            "生命": 100, "物攻": 80, "魔攻": 70, "物防": 70, "魔防": 70, "速度": 50,
-            "技能": ["拍击"], "技能解锁等级": ["1"], "血脉技能": [], "可学技能石": [],
-        },
-    }
-    return skills, pets
 
 
 def test_migrate_import_compile_catalog_and_battle(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
-    skills, pets = _sample_data()
-    ability_lookup = import_abilities(conn, pets)
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
     skill_lookup = import_skills(conn, skills)
     import_pets(conn, pets, skill_lookup, ability_lookup)
     conn.commit()
@@ -41,6 +64,16 @@ def test_migrate_import_compile_catalog_and_battle(tmp_path: Path):
     assert catalog.pets_by_name["地地"].types == ("地", "")
     assert catalog.skills_by_name["火花"].element == "火"
     assert catalog.skills_by_name["火花"].effects
+    assert catalog.ability_effects[catalog.pets_by_name["火火"].ability_id]
+    assert catalog.ability_effects[catalog.pets_by_name["风风"].ability_id]
+    assert ("未映射", 1) in catalog.unsupported_effect_stats
+    unsupported_rows = conn.execute(
+        "SELECT COUNT(*) FROM ability_effects WHERE tag_code = ?",
+        (EffectTag.UNSUPPORTED.value,),
+    ).fetchone()[0]
+    gap_rows = conn.execute("SELECT COUNT(*) FROM effect_gaps WHERE source_name = '未映射'").fetchone()[0]
+    assert unsupported_rows == 0
+    assert gap_rows == 1
 
     engine = BattleEngine(
         [catalog.build_pet("火火")],
@@ -49,20 +82,77 @@ def test_migrate_import_compile_catalog_and_battle(tmp_path: Path):
     engine.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
     assert engine.state.turn_number == 1
     assert engine.state.log
+
+    boosted = BattleEngine([catalog.build_pet("风风")], [catalog.build_pet("地地")])
+    boosted.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
+    boosted_damage = next(ev.detail["damage"] for ev in boosted.state.log if ev.actor == "风风" and ev.action == "attack")
+
+    plain = BattleEngine([catalog.build_pet("风空")], [catalog.build_pet("地地")])
+    plain.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
+    plain_damage = next(ev.detail["damage"] for ev in plain.state.log if ev.actor == "风空" and ev.action == "attack")
+
+    assert boosted_damage > plain_damage
     conn.close()
 
 
 def test_import_rejects_legacy_structured_elements(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
     with pytest.raises(ValueError):
-        import_skills(conn, {
-            "旧属性技能": {"技能名称": "旧属性技能", "属性": "钢", "技能类别": "物攻", "耗能": 1, "威力": 1, "效果": ""}
-        })
+        import_skills(conn, [{
+            "kind": "skill", "name": "旧属性技能", "element": "钢", "category": "物攻",
+            "energy": 1, "power": 1, "effect_text": "", "flags": 0,
+            "effects": [], "classification": {"status": "ok", "gaps": []},
+        }])
+    conn.close()
+
+
+def test_jsonl_roundtrip_is_one_entity_per_line(tmp_path: Path):
+    path = tmp_path / "skills.jsonl"
+    count = write_jsonl([
+        {"kind": "skill", "name": "火花"},
+        {"kind": "skill", "name": "拍击"},
+    ], path)
+    assert count == 2
+    assert path.read_text(encoding="utf-8").count("\n") == 2
+    assert load_jsonl(path) == [{"kind": "skill", "name": "火花"}, {"kind": "skill", "name": "拍击"}]
+
+
+def test_import_db_does_not_read_legacy_parsed_json():
+    root = Path(__file__).resolve().parents[1]
+    for rel in ("roco/data/import_db.py", "roco/data/build_db.py"):
+        text = (root / rel).read_text(encoding="utf-8")
+        assert "PARSED_DIR" not in text
+        assert "effects.json" not in text
+        assert "_data/parsed" not in text
+        assert ("yin" + "ji") not in text
+
+
+def test_used_effect_gaps_fail_after_team_import(tmp_path: Path):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
+
+    teams = [{
+        "kind": "team",
+        "id": "T1",
+        "title": "gap team",
+        "author": "",
+        "type": "PVP",
+        "bloodline_magic": "",
+        "description": "",
+        "upload_date": "",
+        "pets": [{"slot": 1, "name": "谜谜", "name_short": "谜谜", "bloodline": "", "nature": "", "ivs": [], "moves": ["拍击"]}],
+    }]
+    with pytest.raises(RuntimeError, match="unclassified effect gaps"):
+        import_teams(conn, teams, pet_lookup, skill_lookup)
     conn.close()
 
 
 def test_core_pet_naming_guard():
-    forbidden = ("Persistent" + "Pokemon", "Active" + "Pokemon", "Pokemon")
+    legacy = "Poke" + "mon"
+    forbidden = ("Persistent" + legacy, "Active" + legacy, legacy)
     root = Path(__file__).resolve().parents[1]
     targets = [root / "roco", root / "tests", root / "README.md"]
     offenders: list[str] = []
@@ -75,4 +165,49 @@ def test_core_pet_naming_guard():
             text = path.read_text(encoding="utf-8")
             if any(word in text for word in forbidden):
                 offenders.append(str(path.relative_to(root)))
+    assert offenders == []
+
+
+def test_marks_import_only_audits_source_skills(tmp_path: Path):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    import_pets(conn, pets, skill_lookup, ability_lookup)
+
+    import_marks(conn, [{
+        "kind": "mark",
+        "code": "moisture",
+        "name": "湿润印记",
+        "polarity": "positive",
+        "packed_index": 0,
+        "stacking": "stack_same_mark_replace_same_polarity",
+        "effect_text": "全技能能耗-1。",
+        "effects": [],
+        "mechanism": [],
+        "source_skills": [{"skill": "火花", "description": "自己获得1层湿润印记。"}],
+    }])
+
+    tag_rows = conn.execute(
+        "SELECT COUNT(*) FROM skill_effects WHERE tag_code = ?",
+        (EffectTag.MOISTURE_MARK.value,),
+    ).fetchone()[0]
+    gaps = conn.execute(
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_name = '火花' AND primitive = 'MOISTURE_MARK'"
+    ).fetchone()[0]
+    assert tag_rows == 0
+    assert gaps == 1
+    conn.close()
+
+
+def test_no_legacy_mark_engineering_name_guard():
+    root = Path(__file__).resolve().parents[1]
+    offenders: list[str] = []
+    for base in (root / "roco", root / "tests"):
+        for path in base.rglob("*.py"):
+            if "__pycache__" not in path.parts and path.name != Path(__file__).name:
+                text = path.read_text(encoding="utf-8")
+                legacy = "yin" + "ji"
+                if legacy in text or legacy.upper() in text:
+                    offenders.append(str(path.relative_to(root)))
     assert offenders == []

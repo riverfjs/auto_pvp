@@ -108,6 +108,18 @@ CREATE TABLE IF NOT EXISTS ability_effects (
 );
 CREATE INDEX IF NOT EXISTS idx_ability_effects_ability ON ability_effects(ability_id);
 
+CREATE TABLE IF NOT EXISTS effect_gaps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_type TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    primitive TEXT NOT NULL,
+    timing_code INTEGER,
+    params_json TEXT NOT NULL DEFAULT '{}',
+    reason TEXT NOT NULL DEFAULT '',
+    used_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_effect_gaps_source ON effect_gaps(source_type, source_name);
+
 CREATE TABLE IF NOT EXISTS statuses (
     id INTEGER PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
@@ -120,8 +132,21 @@ CREATE TABLE IF NOT EXISTS marks (
     code TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL UNIQUE,
     packed_index INTEGER NOT NULL UNIQUE,
-    polarity TEXT NOT NULL
+    polarity TEXT NOT NULL,
+    stacking TEXT NOT NULL DEFAULT '',
+    effect_text TEXT DEFAULT '',
+    mechanism_json TEXT NOT NULL DEFAULT '[]',
+    effects_json TEXT NOT NULL DEFAULT '[]'
 );
+
+CREATE TABLE IF NOT EXISTS mark_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mark_id INTEGER NOT NULL REFERENCES marks(id) ON DELETE CASCADE,
+    skill_name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    UNIQUE(mark_id, skill_name, description)
+);
+CREATE INDEX IF NOT EXISTS idx_mark_sources_skill ON mark_sources(skill_name);
 
 CREATE TABLE IF NOT EXISTS weathers (
     id INTEGER PRIMARY KEY,
@@ -181,10 +206,10 @@ DROP_ORDER = (
     "teams",
     "weather_effects",
     "weathers",
+    "mark_sources",
     "marks",
     "statuses",
-    "yinji_skills",
-    "yinji",
+    "effect_gaps",
     "ability_effects",
     "skill_effects",
     "pet_skills",
@@ -217,20 +242,21 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
         ],
     )
     conn.executemany(
-        "INSERT OR IGNORE INTO marks (id, code, name, packed_index, polarity) VALUES (?, ?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO marks (id, code, name, packed_index, polarity, stacking) VALUES (?, ?, ?, ?, ?, ?)",
         [
-            (0, "moisture", "湿润印记", 0, "positive"),
-            (1, "dragon", "龙噬印记", 1, "positive"),
-            (2, "charge", "蓄电印记", 2, "positive"),
-            (3, "wind", "风起印记", 3, "positive"),
-            (4, "electric", "电荷印记", 4, "positive"),
-            (5, "solar", "光合印记", 5, "positive"),
-            (6, "attack", "攻击印记", 6, "positive"),
-            (7, "slow", "减速印记", 7, "negative"),
-            (8, "spirit", "降灵印记", 8, "negative"),
-            (9, "meteor", "星陨印记", 9, "negative"),
-            (10, "poison", "中毒印记", 10, "negative"),
-            (11, "thorn", "荆刺印记", 11, "negative"),
+            (0, "moisture", "湿润印记", 0, "positive", "stack_same_mark_replace_same_polarity"),
+            (1, "dragon", "龙噬印记", 1, "positive", "stack_same_mark_replace_same_polarity"),
+            (2, "momentum", "蓄势印记", 2, "positive", "stack_same_mark_replace_same_polarity"),
+            (3, "wind", "风起印记", 3, "positive", "stack_same_mark_replace_same_polarity"),
+            (4, "charge", "蓄电印记", 4, "positive", "stack_same_mark_replace_same_polarity"),
+            (5, "solar", "光合印记", 5, "positive", "stack_same_mark_replace_same_polarity"),
+            (6, "attack", "攻击印记", 6, "positive", "stack_same_mark_replace_same_polarity"),
+            (7, "slow", "减速印记", 7, "negative", "stack_same_mark_replace_same_polarity"),
+            (8, "spirit", "降灵印记", 8, "negative", "stack_same_mark_replace_same_polarity"),
+            (9, "meteor", "星陨印记", 9, "negative", "stack_same_mark_replace_same_polarity"),
+            (10, "poison", "中毒印记", 10, "negative", "stack_same_mark_replace_same_polarity"),
+            (11, "thorn", "棘刺印记", 11, "negative", "stack_same_mark_replace_same_polarity"),
+            (12, "sluggish", "迟缓印记", 12, "positive", "stack_same_mark_replace_same_polarity"),
         ],
     )
     conn.executemany(

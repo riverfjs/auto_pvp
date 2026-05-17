@@ -43,7 +43,6 @@ def register_cute_handlers(bus: "EventBus") -> None:
         if pet.current_hp <= 0:
             pet.current_hp = 1
             pet.cute -= 5  # consume 5 stacks
-            ctx.data["_cute_saved"] = True
 
     bus.on(GameEvent.KILL, on_kill_transfer, priority=80, source="cute")
     bus.on(GameEvent.BEFORE_MOVE, on_before_move, priority=35, source="cute")

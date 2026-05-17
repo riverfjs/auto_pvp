@@ -1,12 +1,12 @@
-"""Fetch all PVP/PVE team data via Semantic MediaWiki ask API (one query).
+"""Fetch all PVP/PVE team data via Semantic MediaWiki ask API as JSONL.
 
-Output: _data/raw/teams_raw.json
+Output: _data/raw/teams_raw.jsonl
 
 Usage:
     python scripts/fetch_teams.py
 """
 
-from roco.data.utils import API_BASE, RAW_DIR, save_json, api_get
+from roco.data.utils import API_BASE, RAW_DIR, write_jsonl, api_get
 
 # All relevant SMW properties — fetched in a single ask query
 PROPS = [
@@ -35,7 +35,7 @@ PROP_STR = "|?" + "|?".join(PROPS)
 QUERY = f"[[分类:精灵阵容]]{PROP_STR}|limit=500|sort=阵容上传日期|order=desc"
 
 
-def fetch_teams() -> dict:
+def fetch_teams() -> list[dict]:
     """Fetch all teams via SMW ask. Returns raw printouts dict."""
     params = {
         "action": "ask",
@@ -45,14 +45,23 @@ def fetch_teams() -> dict:
     data = api_get(params, use_post=True)
     results = data.get("query", {}).get("results", {})
     print(f"Fetched {len(results)} teams")
-    return results
+    return [
+        {
+            "kind": "team_raw",
+            "page_id": page_id,
+            "fulltext": raw_team.get("fulltext", ""),
+            "fullurl": raw_team.get("fullurl", ""),
+            "printouts": raw_team.get("printouts", {}),
+        }
+        for page_id, raw_team in results.items()
+    ]
 
 
 def main() -> None:
-    raw = fetch_teams()
-    out = RAW_DIR / "teams_raw.json"
-    save_json(raw, out)
-    print(f"Saved → {out}")
+    records = fetch_teams()
+    out = RAW_DIR / "teams_raw.jsonl"
+    count = write_jsonl(records, out)
+    print(f"Saved {count} rows -> {out}")
 
 
 if __name__ == "__main__":

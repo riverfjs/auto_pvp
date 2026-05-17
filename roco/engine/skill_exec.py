@@ -1,37 +1,43 @@
-"""Phase-based skill execution — works with ActivePet and packed bitfields."""
+"""Explicit move pipeline driven by compiled effect rows."""
 
 from __future__ import annotations
 
+from roco.config.constants import COUNTER_DAMAGE_BONUS
 from roco.engine.damage import (
-    calc_attack_damage, get_type_multiplier, get_stab,
-    energy_after_use, can_use_skill,
+    calc_attack_damage,
+    can_use_skill,
+    energy_after_use,
+    get_stab,
+    get_type_multiplier,
 )
-from roco.engine.state import (
-    ActivePet, SkillData, SkillCategory, BattleEvent, BattleState,
-    EffectFlag, WeatherType, Element,
-    _pack_cooldown, _unpack_cooldown, _inc_skill_count,
-)
-from roco.config.constants import COUNTER_DAMAGE_BONUS, MAX_ENERGY
+from roco.engine.effect_exec import run_skill_effects
+from roco.engine.effect_model import EffectFlag, Timing
+from roco.engine.enums import Element, SkillCategory, WeatherType
+from roco.engine.events import EventCtx, GameEvent
+from roco.engine.packing import _cooldown_at, _inc_skill_count, _set_cooldown
+from roco.engine.state import ActivePet, BattleEvent, BattleState, SkillData, record_event
+from roco.systems.marks import apply_marks_to_attack_power, apply_marks_to_skill_cost, calc_meteor_extra_damage
 from roco.systems.weather import weather_damage_mult
-from roco.systems.marks import apply_marks_to_skill_cost, apply_marks_to_attack_power, calc_meteor_extra_damage
+
+
+_bus_instance = None
+
+
+def set_bus(bus) -> None:
+    global _bus_instance
+    _bus_instance = bus
+
+
+def _get_bus():
+    if _bus_instance is None:
+        raise RuntimeError("EventBus not set")
+    return _bus_instance
 
 
 def get_skill_category(pet: ActivePet, skill_index: int) -> SkillCategory:
     if skill_index < 0 or skill_index >= len(pet.persistent.moves):
         return SkillCategory.PHYSICAL
     return pet.persistent.moves[skill_index].category
-
-
-_bus_instance = None
-def set_bus(bus): global _bus_instance; _bus_instance = bus
-def _get_bus():
-    if _bus_instance is None: raise RuntimeError("EventBus not set")
-    return _bus_instance
-
-
-def _emit(bus, event_name, state, actor, target, data):
-    from roco.engine.events import GameEvent, EventCtx
-    return bus.emit(EventCtx(getattr(GameEvent, event_name), state, actor=actor, target=target, data=data))
 
 
 def execute_move(
@@ -42,45 +48,85 @@ def execute_move(
     countered: bool = False,
     *,
     team: str | None = None,
-):
+    first_strike: bool = False,
+) -> int:
     moves = attacker.persistent.moves
-    if skill_index < 0 or skill_index >= len(moves): return 0
+    if skill_index < 0 or skill_index >= len(moves):
+        return 0
+
     skill = moves[skill_index]
+    if not skill.effects:
+        raise ValueError(f"skill has no compiled effect rows: {skill.name}")
 
-    cds = _unpack_cooldown(attacker.cooldowns)
-    if cds.get(skill_index, 0) > 0: return 0
+    if _cooldown_at(attacker.cooldowns, skill_index) > 0:
+        return 0
 
-    exec_skill = skill; exec_index = skill_index
+    exec_skill = skill
+    exec_index = skill_index
     if attacker.charging_skill >= 0:
-        ci = attacker.charging_skill; attacker.charging_skill = -1
-        if ci < len(moves): exec_skill = moves[ci]; exec_index = ci
+        charged = attacker.charging_skill
+        attacker.charging_skill = -1
+        if charged < len(moves):
+            exec_skill = moves[charged]
+            exec_index = charged
 
     bus = _get_bus()
     team = team or ("a" if attacker in state.team_a else "b")
     marks = state.marks_a if team == "a" else state.marks_b
-    base_cost = apply_marks_to_skill_cost(exec_skill.energy + attacker._cost_mod, marks)
+    base_cost = apply_marks_to_skill_cost(
+        exec_skill.energy + attacker._cost_mod,
+        marks,
+        is_attack=exec_skill.category in (SkillCategory.PHYSICAL, SkillCategory.MAGICAL),
+    )
 
-    ctx = _emit(bus, "PRE_USE", state, attacker, defender,
-                {"skill": exec_skill, "countered": countered, "skill_index": exec_index,
-                 "team": team, "cost": base_cost})
-    if ctx.cancelled: return 0
-    cost = max(0, int(ctx.data.get("cost", base_cost)) + ctx.energy_delta)
-    if not can_use_skill(attacker.current_energy, cost): return 0
+    before = EventCtx(
+        GameEvent.BEFORE_MOVE,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=exec_skill,
+        skill_index=exec_index,
+        team=team,
+        cost=base_cost,
+        countered=countered,
+        first_strike=first_strike,
+    )
+    bus.emit(before)
+    run_skill_effects(before, Timing.BEFORE_MOVE)
+    if before.cancelled:
+        return 0
+
+    cost = max(0, before.cost + before.energy_delta)
+    if state.weather_type is WeatherType.SANDSTORM and exec_skill.element == "地":
+        cost = cost // 2
+    if not can_use_skill(attacker.current_energy, cost):
+        return 0
 
     attacker.current_energy = energy_after_use(attacker.current_energy, cost)
-    attacker._power_mod *= ctx.power_mod
+    attacker._power_mod *= before.power_mod
     _record_skill_use(state, team, exec_skill)
 
     damage = 0
     if exec_skill.category in (SkillCategory.PHYSICAL, SkillCategory.MAGICAL):
-        damage = _calc_and_apply(attacker, defender, exec_skill, state, countered, bus, ctx.data)
+        damage = _run_damage_pipeline(attacker, defender, exec_skill, state, countered, first_strike, bus)
 
-    _emit(bus, "POST_USE", state, attacker, defender,
-          {"skill": exec_skill, "countered": countered, "damage": damage, "team": team})
+    after = EventCtx(
+        GameEvent.AFTER_MOVE,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=exec_skill,
+        skill_index=exec_index,
+        team=team,
+        damage=damage,
+        countered=countered,
+        first_strike=first_strike,
+    )
+    run_skill_effects(after, Timing.AFTER_MOVE)
+    bus.emit(after)
 
     if exec_skill.effect_flags & EffectFlag.COUNTER:
-        cds[exec_index] = 2
-    attacker.cooldowns = _pack_cooldown(cds)
+        attacker.cooldowns = _set_cooldown(attacker.cooldowns, exec_index, 2)
     return damage
 
 
@@ -103,58 +149,163 @@ def _weather_key(weather: WeatherType) -> str | None:
     }.get(weather)
 
 
-def _calc_and_apply(attacker: ActivePet, defender: ActivePet,
-                    skill: SkillData, state: BattleState, countered: bool, bus,
-                    pipeline_data: dict) -> int:
-    phys = skill.category == SkillCategory.PHYSICAL
-    atk = float(attacker.atk_phys if phys else attacker.atk_mag)
-    dfn = float(defender.def_phys if phys else defender.def_mag)
+def _run_damage_pipeline(
+    attacker: ActivePet,
+    defender: ActivePet,
+    skill: SkillData,
+    state: BattleState,
+    countered: bool,
+    first_strike: bool,
+    bus,
+) -> int:
+    hit = EventCtx(
+        GameEvent.CHECK_HIT,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=skill,
+        countered=countered,
+        first_strike=first_strike,
+    )
+    bus.emit(hit)
+    run_skill_effects(hit, Timing.CHECK_HIT)
+    if hit.cancelled:
+        bus.emit(EventCtx(GameEvent.MOVE_MISS, state, actor=attacker, target=defender, skill=skill))
+        return 0
 
-    type_mult = 1.0 if pipeline_data.get("_barrel") else get_type_multiplier(skill.element, defender.elements)
-    stab = get_stab(skill.element, attacker.elements[0])
-    weather_mult = weather_damage_mult(skill.element, _weather_key(state.weather_type))
+    calc = EventCtx(
+        GameEvent.CALC_DAMAGE,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=skill,
+        countered=countered,
+        first_strike=first_strike,
+        barrel=hit.barrel,
+        power_bonus=attacker.next_power_bonus,
+    )
+    bus.emit(calc)
+    run_skill_effects(calc, Timing.CALC_DAMAGE)
 
-    atk_marks = state.marks_a if attacker in state.team_a else state.marks_b
-    mark_buff = apply_marks_to_attack_power(skill.power, skill.element, atk_marks, attacker.elements[0])
-    counter_buff = COUNTER_DAMAGE_BONUS if countered else 1.0
-    env_mod = attacker._power_mod
-    power_buff = mark_buff * counter_buff * (attacker.power_mult / 100.0) * env_mod
-
-    damage = calc_attack_damage(skill.power, atk, dfn, type_mult,
-        stab=stab, weather=weather_mult, hit_count=skill.hit_count, power_buff=power_buff)
-
-    dfn_marks = state.marks_b if defender in state.team_b else state.marks_a
-    if skill.element != "幻":
-        meteor = calc_meteor_extra_damage(dfn_marks)
-        if meteor > 0: damage += meteor
+    base_damage, detail = _calculate_damage(attacker, defender, skill, state, countered, calc)
+    adjust = EventCtx(
+        GameEvent.ADJUST_DAMAGE,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=skill,
+        damage=base_damage,
+        countered=countered,
+        first_strike=first_strike,
+        barrel=calc.barrel,
+    )
+    bus.emit(adjust)
+    run_skill_effects(adjust, Timing.ADJUST_DAMAGE)
+    damage = max(0, int(adjust.damage * adjust.damage_mult))
 
     reduction = defender._defense_reduction
-    if reduction > 0:
+    if reduction > 0 and damage > 0:
         damage = max(1, int(damage * (1.0 - reduction)))
         defender._defense_reduction = 0.0
 
+    apply = EventCtx(
+        GameEvent.APPLY_DAMAGE,
+        state,
+        actor=attacker,
+        target=defender,
+        skill=skill,
+        damage=damage,
+        countered=countered,
+        first_strike=first_strike,
+    )
+    bus.emit(apply)
+    run_skill_effects(apply, Timing.APPLY_DAMAGE)
+    damage = max(0, int(apply.damage * apply.damage_mult))
+
     defender.current_hp = max(0, defender.current_hp - damage)
+    if attacker.next_power_bonus or attacker.next_power_pct_bps:
+        attacker.next_power_bonus = 0
+        attacker.next_power_pct_bps = 0
     attacker._power_mod = 1.0
 
-    state.log.append(BattleEvent(
-        turn=state.turn_number, actor=attacker.persistent.name, action="attack",
-        detail={"move": skill.name, "damage": damage, "target": defender.persistent.name,
-                "type_mult": type_mult, "stab": stab, "countered": countered,
-                "target_hp_pct": round(defender.hp_pct * 100, 1)}))
+    record_event(state, BattleEvent(
+        turn=state.turn_number,
+        actor=attacker.persistent.name,
+        action="attack",
+        detail={
+            "move": skill.name,
+            "damage": damage,
+            "target": defender.persistent.name,
+            "countered": countered,
+            "target_hp_pct": round(defender.hp_pct * 100, 1),
+            **detail,
+        },
+    ))
 
-    _emit(bus, "ON_DAMAGE", state, attacker, defender,
-          {"skill": skill, "damage": damage, "countered": countered})
-    _emit(bus, "TAKE_DAMAGE", state, defender, attacker,
-          {"skill": skill, "damage": damage, "countered": countered})
+    take = EventCtx(
+        GameEvent.TAKE_DAMAGE,
+        state,
+        actor=defender,
+        target=attacker,
+        skill=skill,
+        damage=damage,
+        countered=countered,
+        first_strike=first_strike,
+    )
+    bus.emit(take)
+    run_skill_effects(take, Timing.TAKE_DAMAGE)
     return damage
 
 
-def register_skill_handlers(bus):
+def _calculate_damage(
+    attacker: ActivePet,
+    defender: ActivePet,
+    skill: SkillData,
+    state: BattleState,
+    countered: bool,
+    ctx: EventCtx,
+) -> tuple[int, dict]:
+    phys = skill.category == SkillCategory.PHYSICAL
+    atk = float(attacker.atk_phys if phys else attacker.atk_mag)
+    dfn = float(defender.def_phys if phys else defender.def_mag)
+    type_mult = 1.0 if ctx.barrel else get_type_multiplier(skill.element, defender.elements)
+    stab = get_stab(skill.element, attacker.elements[0])
+    weather_mult = weather_damage_mult(skill.element, _weather_key(state.weather_type))
+    atk_marks = state.marks_a if attacker in state.team_a else state.marks_b
+    mark_buff = apply_marks_to_attack_power(
+        skill.power,
+        skill.element,
+        atk_marks,
+        attacker.elements[0],
+        first_strike=ctx.first_strike,
+        base_energy=skill.energy,
+    )
+    counter_buff = COUNTER_DAMAGE_BONUS if countered else 1.0
+    power_buff = mark_buff * counter_buff * (attacker.power_mult / 100.0) * attacker._power_mod * ctx.power_mod
+
+    power = max(0, skill.power + ctx.power_bonus)
+    hit_count = max(1, int((skill.hit_count + ctx.hit_count_delta) * ctx.hit_count_mult))
+    next_pct = 1.0 + attacker.next_power_pct_bps / 10000.0
+
+    damage = calc_attack_damage(
+        power,
+        atk,
+        dfn,
+        type_mult,
+        stab=stab,
+        weather=weather_mult,
+        hit_count=hit_count,
+        power_buff=power_buff * next_pct,
+    )
+    dfn_marks = state.marks_b if defender in state.team_b else state.marks_a
+    if skill.element != "幻":
+        damage += calc_meteor_extra_damage(dfn_marks)
+    damage = int(damage * ctx.damage_mult)
+    return damage, {"type_mult": type_mult, "stab": stab}
+
+
+def register_skill_handlers(bus) -> None:
     set_bus(bus)
     import importlib
-    for mod_name in [
-        "roco.systems.skill_pre_use", "roco.systems.skill_on_damage",
-        "roco.systems.skill_post_use", "roco.systems.skill_leech",
-        "roco.systems.skill_counter",
-    ]:
-        importlib.import_module(mod_name).register(bus)
+
+    importlib.import_module("roco.systems.skill_leech").register(bus)

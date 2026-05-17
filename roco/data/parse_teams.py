@@ -1,13 +1,13 @@
-"""Parse raw SMW team data into English-keyed structured JSON.
+"""Parse raw SMW team JSONL into canonical team JSONL.
 
-Output: _data/parsed/teams.json  →  {team_id: {title, author, pets: [...]}}
+Output: _data/canonical/teams.jsonl
 
 Usage:
     python scripts/parse_teams.py
 """
 
 import re
-from roco.data.utils import RAW_DIR, PARSED_DIR, load_json, save_json
+from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, write_jsonl
 
 # Mapping: SMW printout key → English field name (used as flat key in raw data)
 SMW_TO_EN = {
@@ -69,6 +69,7 @@ def parse_one(raw_team: dict) -> dict | None:
 
     team["pets"] = pets
     team["team_url"] = raw_team.get("fullurl", "")
+    team["kind"] = "team"
     return team
 
 
@@ -77,26 +78,25 @@ def _parse_csv(val: str) -> list[str]:
 
 
 def main() -> None:
-    raw_path = RAW_DIR / "teams_raw.json"
+    raw_path = RAW_DIR / "teams_raw.jsonl"
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_teams.py first.")
         return
 
-    raw: dict[str, dict] = load_json(raw_path)
-    teams: dict[str, dict] = {}
+    teams: list[dict] = []
     errors: list[str] = []
 
-    for page_id, raw_team in raw.items():
+    for raw_team in iter_jsonl(raw_path):
+        page_id = str(raw_team.get("page_id", ""))
         team = parse_one(raw_team)
         if team is None:
             errors.append(page_id)
         else:
-            tid = team["id"]
-            teams[tid] = team
+            teams.append(team)
 
-    out_path = PARSED_DIR / "teams.json"
-    save_json(teams, out_path)
-    print(f"Parsed {len(teams)} teams → {out_path}")
+    out_path = CANONICAL_DIR / "teams.jsonl"
+    count = write_jsonl(teams, out_path)
+    print(f"Parsed {count} teams -> {out_path}")
     if errors:
         print(f"Skipped ({len(errors)}): {', '.join(errors[:5])}")
 

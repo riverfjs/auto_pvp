@@ -1,9 +1,9 @@
-"""Fetch all pet / skill / yinji page titles.
+"""Fetch all pet / skill / mark page titles as JSONL records.
 
 Usage:
     python scripts/fetch_index.py pets
     python scripts/fetch_index.py skills
-    python scripts/fetch_index.py yinji
+    python scripts/fetch_index.py marks
     python scripts/fetch_index.py all
 """
 
@@ -12,15 +12,15 @@ import sys
 from roco.data.utils import (
     CATEGORY_PETS,
     CATEGORY_SKILLS,
-    YINJI_SOURCE_PAGE,
+    MARK_SOURCE_PAGE,
     INDEX_DIR,
     fetch_category_members,
     fetch_page_wikitext,
-    save_json,
+    write_jsonl,
 )
 
 # Matches [[印记名称]] links in the 印记 source page
-YINJI_LINK_RE = re.compile(r"\[\[([^\]]+?)\]\]")
+MARK_LINK_RE = re.compile(r"\[\[([^\]]+?)\]\]")
 
 
 def fetch_pets() -> list[str]:
@@ -37,39 +37,43 @@ def fetch_skills() -> list[str]:
     return titles
 
 
-def fetch_yinji() -> list[str]:
-    print(f"Fetching yinji list from page [[{YINJI_SOURCE_PAGE}]] ...")
-    text = fetch_page_wikitext(YINJI_SOURCE_PAGE)
+def fetch_marks() -> list[str]:
+    print(f"Fetching mark list from page [[{MARK_SOURCE_PAGE}]] ...")
+    text = fetch_page_wikitext(MARK_SOURCE_PAGE)
     # Extract all [[link]] targets that contain "印记"
     names: list[str] = []
     seen = set()
-    for match in YINJI_LINK_RE.finditer(text):
+    for match in MARK_LINK_RE.finditer(text):
         name = match.group(1).strip()
         if "印记" in name and name not in seen:
             seen.add(name)
             names.append(name)
-    print(f"  -> {len(names)} yinji found")
+    print(f"  -> {len(names)} marks found")
     return names
 
 
 def main() -> None:
     targets = sys.argv[1:] if len(sys.argv) > 1 else ["all"]
     if "all" in targets:
-        targets = ["pets", "skills", "yinji"]
+        targets = ["pets", "skills", "marks"]
 
     for target in targets:
         if target == "pets":
             titles = fetch_pets()
-            save_json(titles, INDEX_DIR / "pets.json")
         elif target == "skills":
             titles = fetch_skills()
-            save_json(titles, INDEX_DIR / "skills.json")
-        elif target == "yinji":
-            titles = fetch_yinji()
-            save_json(titles, INDEX_DIR / "yinji.json")
+        elif target == "marks":
+            titles = fetch_marks()
         else:
-            print(f"Unknown target: {target} (use pets / skills / yinji / all)")
+            print(f"Unknown target: {target} (use pets / skills / marks / all)")
             sys.exit(1)
+        records = (
+            {"kind": "index", "target": target, "title": title, "sort_order": i}
+            for i, title in enumerate(titles)
+        )
+        out_path = INDEX_DIR / f"{target}.jsonl"
+        count = write_jsonl(records, out_path)
+        print(f"Saved {count} index rows -> {out_path}")
 
     print("Done.")
 

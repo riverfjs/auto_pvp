@@ -103,12 +103,17 @@ class TestEventBus:
         ctx = EventCtx(GameEvent.TURN_START, state=None)
         assert ctx.actor is None
         assert ctx.target is None
-        assert ctx.data == {}
         assert ctx.cancelled is False
         assert ctx.damage_mult == 1.0
         assert ctx.heal_mult == 1.0
         assert ctx.power_mod == 1.0
         assert ctx.energy_delta == 0
+
+    def test_handlers_are_stored_as_fixed_event_table(self):
+        bus = EventBus()
+        bus.on(GameEvent.TURN_START, lambda c: None, source="a")
+        assert isinstance(bus._handlers, tuple)
+        assert isinstance(bus._handlers[GameEvent.TURN_START.value], tuple)
 
     def test_multiple_emit_same_context(self):
         bus = EventBus()

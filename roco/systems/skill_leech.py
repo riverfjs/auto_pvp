@@ -4,7 +4,7 @@ from roco.engine.events import GameEvent, EventCtx
 
 def register(bus):
     def h(ctx):
-        for pet in ctx.state.team_a + ctx.state.team_b:
+        for pet in (ctx.state.team_a[ctx.state.active_a], ctx.state.team_b[ctx.state.active_b]):
             if pet.is_fainted or not pet.leech_source: continue
             stacks = pet.get_status_count(StatusType.LEECH)
             if stacks <= 0: continue

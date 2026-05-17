@@ -54,26 +54,24 @@ def register_weather_handlers(bus: "EventBus") -> None:
         if weather is WeatherType.NONE:
             return
 
-        # Weather duration
-        if state.weather_turns > 0:
-            state.weather_turns -= 1
-            if state.weather_turns <= 0:
-                state.weather = 0
-                return
-
         if weather is WeatherType.SANDSTORM:
-            for pet in state.team_a + state.team_b:
+            for pet in (state.team_a[state.active_a], state.team_b[state.active_b]):
                 if pet.is_fainted or any(is_sandstorm_immune(elem) for elem in pet.elements):
                     continue
                 dmg = sandstorm_chip_damage(pet.max_hp)
                 pet.current_hp = max(0, pet.current_hp - dmg)
         elif weather is WeatherType.SNOW:
-            for pet in state.team_a + state.team_b:
+            for pet in (state.team_a[state.active_a], state.team_b[state.active_b]):
                 if pet.is_fainted:
                     continue
                 frost = snow_frostbite_damage(pet.max_hp)
                 pet.frostbite += frost
                 pet.status_flags |= StatusFlag.FREEZE
                 pet.set_status_count(StatusType.FREEZE, pet.get_status_count(StatusType.FREEZE) + 2)
+
+        if state.weather_turns > 0:
+            state.weather_turns -= 1
+            if state.weather_turns <= 0:
+                state.weather = 0
 
     bus.on(GameEvent.TURN_END, weather_tick, priority=250, source="weather")

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import random
+
 from roco.engine.damage import energy_after_gain, can_use_skill
 from roco.engine.state import (
     ActivePet, PersistentPet, SkillData, SkillCategory,
     BattleEvent as BEvent, MoveDecision, BattleState,
     StatusFlag, StatusType, AbilityFlag,
-    _pack_cooldown, _unpack_cooldown,
+    _cooldown_at, _tick_cooldowns,
+    record_event,
 )
 from roco.engine.events import EventBus, EventCtx, GameEvent
 from roco.config.constants import STARTING_ENERGY, DEFAULT_MAX_TURNS
@@ -17,8 +20,9 @@ from roco.systems.counter import resolve_counter
 
 class BattleEngine:
     def __init__(self, team_a: list[PersistentPet], team_b: list[PersistentPet],
-                 max_turns: int = DEFAULT_MAX_TURNS):
+                 max_turns: int = DEFAULT_MAX_TURNS, rng_seed: int | None = 0):
         self.max_turns = max_turns
+        self.rng = random.Random(rng_seed)
         if not team_a or not team_b:
             raise ValueError("Both teams must have at least 1 pet")
 
@@ -42,7 +46,7 @@ class BattleEngine:
         for pet in act_a + act_b:
             self.bus.emit(EventCtx(GameEvent.PASSIVE, self.state, actor=pet))
         for team, pet in (("a", act_a[0]), ("b", act_b[0])):
-            self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet, data={"team": team}))
+            self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=pet, team=team))
 
     def _init_systems(self):
         import importlib
@@ -72,27 +76,36 @@ class BattleEngine:
         ) else 1
         if is_a: self.state.magic_a = max(0, self.state.magic_a - cost)
         else: self.state.magic_b = max(0, self.state.magic_b - cost)
-        self.state.log.append(BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="faint",
+        record_event(self.state, BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="faint",
             detail={"magic_cost": cost, "magic_remaining": self.state.magic_a if is_a else self.state.magic_b}))
 
     def _on_turn_end_status(self, ctx: EventCtx):
         from roco.engine.damage import calc_burn_damage, burn_decay, calc_poison_damage, get_type_multiplier
-        for pet in self.state.team_a + self.state.team_b:
+        active_pairs = (
+            (self.state.team_a[self.state.active_a], self.state.team_b[self.state.active_b]),
+            (self.state.team_b[self.state.active_b], self.state.team_a[self.state.active_a]),
+        )
+        for pet, enemy in active_pairs:
             if pet.is_fainted: continue
             if pet.has_status(StatusFlag.BURN):
                 s = pet.get_status_count(StatusType.BURN)
                 dmg = calc_burn_damage(pet.max_hp, s, get_type_multiplier("火", pet.elements), mid_turn=False)
                 pet.current_hp = max(0, pet.current_hp - dmg)
-                pet.set_status_count(StatusType.BURN, burn_decay(s))
+                if enemy.has_ability_flag(AbilityFlag.BURN_NO_DECAY):
+                    pet.set_status_count(StatusType.BURN, s + max(1, s // 2))
+                else:
+                    pet.set_status_count(StatusType.BURN, burn_decay(s))
                 if pet.get_status_count(StatusType.BURN) <= 0:
                     pet.status_flags &= ~StatusFlag.BURN
-                self.state.log.append(BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="status_tick",
+                record_event(self.state, BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="status_tick",
                     detail={"status":"灼烧","damage":dmg,"stacks_before":s}))
             if pet.has_status(StatusFlag.POISON):
                 s = pet.get_status_count(StatusType.POISON)
                 dmg = calc_poison_damage(pet.max_hp, s)
                 pet.current_hp = max(0, pet.current_hp - dmg)
-                self.state.log.append(BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="status_tick",
+                if enemy.has_ability_flag(AbilityFlag.EXTRA_POISON_TICK):
+                    pet.current_hp = max(0, pet.current_hp - dmg)
+                record_event(self.state, BEvent(turn=self.state.turn_number, actor=pet.persistent.name, action="status_tick",
                     detail={"status":"中毒","damage":dmg}))
             if pet.current_hp <= 0:
                 self._handle_faint(pet)
@@ -118,17 +131,18 @@ class BattleEngine:
 
         a_cat, b_cat = self._cat(a_pet, move_a), self._cat(b_pet, move_b)
         a_ctr, b_ctr = resolve_counter(a_cat, b_cat)
-        if a_ctr: self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, s, actor=a_pet, target=b_pet, data={"skill": self._skill(a_pet, move_a)}))
-        if b_ctr: self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, s, actor=b_pet, target=a_pet, data={"skill": self._skill(b_pet, move_b)}))
+        if a_ctr: self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, s, actor=a_pet, target=b_pet, skill=self._skill(a_pet, move_a)))
+        if b_ctr: self.bus.emit(EventCtx(GameEvent.COUNTER_SUCCESS, s, actor=b_pet, target=a_pet, skill=self._skill(b_pet, move_b)))
 
         f_pet = a_pet if a_first else b_pet; s_pet = b_pet if a_first else a_pet
         f_mv = move_a if a_first else move_b; s_mv = move_b if a_first else move_a
         f_team = "a" if a_first else "b"; s_team = "b" if a_first else "a"
+        s.last_action_order = (f_team, s_team)
         c1 = (f_team=="a" and b_ctr) or (f_team=="b" and a_ctr)
-        self._exec(f_pet, s_pet, f_mv, f_team, s, c1)
+        self._exec(f_pet, s_pet, f_mv, f_team, s, c1, first_strike=True)
         if not s_pet.is_fainted:
             c2 = (s_team=="a" and b_ctr) or (s_team=="b" and a_ctr)
-            self._exec(s_pet, f_pet, s_mv, s_team, s, c2)
+            self._exec(s_pet, f_pet, s_mv, s_team, s, c2, first_strike=False)
 
         self.bus.emit(EventCtx(GameEvent.TURN_END, s))
         self._check_win(s)
@@ -151,8 +165,8 @@ class BattleEngine:
         if pet.charging_skill >= 0: return [pet.charging_skill]
         marks = self.state.marks_a if team == "a" else self.state.marks_b
         return [i for i, m in enumerate(pet.persistent.moves)
-                if can_use_skill(pet.current_energy, apply_marks_to_skill_cost(m.energy + pet._cost_mod, marks))
-                and (_unpack_cooldown(pet.cooldowns).get(i, 0) <= 0)]
+                if can_use_skill(pet.current_energy, apply_marks_to_skill_cost(m.energy + pet._cost_mod, marks, is_attack=m.category.name in {"PHYSICAL", "MAGICAL"}))
+                and _cooldown_at(pet.cooldowns, i) <= 0]
 
     # ── Internal ────────────────────────────────────────────────
 
@@ -182,21 +196,22 @@ class BattleEngine:
             return a_pri > b_pri
         a_spd = apply_marks_to_speed(a_pet.speed, self.state.marks_a)
         b_spd = apply_marks_to_speed(b_pet.speed, self.state.marks_b)
-        return a_spd >= b_spd
+        if a_spd != b_spd:
+            return a_spd > b_spd
+        return bool(self.rng.getrandbits(1))
 
     @staticmethod
     def _tick_cooldowns(packed: int) -> int:
-        cds = {i: max(0, cd - 1) for i, cd in _unpack_cooldown(packed).items()}
-        return _pack_cooldown({i: cd for i, cd in cds.items() if cd > 0})
+        return _tick_cooldowns(packed)
 
     def _exec(self, actor: ActivePet, target: ActivePet, d: MoveDecision, team: str,
-              state: BattleState, countered: bool):
+              state: BattleState, countered: bool, *, first_strike: bool):
         if actor.is_fainted: return
         if d.action == "switch":
             self._do_switch(actor, d, team, state)
         elif d.action == "move" and d.skill_index is not None:
             from roco.engine.skill_exec import execute_move
-            execute_move(actor, target, d.skill_index, state, countered, team=team)
+            execute_move(actor, target, d.skill_index, state, countered, team=team, first_strike=first_strike)
             if target.current_hp <= 0:
                 self._handle_faint(target)
 
@@ -208,23 +223,24 @@ class BattleEngine:
         new_pet = pets[new_idx]
         if new_pet.is_fainted: return
 
-        self.bus.emit(EventCtx(GameEvent.SWITCH_OUT, state, actor=switcher, data={"team":team}))
+        self.bus.emit(EventCtx(GameEvent.SWITCH_OUT, state, actor=switcher, team=team))
         opp_team = "b" if team == "a" else "a"
         opp_active = state.team_b[state.active_b] if team == "a" else state.team_a[state.active_a]
-        self.bus.emit(EventCtx(GameEvent.ENEMY_SWITCH, state, actor=opp_active, data={"team":opp_team}))
+        self.bus.emit(EventCtx(GameEvent.ENEMY_SWITCH, state, actor=opp_active, team=opp_team))
 
         switcher.reset_volatile()
+        switcher.clear_switch_status()
         switcher.charging_skill = -1
         switcher._defense_reduction = 0
 
-        state.log.append(BEvent(turn=state.turn_number, actor=switcher.persistent.name, action="switch",
+        record_event(state, BEvent(turn=state.turn_number, actor=switcher.persistent.name, action="switch",
             detail={"from":switcher.persistent.name, "to":new_pet.persistent.name}))
 
         if team == "a": state.active_a = new_idx
         else: state.active_b = new_idx
 
         new_pet.current_energy = max(0, new_pet.current_energy)
-        self.bus.emit(EventCtx(GameEvent.SWITCH_IN, state, actor=new_pet, data={"team":team}))
+        self.bus.emit(EventCtx(GameEvent.SWITCH_IN, state, actor=new_pet, team=team))
 
     def _handle_faint(self, pet: ActivePet):
         if pet.is_fainted and pet.current_hp == 0:
@@ -256,10 +272,10 @@ class BattleEngine:
             if i != active_idx and not p.is_fainted:
                 if is_a: self.state.active_a = i
                 else: self.state.active_b = i
-                self.state.log.append(BEvent(turn=self.state.turn_number, actor=p.persistent.name,
+                record_event(self.state, BEvent(turn=self.state.turn_number, actor=p.persistent.name,
                     action="switch", detail={"auto":True,"reason":"faint_replace"}))
                 self.bus.emit(EventCtx(GameEvent.SWITCH_IN, self.state, actor=p,
-                    data={"team":"a" if is_a else "b"}))
+                    team="a" if is_a else "b"))
                 return
 
     def _check_win(self, state: BattleState):

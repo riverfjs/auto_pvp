@@ -16,14 +16,14 @@ if TYPE_CHECKING:
 
 def register_burst_handlers(bus: "EventBus") -> None:
     from roco.engine.events import GameEvent, EventCtx
-    from roco.engine.state import _unpack_burst_entry, _set_burst_entry
+    from roco.engine.state import EffectFlag, _unpack_burst_entry, _set_burst_entry
 
     def on_switch_in(ctx: EventCtx) -> None:
         """Record entry turn for burst tracking, keyed by slot."""
         pet = ctx.actor
         if not pet:
             return
-        team = ctx.data.get("team", "a")
+        team = ctx.team or "a"
         state = ctx.state
         if team == "a":
             state.burst_entry_turn_a = _set_burst_entry(
@@ -35,8 +35,8 @@ def register_burst_handlers(bus: "EventBus") -> None:
     def on_before_move(ctx: EventCtx) -> None:
         """Burst: if this is entry turn (or within burst_extend) and skill has burst tag."""
         pet = ctx.actor
-        skill = ctx.data.get("skill")
-        if not pet or not skill or not skill.burst:
+        skill = ctx.skill
+        if not pet or not skill or not (skill.effect_flags & EffectFlag.BURST):
             return
         state = ctx.state
         team = "a" if pet in state.team_a else "b"
@@ -56,12 +56,12 @@ def register_burst_handlers(bus: "EventBus") -> None:
             # Enemy cost up during burst
             cost_up = pet.burst_enemy_cost_up
             if cost_up > 0:
-                ctx.data["_burst_cost_up"] = cost_up
+                ctx.burst_cost_up = cost_up
 
             # Element cost reduce
             elem_reduce = pet.burst_element_cost_reduce
             if elem_reduce:
-                ctx.data["_burst_elem_reduce"] = elem_reduce
+                ctx.burst_element_reduce = elem_reduce
 
     bus.on(GameEvent.SWITCH_IN, on_switch_in, priority=90, source="burst")
     bus.on(GameEvent.BEFORE_MOVE, on_before_move, priority=45, source="burst")

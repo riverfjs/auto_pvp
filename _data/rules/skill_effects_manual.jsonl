@@ -1,0 +1,2 @@
+{"kind":"skill_effect_rule","name":"飞羽","mode":"extend","effects":[{"timing":"AFTER_MOVE","tag":"AGILITY","params":{},"sort_order":100},{"timing":"AFTER_MOVE","tag":"DISPEL_BUFFS","params":{"target":"enemy","count":1},"sort_order":101}]}
+{"kind":"skill_effect_rule","name":"伺机而动","mode":"extend","effects":[{"timing":"AFTER_MOVE","tag":"NEXT_ATTACK_MOD","params":{"power_bonus":70},"sort_order":100}]}

@@ -92,7 +92,10 @@ def calc_burn_damage(max_hp: int, stacks: int, type_mult: float = 1.0, mid_turn:
     m = 1.0 if mid_turn else type_mult
     return int(hp * stacks * BURN_DAMAGE_PCT * m)
 
-def burn_decay(stacks: int) -> int: return (stacks + 1) // 2
+def burn_decay(stacks: int) -> int:
+    if stacks <= 0:
+        return 0
+    return max(0, stacks - max(1, stacks // 2))
 calc_burn_decay = burn_decay
 
 def calc_poison_damage(max_hp: int, stacks: int) -> int:

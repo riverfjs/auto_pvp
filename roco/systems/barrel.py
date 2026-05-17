@@ -22,7 +22,7 @@ def register_barrel_handlers(bus: "EventBus") -> None:
         from roco.engine.state import AbilityFlag
         if not pet or not pet.has_ability_flag(AbilityFlag.BARREL_ACTIVE):
             return
-        team = ctx.data.get("team", "a")
+        team = ctx.team or "a"
         state = ctx.state
         if team == "a":
             state.barrel_pending_a = True
@@ -34,7 +34,7 @@ def register_barrel_handlers(bus: "EventBus") -> None:
         pet = ctx.actor
         if not pet:
             return
-        team = ctx.data.get("team", "a")
+        team = ctx.team or "a"
         state = ctx.state
         pending = state.barrel_pending_a if team == "a" else state.barrel_pending_b
         if pending:
@@ -51,9 +51,7 @@ def register_barrel_handlers(bus: "EventBus") -> None:
         from roco.engine.state import AbilityFlag
         if not pet or not pet.has_ability_flag(AbilityFlag.BARREL_ACTIVE):
             return
-        # Type effectiveness = 1.0 while barrel is active
-        # (damage calc in skill_exec checks this via ctx.data)
-        ctx.data["_barrel"] = True
+        ctx.barrel = True
 
     def on_after_move(ctx: EventCtx) -> None:
         """Clear barrel after first action."""

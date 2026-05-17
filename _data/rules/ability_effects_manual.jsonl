@@ -1,0 +1,7 @@
+{"kind":"ability_effect_rule","name":"诈死","mode":"replace","effects":[{"timing":"PASSIVE","tag":"FAINT_NO_MP_LOSS","params":{},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"顺风","mode":"replace","effects":[{"timing":"CALC_DAMAGE","tag":"FIRST_STRIKE_POWER_BONUS","params":{"bonus_pct":0.5},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"蓄能","mode":"replace","effects":[{"timing":"TURN_END","tag":"ENERGY_REGEN_PER_TURN","params":{"amount":1},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"木桶戏法","mode":"replace","effects":[{"timing":"SWITCH_OUT","tag":"BARREL_STATE","params":{},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"煤渣草","mode":"replace","effects":[{"timing":"PASSIVE","tag":"BURN_NO_DECAY","params":{},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"加个雪球","mode":"replace","effects":[{"timing":"PASSIVE","tag":"EXTRA_FREEZE_ON_FREEZE","params":{"extra":2},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"复方汤剂","mode":"replace","effects":[{"timing":"PASSIVE","tag":"EXTRA_POISON_TICK","params":{},"sort_order":0}]}

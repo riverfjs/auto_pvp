@@ -1,31 +1,16 @@
-"""Unified event bus for battle hook system.
-
-All game subsystems (weather, marks, skills, abilities, status) register
-handlers on the EventBus. The BattleEngine only emits events — it never
-calls subsystems directly.
-
-Design:
-  - GameEvent: enum of all hook points
-  - EventCtx: data passed to handlers, with mutable modifier fields
-  - EventBus: registration + ordered dispatch
-
-Usage:
-  bus = EventBus()
-  bus.on(GameEvent.AFTER_DAMAGE, my_handler, priority=50, source="skill")
-  ctx = bus.emit(EventCtx(GameEvent.AFTER_DAMAGE, state, actor=attacker))
-"""
+"""Fixed event table for the battle hook system."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum, auto
+from dataclasses import dataclass
+from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from roco.engine.state import ActivePet, BattleState
+    from roco.engine.state import ActivePet, BattleState, SkillData
 
 
-class GameEvent(Enum):
+class GameEvent(IntEnum):
     """All hook points in the battle lifecycle."""
 
     # ── Round-level ──
@@ -69,14 +54,29 @@ class GameEvent(Enum):
     WEATHER_CHANGE = auto()    # weather set or cleared
 
 
-@dataclass
+_EVENT_COUNT = max(event.value for event in GameEvent)
+
+
+@dataclass(slots=True)
 class EventCtx:
     """Context passed to event handlers. Handlers may modify mutable fields."""
     event: GameEvent
-    state: "BattleState"
+    state: "BattleState | None"
     actor: "ActivePet | None" = None
     target: "ActivePet | None" = None
-    data: dict = field(default_factory=dict)
+    skill: "SkillData | None" = None
+    skill_index: int = -1
+    team: str = ""
+    cost: int = 0
+    damage: int = 0
+    countered: bool = False
+    first_strike: bool = False
+    barrel: bool = False
+    burst_cost_up: int = 0
+    burst_element_reduce: str = ""
+    power_bonus: int = 0
+    hit_count_delta: int = 0
+    hit_count_mult: float = 1.0
     cancelled: bool = False
 
     # Mutable modifiers that handlers can adjust
@@ -88,31 +88,31 @@ class EventCtx:
 
 # Handler: (EventCtx) -> None
 EventHandler = Callable[[EventCtx], None]
+HandlerRow = tuple[int, str, EventHandler]
 
 
 class EventBus:
     """Priority-ordered event dispatcher. Lower priority runs first."""
 
     def __init__(self):
-        self._handlers: dict[GameEvent, list[tuple[int, str, EventHandler]]] = {}
+        self._handlers: tuple[tuple[HandlerRow, ...], ...] = tuple(() for _ in range(_EVENT_COUNT + 1))
 
     def on(self, event: GameEvent, handler: EventHandler,
            priority: int = 100, source: str = "unknown") -> None:
         """Register a handler for an event. Lower priority = earlier execution."""
-        self._handlers.setdefault(event, []).append((priority, source, handler))
-        self._handlers[event].sort(key=lambda x: x[0])
+        idx = event.value
+        rows = tuple(sorted(self._handlers[idx] + ((priority, source, handler),), key=lambda row: row[0]))
+        self._handlers = self._handlers[:idx] + (rows,) + self._handlers[idx + 1:]
 
     def off(self, event: GameEvent, source: str) -> None:
         """Remove all handlers from a source for an event."""
-        if event not in self._handlers:
-            return
-        self._handlers[event] = [
-            (p, s, h) for p, s, h in self._handlers[event] if s != source
-        ]
+        idx = event.value
+        rows = tuple(row for row in self._handlers[idx] if row[1] != source)
+        self._handlers = self._handlers[:idx] + (rows,) + self._handlers[idx + 1:]
 
     def emit(self, ctx: EventCtx) -> EventCtx:
         """Fire all handlers for ctx.event in priority order. Returns modified ctx."""
-        for _pri, src, handler in self._handlers.get(ctx.event, []):
+        for _pri, _src, handler in self._handlers[ctx.event.value]:
             if ctx.cancelled:
                 break
             handler(ctx)
@@ -120,10 +120,10 @@ class EventBus:
 
     def clear(self) -> None:
         """Remove all handlers."""
-        self._handlers.clear()
+        self._handlers = tuple(() for _ in range(_EVENT_COUNT + 1))
 
     def handler_count(self, event: GameEvent | None = None) -> int:
         """Count registered handlers. If event is None, count all."""
         if event:
-            return len(self._handlers.get(event, []))
-        return sum(len(v) for v in self._handlers.values())
+            return len(self._handlers[event.value])
+        return sum(len(rows) for rows in self._handlers)
