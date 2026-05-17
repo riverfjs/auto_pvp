@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from roco.data.catalog import compile_catalog
-from roco.data.compile_kernel_catalog import compile_artifacts
+from roco.compiler.artifact import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl

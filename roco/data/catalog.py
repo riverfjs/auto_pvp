@@ -10,9 +10,9 @@ from types import MappingProxyType
 from typing import Any
 
 from roco.data.utils import DB_DIR
-from roco.engine.effect_model import AbilityEffect, EffectSpec, EffectTag, SkillEffect, Timing
+from roco.compiler.effect_model import AbilityEffect, EffectSpec, EffectTag, SkillEffect, Timing
 from roco.engine.enums import SkillCategory, Stats
-from roco.engine.state import (
+from roco.compiler.records import (
     PetData,
     SkillData,
 )

@@ -2,7 +2,7 @@
 
 import pytest
 from roco.engine.enums import Element
-from roco.engine.type_chart import (
+from roco.compiler.type_chart import (
     TYPES,
     CHART,
     STRONG_MULT,

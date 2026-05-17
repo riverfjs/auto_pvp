@@ -1,11 +1,11 @@
 """Tests for import-time skill classification into compiled effects."""
 
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
-from roco.engine.effect_compile import compile_skill_effects
-from roco.engine.effect_model import EffectFlag, EffectTag, Timing
+from roco.compiler.effect_compile import compile_skill_effects
+from roco.compiler.effect_model import EffectFlag, EffectTag, Timing
 from roco.engine.enums import SkillCategory
-from roco.engine.skill_tags import classify
-from roco.engine.state import SkillData
+from roco.compiler.skill_tags import classify
+from roco.compiler.records import SkillData
 
 
 def _compiled(effect: str, name: str = "test", element: str = "普通",

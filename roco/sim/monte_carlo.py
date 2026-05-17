@@ -10,25 +10,19 @@ from typing import NamedTuple
 
 from roco.config.constants import DEFAULT_MAX_TURNS
 from roco.data.utils import DB_DIR
-from roco.engine import catalog_debug as debug
-from roco.engine import catalog_hot as hot
-from roco.engine.battle import BattleEngine
-from roco.engine.kernel import (
-    BPS,
+from roco.engine.generated import catalog_debug as debug
+from roco.engine.generated import catalog_hot as hot
+from roco.engine.facade.battle import BattleEngine
+from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, move_choice, switch_choice
+from roco.engine.kernel.catalog import (
     PET_PRIMARY,
     PET_SECONDARY,
     SKILL_ELEMENT,
     SKILL_ENERGY,
     SKILL_POWER,
 )
-from roco.engine.kernel_state import (
-    SIDE_A,
-    SIDE_B,
-    Choice,
-    KernelState,
-    move_choice,
-    switch_choice,
-)
+from roco.engine.kernel.ctx import BPS
+from roco.engine.kernel.state import KernelState
 
 
 class TeamSpec(NamedTuple):

@@ -1,14 +1,14 @@
 """Import-time static Pet and skill definitions.
 
-Battle state for the fixed engine lives in ``kernel_state.py``. This module is
-kept small for parsers, classifiers, and SQLite catalog inspection.
+Battle state for the fixed engine lives in ``roco.engine.kernel.state``. This
+module is kept small for parsers, classifiers, and SQLite catalog inspection.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from roco.engine.effect_model import EffectFlag, SkillEffect
+from roco.compiler.effect_model import EffectFlag, SkillEffect
 from roco.engine.enums import SkillCategory, Stats
 
 

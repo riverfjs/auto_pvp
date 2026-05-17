@@ -5,24 +5,10 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from roco.config.constants import STARTING_ENERGY
-from roco.engine import catalog_hot as hot
+from roco.engine.generated import catalog_hot as hot
 from roco.engine.enums import StatusFlag, StatusType, WeatherType
-from roco.engine.packing import _pack_buff, _set_status, _unpack_status
-
-ACTION_MOVE = 1
-ACTION_SWITCH = 2
-SIDE_A = 0
-SIDE_B = 1
-NO_WINNER = 0
-WIN_A = 1
-WIN_B = 2
-WIN_DRAW = 3
-
-
-class Choice(NamedTuple):
-    action_code: int
-    data: int
-
+from roco.engine.common.choices import NO_WINNER, SIDE_A
+from roco.engine.common.packing import _pack_buff, _set_status, _unpack_status
 
 class PetState(NamedTuple):
     pet_id: int
@@ -59,14 +45,6 @@ class KernelState(NamedTuple):
     winner: int
     side_a: SideState
     side_b: SideState
-
-
-def move_choice(skill_index: int) -> Choice:
-    return Choice(ACTION_MOVE, skill_index)
-
-
-def switch_choice(slot_index: int) -> Choice:
-    return Choice(ACTION_SWITCH, slot_index)
 
 
 def pack_weather(weather: int, turns: int) -> int:
@@ -191,3 +169,17 @@ def copy_state(state: KernelState) -> KernelState:
 def replace_pet(side: SideState, slot: int, pet: PetState) -> SideState:
     pets = side.pets[:slot] + (pet,) + side.pets[slot + 1:]
     return side._replace(pets=pets)
+
+
+def side(state: KernelState, side_id: int) -> SideState:
+    return state.side_a if side_id == SIDE_A else state.side_b
+
+
+def replace_side(state: KernelState, side_id: int, value: SideState) -> KernelState:
+    if side_id == SIDE_A:
+        return state._replace(side_a=value)
+    return state._replace(side_b=value)
+
+
+def active_pet(side_state: SideState) -> PetState:
+    return side_state.pets[side_state.active]

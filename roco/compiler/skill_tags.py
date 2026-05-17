@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 
-from roco.engine.effect_model import EffectFlag
+from roco.compiler.effect_model import EffectFlag
 from roco.engine.enums import SkillCategory
-from roco.engine.state import SkillData
+from roco.compiler.records import SkillData
 
 
 _RE_HIT_COUNT = re.compile(r"(?:连击\s*(\d+)\s*次|(\d+)\s*连击)")

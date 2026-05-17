@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 from roco.config.constants import DEFAULT_MAX_TURNS
-from roco.engine import catalog_debug as debug
-from roco.engine import catalog_hot as hot
-from roco.engine.kernel import SKILL_ENERGY, update
-from roco.engine.kernel_state import (
-    NO_WINNER,
-    SIDE_A,
-    SIDE_B,
-    WIN_A,
-    WIN_B,
-    WIN_DRAW,
-    Choice,
+from roco.engine.generated import catalog_debug as debug
+from roco.engine.generated import catalog_hot as hot
+from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW, Choice
+from roco.engine.kernel.catalog import SKILL_ENERGY
+from roco.engine.kernel.mechanics import update
+from roco.engine.kernel.state import (
     KernelState,
     PetState,
     SideState,
@@ -25,7 +20,7 @@ class BattleEngine:
     """Thin owner for fixed-kernel state.
 
     Names and display lookup stay at this facade/debug boundary. Battle turns
-    themselves run through ``roco.engine.kernel.update`` over integer ids.
+    themselves run through ``roco.engine.kernel.mechanics.update`` over integer ids.
     """
 
     def __init__(self, state: KernelState, *, max_turns: int = DEFAULT_MAX_TURNS):

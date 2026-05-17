@@ -8,8 +8,8 @@ from roco.config.constants import (
     ENERGY_GAIN_PER_TURN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
 from roco.config.natures import IV_STAT_MAP, NATURE_MOD
-from roco.engine.packing import buff_multiplier as _bm
-from roco.engine.type_chart import effectiveness_v2
+from roco.engine.common.packing import buff_multiplier as _bm
+from roco.compiler.type_chart import effectiveness_v2
 
 
 def can_use_skill(current_energy: int, cost: int) -> bool:

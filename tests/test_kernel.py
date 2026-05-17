@@ -3,29 +3,30 @@ from pathlib import Path
 import pytest
 
 from roco.config.constants import MIN_DAMAGE, STARTING_ENERGY
-from roco.engine import catalog_debug as debug
-from roco.engine import catalog_hot as hot
-from roco.engine.damage import calc_attack_damage
-from roco.engine.effect_model import EffectTag, Timing
+from roco.engine.generated import catalog_debug as debug
+from roco.engine.generated import catalog_hot as hot
+from roco.compiler.scalar_damage import calc_attack_damage
+from roco.compiler.effect_model import EffectTag, Timing
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
-from roco.engine.kernel import (
-    BPS,
-    DAMAGE_CONST_BPS,
-    SIDE_A,
-    SIDE_B,
+from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice, switch_choice
+from roco.engine.kernel.catalog import (
     SKILL_CATEGORY,
     SKILL_ELEMENT,
     SKILL_ENERGY,
     SKILL_POWER,
-    STAB_BPS,
-    _damage,
-    update,
 )
-from roco.engine.kernel_catalog import load_hot_catalog, validate_catalog
-from roco.engine.kernel_effects import KERNEL_SUPPORTED_TAGS, StageCtx, run_skill_timing
-from roco.engine.kernel_state import copy_state, make_state, move_choice, switch_choice
-from roco.engine.kernel_state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
-from roco.engine.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
+from roco.engine.kernel.ctx import BPS, StageCtx
+from roco.engine.kernel.damage import (
+    DAMAGE_CONST_BPS,
+    STAB_BPS,
+    damage as _damage,
+)
+from roco.engine.kernel.mechanics import update
+from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
+from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
+from roco.engine.kernel.state import copy_state, make_state
+from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
+from roco.engine.common.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
 
 
 def _pet_id(name: str) -> int:
@@ -513,39 +514,61 @@ def test_kernel_cute_boosts_damage_shields_and_transfers_on_faint():
 
 def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
     root = Path(__file__).resolve().parents[1]
+    kernel_files = tuple((root / "roco/engine/kernel").glob("*.py"))
     forbidden_terms = (
         "EventBus",
+        "EventCtx",
+        "GameEvent",
         "bus.on",
         "emit(",
         "importlib",
         "__import__",
         "MappingProxyType",
         "json.loads",
+        "sqlite3",
+        "catalog_debug",
+        "roco.data",
+        "roco.compiler",
         "params.get",
         "record_event",
         "BattleEvent",
     )
-    for rel in (
-        "roco/engine/kernel.py",
-        "roco/engine/kernel_state.py",
-        "roco/engine/kernel_effects.py",
-        "roco/engine/kernel_catalog.py",
-    ):
-        text = (root / rel).read_text(encoding="utf-8")
+    assert kernel_files
+    for path in kernel_files:
+        text = path.read_text(encoding="utf-8")
         for term in forbidden_terms:
             assert term not in text
-    effect_exec = (root / "roco/engine/kernel_effects.py").read_text(encoding="utf-8")
+    init_text = (root / "roco/engine/kernel/__init__.py").read_text(encoding="utf-8")
+    assert "from " not in init_text
+    assert "import " not in init_text
+    effect_exec = (root / "roco/engine/kernel/ops.py").read_text(encoding="utf-8")
     assert "OP_TABLE[row[ROW_TAG]]" in effect_exec
     assert "OP_TABLE.get" not in effect_exec
 
 
-def test_old_event_bus_hot_path_modules_are_retired():
+def test_retired_root_engine_modules_are_not_legacy_entrypoints():
     root = Path(__file__).resolve().parents[1]
     retired = (
+        "roco/engine/kernel.py",
+        "roco/engine/kernel_state.py",
+        "roco/engine/kernel_effects.py",
+        "roco/engine/kernel_catalog.py",
+        "roco/engine/catalog_hot.py",
+        "roco/engine/catalog_debug.py",
+        "roco/engine/effect_model.py",
+        "roco/engine/effect_compile.py",
+        "roco/engine/effect_registry.py",
+        "roco/engine/skill_tags.py",
+        "roco/engine/state.py",
+        "roco/engine/damage.py",
+        "roco/engine/type_chart.py",
+        "roco/engine/packing.py",
+        "roco/engine/battle.py",
         "roco/engine/events.py",
         "roco/engine/skill_exec.py",
         "roco/engine/effect_exec.py",
         "roco/engine/ability.py",
+        "roco/data/compile_kernel_catalog.py",
         "roco/systems/weather.py",
         "roco/systems/marks.py",
         "roco/systems/burst.py",
@@ -557,6 +580,9 @@ def test_old_event_bus_hot_path_modules_are_retired():
     for rel in retired:
         assert not (root / rel).exists()
 
+    assert (root / "roco/engine/generated/catalog_hot.py").exists()
+    assert (root / "roco/engine/generated/catalog_debug.py").exists()
+
     forbidden_terms = (
         "EventBus",
         "EventCtx",
@@ -567,7 +593,7 @@ def test_old_event_bus_hot_path_modules_are_retired():
         "importlib",
     )
     for rel in (
-        "roco/engine/battle.py",
+        "roco/engine/facade/battle.py",
         "roco/sim/monte_carlo.py",
         "README.md",
     ):

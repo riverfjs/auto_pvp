@@ -9,11 +9,11 @@ import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_skills as parse_skills
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
-from roco.data.compile_kernel_catalog import compile_artifacts
+from roco.compiler.artifact import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, with_canonical_hash, write_jsonl
-from roco.engine.effect_model import EffectTag
+from roco.compiler.effect_model import EffectTag
 
 
 def _sample_data():

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.engine.effect_model import EffectTag
+from roco.compiler.effect_model import EffectTag
 
 
 IMPLEMENTED_EFFECT_TAGS = frozenset({

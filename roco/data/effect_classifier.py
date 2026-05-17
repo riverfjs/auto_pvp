@@ -13,11 +13,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from roco.data.utils import RULES_DIR, iter_jsonl
-from roco.engine.effect_compile import compile_skill_effects
-from roco.engine.effect_model import EffectTag, Timing
+from roco.compiler.effect_compile import compile_skill_effects
+from roco.compiler.effect_model import EffectTag, Timing
 from roco.engine.enums import SkillCategory, normalize_element_name
-from roco.engine.skill_tags import classify
-from roco.engine.state import SkillData
+from roco.compiler.skill_tags import classify
+from roco.compiler.records import SkillData
 
 
 EffectRecord = dict[str, Any]

@@ -6,8 +6,10 @@
 
 核心边界：
 
-- `roco/engine/kernel.py`、`kernel_state.py`、`kernel_effects.py`、`kernel_catalog.py`: 热路径，只使用整数 ID、tuple index、packed state 和固定函数表。
-- `roco/engine/catalog_hot.py`: 战斗用热 catalog，全整数 tuple；`catalog_debug.py` 只用于展示和名字反查。
-- `roco/engine/battle.py`: 外层 facade，负责持有 `KernelState` 和调用 fixed kernel，不包含事件总线或动态系统注册。
-- `roco/data`: `raw/canonical JSONL -> SQLite -> hot/debug artifact` 的数据管线。
+- `roco/engine/common`: 跨 kernel 的 `Choice`、side/result id、RNG 和 packed bit helpers。
+- `roco/engine/kernel`: 热路径包，入口是 `mechanics.update()`；状态、伤害、残余结算、切换生命周期和 op table 分文件放置。`__init__.py` 不做便利 re-export。
+- `roco/engine/generated`: 编译生成的 `catalog_hot.py` / `catalog_debug.py`；kernel 只读 hot catalog，debug/facade 才读名字反查。
+- `roco/engine/facade`: 外层 `BattleEngine`，负责名字到整数 ID 的边界转换和持有 `KernelState`。
+- `roco/compiler`: 技能/特性效果分类、effect row 编译、artifact 生成；不进入 battle kernel。
+- `roco/data`: `raw/canonical JSONL -> SQLite` 的数据仓库管线，随后由 compiler 生成 hot/debug artifact。
 - `_data` / `_db`: 生成数据产物。

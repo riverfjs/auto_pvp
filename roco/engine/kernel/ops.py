@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roco.engine.effect_model import EffectTag, Timing
-from roco.engine.packing import MarkIdx, _set_mark, _unpack_mark
+from roco.engine.common.packing import MarkIdx, _set_mark, _unpack_mark
+from roco.engine.kernel.ctx import StageCtx
 
 ROW_TAG = 0
 ROW_TIMING = 1
@@ -15,85 +15,36 @@ ROW_ARG1 = 6
 ROW_ARG2 = 7
 ROW_ARG3 = 8
 COND_NONE = 0
-BPS = 10000
 TARGET_SELF = 1
 TARGET_ALLY = 3
 TARGET_TEAM = 4
-
-
-class StageCtx:
-    __slots__ = (
-        "actor_side",
-        "actor_slot",
-        "target_side",
-        "target_slot",
-        "skill_id",
-        "power",
-        "hit_count",
-        "power_bps",
-        "damage_bps",
-        "heal_bps",
-        "flat_damage",
-        "burn_stacks",
-        "poison_stacks",
-        "freeze_stacks",
-        "leech_stacks",
-        "weather",
-        "weather_turns",
-        "mark_self",
-        "mark_enemy",
-        "clear_self_marks",
-        "clear_enemy_marks",
-        "cancelled",
-    )
-
-    def __init__(self) -> None:
-        self.actor_side = 0
-        self.actor_slot = 0
-        self.target_side = 0
-        self.target_slot = 0
-        self.skill_id = 0
-        self.power = 0
-        self.hit_count = 1
-        self.power_bps = BPS
-        self.damage_bps = BPS
-        self.heal_bps = BPS
-        self.flat_damage = 0
-        self.burn_stacks = 0
-        self.poison_stacks = 0
-        self.freeze_stacks = 0
-        self.leech_stacks = 0
-        self.weather = 0
-        self.weather_turns = 0
-        self.mark_self = 0
-        self.mark_enemy = 0
-        self.clear_self_marks = 0
-        self.clear_enemy_marks = 0
-        self.cancelled = 0
-
-    def reset(self, actor_side: int, actor_slot: int, target_side: int, target_slot: int, skill_id: int) -> None:
-        self.actor_side = actor_side
-        self.actor_slot = actor_slot
-        self.target_side = target_side
-        self.target_slot = target_slot
-        self.skill_id = skill_id
-        self.power = 0
-        self.hit_count = 1
-        self.power_bps = BPS
-        self.damage_bps = BPS
-        self.heal_bps = BPS
-        self.flat_damage = 0
-        self.burn_stacks = 0
-        self.poison_stacks = 0
-        self.freeze_stacks = 0
-        self.leech_stacks = 0
-        self.weather = 0
-        self.weather_turns = 0
-        self.mark_self = 0
-        self.mark_enemy = 0
-        self.clear_self_marks = 0
-        self.clear_enemy_marks = 0
-        self.cancelled = 0
+TAG_DAMAGE = 1
+TAG_HEAL_HP = 2
+TAG_HEAL_ENERGY = 3
+TAG_BURN = 9
+TAG_POISON = 10
+TAG_FREEZE = 11
+TAG_LEECH = 12
+TAG_DAMAGE_REDUCTION = 14
+TAG_WEATHER = 17
+TAG_POISON_MARK = 27
+TAG_MOISTURE_MARK = 28
+TAG_DRAGON_MARK = 29
+TAG_WIND_MARK = 30
+TAG_CHARGE_MARK = 31
+TAG_SOLAR_MARK = 32
+TAG_ATTACK_MARK = 33
+TAG_SLOW_MARK = 34
+TAG_SLUGGISH_MARK = 35
+TAG_SPIRIT_MARK = 36
+TAG_METEOR_MARK = 37
+TAG_THORN_MARK = 38
+TAG_MOMENTUM_MARK = 39
+TAG_DISPEL_ENEMY_MARKS = 40
+TAG_DISPEL_MARKS = 63
+MAX_TAG = 146
+TIMING_CALC_DAMAGE = 13
+TIMING_AFTER_MOVE = 5
 
 
 def _op_unsupported(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -207,31 +158,31 @@ def _op_dispel_marks(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.clear_enemy_marks = 1
 
 
-_TABLE = [_op_unsupported] * (max(tag.value for tag in EffectTag) + 1)
-_TABLE[EffectTag.DAMAGE.value] = _op_damage
-_TABLE[EffectTag.DAMAGE_REDUCTION.value] = _noop
-_TABLE[EffectTag.HEAL_HP.value] = _noop
-_TABLE[EffectTag.HEAL_ENERGY.value] = _noop
-_TABLE[EffectTag.BURN.value] = _op_burn
-_TABLE[EffectTag.POISON.value] = _op_poison
-_TABLE[EffectTag.FREEZE.value] = _op_freeze
-_TABLE[EffectTag.LEECH.value] = _op_leech
-_TABLE[EffectTag.WEATHER.value] = _op_weather
-_TABLE[EffectTag.MOISTURE_MARK.value] = _op_moisture_mark
-_TABLE[EffectTag.DRAGON_MARK.value] = _op_dragon_mark
-_TABLE[EffectTag.MOMENTUM_MARK.value] = _op_momentum_mark
-_TABLE[EffectTag.WIND_MARK.value] = _op_wind_mark
-_TABLE[EffectTag.CHARGE_MARK.value] = _op_charge_mark
-_TABLE[EffectTag.SOLAR_MARK.value] = _op_solar_mark
-_TABLE[EffectTag.ATTACK_MARK.value] = _op_attack_mark
-_TABLE[EffectTag.SLOW_MARK.value] = _op_slow_mark
-_TABLE[EffectTag.SPIRIT_MARK.value] = _op_spirit_mark
-_TABLE[EffectTag.METEOR_MARK.value] = _op_meteor_mark
-_TABLE[EffectTag.POISON_MARK.value] = _op_poison_mark
-_TABLE[EffectTag.THORN_MARK.value] = _op_thorn_mark
-_TABLE[EffectTag.SLUGGISH_MARK.value] = _op_sluggish_mark
-_TABLE[EffectTag.DISPEL_ENEMY_MARKS.value] = _op_dispel_enemy_marks
-_TABLE[EffectTag.DISPEL_MARKS.value] = _op_dispel_marks
+_TABLE = [_op_unsupported] * (MAX_TAG + 1)
+_TABLE[TAG_DAMAGE] = _op_damage
+_TABLE[TAG_DAMAGE_REDUCTION] = _noop
+_TABLE[TAG_HEAL_HP] = _noop
+_TABLE[TAG_HEAL_ENERGY] = _noop
+_TABLE[TAG_BURN] = _op_burn
+_TABLE[TAG_POISON] = _op_poison
+_TABLE[TAG_FREEZE] = _op_freeze
+_TABLE[TAG_LEECH] = _op_leech
+_TABLE[TAG_WEATHER] = _op_weather
+_TABLE[TAG_MOISTURE_MARK] = _op_moisture_mark
+_TABLE[TAG_DRAGON_MARK] = _op_dragon_mark
+_TABLE[TAG_MOMENTUM_MARK] = _op_momentum_mark
+_TABLE[TAG_WIND_MARK] = _op_wind_mark
+_TABLE[TAG_CHARGE_MARK] = _op_charge_mark
+_TABLE[TAG_SOLAR_MARK] = _op_solar_mark
+_TABLE[TAG_ATTACK_MARK] = _op_attack_mark
+_TABLE[TAG_SLOW_MARK] = _op_slow_mark
+_TABLE[TAG_SPIRIT_MARK] = _op_spirit_mark
+_TABLE[TAG_METEOR_MARK] = _op_meteor_mark
+_TABLE[TAG_POISON_MARK] = _op_poison_mark
+_TABLE[TAG_THORN_MARK] = _op_thorn_mark
+_TABLE[TAG_SLUGGISH_MARK] = _op_sluggish_mark
+_TABLE[TAG_DISPEL_ENEMY_MARKS] = _op_dispel_enemy_marks
+_TABLE[TAG_DISPEL_MARKS] = _op_dispel_marks
 OP_TABLE = tuple(_TABLE)
 KERNEL_SUPPORTED_TAGS = tuple(
     idx for idx, op in enumerate(OP_TABLE)
@@ -245,7 +196,3 @@ def run_skill_timing(effect_rows: tuple[tuple[int, ...], ...], effect_range: tup
         row = effect_rows[idx]
         if row[ROW_TIMING] == timing and row[ROW_COND] == COND_NONE:
             OP_TABLE[row[ROW_TAG]](ctx, row)
-
-
-TIMING_CALC_DAMAGE = Timing.CALC_DAMAGE.value
-TIMING_AFTER_MOVE = Timing.AFTER_MOVE.value

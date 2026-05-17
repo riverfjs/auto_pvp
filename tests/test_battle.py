@@ -1,9 +1,9 @@
 from roco.config.constants import STARTING_ENERGY
-from roco.engine import catalog_debug as debug
-from roco.engine import catalog_hot as hot
-from roco.engine.battle import BattleEngine
-from roco.engine.kernel import SKILL_ENERGY
-from roco.engine.kernel_state import SIDE_A, SIDE_B, move_choice, switch_choice
+from roco.engine.generated import catalog_debug as debug
+from roco.engine.generated import catalog_hot as hot
+from roco.engine.facade.battle import BattleEngine
+from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice, switch_choice
+from roco.engine.kernel.catalog import SKILL_ENERGY
 
 
 def _pet_id(name: str) -> int:

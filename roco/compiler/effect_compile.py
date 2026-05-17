@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from types import MappingProxyType
 
-from roco.engine.effect_model import EffectFlag, EffectSpec, EffectTag, SkillEffect, Timing
-from roco.engine.state import SkillData
+from roco.compiler.effect_model import EffectFlag, EffectSpec, EffectTag, SkillEffect, Timing
+from roco.compiler.records import SkillData
 
 
 _RE_HEAL_HP = re.compile(r"回复\s*(\d+)%\s*(?:HP|生命)")
