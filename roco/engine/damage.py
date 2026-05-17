@@ -1,4 +1,4 @@
-"""Pure damage calculation — works with ActivePet and packed bitfields."""
+"""Pure scalar helpers shared by data tests and the fixed kernel."""
 
 from __future__ import annotations
 
@@ -8,10 +8,7 @@ from roco.config.constants import (
     ENERGY_GAIN_PER_TURN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
 from roco.config.natures import IV_STAT_MAP, NATURE_MOD
-from roco.engine.state import (
-    ActivePet, SkillData, SkillCategory, Stats, StatusFlag, StatusType,
-    buff_multiplier as _bm,
-)
+from roco.engine.packing import buff_multiplier as _bm
 from roco.engine.type_chart import effectiveness_v2
 
 

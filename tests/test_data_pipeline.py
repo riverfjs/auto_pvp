@@ -9,11 +9,11 @@ import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_skills as parse_skills
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
+from roco.data.compile_kernel_catalog import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, with_canonical_hash, write_jsonl
-from roco.engine.battle import BattleEngine
-from roco.engine.state import EffectTag, MoveDecision
+from roco.engine.effect_model import EffectTag
 
 
 def _sample_data():
@@ -57,7 +57,7 @@ def _pet(name, element, ability, speed, skill, *, atk=80, atk_mag=70):
     }
 
 
-def test_migrate_import_compile_catalog_and_battle(tmp_path: Path):
+def test_migrate_import_compile_catalog(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
     skills, abilities, pets = _sample_data()
     ability_lookup = import_abilities(conn, abilities)
@@ -80,24 +80,35 @@ def test_migrate_import_compile_catalog_and_battle(tmp_path: Path):
     assert unsupported_rows == 0
     assert gap_rows == 1
 
-    engine = BattleEngine(
-        [catalog.build_pet("火火")],
-        [catalog.build_pet("地地")],
-    )
-    engine.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
-    assert engine.state.turn_number == 1
-    assert engine.state.log
-
-    boosted = BattleEngine([catalog.build_pet("风风")], [catalog.build_pet("地地")])
-    boosted.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
-    boosted_damage = next(ev.detail["damage"] for ev in boosted.state.log if ev.actor == "风风" and ev.action == "attack")
-
-    plain = BattleEngine([catalog.build_pet("风空")], [catalog.build_pet("地地")])
-    plain.step(MoveDecision("move", skill_index=0), MoveDecision("move", skill_index=0))
-    plain_damage = next(ev.detail["damage"] for ev in plain.state.log if ev.actor == "风空" and ev.action == "attack")
-
-    assert boosted_damage > plain_damage
     conn.close()
+
+
+def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
+    db_path = tmp_path / "data.db"
+    conn = migrate(reset=True, db_path=db_path)
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    import_pets(conn, pets, skill_lookup, ability_lookup)
+    conn.commit()
+    conn.close()
+
+    hot_path, debug_path = compile_artifacts(
+        db_path,
+        hot_path=tmp_path / "catalog_hot.py",
+        debug_path=tmp_path / "catalog_debug.py",
+    )
+    hot_text = hot_path.read_text(encoding="utf-8")
+    debug_text = debug_path.read_text(encoding="utf-8")
+
+    assert "CATALOG_VERSION = 1" in hot_text
+    assert "SCHEMA_VERSION = 'kernel-v1'" in hot_text
+    assert "SOURCE_HASH = ''" not in hot_text
+    assert "PETS =" in hot_text
+    assert "SKILL_EFFECT_ROWS =" in hot_text
+    assert "PET_NAMES" not in hot_text
+    assert "PET_NAMES =" in debug_text
+    assert "PET_IDS_BY_NAME =" in debug_text
 
 
 def test_import_rejects_legacy_structured_elements(tmp_path: Path):

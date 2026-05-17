@@ -1,7 +1,7 @@
 """Unit tests for type_chart.py — verified against WIKI 克制计算器."""
 
 import pytest
-from roco.engine.state import Element
+from roco.engine.enums import Element
 from roco.engine.type_chart import (
     TYPES,
     CHART,

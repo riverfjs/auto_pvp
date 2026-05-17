@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from roco.data.catalog import compile_catalog
+from roco.data.compile_kernel_catalog import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
@@ -48,11 +49,13 @@ def main() -> None:
     conn.commit()
     catalog = compile_catalog(conn)
     conn.close()
+    hot_path, debug_path = compile_artifacts(DB_DIR / "data.db")
     print(
         f"Built -> {DB_DIR / 'data.db'} "
         f"({len(catalog.pets_by_id)} pets, {len(catalog.skills_by_id)} skills, "
         f"{len(catalog.unsupported_effect_stats)} gap groups)"
     )
+    print(f"Compiled kernel catalogs -> {hot_path}, {debug_path}")
 
 
 if __name__ == "__main__":

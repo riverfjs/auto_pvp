@@ -1,68 +1,99 @@
-"""Monte Carlo PVP battle simulator backed by the runtime catalog."""
+"""Monte Carlo PVP simulator backed by the fixed kernel catalog."""
 
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sqlite3
 from collections import Counter
-from dataclasses import replace
+from typing import NamedTuple
 
 from roco.config.constants import DEFAULT_MAX_TURNS
-from roco.data.catalog import RuntimeCatalog, compile_catalog
 from roco.data.utils import DB_DIR
+from roco.engine import catalog_debug as debug
+from roco.engine import catalog_hot as hot
 from roco.engine.battle import BattleEngine
-from roco.engine.damage import compute_stats, get_type_multiplier
-from roco.engine.state import BattleState, MoveDecision, PersistentPet, Stats
+from roco.engine.kernel import (
+    BPS,
+    PET_PRIMARY,
+    PET_SECONDARY,
+    SKILL_ELEMENT,
+    SKILL_ENERGY,
+    SKILL_POWER,
+)
+from roco.engine.kernel_state import (
+    SIDE_A,
+    SIDE_B,
+    Choice,
+    KernelState,
+    move_choice,
+    switch_choice,
+)
+
+
+class TeamSpec(NamedTuple):
+    pet_ids: tuple[int, ...]
+    move_rows: tuple[tuple[int, ...], ...]
 
 
 class Policy:
-    """Abstract move-selection strategy."""
-    def select_move(self, state: BattleState, team: str) -> MoveDecision:
+    def select_move(self, state: KernelState, side_id: int) -> Choice:
         raise NotImplementedError
 
 
 class RandomPolicy(Policy):
-    def select_move(self, state: BattleState, team: str) -> MoveDecision:
-        valid_moves = _get_valid_moves(state, team)
-        switches = _get_switches(state, team)
+    def select_move(self, state: KernelState, side_id: int) -> Choice:
+        valid_moves = _get_valid_moves(state, side_id)
+        switches = _get_switches(state, side_id)
         if random.random() < 0.7 and valid_moves:
-            return MoveDecision("move", skill_index=random.choice(valid_moves))
+            return move_choice(random.choice(valid_moves))
         if switches:
-            return MoveDecision("switch", switch_slot=random.choice(switches))
-        return MoveDecision("move", skill_index=random.choice(valid_moves) if valid_moves else 0)
+            return switch_choice(random.choice(switches))
+        return move_choice(random.choice(valid_moves) if valid_moves else 0)
 
 
 class GreedyPolicy(Policy):
-    def select_move(self, state: BattleState, team: str) -> MoveDecision:
-        pet = _get_active(state, team)
-        valid = _get_valid_moves(state, team)
+    def select_move(self, state: KernelState, side_id: int) -> Choice:
+        valid = _get_valid_moves(state, side_id)
         if not valid:
-            return MoveDecision("move", skill_index=0)
-        return MoveDecision("move", skill_index=max(valid, key=lambda i: pet.persistent.moves[i].power))
+            return move_choice(0)
+        side = _side(state, side_id)
+        moves = side.moves[side.active]
+        return move_choice(max(valid, key=lambda idx: hot.SKILLS[moves[idx]][SKILL_POWER]))
 
 
 class TypeAdvantagePolicy(Policy):
-    def select_move(self, state: BattleState, team: str) -> MoveDecision:
-        pet = _get_active(state, team)
-        opponent = _get_active(state, "b" if team == "a" else "a")
-        valid = _get_valid_moves(state, team)
+    def select_move(self, state: KernelState, side_id: int) -> Choice:
+        valid = _get_valid_moves(state, side_id)
         if not valid:
-            return MoveDecision("move", skill_index=0)
-        best = max(valid, key=lambda i: get_type_multiplier(pet.persistent.moves[i].element, opponent.elements))
-        return MoveDecision("move", skill_index=best)
+            return move_choice(0)
+        side = _side(state, side_id)
+        target = _active_pet(state, SIDE_B if side_id == SIDE_A else SIDE_A)
+        target_row = hot.PETS[target.pet_id]
+        moves = side.moves[side.active]
+        return move_choice(
+            max(
+                valid,
+                key=lambda idx: _type_bps(
+                    hot.SKILLS[moves[idx]][SKILL_ELEMENT],
+                    target_row[PET_PRIMARY],
+                    target_row[PET_SECONDARY],
+                ),
+            )
+        )
 
 
 class FixedPolicy(Policy):
     def __init__(self):
-        self._counter: dict[str, int] = {}
+        self._counter: dict[int, int] = {}
 
-    def select_move(self, state: BattleState, team: str) -> MoveDecision:
-        pet = _get_active(state, team)
-        idx = self._counter.get(team, 0)
-        self._counter[team] = idx + 1
-        return MoveDecision("move", skill_index=idx % max(1, len(pet.persistent.moves)))
+    def select_move(self, state: KernelState, side_id: int) -> Choice:
+        valid = _get_valid_moves(state, side_id)
+        if not valid:
+            return move_choice(0)
+        idx = self._counter.get(side_id, 0)
+        self._counter[side_id] = idx + 1
+        return move_choice(valid[idx % len(valid)])
 
 
 POLICIES: dict[str, type[Policy]] = {
@@ -73,129 +104,71 @@ POLICIES: dict[str, type[Policy]] = {
 }
 
 
-def _stat_tuple(base: dict[str, int]) -> tuple[int, int, int, int, int, int]:
-    return (
-        base["hp"], base["atk_phys"], base["atk_mag"],
-        base["def_phys"], base["def_mag"], base["speed"],
-    )
-
-
-def _build_team_pet(catalog: RuntimeCatalog, row: sqlite3.Row, skill_names: list[str]) -> PersistentPet | None:
-    data = catalog.pets_by_id.get(row["pet_id"]) or catalog.pets_by_name.get(row["pet_name"])
-    if not data:
-        return None
-    base = compute_stats(
-        hp=data.stat(Stats.HP),
-        atk_phys=data.stat(Stats.ATK_PHYS),
-        atk_mag=data.stat(Stats.ATK_MAG),
-        def_phys=data.stat(Stats.DEF_PHYS),
-        def_mag=data.stat(Stats.DEF_MAG),
-        speed=data.stat(Stats.SPEED),
-        nature=row["nature"] or "",
-        ivs=json.loads(row["ivs_json"] or "[]"),
-    )
-    moves = tuple(catalog.skills_by_name[name] for name in skill_names if name in catalog.skills_by_name)
-    if not moves:
-        moves = tuple(catalog.skills_by_id[sid] for sid in catalog.pet_skill_ids.get(data.pet_id, ())[:4])
-    return PersistentPet(
-        name=data.name,
-        stats=_stat_tuple(base),
-        types=data.types,
-        moves=moves,
-        data_id=data.pet_id,
-        ability_id=data.ability_id,
-        ability_name=data.ability_name,
-        ability_desc=data.ability_desc,
-        bloodline=row["bloodline"] or "",
-        nature=row["nature"] or "",
-        ivs=json.loads(row["ivs_json"] or "[]"),
-    )
-
-
-def load_team_from_db(team_id: str, conn: sqlite3.Connection, catalog: RuntimeCatalog) -> list[PersistentPet] | None:
+def load_team_from_db(team_id: str, conn: sqlite3.Connection) -> TeamSpec | None:
     slots = conn.execute(
-        "SELECT id, slot, pet_id, pet_name, bloodline, nature, ivs_json "
-        "FROM team_pets WHERE team_id = ? ORDER BY slot",
+        "SELECT id, slot, pet_id, pet_name FROM team_pets WHERE team_id = ? ORDER BY slot",
         (team_id,),
     ).fetchall()
-    team: list[PersistentPet] = []
+    pet_ids: list[int] = []
+    move_rows: list[tuple[int, ...]] = []
     for slot in slots:
+        pet_id = slot["pet_id"] or debug.PET_IDS_BY_NAME.get(slot["pet_name"], 0)
+        if not pet_id or pet_id >= len(hot.PETS):
+            continue
         skill_rows = conn.execute(
-            "SELECT skill_name FROM team_pet_skills WHERE team_pet_id = ? ORDER BY slot",
+            "SELECT skill_id, skill_name FROM team_pet_skills WHERE team_pet_id = ? ORDER BY slot",
             (slot["id"],),
         ).fetchall()
-        pet = _build_team_pet(catalog, slot, [r["skill_name"] for r in skill_rows])
-        if pet:
-            team.append(pet)
-    return team or None
+        moves = tuple(
+            sid
+            for sid in (
+                row["skill_id"] or debug.SKILL_IDS_BY_NAME.get(row["skill_name"], 0)
+                for row in skill_rows
+            )
+            if sid and sid < len(hot.SKILLS)
+        )
+        pet_ids.append(pet_id)
+        move_rows.append(tuple((moves or hot.PET_SKILLS[pet_id])[:4]))
+    if not pet_ids:
+        return None
+    return TeamSpec(tuple(pet_ids), tuple(move_rows))
 
 
-def load_all_pvp_teams(conn: sqlite3.Connection, catalog: RuntimeCatalog) -> dict[str, tuple[str, list[PersistentPet]]]:
+def load_all_pvp_teams(conn: sqlite3.Connection) -> dict[str, tuple[str, TeamSpec]]:
     rows = conn.execute(
         "SELECT id, title FROM teams WHERE team_type = 'pvp' ORDER BY upload_date DESC"
     ).fetchall()
-    result: dict[str, tuple[str, list[PersistentPet]]] = {}
+    result: dict[str, tuple[str, TeamSpec]] = {}
     for row in rows:
-        pets = load_team_from_db(row["id"], conn, catalog)
-        if pets:
-            result[row["id"]] = (row["title"], pets)
+        team = load_team_from_db(row["id"], conn)
+        if team:
+            result[row["id"]] = (row["title"], team)
     return result
 
 
-def _get_active(state: BattleState, team: str):
-    idx = state.active_a if team == "a" else state.active_b
-    return (state.team_a if team == "a" else state.team_b)[idx]
-
-
-def _get_valid_moves(state: BattleState, team: str) -> list[int]:
-    pet = _get_active(state, team)
-    return [i for i, move in enumerate(pet.persistent.moves) if move.energy <= pet.current_energy]
-
-
-def _get_switches(state: BattleState, team: str) -> list[int]:
-    pets = state.team_a if team == "a" else state.team_b
-    active = state.active_a if team == "a" else state.active_b
-    return [i for i, pet in enumerate(pets) if i != active and not pet.is_fainted]
-
-
 def run_single_battle(
-    team_a: list[PersistentPet],
-    team_b: list[PersistentPet],
+    team_a: TeamSpec,
+    team_b: TeamSpec,
     policy_a: Policy,
     policy_b: Policy,
     max_turns: int = DEFAULT_MAX_TURNS,
 ) -> dict:
-    engine = BattleEngine(_clone_team(team_a), _clone_team(team_b), max_turns=max_turns)
-    turns = 0
+    engine = BattleEngine.from_team_ids(
+        team_a.pet_ids,
+        team_b.pet_ids,
+        team_a_moves=team_a.move_rows,
+        team_b_moves=team_b.move_rows,
+        rng_seed=random.getrandbits(32),
+        max_turns=max_turns,
+    )
     while not engine.is_finished():
-        engine.step(policy_a.select_move(engine.state, "a"), policy_b.select_move(engine.state, "b"))
-        turns += 1
-    return {"winner": engine.get_winner(), "turns": turns, "log": engine.state.log}
-
-
-def _clone_team(team: list[PersistentPet]) -> list[PersistentPet]:
-    cloned: list[PersistentPet] = []
-    for pet in team:
-        cloned.append(PersistentPet(
-            name=pet.name,
-            stats=pet.stats,
-            types=pet.types,
-            moves=tuple(replace(move) for move in pet.moves),
-            data_id=pet.data_id,
-            ability_id=pet.ability_id,
-            ability_name=pet.ability_name,
-            ability_desc=pet.ability_desc,
-            ability_tags=list(pet.ability_tags),
-            bloodline=pet.bloodline,
-            nature=pet.nature,
-            ivs=list(pet.ivs),
-        ))
-    return cloned
+        engine.step(policy_a.select_move(engine.state, SIDE_A), policy_b.select_move(engine.state, SIDE_B))
+    return {"winner": engine.get_winner(), "turns": engine.state.turn}
 
 
 def run_monte_carlo(
-    team_a: list[PersistentPet],
-    team_b: list[PersistentPet],
+    team_a: TeamSpec,
+    team_b: TeamSpec,
     policy_a: Policy,
     policy_b: Policy,
     n: int = 100,
@@ -218,7 +191,7 @@ def run_monte_carlo(
 
 
 def run_matchup_matrix(
-    teams: dict[str, tuple[str, list[PersistentPet]]],
+    teams: dict[str, tuple[str, TeamSpec]],
     n: int = 50,
     policy_name: str = "random",
 ) -> dict:
@@ -249,6 +222,49 @@ def run_matchup_matrix(
     return results
 
 
+def _side(state: KernelState, side_id: int):
+    return state.side_a if side_id == SIDE_A else state.side_b
+
+
+def _active_pet(state: KernelState, side_id: int):
+    side = _side(state, side_id)
+    return side.pets[side.active]
+
+
+def _get_valid_moves(state: KernelState, side_id: int) -> tuple[int, ...]:
+    side = _side(state, side_id)
+    pet = side.pets[side.active]
+    moves = side.moves[side.active]
+    return tuple(
+        idx
+        for idx, skill_id in enumerate(moves)
+        if skill_id > 0 and hot.SKILLS[skill_id][SKILL_ENERGY] <= pet.current_energy
+    )
+
+
+def _get_switches(state: KernelState, side_id: int) -> tuple[int, ...]:
+    side = _side(state, side_id)
+    return tuple(
+        idx
+        for idx, pet in enumerate(side.pets)
+        if idx != side.active and pet.fainted == 0
+    )
+
+
+def _type_bps(move_element: int, primary: int, secondary: int) -> int:
+    first = hot.TYPE_CHART_BPS[move_element][primary]
+    if secondary < 0:
+        return first
+    second = hot.TYPE_CHART_BPS[move_element][secondary]
+    if first > BPS and second > BPS:
+        return 30000
+    if first < BPS and second < BPS:
+        return 2500
+    if (first > BPS and second < BPS) or (first < BPS and second > BPS):
+        return BPS
+    return first if first != BPS else second
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Monte Carlo PVP battle simulator")
     parser.add_argument("--n", type=int, default=10, help="Battles per matchup")
@@ -259,10 +275,9 @@ def main() -> None:
 
     conn = sqlite3.connect(args.db)
     conn.row_factory = sqlite3.Row
-    catalog = compile_catalog(conn)
-    teams = load_all_pvp_teams(conn, catalog)
+    teams = load_all_pvp_teams(conn)
     if args.teams > 0:
-        teams = {k: teams[k] for k in list(teams)[:args.teams]}
+        teams = {key: teams[key] for key in list(teams)[:args.teams]}
 
     print(f"Loaded {len(teams)} PVP teams")
     print(f"Running {args.n} battles per matchup (policy={args.policy})...")

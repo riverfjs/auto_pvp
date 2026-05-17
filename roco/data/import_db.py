@@ -12,7 +12,7 @@ from typing import Any
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
 from roco.engine.effect_model import EffectTag, Timing
 from roco.engine.effect_registry import IMPLEMENTED_EFFECT_TAGS
-from roco.engine.state import SkillCategory, normalize_element_name
+from roco.engine.enums import SkillCategory, normalize_element_name
 
 
 Record = Mapping[str, Any]

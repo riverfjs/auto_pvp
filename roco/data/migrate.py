@@ -13,7 +13,8 @@ import sqlite3
 from pathlib import Path
 
 from roco.data.utils import DB_DIR
-from roco.engine.state import ELEMENT_NAMES, EffectTag, Timing
+from roco.engine.effect_model import EffectTag, Timing
+from roco.engine.enums import ELEMENT_NAMES
 
 
 SCHEMA = """

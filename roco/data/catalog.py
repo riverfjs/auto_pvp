@@ -1,4 +1,4 @@
-"""Compile SQLite data into runtime-friendly Pet and skill catalogs."""
+"""Compile SQLite data into debug-friendly Pet and skill catalogs."""
 
 from __future__ import annotations
 
@@ -10,22 +10,16 @@ from types import MappingProxyType
 from typing import Any
 
 from roco.data.utils import DB_DIR
+from roco.engine.effect_model import AbilityEffect, EffectSpec, EffectTag, SkillEffect, Timing
+from roco.engine.enums import SkillCategory, Stats
 from roco.engine.state import (
-    AbilityEffect,
-    EffectSpec,
-    EffectTag,
     PetData,
-    PersistentPet,
-    SkillCategory,
     SkillData,
-    SkillEffect,
-    Stats,
-    Timing,
 )
 
 
 @dataclass(frozen=True, slots=True)
-class RuntimeCatalog:
+class DataCatalog:
     elements_by_id: dict[int, str]
     elements_by_name: dict[str, int]
     skills_by_id: dict[int, SkillData]
@@ -35,14 +29,6 @@ class RuntimeCatalog:
     pet_skill_ids: dict[int, tuple[int, ...]]
     ability_effects: dict[int, tuple[AbilityEffect, ...]]
     unsupported_effect_stats: tuple[tuple[str, int], ...] = ()
-
-    def build_pet(self, name: str, skill_names: list[str] | None = None) -> PersistentPet:
-        data = self.pets_by_name[name]
-        if skill_names:
-            moves = tuple(self.skills_by_name[s] for s in skill_names if s in self.skills_by_name)
-        else:
-            moves = tuple(self.skills_by_id[sid] for sid in self.pet_skill_ids.get(data.pet_id, ())[:4])
-        return PersistentPet.from_data(data, moves, ability_effects=self.ability_effects.get(data.ability_id, ()))
 
 
 def _connect(path_or_conn: str | Path | sqlite3.Connection | None) -> tuple[sqlite3.Connection, bool]:
@@ -81,7 +67,7 @@ def _load_ability_effects(conn: sqlite3.Connection) -> dict[int, tuple[AbilityEf
     return {aid: tuple(items) for aid, items in by_ability.items()}
 
 
-def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None) -> RuntimeCatalog:
+def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None) -> DataCatalog:
     conn, should_close = _connect(path_or_conn)
     try:
         conn.row_factory = sqlite3.Row
@@ -186,7 +172,7 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
             )
         for row in no_effect_rows:
             unsupported[row["name"]] = unsupported.get(row["name"], 0) + 1
-        return RuntimeCatalog(
+        return DataCatalog(
             elements_by_id=elements_by_id,
             elements_by_name=elements_by_name,
             skills_by_id=skills_by_id,

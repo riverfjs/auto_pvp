@@ -2,9 +2,10 @@
 
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.engine.effect_compile import compile_skill_effects
-from roco.engine.effect_model import EffectTag, Timing
+from roco.engine.effect_model import EffectFlag, EffectTag, Timing
+from roco.engine.enums import SkillCategory
 from roco.engine.skill_tags import classify
-from roco.engine.state import EffectFlag, SkillCategory, SkillData
+from roco.engine.state import SkillData
 
 
 def _compiled(effect: str, name: str = "test", element: str = "普通",
