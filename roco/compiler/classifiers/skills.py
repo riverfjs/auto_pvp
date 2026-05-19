@@ -18,7 +18,7 @@ from roco.compiler.classifiers.marks import generated_mark_effects
 from roco.compiler.effect_compile import compile_skill_effects
 from roco.compiler.records import SkillData
 from roco.compiler.skill_tags import classify
-from roco.engine.enums import normalize_element_name
+from roco.common.enums import normalize_element_name
 
 
 def classify_skill_record(

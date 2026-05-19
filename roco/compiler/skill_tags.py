@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from roco.compiler.effect_model import EffectFlag
-from roco.engine.enums import SkillCategory
+from roco.common.enums import SkillCategory
 from roco.compiler.records import SkillData
 
 

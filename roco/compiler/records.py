@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from roco.compiler.effect_model import EffectFlag, SkillEffect
-from roco.engine.enums import SkillCategory, Stats
+from roco.common.enums import SkillCategory, Stats
 
 
 @dataclass(slots=True)

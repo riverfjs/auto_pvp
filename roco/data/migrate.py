@@ -14,7 +14,7 @@ from pathlib import Path
 
 from roco.data.utils import DB_DIR
 from roco.compiler.effect_model import EffectTag, Timing
-from roco.engine.enums import ELEMENT_NAMES
+from roco.common.enums import ELEMENT_NAMES
 
 
 SCHEMA = """

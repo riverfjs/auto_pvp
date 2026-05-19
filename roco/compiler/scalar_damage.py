@@ -8,7 +8,7 @@ from roco.config.constants import (
     FOCUS_ENERGY_GAIN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
 from roco.config.natures import IV_STAT_MAP, NATURE_MOD
-from roco.engine.common.packing import buff_multiplier as _bm
+from roco.common.packing import buff_multiplier as _bm
 from roco.compiler.type_chart import effectiveness_v2
 
 

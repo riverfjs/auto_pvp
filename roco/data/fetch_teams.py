@@ -8,7 +8,8 @@ Usage:
 
 import argparse
 
-from roco.data.utils import RAW_DIR, api_get, content_hash, iter_jsonl, merge_by_key, utc_now_iso, write_jsonl
+from roco.data.bwiki_api import api_get
+from roco.data.utils import RAW_DIR, content_hash, iter_jsonl, merge_by_key, utc_now_iso, write_jsonl
 
 # All relevant SMW properties — fetched in a single ask query
 PROPS = [

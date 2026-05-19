@@ -8,7 +8,7 @@ from typing import Any
 
 from roco.compiler.effect_model import EffectTag, Timing
 from roco.data.utils import RULES_DIR, iter_jsonl
-from roco.engine.enums import SkillCategory
+from roco.common.enums import SkillCategory
 
 EffectRecord = dict[str, Any]
 ManualRules = dict[str, dict[str, Any]]

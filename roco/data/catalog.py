@@ -11,7 +11,7 @@ from typing import Any
 
 from roco.data.utils import DB_DIR
 from roco.compiler.effect_model import AbilityEffect, EffectSpec, EffectTag, SkillEffect, Timing
-from roco.engine.enums import SkillCategory, Stats
+from roco.common.enums import SkillCategory, Stats
 from roco.compiler.records import (
     PetData,
     SkillData,
