@@ -31,7 +31,10 @@ from roco.common.enums import WeatherType
 from roco.generated.handler_indices import (
     H_DISPEL_MARKS,
     H_DISPEL_MARKS_TO_BURN,
+    H_HEAL_ENERGY,
+    H_HEAL_HP,
     H_HIT_COUNT_DELTA,
+    H_LIFE_DRAIN,
     H_PRIORITY_NEXT_DELTA,
     H_SET_SELF_COOLDOWN,
     H_WEATHER,
@@ -83,6 +86,15 @@ EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
     # up 113 times across used skills.  ``apply_after_move`` already
     # folds ``ctx.priority_next`` into ``actor.priority_boost``.
     1051001: (H_PRIORITY_NEXT_DELTA, 1, 0, 0, 0, 0),
+    # "汲取生命100" — heal 100% of damage dealt (pak BPS 10000).
+    # The kernel multiplies ``ctx.drain_bps`` by damage in apply_after_move.
+    1011001: (H_LIFE_DRAIN, 10000, 0, 0, 0, 0),
+    # "恢复15%生命" — heal 15% max HP via ``ctx.heal_hp_bps``
+    # (pak param[1] = 1500 BPS).  Other 1005xxx variants exist but the
+    # widely-used one is 1005015.
+    1005015: (H_HEAL_HP, 1500, 0, 0, 0, 0),
+    # "通用--获得1能量" — actor gains 1 energy via ``ctx.heal_energy``.
+    1019001: (H_HEAL_ENERGY, 1, 0, 0, 0, 0),
     # 标记转换灼烧 — skill text: "dispel both sides' marks, every dispelled
     # stack gives the enemy 5 burn".  The dispel half is 1042008 above and
     # runs at CALC_DAMAGE; this row fires at TURN_END (pak ``cast_moment=12``)
