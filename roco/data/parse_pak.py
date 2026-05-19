@@ -157,7 +157,9 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
             continue
         record = _skill_record(row, desc_notes)
         skill_row = data.skill_conf.get(str(sid), row)
-        record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
+        effect_rows, effect_gaps = generate_effect_rows(skill_row, pak_tables)
+        record["effect_rows"] = effect_rows
+        record["effect_gaps"] = effect_gaps
         source = _source("skill", sid, row)
         record = with_canonical_hash(record, source)
         records.append(record)
@@ -193,7 +195,9 @@ def build_abilities(data: PakData, desc_notes: dict[int, str], pak_tables: PakTa
             "source_version": str(row.get("monitor_data_version", "")),
             "source_fields": row,
         }
-        record["effect_rows"] = build_ability_effect_rows(row, pak_tables)
+        effect_rows, effect_gaps = build_ability_effect_rows(row, pak_tables)
+        record["effect_rows"] = effect_rows
+        record["effect_gaps"] = effect_gaps
         records.append(with_canonical_hash(record, _source("ability", fid, row)))
         name_by_id[fid] = name
     return records, name_by_id

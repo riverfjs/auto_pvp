@@ -88,9 +88,10 @@ def test_generate_effect_rows_buff_ref(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_SELF_BUFF
+    assert gaps == []
 
 
 def test_generate_effect_rows_damage_ref(pak):
@@ -100,21 +101,25 @@ def test_generate_effect_rows_damage_ref(pak):
         "result_target_type": 2,
         "success_rate": 10000,
     }]}
-    rows = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_DAMAGE
+    assert gaps == []
 
 
-def test_generate_effect_rows_state_change_ref(pak):
+def test_generate_effect_rows_state_change_records_gap(pak):
     skill_row = {"skill_result": [{
         "effect_id": 1004001,
         "cast_moment": 11,
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows = generate_effect_rows(skill_row, pak)
-    # type=3 (state change) defaults to NOOP — specific cases handled via overrides
-    assert len(rows) == 0
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    # type=3 state changes are not yet executable — must surface as audit gaps.
+    assert rows == []
+    assert len(gaps) == 1
+    assert gaps[0]["reason"].startswith("effect_type_3")
+    assert gaps[0]["params"]["effect_id"] == 1004001
 
 
 def test_generate_effect_rows_timing_from_cast_moment(pak):
@@ -124,15 +129,17 @@ def test_generate_effect_rows_timing_from_cast_moment(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows[0][1] == Timing.TURN_END
 
 
 def test_generate_effect_rows_empty_skill_result(pak):
-    rows = generate_effect_rows({"skill_result": []}, pak)
+    rows, gaps = generate_effect_rows({"skill_result": []}, pak)
     assert rows == []
-    rows2 = generate_effect_rows({}, pak)
+    assert gaps == []
+    rows2, gaps2 = generate_effect_rows({}, pak)
     assert rows2 == []
+    assert gaps2 == []
 
 
 def test_build_ability_effect_rows(pak):
@@ -142,8 +149,9 @@ def test_build_ability_effect_rows(pak):
         "result_target_type": 2,
         "success_rate": 5000,
     }]}
-    rows = build_ability_effect_rows(ability_row, pak)
+    rows, gaps = build_ability_effect_rows(ability_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_POISON
+    assert gaps == []
 
 

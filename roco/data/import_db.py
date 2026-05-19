@@ -178,6 +178,7 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
     )
     lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
     effect_rows: list[tuple] = []
+    gap_rows: list[tuple] = []
     for record in records:
         name = str(record.get("name", "")).strip()
         if not name:
@@ -191,14 +192,25 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
             rate = row_tuple[3]
             params_json = json.dumps({"target": target, "rate": rate, "p0": row_tuple[4], "p1": row_tuple[5], "p2": row_tuple[6], "p3": row_tuple[7]})
             effect_rows.append((owner_id, timing, handler_idx, 0, params_json, "", order))
+        for gap in record.get("effect_gaps", []) or []:
+            gap_rows.append(_gap_row(
+                "ability",
+                name,
+                str(gap.get("primitive", "")),
+                gap.get("timing_code"),
+                gap.get("params") or {},
+                str(gap.get("reason", "")),
+            ))
     if effect_rows:
         conn.executemany(
             "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
+    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  abilities: {len(lookup)} inserted")
     print(f"  ability_effects: {len(effect_rows)} inserted")
+    print(f"  ability effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 
@@ -226,6 +238,7 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
     )
     lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     effect_rows: list[tuple] = []
+    gap_rows: list[tuple] = []
     for record in records:
         name = str(record["name"])
         owner_id = lookup[name]
@@ -237,14 +250,25 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             rate = row_tuple[3]
             params_json = json.dumps({"target": target, "rate": rate, "p0": row_tuple[4], "p1": row_tuple[5], "p2": row_tuple[6], "p3": row_tuple[7]})
             effect_rows.append((owner_id, timing, handler_idx, 0, params_json, "", order))
+        for gap in record.get("effect_gaps", []) or []:
+            gap_rows.append(_gap_row(
+                "skill",
+                name,
+                str(gap.get("primitive", "")),
+                gap.get("timing_code"),
+                gap.get("params") or {},
+                str(gap.get("reason", "")),
+            ))
     if effect_rows:
         conn.executemany(
             "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
+    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  skills: {len(lookup)} inserted")
     print(f"  skill_effects: {len(effect_rows)} inserted")
+    print(f"  skill effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 
@@ -534,6 +558,36 @@ def import_teams(
     print(f"  teams: {len(team_rows)} inserted")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
     print(f"  team_pet_skills: {len(skill_rows)} moves inserted")
+
+
+def print_effect_coverage(conn: sqlite3.Connection) -> None:
+    """Emit a coverage summary so silent regressions in handler mapping are visible."""
+    skill_rows = conn.execute("SELECT COUNT(*) FROM skill_effects").fetchone()[0]
+    skill_gaps = conn.execute(
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_type = 'skill'"
+    ).fetchone()[0]
+    skill_used_gaps = conn.execute(
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_type = 'skill' AND used_count > 0"
+    ).fetchone()[0]
+    ability_rows = conn.execute("SELECT COUNT(*) FROM ability_effects").fetchone()[0]
+    ability_gaps = conn.execute(
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_type = 'ability'"
+    ).fetchone()[0]
+    ability_used_gaps = conn.execute(
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_type = 'ability' AND used_count > 0"
+    ).fetchone()[0]
+    skill_total = skill_rows + skill_gaps
+    ability_total = ability_rows + ability_gaps
+    skill_cov = (skill_rows / skill_total * 100.0) if skill_total else 0.0
+    ability_cov = (ability_rows / ability_total * 100.0) if ability_total else 0.0
+    print(
+        f"  effect coverage  skills: {skill_rows}/{skill_total} ({skill_cov:.1f}%) "
+        f"dropped={skill_gaps} used_dropped={skill_used_gaps}"
+    )
+    print(
+        f"  effect coverage  abilities: {ability_rows}/{ability_total} ({ability_cov:.1f}%) "
+        f"dropped={ability_gaps} used_dropped={ability_used_gaps}"
+    )
 
 
 def refresh_effect_gap_usage(conn: sqlite3.Connection) -> None:

@@ -6,7 +6,7 @@ import argparse
 
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
-from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
+from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams, print_effect_coverage
 from roco.data.migrate import migrate
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
 
@@ -62,6 +62,7 @@ def main() -> None:
         )
 
     conn.commit()
+    print_effect_coverage(conn)
     catalog = compile_catalog(conn)
     conn.close()
     hot_path, debug_path = compile_artifacts(DB_DIR / "data.db")
