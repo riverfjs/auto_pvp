@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.effect_model import PakOp, Timing
+from roco.compiler.effect_model import Timing
+from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
 from roco.compiler.effect_codegen import (
     PakTables,
     generate_effect_rows,
@@ -64,13 +65,15 @@ def pak(tmp_path):
     return PakTables(tmp_path)
 
 
-def test_pak_op_has_major_families():
-    assert PakOp.STAT_MOD == 2001
-    assert PakOp.IMMUNITY_LOCK == 2003
-    assert PakOp.POWER_MOD == 2023
-    assert PakOp.EFF_DAMAGE == 10002
-    assert PakOp.EFF_STATE_CHANGE == 10003
-    assert PakOp.UNSUPPORTED == 0
+def test_pak_op_prefix_table_covers_major_families():
+    # PAK_PREFIX_NAMES is generated from BUFF_CONF + prefix_handlers.jsonl;
+    # the legacy ``PakOp`` enum is retired.  Confirm the table still names
+    # the most-used families and exports the synthetic EFFECT_CONF markers.
+    assert PAK_PREFIX_NAMES[2001] == "STAT_MOD"
+    assert PAK_PREFIX_NAMES[2003] == "IMMUNITY_LOCK"
+    assert PAK_PREFIX_NAMES[2023] == "POWER_MOD"
+    assert EFF_DAMAGE == 10002
+    assert EFF_STATE_CHANGE == 10003
 
 
 def test_timing_matches_cast_moment():

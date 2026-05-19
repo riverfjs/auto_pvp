@@ -11,7 +11,6 @@ from roco.compiler.artifact import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, write_jsonl
-from roco.compiler.effect_model import PakOp
 
 
 def _sample_data():

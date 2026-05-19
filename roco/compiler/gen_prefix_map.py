@@ -17,11 +17,11 @@ import json
 import sys
 from pathlib import Path
 
-from roco.compiler.effect_model import PakOp
 
 ROOT = Path(__file__).resolve().parents[2]
 PAK_DATA = ROOT / "pak-public-kit" / "output" / "data" / "BinData"
 GEN_DIR = ROOT / "roco" / "generated"
+RULES_DIR = ROOT / "roco" / "compiler" / "rules"
 REGISTRY_PATH = GEN_DIR / "handler_registry.json"
 INDICES_PATH = GEN_DIR / "handler_indices.py"
 ORDER_PATH = GEN_DIR / "handler_order.py"
@@ -29,6 +29,12 @@ TABLE_PATH = GEN_DIR / "handler_table.py"
 PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
 PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 MARK_GROUPS_PATH = GEN_DIR / "mark_groups.py"
+PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
+# Hand-curated prefix/base_id → handler seed used to bootstrap
+# ``generate_prefix_map``.  Editable JSONL keeps the semantic decisions
+# (which pak prefix family maps to which kernel handler) as data, not as
+# Python source.  ``gen_prefix_map`` only loads, validates, and emits.
+PREFIX_SEED_PATH = RULES_DIR / "prefix_handlers.jsonl"
 
 _OP_MODULES = (
     # op_mods is a package split by topic; gen scans each submodule
@@ -190,111 +196,40 @@ def _write_handler_table(handlers: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 def _build_seed(h: dict[str, int]) -> tuple[dict[int, int], dict[int, int]]:
-    prefix_seed: dict[int, int] = {
-        PakOp.STAT_MOD: h["H_SELF_BUFF"],
-        PakOp.IMMUNITY_LOCK: h["H_NOOP"],
-        PakOp.LOCK_SWITCH: h["H_SELF_BUFF"],
-        PakOp.LEECH: h["H_LEECH"],
-        PakOp.BOSS_STUN: h["H_SELF_BUFF"],
-        PakOp.STATUS_CONDITION: h["H_POISON"],
-        PakOp.NEXT_PET: h["H_SELF_BUFF"],
-        PakOp.DAMAGE_REDUCE: h["H_DAMAGE_REDUCTION"],
-        PakOp.DOUBLE_ACTION: h["H_SELF_BUFF"],
-        PakOp.STUN_HEAL: h["H_HIT_COUNT_DELTA"],
-        PakOp.ON_HIT_REACTION: h["H_SELF_BUFF"],
-        PakOp.PRIORITY: h["H_POWER_DYNAMIC"],
-        PakOp.NUTRITION: h["H_HEAL_HP"],
-        PakOp.POWER_MOD: h["H_POWER_DYNAMIC"],
-        PakOp.EARTH_HEART: h["H_POWER_DYNAMIC"],
-        PakOp.ELEMENT_VULN: h["H_SELF_BUFF"],
-        PakOp.MOMENTUM: h["H_POWER_DYNAMIC"],
-        PakOp.TEST_28: h["H_SELF_BUFF"],
-        PakOp.FIRE_RAGE: h["H_POWER_DYNAMIC"],
-        PakOp.COST_MOD: h["H_PASSIVE_ENERGY_REDUCE"],
-        PakOp.ENTRY_AMBUSH: h["H_SELF_BUFF"],
-        PakOp.OVERLOAD: h["H_POWER_DYNAMIC"],
-        PakOp.ELEMENT_TRIGGER: h["H_SELF_BUFF"],
-        PakOp.EFFICIENCY: h["H_PASSIVE_ENERGY_REDUCE"],
-        PakOp.SURVIVAL: h["H_DAMAGE_REDUCTION"],
-        PakOp.DUCK: h["H_SELF_BUFF"],
-        PakOp.DETECTION: h["H_NOOP"],
-        PakOp.HP_CONDITIONAL: h["H_SELF_BUFF"],
-        PakOp.NON_SE_REDUCE: h["H_DAMAGE_REDUCTION"],
-        PakOp.QUICK_START: h["H_SELF_BUFF"],
-        PakOp.HIT_COUNT: h["H_HIT_COUNT_DELTA"],
-        PakOp.ON_KILL: h["H_SELF_BUFF"],
-        PakOp.FORCE_SWITCH: h["H_FORCE_SWITCH"],
-        PakOp.TURN_END_TRANSFORM: h["H_SELF_BUFF"],
-        PakOp.ENTRY_STATUS: h["H_SELF_BUFF"],
-        PakOp.DREAM: h["H_SELF_BUFF"],
-        PakOp.ENERGY_GAIN: h["H_HEAL_ENERGY"],
-        PakOp.HEAL_MOD: h["H_HEAL_HP"],
-        PakOp.DRAIN: h["H_LIFE_DRAIN"],
-        PakOp.SKILL_COPY: h["H_SELF_BUFF"],
-        PakOp.FREEZE_STATUS: h["H_FREEZE"],
-        PakOp.COOLDOWN: h["H_NOOP"],
-        PakOp.CHAR_SPECIFIC_A: h["H_SELF_BUFF"],
-        PakOp.CONDITIONAL_TRIGGER: h["H_SELF_BUFF"],
-        PakOp.COUNTER_REWARD: h["H_SELF_BUFF"],
-        PakOp.POISON_FANG: h["H_POISON"],
-        PakOp.DARK_HEAL: h["H_HEAL_HP"],
-        PakOp.OTTER: h["H_SELF_BUFF"],
-        PakOp.TEAM_ON_DEATH: h["H_SELF_BUFF"],
-        PakOp.DOUBLE_TRIGGER: h["H_SELF_BUFF"],
-        PakOp.SLEEPWALK: h["H_SELF_BUFF"],
-        PakOp.SLOT_PRIORITY: h["H_SELF_BUFF"],
-        PakOp.LANTERN: h["H_SELF_BUFF"],
-        PakOp.CYCLOPS: h["H_SELF_BUFF"],
-        PakOp.MIRROR_PRIORITY: h["H_SELF_BUFF"],
-        PakOp.FEYNMAN: h["H_SELF_BUFF"],
-        PakOp.CHAR_SPECIFIC_B: h["H_SELF_BUFF"],
-        PakOp.ENERGY_HEAL: h["H_HEAL_ENERGY"],
-        PakOp.CHARGE: h["H_SELF_BUFF"],
-        PakOp.REFRACT: h["H_SELF_BUFF"],
-        PakOp.DYNAMIC_HIT: h["H_HIT_COUNT_DELTA"],
-        PakOp.FREEZE_LOCK: h["H_SELF_BUFF"],
-        PakOp.ENTRY_FIRST_TURN: h["H_SELF_BUFF"],
-        PakOp.MARK_METEOR: h["H_METEOR_MARK"],
-        PakOp.ELEMENT_ENERGY: h["H_HEAL_ENERGY"],
-        PakOp.EXTEND_ENTRY: h["H_SELF_BUFF"],
-        PakOp.CUTE_SPEED: h["H_CUTE_GAIN"],
-        PakOp.DIFF_SKILL_COST: h["H_SELF_BUFF"],
-        PakOp.MAGIC_KILLER: h["H_SELF_BUFF"],
-        PakOp.SKILL_CHECK: h["H_SELF_BUFF"],
-        PakOp.POSITION_COST: h["H_SELF_BUFF"],
-        PakOp.COND_POWER: h["H_POWER_DYNAMIC"],
-        PakOp.FLAT_POWER: h["H_POWER_DYNAMIC"],
-        PakOp.OVERFLOW_HEAL: h["H_HEAL_HP"],
-        PakOp.MARK_NO_DECAY: h["H_SELF_BUFF"],
-        PakOp.BURN_REVERSE: h["H_SELF_BUFF"],
-        PakOp.COVER: h["H_SELF_BUFF"],
-        PakOp.CAP_RAISE: h["H_SELF_BUFF"],
-        PakOp.DRIVE: h["H_HIT_COUNT_DELTA"],
-        PakOp.SLOT_MOD: h["H_SELF_BUFF"],
-        PakOp.RETURN: h["H_SELF_BUFF"],
-        PakOp.FIRST_USE_POWER: h["H_SELF_BUFF"],
-        PakOp.SIDE_COST: h["H_SELF_BUFF"],
-        PakOp.TEST: h["H_SELF_BUFF"],
-        PakOp.ALERT: h["H_SELF_BUFF"],
-        PakOp.BORROW: h["H_SELF_BUFF"],
-        PakOp.FROG: h["H_SELF_BUFF"],
-        PakOp.SEGMENT_HP: h["H_SELF_BUFF"],
-        PakOp.HIT_BURN: h["H_BURN"],
-        PakOp.CUTE_INFINITE: h["H_CUTE_GAIN"],
-        PakOp.PURIFY: h["H_CLEANSE"],
-        PakOp.COST_EFFICIENCY: h["H_PASSIVE_ENERGY_REDUCE"],
-        PakOp.CANDY: h["H_CUTE_GAIN"],
-        PakOp.MARK_CHANGE: h["H_SELF_BUFF"],
-    }
-    base_id_seed: dict[int, int] = {
-        2007001: h["H_POISON"],
-        2007002: h["H_BURN"],
-        2005001: h["H_LEECH"],
-        2032007: h["H_MOISTURE_MARK"],
-        2021004: h["H_WIND_MARK"],
-        2143001: h["H_MOISTURE_MARK"],
-        2094001: h["H_METEOR_MARK"],
-    }
+    """Load the hand-curated prefix / base_id → handler seed from JSONL.
+
+    The JSONL is the editable source of truth for semantic decisions
+    (which pak prefix family maps to which kernel handler).  Each record
+    is either ``{"prefix": <int>, "handler": "H_*", "alias": "..."}`` or
+    ``{"base_id": <int>, "handler": "H_*", "note": "..."}``.
+
+    Unknown handler names raise immediately so renames in the kernel
+    cannot silently drop a prefix from the seed.
+    """
+    prefix_seed: dict[int, int] = {}
+    base_id_seed: dict[int, int] = {}
+    with PREFIX_SEED_PATH.open("r", encoding="utf-8") as fp:
+        for line_no, raw in enumerate(fp, 1):
+            raw = raw.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            rec = json.loads(raw)
+            handler_name = rec.get("handler")
+            if handler_name not in h:
+                raise RuntimeError(
+                    f"prefix_handlers.jsonl line {line_no}: unknown handler "
+                    f"'{handler_name}' (not in handler_indices)"
+                )
+            handler_idx = h[handler_name]
+            if "prefix" in rec:
+                prefix_seed[int(rec["prefix"])] = handler_idx
+            elif "base_id" in rec:
+                base_id_seed[int(rec["base_id"])] = handler_idx
+            else:
+                raise RuntimeError(
+                    f"prefix_handlers.jsonl line {line_no}: record needs "
+                    "either 'prefix' or 'base_id'"
+                )
     return prefix_seed, base_id_seed
 
 
@@ -352,6 +287,53 @@ _PAK_RULES_KEYS = {
     "SKILL_DAMAGE_MAX":      "skill_damage_max",
     "PVP_LEVEL":             "battle_pvp_level",
 }
+
+
+def generate_pak_ops(pak_data_dir: Path = PAK_DATA) -> int:
+    """Emit ``roco/generated/pak_ops.py`` — pak prefix family debug names.
+
+    Aliases come from :data:`PREFIX_SEED_PATH`; prefixes that appear in
+    pak BUFF_CONF but have no seed entry get a generic ``PREFIX_<n>``
+    label so the table is exhaustive.  ``PAK_PREFIX_NAMES`` is the only
+    place the compiler/data layer should look up "what does this pak
+    prefix mean" — no hand-written enum mirrors pak schema any more.
+    """
+    aliases: dict[int, str] = {}
+    with PREFIX_SEED_PATH.open("r", encoding="utf-8") as fp:
+        for raw in fp:
+            raw = raw.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            rec = json.loads(raw)
+            if "prefix" in rec and rec.get("alias"):
+                aliases[int(rec["prefix"])] = rec["alias"]
+
+    buff_path = pak_data_dir / "BUFF_CONF.json"
+    rows = json.loads(buff_path.read_text(encoding="utf-8")).get("RocoDataRows", {})
+    all_prefixes: set[int] = set()
+    for rec in rows.values():
+        for bid in rec.get("buff_base_ids") or []:
+            if bid:
+                all_prefixes.add(bid // 1000)
+
+    lines = [
+        "# Auto-generated from BUFF_CONF.json + prefix_handlers.jsonl — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+        "# Synthetic ``EFFECT_CONF.type`` markers (not pak buff prefixes).",
+        "EFF_BUFF_APPLY = 10001",
+        "EFF_DAMAGE = 10002",
+        "EFF_STATE_CHANGE = 10003",
+        "",
+        "PAK_PREFIX_NAMES: dict[int, str] = {",
+    ]
+    for pfx in sorted(all_prefixes):
+        name = aliases.get(pfx, f"PREFIX_{pfx}")
+        lines.append(f"    {pfx}: {name!r},")
+    lines.append("}")
+    lines.append("")
+    PAK_OPS_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return len(all_prefixes)
 
 
 def generate_mark_groups(
@@ -488,6 +470,9 @@ def main() -> None:
 
     groups = generate_mark_groups(h, result)
     print(f"mark_groups.py: {len(groups)} cover groups -> {MARK_GROUPS_PATH}")
+
+    pak_op_count = generate_pak_ops()
+    print(f"pak_ops.py: {pak_op_count} prefixes -> {PAK_OPS_PATH}")
 
 
 if __name__ == "__main__":

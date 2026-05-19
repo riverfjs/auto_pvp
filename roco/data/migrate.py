@@ -13,7 +13,8 @@ import sqlite3
 from pathlib import Path
 
 from roco.data.utils import DB_DIR
-from roco.compiler.effect_model import PakOp, Timing
+from roco.compiler.effect_model import Timing
+from roco.generated.pak_ops import EFF_DAMAGE
 from roco.common.enums import ELEMENT_NAMES
 
 
@@ -294,9 +295,13 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT OR IGNORE INTO weather_effects (weather_id, timing_code, tag_code, params_json, sort_order) VALUES (?, ?, ?, ?, ?)",
         [
-            (1, Timing.CALC_DAMAGE.value, PakOp.EFF_DAMAGE.value, '{"element":"水","mult":1.5}', 0),
-            (2, Timing.TURN_END.value, PakOp.EFF_DAMAGE.value, '{"fraction":0.0625,"immune":["地","机械"]}', 0),
-            (3, Timing.TURN_END.value, PakOp.FREEZE_STATUS.value, '{"stacks":2}', 0),
+            # ``tag_code`` for ``weather_effects`` is documentation-only —
+            # use the synthetic EFF_DAMAGE code for damage rows and a
+            # placeholder int for the freeze sample (the pak ``FREEZE_STATUS``
+            # prefix 2058 is now just a debug name in :mod:`pak_ops`).
+            (1, Timing.CALC_DAMAGE.value, EFF_DAMAGE, '{"element":"水","mult":1.5}', 0),
+            (2, Timing.TURN_END.value, EFF_DAMAGE, '{"fraction":0.0625,"immune":["地","机械"]}', 0),
+            (3, Timing.TURN_END.value, 2058, '{"stacks":2}', 0),
         ],
     )
     conn.executemany(

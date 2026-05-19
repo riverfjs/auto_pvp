@@ -10,7 +10,7 @@ from types import MappingProxyType
 from typing import Any
 
 from roco.data.utils import DB_DIR
-from roco.compiler.effect_model import AbilityEffect, EffectSpec, PakOp, SkillEffect, Timing
+from roco.compiler.effect_model import AbilityEffect, EffectSpec, SkillEffect, Timing
 from roco.common.enums import SkillCategory, Stats
 from roco.compiler.records import (
     PetData,
@@ -50,11 +50,7 @@ def _load_skill_effects(conn: sqlite3.Connection) -> dict[int, tuple[SkillEffect
     )
     by_skill: dict[int, list[SkillEffect]] = {}
     for skill_id, timing, tag, params, condition, sort_order in rows:
-        try:
-            op = PakOp(tag)
-        except ValueError:
-            op = PakOp.UNSUPPORTED
-        spec = EffectSpec(op, Timing(timing), _params(params), 1.0, condition or "")
+        spec = EffectSpec(int(tag), Timing(timing), _params(params), 1.0, condition or "")
         by_skill.setdefault(skill_id, []).append(SkillEffect(skill_id, spec, sort_order))
     return {sid: tuple(items) for sid, items in by_skill.items()}
 
@@ -66,11 +62,7 @@ def _load_ability_effects(conn: sqlite3.Connection) -> dict[int, tuple[AbilityEf
     )
     by_ability: dict[int, list[AbilityEffect]] = {}
     for ability_id, timing, tag, params, condition, sort_order in rows:
-        try:
-            op = PakOp(tag)
-        except ValueError:
-            op = PakOp.UNSUPPORTED
-        spec = EffectSpec(op, Timing(timing), _params(params), 1.0, condition or "")
+        spec = EffectSpec(int(tag), Timing(timing), _params(params), 1.0, condition or "")
         by_ability.setdefault(ability_id, []).append(AbilityEffect(ability_id, spec, sort_order))
     return {aid: tuple(items) for aid, items in by_ability.items()}
 
@@ -141,12 +133,12 @@ def compile_catalog(path_or_conn: str | Path | sqlite3.Connection | None = None)
                 pets_by_id[pet_id].skill_ids = skill_ids
 
         ability_effects = _load_ability_effects(conn)
+        # Coverage gaps now live exclusively in the ``effect_gaps`` table
+        # (populated by ``effect_codegen`` for every dropped skill_result
+        # entry); the prior PakOp-based scan over loaded effects produced
+        # nothing useful because ``tag_code`` is a kernel handler index,
+        # not a pak prefix.
         unsupported: dict[str, int] = {}
-        for items in tuple(skill_effects.values()) + tuple(ability_effects.values()):
-            for item in items:
-                if item.effect.tag is PakOp.UNSUPPORTED:
-                    kind = str(item.effect.params.get("primitive", item.effect.params.get("tag", "UNSUPPORTED")))
-                    unsupported[kind] = unsupported.get(kind, 0) + 1
         try:
             gap_rows = conn.execute("SELECT primitive FROM effect_gaps")
         except sqlite3.OperationalError:
@@ -200,7 +192,13 @@ load_catalog = compile_catalog
 
 
 def _damage_hit_count(effects: tuple[SkillEffect, ...]) -> int:
+    # ``tag_code`` stored in the DB is the kernel handler index, so compare
+    # against ``H_DAMAGE`` directly; the legacy ``PakOp.EFF_DAMAGE`` check
+    # never matched (those synthetic codes live in :mod:`pak_ops` and were
+    # never persisted).
+    from roco.generated.handler_indices import H_DAMAGE
+
     for item in effects:
-        if item.effect.tag is PakOp.EFF_DAMAGE:
+        if item.effect.tag == H_DAMAGE:
             return max(1, int(item.effect.params.get("hit_count", 1)))
     return 1
