@@ -6,7 +6,7 @@ from typing import NamedTuple
 
 from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
 from roco.engine.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
-from roco.engine.common.rules import (
+from roco.common.constants import (
     BPS,
     FOCUS_ENERGY_GAIN,
     HP_FOR_ENERGY_PCT_BPS,

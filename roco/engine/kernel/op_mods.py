@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from roco.engine.common.packing import BUFF_ATK_MAG, BUFF_ATK_PHYS, BUFF_DEF_MAG, BUFF_DEF_PHYS, BUFF_SPEED, _add_buff_bps, _unpack_skill_count
-from roco.engine.common.rules import BLOODLINE_LEADER, BLOODLINE_POLLUTANT, BPS
+from roco.common.constants import BLOODLINE_LEADER, BLOODLINE_POLLUTANT, BPS
 from roco.engine.enums import Element
 from roco.engine.kernel.catalog import ELEMENT_LIGHT, SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx

@@ -51,21 +51,26 @@ uv run pytest tests/ -v                          # 验证
 
 ```
 roco/
+├── generated/         # 全部自动生成产物 (build artifacts)
+│   ├── handler_indices.py        # H_* 常量 (从 ops.py HANDLERS 派生)
+│   ├── handler_order.py          # HANDLER_ORDER tuple
+│   ├── handler_registry.json     # append-only handler 注册表
+│   ├── prefix_handler_map.json   # buff prefix → handler 索引
+│   └── pak_rules.py              # 从 BATTLE_GLOBAL_CONFIG 提取的常量
+├── common/            # 跨层共享: 枚举、常量、natures、bit packing
 ├── engine/
-│   ├── common/       # Choice, RNG, packed bitfields, rules
-│   ├── kernel/       # 热路径: mechanics, damage, state, ops, switch, residual
-│   ├── generated/    # catalog_hot.py, catalog_debug.py (编译产物)
-│   └── facade/       # BattleEngine (名字↔ID 边界转换)
+│   ├── common/        # Choice, RNG, kernel-local helpers
+│   ├── kernel/        # 热路径: mechanics, damage, state, ops, switch, residual
+│   ├── generated/     # catalog_hot.py, catalog_debug.py (DB 编译产物)
+│   └── facade/        # BattleEngine (名字↔ID 边界转换)
 ├── compiler/
 │   ├── effect_codegen.py   # pak → handler_idx 分类
 │   ├── artifact.py         # SQLite → catalog_hot.py
-│   ├── gen_prefix_map.py   # handler 自动发现 + prefix 映射生成
-│   └── generated/          # handler_indices.py, handler_registry.json, prefix_handler_map.json
-├── data/
-│   ├── parse_pak.py   # pak BinData → canonical JSONL
-│   ├── import_db.py   # JSONL → SQLite
-│   └── build_db.py    # 完整构建入口
-└── common/            # 跨层共享枚举
+│   └── gen_prefix_map.py   # handler 注册 + prefix 映射 + pak_rules 生成
+└── data/
+    ├── parse_pak.py   # pak BinData → canonical JSONL
+    ├── import_db.py   # JSONL → SQLite
+    └── build_db.py    # 完整构建入口
 ```
 
 ## Reference

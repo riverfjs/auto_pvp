@@ -17,7 +17,7 @@ from roco.compiler.scalar_damage import (
     clamp_stage,
     apply_buff_stages,
 )
-from roco.config.natures import NATURE_MOD
+from roco.common.natures import NATURE_MOD
 
 
 # ── Stat computation ───────────────────────────────────────────

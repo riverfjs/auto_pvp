@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW
 from roco.engine.common.packing import MarkIdx, _set_mark, _unpack_mark
-from roco.engine.common.rules import BPS, MAX_ENERGY, SPIRIT_ENTRY_ENERGY_LOSS, THORN_ENTRY_DAMAGE_BPS
+from roco.common.constants import BPS, MAX_ENERGY, SPIRIT_ENTRY_ENERGY_LOSS, THORN_ENTRY_DAMAGE_BPS
 from roco.engine.enums import AbilityFlag
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import ELEMENT_BUG, PET_ABILITY, PET_PRIMARY, STAT_HP

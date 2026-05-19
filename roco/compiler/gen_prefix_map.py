@@ -1,8 +1,11 @@
-"""Auto-generate handler indices + prefix->handler mapping.
+"""Auto-generate handler indices + prefix->handler mapping + pak rules.
 
-Two outputs (both under roco/compiler/generated/):
-  1. handler_indices.py  — H_* constants from handler_registry.json
-  2. prefix_handler_map.json — prefix family -> handler index from BUFF_CONF
+Outputs (all under roco/generated/):
+  - handler_indices.py        H_* constants from handler_registry.json
+  - handler_order.py          HANDLER_ORDER tuple consumed by ops.py
+  - handler_registry.json     append-only registry of op_* function names
+  - prefix_handler_map.json   buff prefix family -> handler index
+  - pak_rules.py              constants extracted from BATTLE_GLOBAL_CONFIG
 
 Run at build time:  uv run python -m roco.compiler.gen_prefix_map
 """
@@ -18,11 +21,12 @@ from roco.compiler.effect_model import PakOp
 
 ROOT = Path(__file__).resolve().parents[2]
 PAK_DATA = ROOT / "pak-public-kit" / "output" / "data" / "BinData"
-GEN_DIR = ROOT / "roco" / "compiler" / "generated"
+GEN_DIR = ROOT / "roco" / "generated"
 REGISTRY_PATH = GEN_DIR / "handler_registry.json"
 INDICES_PATH = GEN_DIR / "handler_indices.py"
 ORDER_PATH = GEN_DIR / "handler_order.py"
 PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
+PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 
 _OP_MODULES = (
     "roco.engine.kernel.op_mods",
@@ -260,6 +264,55 @@ def generate_prefix_map(handler_indices: dict[str, int], pak_data_dir: Path = PA
     }
 
 
+# ---------------------------------------------------------------------------
+# Pak-derivable game-rule constants (BATTLE_GLOBAL_CONFIG)
+# ---------------------------------------------------------------------------
+
+# Map our constant name -> pak BATTLE_GLOBAL_CONFIG key.
+# Only constants whose semantics match pak's encoding are listed here.
+# Kernel-specific composites (e.g. TYPE_DOUBLE_RESIST_BPS from multiplicative
+# stack of two single-resist mults) stay in common/constants.py.
+_PAK_RULES_KEYS = {
+    "TYPE_NEUTRAL_BPS":      "restraint_percent",
+    "TYPE_WEAK_BPS":         "double_restraint_percent",
+    "TYPE_DOUBLE_WEAK_BPS":  "triple_restraint_percent",
+    "TYPE_RESIST_BPS":       "restrained_percent",
+    "DAMAGE_PERCENT_LIMIT":  "damage_percent_limit",
+    "SKILL_DAMAGE_MAX":      "skill_damage_max",
+    "PVP_LEVEL":             "battle_pvp_level",
+}
+
+
+def generate_pak_rules(pak_data_dir: Path = PAK_DATA) -> dict[str, int]:
+    p = pak_data_dir / "BATTLE_GLOBAL_CONFIG.json"
+    data = json.loads(p.read_text(encoding="utf-8"))
+    rows = data.get("RocoDataRows", data)
+    by_key = {v.get("key"): v.get("num") for v in rows.values() if v.get("key")}
+
+    out: dict[str, int] = {}
+    missing: list[str] = []
+    for const, pak_key in _PAK_RULES_KEYS.items():
+        val = by_key.get(pak_key)
+        if isinstance(val, (int, float)):
+            out[const] = int(val)
+        else:
+            missing.append(f"{const} ({pak_key})")
+
+    lines = [
+        "# Auto-generated from BATTLE_GLOBAL_CONFIG.json — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+    ]
+    for k, v in out.items():
+        lines.append(f"{k} = {v}")
+    lines.append("")
+    PAK_RULES_PATH.write_text("\n".join(lines), encoding="utf-8")
+
+    if missing:
+        print(f"WARNING: pak_rules missing values for: {missing}", file=sys.stderr)
+    return out
+
+
 def main() -> None:
     h = generate_handler_indices()
     print(f"handler_indices.py: {len(h)} constants -> {INDICES_PATH}")
@@ -272,6 +325,9 @@ def main() -> None:
           f"({stats['mapped_prefixes']} mapped, {len(stats['unmapped_prefixes'])} unmapped) -> {PREFIX_MAP_PATH}")
     if stats["unmapped_prefixes"]:
         print(f"  unmapped: {stats['unmapped_prefixes']}", file=sys.stderr)
+
+    rules = generate_pak_rules()
+    print(f"pak_rules.py: {len(rules)} constants -> {PAK_RULES_PATH}")
 
 
 if __name__ == "__main__":

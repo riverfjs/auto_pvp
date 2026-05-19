@@ -1,0 +1,10 @@
+# Auto-generated from BATTLE_GLOBAL_CONFIG.json — do not edit.
+# Regenerate with: uv run python -m roco.compiler.gen_prefix_map
+
+TYPE_NEUTRAL_BPS = 10000
+TYPE_WEAK_BPS = 20000
+TYPE_DOUBLE_WEAK_BPS = 30000
+TYPE_RESIST_BPS = 5000
+DAMAGE_PERCENT_LIMIT = 1000
+SKILL_DAMAGE_MAX = 99999
+PVP_LEVEL = 60

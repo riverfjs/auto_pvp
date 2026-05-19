@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.config.constants import DEFAULT_MAX_TURNS
+from roco.common.constants import DEFAULT_MAX_TURNS
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW, Choice

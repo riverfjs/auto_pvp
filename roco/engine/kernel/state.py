@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from roco.engine.common.rules import LEADER_USES, SIDE_LIVES, STARTING_ENERGY, WILLPOWER_USES
+from roco.common.constants import LEADER_USES, SIDE_LIVES, STARTING_ENERGY, WILLPOWER_USES
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.enums import AbilityFlag, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import NO_WINNER, SIDE_A

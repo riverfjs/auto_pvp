@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from roco.engine.common.choices import SIDE_A, SIDE_B
 from roco.engine.common.packing import DevotionIdx, MarkIdx, _add_to_negative_buff_lanes, _add_to_positive_buff_lanes, _clear_buff_lanes, _merge_buff_delta, _set_cooldown, _set_devotion, _tick_cooldowns, _unpack_devotion, _unpack_mark
-from roco.engine.common.rules import (
+from roco.common.constants import (
     BPS,
     CUTE_MAX_STACKS,
     LEECH_DAMAGE_BPS,

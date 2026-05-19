@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from roco.config.constants import (
-    DAMAGE_FORMULA_CONSTANT, STAB_MULTIPLIER, MIN_DAMAGE,
-    BURN_HP_CAP, BURN_DAMAGE_PCT, POISON_DAMAGE_PCT,
+from roco.common.constants import (
+    BPS, DAMAGE_CONST_BPS, STAB_BPS, MIN_DAMAGE,
+    BURN_HP_CAP, BURN_DAMAGE_BPS, POISON_DAMAGE_BPS,
     FOCUS_ENERGY_GAIN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
 )
-from roco.config.natures import IV_STAT_MAP, NATURE_MOD
+
+DAMAGE_FORMULA_CONSTANT = DAMAGE_CONST_BPS / BPS
+STAB_MULTIPLIER = STAB_BPS / BPS
+BURN_DAMAGE_PCT = BURN_DAMAGE_BPS / BPS
+POISON_DAMAGE_PCT = POISON_DAMAGE_BPS / BPS
+from roco.common.natures import IV_STAT_MAP, NATURE_MOD
 from roco.common.packing import buff_multiplier as _bm
 from roco.compiler.type_chart import effectiveness_v2
 

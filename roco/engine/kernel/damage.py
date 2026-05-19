@@ -11,7 +11,7 @@ from roco.engine.common.packing import (
     _unpack_mark,
     stat_ratio_bps,
 )
-from roco.engine.common.rules import (
+from roco.common.constants import (
     BPS,
     BURN_DAMAGE_BPS,
     BURN_HP_CAP,

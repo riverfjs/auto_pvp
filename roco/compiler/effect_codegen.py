@@ -119,7 +119,7 @@ def _extract_int_list(lst: list, index: int) -> list[int]:
 
 # Handler indices — auto-generated from HANDLERS array in ops.py.
 # Run `uv run python -m roco.compiler.gen_prefix_map` to regenerate.
-from roco.compiler.generated.handler_indices import *  # noqa: F401,F403
+from roco.generated.handler_indices import *  # noqa: F401,F403
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ from roco.compiler.generated.handler_indices import *  # noqa: F401,F403
 # Run `uv run python -m roco.compiler.gen_prefix_map` to regenerate.
 # ---------------------------------------------------------------------------
 
-_MAP_PATH = Path(__file__).resolve().parent / "generated" / "prefix_handler_map.json"
+_MAP_PATH = Path(__file__).resolve().parents[1] / "generated" / "prefix_handler_map.json"
 
 
 def _load_handler_maps() -> tuple[dict[int, int], dict[int, int]]:

@@ -1,4 +1,4 @@
-from roco.config.constants import STARTING_ENERGY
+from roco.common.constants import STARTING_ENERGY
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.facade.battle import BattleEngine

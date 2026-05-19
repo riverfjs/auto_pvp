@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.engine.common.rules import BPS
+from roco.common.constants import BPS
 
 _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("actor_side", 0),

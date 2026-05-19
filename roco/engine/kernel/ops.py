@@ -19,7 +19,7 @@ from roco.engine.kernel.op_rows import (  # noqa: F401
     TIMING_TAKE_DAMAGE, TIMING_TURN_END, TIMING_TURN_START,
 )
 
-from roco.compiler.generated.handler_order import HANDLER_ORDER
+from roco.generated.handler_order import HANDLER_ORDER
 
 import roco.engine.kernel.op_mods as _op_mods
 import roco.engine.kernel.op_resources as _op_resources

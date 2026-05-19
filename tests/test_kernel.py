@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from roco.config.constants import MIN_DAMAGE, STARTING_ENERGY
+from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.compiler.scalar_damage import calc_attack_damage
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
-from roco.engine.common.rules import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
+from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
 from roco.engine.kernel.catalog import (
     SKILL_CATEGORY,
     SKILL_ELEMENT,
