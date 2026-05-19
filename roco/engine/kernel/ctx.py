@@ -72,6 +72,10 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("form_transform_heal", 0),
     ("counter_damage", 0),
     ("enemy_cooldown_turns", 0),
+    # Set by ``op_set_self_cooldown`` (pak 1037001/1037002 "公共冷却");
+    # ``apply_after_move`` writes this many turns into the actor's own
+    # cooldown slot for the skill being used.
+    ("actor_self_cooldown_turns", 0),
     ("cleanse_self", 0),
     ("cleanse_enemy", 0),
     ("clear_self_buffs", 0),

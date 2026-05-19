@@ -31,6 +31,8 @@ from roco.common.enums import WeatherType
 from roco.generated.handler_indices import (
     H_DISPEL_MARKS,
     H_DISPEL_MARKS_TO_BURN,
+    H_HIT_COUNT_DELTA,
+    H_SET_SELF_COOLDOWN,
     H_WEATHER,
 )
 
@@ -52,6 +54,29 @@ EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
     # not "apply wind/water/...".  Maps to the existing dispel-all-marks
     # kernel primitive.
     1042008: (H_DISPEL_MARKS, 0, 0, 0, 0, 0),
+    # "防御类技能公共冷却 1/2" — 3-turn cooldown on the actor's own skill
+    # slot, attached to defensive skills (防御 / 有效预防 / 风墙 / 听桥 /
+    # 截拳 / …).  Top strict-build blocker by used_count (1037002 alone
+    # appears on 42 used skills, 773 references).  The two pak variants
+    # share semantics; they just live in different cooldown groups in
+    # pak's bookkeeping which the kernel does not distinguish.
+    1037001: (H_SET_SELF_COOLDOWN, 3, 0, 0, 0, 0),
+    1037002: (H_SET_SELF_COOLDOWN, 3, 0, 0, 0, 0),
+    # "连击N" — each pak id adds N hits to the actor's attack at
+    # CALC_DAMAGE; target=self triggers the additive branch of
+    # ``op_hit_count_delta``.  Editor names like "连击10" actually mean
+    # variant index, not stack count — the per-id ``effect_param[0]`` is
+    # the real delta.  9 distinct skills use 1032002 (+2 hits) most.
+    1032001: (H_HIT_COUNT_DELTA, 1, 0, 0, 0, 0),
+    1032002: (H_HIT_COUNT_DELTA, 2, 0, 0, 0, 0),
+    1032003: (H_HIT_COUNT_DELTA, 3, 0, 0, 0, 0),
+    1032004: (H_HIT_COUNT_DELTA, 4, 0, 0, 0, 0),
+    1032005: (H_HIT_COUNT_DELTA, 5, 0, 0, 0, 0),
+    1032006: (H_HIT_COUNT_DELTA, 6, 0, 0, 0, 0),
+    1032007: (H_HIT_COUNT_DELTA, 7, 0, 0, 0, 0),
+    1032008: (H_HIT_COUNT_DELTA, 8, 0, 0, 0, 0),
+    1032009: (H_HIT_COUNT_DELTA, 9, 0, 0, 0, 0),
+    1032010: (H_HIT_COUNT_DELTA, 10, 0, 0, 0, 0),
     # 标记转换灼烧 — skill text: "dispel both sides' marks, every dispelled
     # stack gives the enemy 5 burn".  The dispel half is 1042008 above and
     # runs at CALC_DAMAGE; this row fires at TURN_END (pak ``cast_moment=12``)

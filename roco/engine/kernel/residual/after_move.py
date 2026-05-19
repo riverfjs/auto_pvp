@@ -172,6 +172,8 @@ def apply_after_move(
         target = target._replace(hit_delta=max(-15, min(15, target.hit_delta + ctx.enemy_hit_delta)))
     if ctx.enemy_cooldown_turns and ctx.target_skill_slot >= 0:
         target = target._replace(cooldowns=_set_cooldown(target.cooldowns, ctx.target_skill_slot, ctx.enemy_cooldown_turns))
+    if ctx.actor_self_cooldown_turns and ctx.skill_slot >= 0:
+        actor = actor._replace(cooldowns=_set_cooldown(actor.cooldowns, ctx.skill_slot, ctx.actor_self_cooldown_turns))
     if ctx.counter_damage and ctx.damage_dealt:
         actor = actor._replace(current_hp=max(0, actor.current_hp - ctx.counter_damage))
     if ctx.form_transform:

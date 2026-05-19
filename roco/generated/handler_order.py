@@ -114,4 +114,5 @@ HANDLER_ORDER: tuple[str, ...] = (
     'op_cute_hit_per_stack',
     'op_cute_bench_cost_reduce',
     'op_dispel_marks_to_burn',
+    'op_set_self_cooldown',
 )

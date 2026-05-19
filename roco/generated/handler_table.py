@@ -58,6 +58,7 @@ from roco.engine.kernel.op_mods.combat import (
     op_charge_cost_reduce,
     op_energy_drain_by_cost_diff,
     op_on_interrupt_cooldown,
+    op_set_self_cooldown,
 )
 from roco.engine.kernel.op_resources import (
     op_life_drain,
@@ -251,6 +252,7 @@ HANDLERS: tuple = (
     op_cute_hit_per_stack,  # 110
     op_cute_bench_cost_reduce,  # 111
     op_dispel_marks_to_burn,  # 112
+    op_set_self_cooldown,  # 113
 )
 
 HANDLER_COUNT = len(HANDLERS)

@@ -80,6 +80,21 @@ def op_auto_switch_on_zero_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.force_switch = 1
 
 
+# ── cooldowns ────────────────────────────────────────────────────────────
+
+def op_set_self_cooldown(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    """Lock the actor's currently-used skill slot for ``row[ROW_ARG0]`` turns.
+
+    Backs pak's "公共冷却" effects (1037001/1037002) attached to defensive
+    skills (防御 / 有效预防 / 风墙 / …).  ``apply_after_move`` reads
+    ``ctx.actor_self_cooldown_turns`` together with ``ctx.skill_slot``
+    to write the cooldown into the actor's packed slot.
+    """
+    turns = row[ROW_ARG0]
+    if turns > 0 and ctx.skill_slot >= 0:
+        ctx.actor_self_cooldown_turns = max(ctx.actor_self_cooldown_turns, turns)
+
+
 # ── energy / cost mods ───────────────────────────────────────────────────
 
 def op_charge_cost_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
