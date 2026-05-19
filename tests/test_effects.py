@@ -10,8 +10,7 @@ from roco.compiler.effect_codegen import (
     PakTables,
     generate_effect_rows,
     build_ability_effect_rows,
-    report_coverage,
-    H_DAMAGE, H_STAT_BUFF, H_POISON, H_NOOP,
+    H_DAMAGE, H_SELF_BUFF, H_POISON, H_NOOP,
 )
 
 
@@ -91,7 +90,7 @@ def test_generate_effect_rows_buff_ref(pak):
     }]}
     rows = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == H_STAT_BUFF
+    assert rows[0][0] == H_SELF_BUFF
 
 
 def test_generate_effect_rows_damage_ref(pak):
@@ -148,9 +147,3 @@ def test_build_ability_effect_rows(pak):
     assert rows[0][0] == H_POISON
 
 
-def test_report_coverage(pak):
-    cov = report_coverage(pak)
-    assert "total" in cov
-    assert "mapped" in cov
-    assert "coverage_pct" in cov
-    assert isinstance(cov["coverage_pct"], float)

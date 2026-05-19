@@ -5,7 +5,6 @@ from __future__ import annotations
 from roco.engine.common.packing import BUFF_ATK_MAG, BUFF_ATK_PHYS, BUFF_DEF_MAG, BUFF_DEF_PHYS, BUFF_SPEED, _add_buff_bps, _unpack_skill_count
 from roco.engine.common.rules import BLOODLINE_LEADER, BLOODLINE_POLLUTANT, BPS
 from roco.engine.enums import Element
-from roco.engine.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import ELEMENT_LIGHT, SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import (
@@ -19,7 +18,6 @@ from roco.engine.kernel.op_rows import (
     TARGET_SELF,
     TARGET_TEAM,
 )
-from roco.compiler.effect_model import PakOp
 
 
 def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -197,15 +195,20 @@ def op_damage_mod_non_light(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_damage_mod_non_weakness(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    from roco.engine.generated import catalog_hot as hot
     first = hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_primary]
     second = BPS if ctx.target_secondary < 0 else hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_secondary]
     if not (first > BPS or second > BPS):
         ctx.power_bps = ctx.power_bps * row[ROW_ARG0] // BPS
 
 
-def op_damage_mod_bloodline(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    required = BLOODLINE_LEADER if row[ROW_TAG] == PakOp.DAMAGE_MOD_LEADER_BLOOD else BLOODLINE_POLLUTANT
-    if ctx.target_bloodline == required:
+def op_damage_mod_leader_blood(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.target_bloodline == BLOODLINE_LEADER:
+        ctx.power_bps = ctx.power_bps * row[ROW_ARG0] // BPS
+
+
+def op_damage_mod_pollutant(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.target_bloodline == BLOODLINE_POLLUTANT:
         ctx.power_bps = ctx.power_bps * row[ROW_ARG0] // BPS
 
 

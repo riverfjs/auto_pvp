@@ -8,7 +8,6 @@ import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
-from roco.compiler.nrc_compare import project_report
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, write_jsonl
@@ -30,7 +29,7 @@ def _sample_data():
         _pet("风风", "翼", "顺风", 95, "拍击", atk=90),
         _pet("风空", "翼", "", 95, "拍击", atk=90),
         _pet("谜谜", "普通", "未映射", 55, "拍击"),
-        _pet("地地", "地面系", "", 50, "拍击"),
+        _pet("地地", "地", "", 50, "拍击"),
     ]
     return skills, abilities, pets
 
@@ -288,17 +287,6 @@ def test_old_classifier_pipeline_is_deleted():
     assert [p for p in deleted if (root / p).exists()] == []
 
 
-def test_optional_nrc_compare_report_is_outside_build(tmp_path: Path):
-    src = tmp_path / "src"
-    src.mkdir()
-    (src / "effect_data.py").write_text('SKILL_EFFECTS = {\n    "火花": [],\n}\n', encoding="utf-8")
-    (src / "skill_effects_generated.py").write_text('SKILL_EFFECTS_GENERATED = {\n    "不存在技能": [],\n}\n', encoding="utf-8")
-
-    report = project_report(tmp_path)
-
-    assert report["nrc_root"] == str(tmp_path)
-    assert report["nrc_skill_name_count"] == 2
-    assert "火花" not in report["project_skill_gaps"]
 
 
 def test_pets_with_ability_require_description(tmp_path: Path):

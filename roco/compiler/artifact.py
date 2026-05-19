@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import DB_DIR, ROOT, content_hash
-from roco.compiler.effect_model import PakOp
 from roco.compiler.type_chart import effectiveness_v2
 
 CATALOG_VERSION = 1

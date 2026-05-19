@@ -33,10 +33,9 @@ def test_all_types_present():
 def test_element_aliases_use_roco_ground_not_legacy_elements():
     assert not hasattr(Element, "ROCK")
     assert Element.from_str("地") is Element.GROUND
-    assert Element.from_str("地面") is Element.GROUND
-    for legacy in ("岩", "岩石", "钢", "Rock", "ROCK", "Steel", "STEEL"):
+    for invalid in ("地面", "岩", "岩石", "钢", "Rock", "Steel"):
         with pytest.raises(ValueError):
-            Element.from_str(legacy)
+            Element.from_str(invalid)
 
 
 def test_every_type_has_four_facets():

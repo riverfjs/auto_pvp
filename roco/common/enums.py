@@ -76,19 +76,13 @@ class Element(IntEnum):
     def from_str(cls, s: str) -> "Element":
         mapping = {
             "普通": cls.NORMAL, "草": cls.GRASS, "火": cls.FIRE, "水": cls.WATER,
-            "光": cls.LIGHT, "地": cls.GROUND, "地面": cls.GROUND,
-            "冰": cls.ICE, "龙": cls.DRAGON, "电": cls.ELECTRIC, "毒": cls.POISON,
-            "虫": cls.BUG, "武": cls.FIGHTING, "格斗": cls.FIGHTING,
-            "翼": cls.FLYING, "飞行": cls.FLYING, "萌": cls.CUTE,
-            "幽": cls.GHOST, "幽灵": cls.GHOST, "恶": cls.DARK,
-            "机械": cls.MECHANICAL,
-            "幻": cls.ILLUSION, "超能": cls.ILLUSION,
+            "光": cls.LIGHT, "地": cls.GROUND, "冰": cls.ICE, "龙": cls.DRAGON,
+            "电": cls.ELECTRIC, "毒": cls.POISON, "虫": cls.BUG, "武": cls.FIGHTING,
+            "翼": cls.FLYING, "萌": cls.CUTE, "幽": cls.GHOST, "恶": cls.DARK,
+            "机械": cls.MECHANICAL, "幻": cls.ILLUSION,
         }
-        token = s.replace("系", "").strip()
-        if token in {"岩", "岩石", "钢", "Rock", "ROCK", "rock", "Steel", "STEEL", "steel"}:
-            raise ValueError(f"legacy element is not supported: {s!r}")
         try:
-            return mapping[token]
+            return mapping[s.strip()]
         except KeyError as exc:
             raise ValueError(f"unknown element: {s!r}") from exc
 

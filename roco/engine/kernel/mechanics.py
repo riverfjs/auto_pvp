@@ -45,7 +45,7 @@ from roco.engine.kernel.op_rows import (
     TIMING_CALC_DAMAGE,
     TIMING_TAKE_DAMAGE,
 )
-from roco.compiler.effect_model import PakOp
+from roco.compiler.effect_codegen import H_BORROW_TEAM_SKILL, H_SKILL_MOD
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.residual import apply_after_move, end_turn, share_gains_on_side
 from roco.engine.kernel.state import (
@@ -362,7 +362,7 @@ def _ability_slot_priority(actor: PetState, slot_idx: int) -> int:
     priority = 0
     for idx in range(start, end):
         row = hot.ABILITY_EFFECT_ROWS[idx]
-        if row[0] == PakOp.SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
+        if row[0] == H_SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
             priority += row[6]
     return priority
 
@@ -371,7 +371,7 @@ def _borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> 
     start, end = hot.SKILL_EFFECT_RANGES[skill_id]
     has_borrow = 0
     for idx in range(start, end):
-        if hot.SKILL_EFFECT_ROWS[idx][0] == PakOp.BORROW_TEAM_SKILL:
+        if hot.SKILL_EFFECT_ROWS[idx][0] == H_BORROW_TEAM_SKILL:
             has_borrow = 1
     if not has_borrow:
         return 0

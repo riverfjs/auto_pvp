@@ -343,7 +343,7 @@ def _skill_element(row: dict[str, Any], move: dict[str, Any]) -> str:
     if move:
         zh = (((move.get("move_type") or {}).get("localized") or {}).get("zh") or "").strip()
         if zh and zh != "首领":
-            return "地" if zh in {"岩", "岩石", "地面"} else zh
+            return zh
     return SKILL_DAM_TYPE_TO_ELEMENT.get(_int(row.get("skill_dam_type")), "普通")
 
 
@@ -377,8 +377,6 @@ def _type_label(raw: object) -> str:
     zh = str((raw.get("localized") or {}).get("zh", "")).strip()
     if zh in {"首领", "未知", "无"}:
         return ""
-    if zh in {"岩", "岩石", "地面"}:
-        return "地"
     return zh
 
 

@@ -1,5 +1,0 @@
-{"kind":"skill_effect_override","skill_name":"焚烧烙印","effect_rows":[[7,11,2,10000,5,0,0,0],[46,11,0,10000,0,0,0,0]],"reason":"burn 5 stacks + dispel marks; codegen cannot extract stack count from pak effect chain"}
-{"kind":"skill_effect_override","skill_name":"剧毒","effect_rows":[[8,11,2,10000,3,0,0,0]],"reason":"poison 3 stacks; codegen cannot extract stack count from pak etype=3 companion"}
-{"kind":"skill_effect_override","skill_name":"沙涌","effect_rows":[[16,11,0,10000,2,8,0,0]],"reason":"sandstorm weather 8 turns (7 after first turn decay); pak models weather as etype=3 state change not classifiable by codegen"}
-{"kind":"skill_effect_override","skill_name":"虫群过境","effect_rows":[[1,6,0,10000,45,2,0,0],[48,11,0,10000,3,1,0,0]],"reason":"damage(45 power, 2 hits) + permanent_mod(hit_count +1); codegen assigns wrong handler for devotion skill"}
-{"kind":"skill_effect_override","skill_name":"风起","effect_rows":[[34,11,1,10000,1,0,0,0]],"reason":"wind mark at AFTER_MOVE; pak cast_moment=12 (TURN_END) is wrong timing for skill effects"}
