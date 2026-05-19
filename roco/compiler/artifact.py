@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import DB_DIR, ROOT, content_hash
-from roco.compiler.type_chart import effectiveness_v2
+from roco.generated.type_chart import TYPE_CHART_BPS as _PAK_TYPE_CHART_BPS
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v1"
@@ -42,10 +42,26 @@ def _source_payload(conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ...]:
-    rows: list[tuple[int, ...]] = []
-    for move in element_names:
-        rows.append(tuple(int(effectiveness_v2(move, (defender,)) * 10000) for defender in element_names))
-    return tuple(rows)
+    """Type effectiveness BPS table consumed by the kernel hot catalog.
+
+    Pak ``TYPE_DICTIONARY.json`` is the single source of truth here —
+    ``gen_prefix_map`` reads it once and emits the compiled table to
+    :mod:`roco.generated.type_chart`.  We pass it through unchanged so
+    ``catalog_hot.TYPE_CHART_BPS`` is the same data the codegen wrote;
+    the legacy hand-curated chart in :mod:`roco.compiler.type_chart`
+    is retained only for the display/test layer.
+
+    The ``element_names`` argument is accepted for shape compatibility
+    with the surrounding artifact builder, and we assert it matches the
+    pak-derived row count so a drift between ``elements`` and the
+    generated chart will fail loudly rather than silently truncate.
+    """
+    if len(element_names) != len(_PAK_TYPE_CHART_BPS):
+        raise RuntimeError(
+            f"elements table has {len(element_names)} rows but pak type chart "
+            f"has {len(_PAK_TYPE_CHART_BPS)} — regenerate via gen_prefix_map"
+        )
+    return _PAK_TYPE_CHART_BPS
 
 
 def _effect_row(row: sqlite3.Row) -> tuple[int, ...]:

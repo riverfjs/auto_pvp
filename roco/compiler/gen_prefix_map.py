@@ -30,6 +30,7 @@ PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
 PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 MARK_GROUPS_PATH = GEN_DIR / "mark_groups.py"
 PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
+TYPE_CHART_PATH = GEN_DIR / "type_chart.py"
 # Hand-curated prefix/base_id → handler seed used to bootstrap
 # ``generate_prefix_map``.  Editable JSONL keeps the semantic decisions
 # (which pak prefix family maps to which kernel handler) as data, not as
@@ -289,6 +290,75 @@ _PAK_RULES_KEYS = {
 }
 
 
+def generate_type_chart(pak_data_dir: Path = PAK_DATA) -> int:
+    """Emit ``roco/generated/type_chart.py`` — single-defender BPS chart.
+
+    ``TYPE_DICTIONARY.json`` carries one row per element with sparse
+    ``type_restraint{N}`` fields:
+
+    * ``+1`` → this element deals super-effective damage to element N
+      (``TYPE_WEAK_BPS`` = 20000 = 2.0×).
+    * ``-1`` → this element is resisted by element N
+      (``TYPE_RESIST_BPS`` = 5000 = 0.5×).
+    * missing → neutral (``TYPE_NEUTRAL_BPS`` = 10000 = 1.0×).
+
+    Dual-type composition (3.0× / 0.25× overlap rules) is handled by the
+    kernel at runtime against the single-defender values in this table.
+
+    Rows are emitted in the kernel's :data:`ELEMENT_NAMES` order so
+    ``TYPE_CHART_BPS[attacker_id][defender_id]`` indexes directly with
+    the element ids that show up in :class:`hot.PETS`.
+    """
+    from roco.common.enums import ELEMENT_NAMES
+    from roco.generated.pak_rules import (
+        TYPE_NEUTRAL_BPS,
+        TYPE_RESIST_BPS,
+        TYPE_WEAK_BPS,
+    )
+
+    rows = json.loads((pak_data_dir / "TYPE_DICTIONARY.json").read_text(encoding="utf-8"))
+    pak_rows = rows.get("RocoDataRows", rows)
+
+    by_short_name: dict[str, dict] = {}
+    for rec in pak_rows.values():
+        short = rec.get("short_name")
+        if short:
+            by_short_name[short] = rec
+
+    n = len(ELEMENT_NAMES)
+    pak_ids_in_order: list[int] = []
+    for name in ELEMENT_NAMES:
+        rec = by_short_name.get(name)
+        if rec is None:
+            raise RuntimeError(f"TYPE_DICTIONARY missing short_name={name!r}")
+        pak_ids_in_order.append(int(rec["id"]))
+
+    chart: list[list[int]] = [[TYPE_NEUTRAL_BPS] * n for _ in range(n)]
+    for attacker_idx, attacker_name in enumerate(ELEMENT_NAMES):
+        rec = by_short_name[attacker_name]
+        for defender_idx, defender_pak_id in enumerate(pak_ids_in_order):
+            sign = rec.get(f"type_restraint{defender_pak_id}", 0)
+            if sign == 1:
+                chart[attacker_idx][defender_idx] = TYPE_WEAK_BPS
+            elif sign == -1:
+                chart[attacker_idx][defender_idx] = TYPE_RESIST_BPS
+
+    lines = [
+        "# Auto-generated from TYPE_DICTIONARY.json — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+        f"# Element order matches roco.common.enums.ELEMENT_NAMES (length {n}).",
+        "TYPE_CHART_BPS: tuple[tuple[int, ...], ...] = (",
+    ]
+    for attacker_idx, attacker_name in enumerate(ELEMENT_NAMES):
+        row_str = ", ".join(str(v) for v in chart[attacker_idx])
+        lines.append(f"    ({row_str}),  # {attacker_idx:2d} {attacker_name}")
+    lines.append(")")
+    lines.append("")
+    TYPE_CHART_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return n
+
+
 def generate_pak_ops(pak_data_dir: Path = PAK_DATA) -> int:
     """Emit ``roco/generated/pak_ops.py`` — pak prefix family debug names.
 
@@ -473,6 +543,9 @@ def main() -> None:
 
     pak_op_count = generate_pak_ops()
     print(f"pak_ops.py: {pak_op_count} prefixes -> {PAK_OPS_PATH}")
+
+    chart_size = generate_type_chart()
+    print(f"type_chart.py: {chart_size}x{chart_size} BPS table -> {TYPE_CHART_PATH}")
 
 
 if __name__ == "__main__":
