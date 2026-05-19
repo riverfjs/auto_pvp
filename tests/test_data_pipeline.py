@@ -276,12 +276,7 @@ def test_non_team_bwiki_data_entrypoints_are_retired():
         "roco/data/parse_pets.py",
         "roco/data/parse_skills.py",
         "roco/data/parse_marks.py",
-        "scripts/fetch_index.py",
-        "scripts/fetch_details.py",
-        "scripts/parse_pets.py",
-        "scripts/parse_skills.py",
-        "scripts/parse_yinji.py",
-        "scripts/utils.py",
+        "scripts",
     ]
     assert [path for path in retired if (root / path).exists()] == []
 
