@@ -1,7 +1,0 @@
-{"kind":"skill_effect_rule","name":"飞羽","mode":"extend","effects":[{"timing":"AFTER_MOVE","tag":"AGILITY","params":{},"sort_order":100},{"timing":"AFTER_MOVE","tag":"DISPEL_BUFFS","params":{"target":"enemy","count":1},"sort_order":101}]}
-{"kind":"skill_effect_rule","name":"伺机而动","mode":"extend","effects":[{"timing":"AFTER_MOVE","tag":"NEXT_ATTACK_MOD","params":{"power_bonus":70},"sort_order":100}]}
-{"kind":"skill_effect_rule","name":"热身","mode":"replace","effects":[{"timing":"BEFORE_MOVE","tag":"POWER_DYNAMIC","params":{"multiplier":2.0},"sort_order":0},{"timing":"BEFORE_MOVE","tag":"POWER_DYNAMIC","params":{"multiplier":4.0},"condition":"counter","sort_order":1}]}
-{"kind":"skill_effect_rule","name":"硬门","mode":"replace","effects":[{"timing":"BEFORE_MOVE","tag":"INTERRUPT","params":{},"condition":"counter","sort_order":0}]}
-{"kind":"skill_effect_rule","name":"食腐","mode":"replace","effects":[{"timing":"AFTER_MOVE","tag":"CONSUME_MARKS_HEAL","params":{"pct":0.1},"sort_order":0}]}
-{"kind":"skill_effect_rule","name":"过载回路","mode":"replace","effects":[{"timing":"AFTER_MOVE","tag":"FORCE_SWITCH","params":{},"sort_order":0},{"timing":"AFTER_MOVE","tag":"PERMANENT_MOD","params":{"target":"hit_count","delta":1},"sort_order":1}]}
-{"kind":"skill_effect_rule","name":"虫群智慧","mode":"replace","effects":[{"timing":"AFTER_MOVE","tag":"DEVOTION_GRANT_RANDOM","params":{"amount":2},"sort_order":0}]}

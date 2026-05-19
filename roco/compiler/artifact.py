@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import DB_DIR, ROOT, content_hash
-from roco.compiler.effect_model import EffectTag
+from roco.compiler.effect_model import PakOp
 from roco.common.enums import AbilityFlag, Element, SkillCategory, WeatherType
 from roco.common.packing import _add_buff_bps
 from roco.common.constants import BPS, HP_FOR_ENERGY_PCT_BPS
@@ -38,37 +38,7 @@ WEATHER_CODES = {
     "snow": WeatherType.SNOW.value,
     "hail": WeatherType.SNOW.value,
 }
-ABILITY_FLAG_TAGS = {
-    EffectTag.BARREL_STATE.value: AbilityFlag.BARREL_ACTIVE,
-    EffectTag.FAINT_NO_MP_LOSS.value: AbilityFlag.FAKE_DEATH,
-    EffectTag.BURN_NO_DECAY.value: AbilityFlag.BURN_NO_DECAY,
-    EffectTag.EXTRA_POISON_TICK.value: AbilityFlag.EXTRA_POISON_TICK,
-    EffectTag.ENERGY_NO_CAP.value: AbilityFlag.ENERGY_NO_CAP,
-    EffectTag.HP_FOR_ENERGY.value: AbilityFlag.HP_FOR_ENERGY,
-    EffectTag.EXTRA_FREEZE_ON_FREEZE.value: AbilityFlag.EXTRA_FREEZE_ON_FREEZE,
-    EffectTag.CUTE_LETHAL_SHIELD.value: AbilityFlag.CUTE_LETHAL_SHIELD,
-    EffectTag.KILL_MP_PENALTY.value: AbilityFlag.KILL_MP_PENALTY,
-    EffectTag.COST_INVERT.value: AbilityFlag.COST_INVERT,
-    EffectTag.SKILL_SLOT_LOCK.value: AbilityFlag.SKILL_SLOT_LOCK,
-    EffectTag.IMMUNE_ZERO_ENERGY_ATTACKER.value: AbilityFlag.IMMUNE_ZERO_ENERGY_ATTACKER,
-    EffectTag.IMMUNE_LOW_COST_ATTACK.value: AbilityFlag.IMMUNE_LOW_COST_ATTACK,
-    EffectTag.FIXED_HIT_COUNT_ALL.value: AbilityFlag.FIXED_HIT_COUNT_ALL,
-    EffectTag.START_ZERO_ENERGY.value: AbilityFlag.START_ZERO_ENERGY,
-    EffectTag.TURN_END_SKIP.value: AbilityFlag.TURN_END_SKIP,
-    EffectTag.COPY_SWITCH_STATE.value: AbilityFlag.COPY_SWITCH_STATE,
-    EffectTag.HEAL_ON_BURN_DAMAGE.value: AbilityFlag.HEAL_ON_BURN_DAMAGE,
-    EffectTag.HEAL_ON_POISON_DAMAGE.value: AbilityFlag.HEAL_ON_POISON_DAMAGE,
-    EffectTag.CUTE_NO_CAP.value: AbilityFlag.CUTE_NO_CAP,
-    EffectTag.MARK_STACK_NO_REPLACE.value: AbilityFlag.MARK_STACK_NO_REPLACE,
-    EffectTag.SHARE_GAINS.value: AbilityFlag.SHARE_GAINS,
-    EffectTag.SHUFFLE_SKILLS_REDUCE_LAST.value: AbilityFlag.SHUFFLE_SKILLS_REDUCE_LAST,
-    EffectTag.HALF_METEOR_FULL_DAMAGE.value: AbilityFlag.HALF_METEOR_FULL_DAMAGE,
-    EffectTag.CHARGE_FREE_SKILL.value: AbilityFlag.CHARGE_FREE_SKILL,
-    EffectTag.FIRST_ACTION_EXTRA_USE.value: AbilityFlag.FIRST_ACTION_EXTRA_USE,
-    EffectTag.BUFF_EXTRA_LAYERS.value: AbilityFlag.BUFF_EXTRA_LAYERS,
-    EffectTag.HEAL_HP_PER_ENERGY_GAIN.value: AbilityFlag.HEAL_HP_PER_ENERGY_GAIN,
-    EffectTag.BURST_EXTEND.value: AbilityFlag.BURST_EXTEND,
-}
+ABILITY_FLAG_TAGS: dict[int, AbilityFlag] = {}
 
 
 def _connect(path: Path | None = None) -> sqlite3.Connection:
@@ -103,7 +73,7 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
 
 
 def _effect_args(tag: int, params: dict[str, Any], skill_ids: dict[str, int] | None = None) -> tuple[int, int, int, int]:
-    T = EffectTag
+    T = PakOp
     result = _status_and_weather_args(tag, params, T)
     if result is not None:
         return result
@@ -539,7 +509,7 @@ def compile_artifacts(
             BLOODLINE_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodlines ORDER BY id")},
             BLOODLINE_MAGIC_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodline_magics ORDER BY id")},
             SKIPPED_EFFECT_STATS=tuple(
-                (EffectTag(tag).name if tag in EffectTag._value2member_map_ else str(tag), count)
+                (PakOp(tag).name if tag in PakOp._value2member_map_ else str(tag), count)
                 for tag, count in skipped_effect_stats
             ),
         )

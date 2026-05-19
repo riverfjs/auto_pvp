@@ -6,25 +6,24 @@ import pytest
 
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
-from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
 from roco.compiler.nrc_compare import project_report
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, write_jsonl
-from roco.compiler.effect_model import EffectTag
+from roco.compiler.effect_model import PakOp
 
 
 def _sample_data():
     skills = [
-        refresh_skill_classification({"kind": "skill", "name": "火花", "element": "火", "category": "魔攻", "energy": 1, "power": 60, "effect_text": "造成魔伤"}),
-        refresh_skill_classification({"kind": "skill", "name": "拍击", "element": "普通", "category": "物攻", "energy": 1, "power": 40, "effect_text": "造成物伤"}),
+        {"kind": "skill", "name": "火花", "element": "火", "category": "魔攻", "energy": 1, "power": 60, "effect_text": "造成魔伤", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
+        {"kind": "skill", "name": "拍击", "element": "普通", "category": "物攻", "energy": 1, "power": 40, "effect_text": "造成物伤", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
     ]
     abilities = [
-        refresh_ability_classification({"kind": "ability", "name": "诈死", "description": "力竭不扣MP"}),
-        refresh_ability_classification({"kind": "ability", "name": "顺风", "description": "若先于敌方攻击，本次技能威力+50%"}),
-        refresh_ability_classification({"kind": "ability", "name": "未映射", "description": "这条描述暂未映射到本项目原语"}),
+        {"kind": "ability", "name": "诈死", "description": "力竭不扣MP", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
+        {"kind": "ability", "name": "顺风", "description": "若先于敌方攻击，本次技能威力+50%", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
+        {"kind": "ability", "name": "未映射", "description": "这条描述暂未映射到本项目原语", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
     ]
     pets = [
         _pet("火火", "火", "诈死", 90, "火花", atk_mag=100),
@@ -75,17 +74,8 @@ def test_migrate_import_compile_catalog(tmp_path: Path):
     catalog = compile_catalog(conn)
     assert catalog.pets_by_name["地地"].types == ("地", "")
     assert catalog.skills_by_name["火花"].element == "火"
-    assert catalog.skills_by_name["火花"].effects
-    assert catalog.ability_effects[catalog.pets_by_name["火火"].ability_id]
-    assert catalog.ability_effects[catalog.pets_by_name["风风"].ability_id]
-    assert ("未映射", 1) in catalog.unsupported_effect_stats
-    unsupported_rows = conn.execute(
-        "SELECT COUNT(*) FROM ability_effects WHERE tag_code = ?",
-        (EffectTag.UNSUPPORTED.value,),
-    ).fetchone()[0]
-    gap_rows = conn.execute("SELECT COUNT(*) FROM effect_gaps WHERE source_name = '未映射'").fetchone()[0]
-    assert unsupported_rows == 0
-    assert gap_rows == 1
+    assert len(catalog.pets_by_id) == 5
+    assert len(catalog.skills_by_id) == 2
 
     conn.close()
 
@@ -212,7 +202,7 @@ def test_parse_pak_generates_canonical_from_extracted_tables(tmp_path: Path, mon
     assert skills[0]["source_kind"] == "pak:skill"
     assert skills[0]["name"] == "拍击"
     assert skills[0]["category"] == "魔攻"
-    assert any(effect["tag"] == "DAMAGE" for effect in skills[0]["effects"])
+    assert "effect_rows" in skills[0]
     assert abilities[0]["source_kind"] == "pak:ability"
     assert abilities[0]["description"] == "使用草系技能后，回复10%生命。"
     assert pets[0]["source_kind"] == "pak:pet"
@@ -263,9 +253,7 @@ def test_import_db_does_not_read_legacy_parsed_json():
 def test_build_db_has_no_fallback_classifier_path():
     root = Path(__file__).resolve().parents[1]
     text = (root / "roco/data/build_db.py").read_text(encoding="utf-8")
-    classifier = (root / "roco/data/effect_classifier.py").read_text(encoding="utf-8")
     assert "allow_fallback" not in text
-    assert "allow_fallback" not in classifier
 
 
 def test_non_team_bwiki_data_entrypoints_are_retired():
@@ -288,15 +276,16 @@ def _write_table(path: Path, rows: dict[str, dict]) -> None:
     )
 
 
-def test_effect_classifier_entrypoints_stay_thin():
+def test_old_classifier_pipeline_is_deleted():
     root = Path(__file__).resolve().parents[1]
-    facade = (root / "roco/data/effect_classifier.py").read_text(encoding="utf-8")
-    abilities = (root / "roco/compiler/classifiers/abilities.py").read_text(encoding="utf-8")
-    rules_path = root / "roco/compiler/classifiers/ability_rules.py"
-    assert rules_path.exists()
-    assert len(facade.splitlines()) < 80
-    assert len(abilities.splitlines()) < 120
-    assert "def generated_ability_effects" not in abilities
+    deleted = [
+        "roco/data/effect_classifier.py",
+        "roco/compiler/classifiers",
+        "roco/compiler/effect_compile.py",
+        "roco/compiler/skill_tags.py",
+        "roco/compiler/effect_registry.py",
+    ]
+    assert [p for p in deleted if (root / p).exists()] == []
 
 
 def test_optional_nrc_compare_report_is_outside_build(tmp_path: Path):
@@ -324,7 +313,7 @@ def test_pets_with_ability_require_description(tmp_path: Path):
     conn.close()
 
 
-def test_used_effect_gaps_fail_after_team_import(tmp_path: Path):
+def test_team_import_succeeds_without_gap_system(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
     skills, abilities, pets = _sample_data()
     ability_lookup = import_abilities(conn, abilities)
@@ -334,7 +323,7 @@ def test_used_effect_gaps_fail_after_team_import(tmp_path: Path):
     teams = [{
         "kind": "team",
         "id": "T1",
-        "title": "gap team",
+        "title": "test team",
         "author": "",
         "type": "PVP",
         "bloodline_magic": "",
@@ -342,8 +331,9 @@ def test_used_effect_gaps_fail_after_team_import(tmp_path: Path):
         "upload_date": "",
         "pets": [{"slot": 1, "name": "谜谜", "name_short": "谜谜", "bloodline": "", "nature": "", "ivs": [], "moves": ["拍击"]}],
     }]
-    with pytest.raises(RuntimeError, match="unclassified effect gaps"):
-        import_teams(conn, teams, pet_lookup, skill_lookup)
+    import_teams(conn, teams, pet_lookup, skill_lookup)
+    count = conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
+    assert count == 1
     conn.close()
 
 
@@ -387,10 +377,10 @@ def test_marks_import_only_audits_source_skills(tmp_path: Path):
 
     tag_rows = conn.execute(
         "SELECT COUNT(*) FROM skill_effects WHERE tag_code = ?",
-        (EffectTag.MOISTURE_MARK.value,),
+        (2143,),
     ).fetchone()[0]
     gaps = conn.execute(
-        "SELECT COUNT(*) FROM effect_gaps WHERE source_name = '火花' AND primitive = 'MOISTURE_MARK'"
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_name = '火花' AND primitive = '2143'"
     ).fetchone()[0]
     assert tag_rows == 0
     assert gaps == 1

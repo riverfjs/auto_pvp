@@ -6,7 +6,6 @@ from roco.config.constants import MIN_DAMAGE, STARTING_ENERGY
 from roco.engine.generated import catalog_debug as debug
 from roco.engine.generated import catalog_hot as hot
 from roco.compiler.scalar_damage import calc_attack_damage
-from roco.compiler.effect_model import EffectTag, Timing
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.engine.common.rules import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
@@ -25,6 +24,8 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
+from roco.engine.kernel.op_tags import TAG_DAMAGE
+from roco.engine.kernel.op_rows import TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
 from roco.engine.common.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
@@ -189,9 +190,9 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
-        ((EffectTag.DAMAGE.value, Timing.CALC_DAMAGE.value, 0, 0, 0, 37, 3, 0, 0),),
+        ((TAG_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),),
         (0, 1),
-        Timing.CALC_DAMAGE.value,
+        TIMING_CALC_DAMAGE,
         ctx,
     )
     ctx.power_bps = 15000

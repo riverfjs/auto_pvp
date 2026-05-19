@@ -1,8 +1,11 @@
-"""Compiled effect primitives and trigger timings.
+"""Compiled effect primitives and trigger timings (pak-native edition).
 
-This module is intentionally separate from runtime state. The hot battle
-state stores compact ids and packed flags; effect definitions are immutable
-catalog rows loaded before simulation.
+This module replaces the hand-crafted EffectTag enum with PakOp, whose values
+are buff_base_id prefix families (first 4 digits) drawn directly from pak game
+data.  Three synthetic EFFECT_CONF types round out the enum for non-buff
+effects.
+
+Timing values map 1:1 to pak cast_moment integers -- no translation layer.
 """
 
 from __future__ import annotations
@@ -16,7 +19,150 @@ from typing import Any
 EMPTY_PARAMS = MappingProxyType({})
 
 
+# ---------------------------------------------------------------------------
+# PakOp -- replaces EffectTag
+# ---------------------------------------------------------------------------
+# Values are buff_base_id prefix families (buff_base_id // 1000) for BUFF_CONF
+# effects, and 10001-10003 for the three EFFECT_CONF types.
+
+class PakOp(IntEnum):
+    """Pak-native operation codes derived from buff_base_id prefix families."""
+
+    UNSUPPORTED = 0
+
+    # --- buff_base_id prefix families (94 active) sorted by usage -----------
+    STAT_MOD = 2001
+    IMMUNITY_LOCK = 2003
+    POWER_MOD = 2023
+    ON_HIT_REACTION = 2019
+    DAMAGE_REDUCE = 2011
+    STUN_HEAL = 2017
+    COST_MOD = 2032
+    ELEMENT_TRIGGER = 2035
+    STATUS_CONDITION = 2007
+    DETECTION = 2040
+    CONDITIONAL_TRIGGER = 2064
+    FORCE_SWITCH = 2048
+    COUNTER_REWARD = 2067
+    MARK_METEOR = 2094
+    CHAR_SPECIFIC_A = 2063
+    ENTRY_FIRST_TURN = 2093
+    SLOT_MOD = 2117
+    ON_KILL = 2046
+    DRIVE = 2115
+    BORROW = 2132
+    MARK_CHANGE = 2143
+    SURVIVAL = 2038
+    HIT_COUNT = 2045
+    CUTE_SPEED = 2102
+    NEXT_PET = 2010
+    COND_POWER = 2107
+    CHARGE = 2088
+    LOCK_SWITCH = 2004
+    SLOT_PRIORITY = 2077
+    FREEZE_LOCK = 2092
+    CANDY = 2142
+    BOSS_STUN = 2006
+    EARTH_HEART = 2024
+    EFFICIENCY = 2037
+    FREEZE_STATUS = 2058
+    POISON_FANG = 2068
+    PRIORITY = 2021
+    HP_CONDITIONAL = 2041
+    TURN_END_TRANSFORM = 2049
+    SKILL_COPY = 2056
+    TEAM_ON_DEATH = 2073
+    DOUBLE_TRIGGER = 2075
+    REFRACT = 2089
+    MAGIC_KILLER = 2104
+    DOUBLE_ACTION = 2015
+    ENERGY_GAIN = 2052
+    HEAL_MOD = 2053
+    DYNAMIC_HIT = 2091
+    PURIFY = 2138
+    ELEMENT_ENERGY = 2100
+    SKILL_CHECK = 2105
+    FLAT_POWER = 2108
+    DRAIN = 2054
+    CHAR_SPECIFIC_B = 2086
+    CAP_RAISE = 2114
+    ALERT = 2130
+    CUTE_INFINITE = 2136
+    LEECH = 2005
+    NUTRITION = 2022
+    MOMENTUM = 2027
+    FIRE_RAGE = 2029
+    ENTRY_AMBUSH = 2033
+    OVERLOAD = 2034
+    QUICK_START = 2043
+    ENTRY_STATUS = 2050
+    DREAM = 2051
+    DARK_HEAL = 2071
+    SLEEPWALK = 2076
+    FEYNMAN = 2084
+    POSITION_COST = 2106
+    BURN_REVERSE = 2111
+    TEST = 2121
+    FROG = 2133
+    ELEMENT_VULN = 2025
+    TEST_28 = 2028
+    DUCK = 2039
+    NON_SE_REDUCE = 2042
+    COOLDOWN = 2062
+    OTTER = 2072
+    LANTERN = 2079
+    CYCLOPS = 2080
+    MIRROR_PRIORITY = 2083
+    ENERGY_HEAL = 2087
+    EXTEND_ENTRY = 2101
+    DIFF_SKILL_COST = 2103
+    OVERFLOW_HEAL = 2109
+    MARK_NO_DECAY = 2110
+    COVER = 2112
+    RETURN = 2118
+    FIRST_USE_POWER = 2119
+    SIDE_COST = 2120
+    SEGMENT_HP = 2134
+    HIT_BURN = 2135
+    COST_EFFICIENCY = 2141
+
+    # --- EFFECT_CONF synthetic types ----------------------------------------
+    EFF_BUFF_APPLY = 10001   # EFFECT_CONF type=1: buff application
+    EFF_DAMAGE = 10002       # EFFECT_CONF type=2: damage effect
+    EFF_STATE_CHANGE = 10003 # EFFECT_CONF type=3: state change / dispel
+
+
+# Legacy alias so downstream code referencing EffectTag still imports.
+EffectTag = PakOp
+
+
+# ---------------------------------------------------------------------------
+# Timing -- values match pak cast_moment directly
+# ---------------------------------------------------------------------------
+
+class Timing(IntEnum):
+    """Effect trigger points matching pak cast_moment values."""
+
+    CALC_DAMAGE = 6       # pre-attack setup
+    CHECK_HIT = 7         # post-hit
+    FAINT = 9             # faint trigger
+    TURN_START = 10       # turn start
+    AFTER_MOVE = 11       # main effect resolution
+    TURN_END = 12         # end of turn
+    PASSIVE_PERSIST = 23  # passive persistent
+    SWITCH_IN = 24        # switch in
+    CHARGE = 25           # charge/prep
+    PASSIVE_COND = 26     # passive conditional
+    BATTLE_START = 27     # entry aura
+
+
+# ---------------------------------------------------------------------------
+# EffectFlag -- legacy, kept for downstream compatibility
+# ---------------------------------------------------------------------------
+
 class EffectFlag(IntFlag):
+    """Legacy flag bitfield.  Retained for records.py / skill_tags.py compat."""
+
     NONE = 0; DRAIN = auto(); HEAL_HP = auto(); HEAL_ENERGY = auto()
     STEAL_ENERGY = auto(); DEFENSE = auto(); BURN = auto(); POISON = auto()
     FREEZE = auto(); LEECH = auto(); STAT_CHANGE = auto(); FORCE_SWITCH = auto()
@@ -26,257 +172,15 @@ class EffectFlag(IntFlag):
     BURST = auto(); AGILITY = auto(); IS_MARK = auto(); DEVOTION = auto()
 
 
-class Timing(IntEnum):
-    """Effect trigger points stored as compact integer codes."""
-
-    PASSIVE = 0
-    BATTLE_START = 1
-    TURN_START = 2
-    BEFORE_MOVE = 3
-    ON_DAMAGE = 4
-    AFTER_MOVE = 5
-    TURN_END = 6
-    SWITCH_IN = 7
-    SWITCH_OUT = 8
-    FAINT = 9
-    KILL = 10
-    COUNTER_SUCCESS = 11
-    CHECK_HIT = 12
-    CALC_DAMAGE = 13
-    ADJUST_DAMAGE = 14
-    APPLY_DAMAGE = 15
-    TAKE_DAMAGE = 16
-    ENEMY_SWITCH = 17
-    ALLY_COUNTER = 18
-    BE_KILLED = 19
-    USE_SKILL = 20
-
-
-class EffectTag(IntEnum):
-    """Project-owned primitive ids used by unified effect rows."""
-
-    UNSUPPORTED = 0
-    DAMAGE = 1
-    HEAL_HP = 2
-    HEAL_ENERGY = 3
-    STEAL_ENERGY = 4
-    ENEMY_LOSE_ENERGY = 5
-    LIFE_DRAIN = 6
-    SELF_BUFF = 7
-    ENEMY_DEBUFF = 8
-    BURN = 9
-    POISON = 10
-    FREEZE = 11
-    LEECH = 12
-    METEOR = 13
-    DAMAGE_REDUCTION = 14
-    FORCE_SWITCH = 15
-    ENERGY_ALL_IN = 16
-    WEATHER = 17
-    COUNTER_ATTACK = 18
-    COUNTER_STATUS = 19
-    COUNTER_DEFENSE = 20
-    BARREL_STATE = 21
-    BURST_POWER_BONUS = 22
-    FAINT_NO_MP_LOSS = 23
-    ENERGY_REGEN_PER_TURN = 24
-    GRANT_LIFE_DRAIN = auto()
-    SELF_DEBUFF = auto()
-    POISON_MARK = auto()
-    MOISTURE_MARK = auto()
-    DRAGON_MARK = auto()
-    WIND_MARK = auto()
-    CHARGE_MARK = auto()
-    SOLAR_MARK = auto()
-    ATTACK_MARK = auto()
-    SLOW_MARK = auto()
-    SLUGGISH_MARK = auto()
-    SPIRIT_MARK = auto()
-    METEOR_MARK = auto()
-    THORN_MARK = auto()
-    MOMENTUM_MARK = auto()
-    DISPEL_ENEMY_MARKS = auto()
-    CONVERT_MARKS_TO_BURN = auto()
-    DISPEL_MARKS_TO_BURN = auto()
-    CONSUME_MARKS_HEAL = auto()
-    MARKS_TO_METEOR = auto()
-    STEAL_MARKS = auto()
-    ENERGY_COST_PER_ENEMY_MARK = auto()
-    FORCE_ENEMY_SWITCH = auto()
-    AGILITY = auto()
-    INTERRUPT = auto()
-    POWER_DYNAMIC = auto()
-    ENERGY_COST_DYNAMIC = auto()
-    PERMANENT_MOD = auto()
-    SKILL_MOD = auto()
-    NEXT_ATTACK_MOD = auto()
-    CLEANSE = auto()
-    SELF_KO = auto()
-    RESET_SKILL_COST = auto()
-    POSITION_BUFF = auto()
-    DRIVE = auto()
-    PASSIVE_ENERGY_REDUCE = auto()
-    CONVERT_BUFF_TO_POISON = auto()
-    CONVERT_POISON_TO_MARK = auto()
-    DISPEL_MARKS = auto()
-    CONDITIONAL_BUFF = auto()
-    DISPEL_BUFFS = auto()
-    DISPEL_DEBUFFS = auto()
-    MIRROR_DAMAGE = auto()
-    ENEMY_ENERGY_COST_UP = auto()
-    COUNTER_OVERRIDE = auto()
-    ABILITY_COMPUTE = auto()
-    ABILITY_INCREMENT_COUNTER = auto()
-    TRANSFER_MODS = auto()
-    BURN_NO_DECAY = auto()
-    POWER_MULTIPLIER_BUFF = auto()
-    THREAT_SPEED_BUFF = auto()
-    COUNTER_ACCUMULATE_TRANSFORM = auto()
-    DELAYED_REVIVE = auto()
-    COPY_SWITCH_STATE = auto()
-    COST_INVERT = auto()
-    MIRROR_ENEMY_BUFFS = auto()
-    REPLAY_AGILITY = auto()
-    ENERGY_COST_ACCUMULATE = auto()
-    AGILITY_COST_SHARE = auto()
-    COUNTER_SUCCESS_DOUBLE_DAMAGE = auto()
-    COUNTER_SUCCESS_BUFF_PERMANENT = auto()
-    COUNTER_SUCCESS_POWER_BONUS = auto()
-    COUNTER_SUCCESS_COST_REDUCE = auto()
-    COUNTER_SUCCESS_SPEED_PRIORITY = auto()
-    FIRST_STRIKE_POWER_BONUS = auto()
-    FIRST_STRIKE_HIT_COUNT = auto()
-    FIRST_STRIKE_AGILITY = auto()
-    AUTO_SWITCH_ON_ZERO_ENERGY = auto()
-    AUTO_SWITCH_AFTER_ACTION = auto()
-    TEAM_SYNERGY_BUG_SWARM_ATTACK = auto()
-    TEAM_SYNERGY_BUG_SWARM_INSPIRE = auto()
-    TEAM_SYNERGY_BRAVE_IF_BUGS = auto()
-    TEAM_SYNERGY_BUG_KILL_AFF = auto()
-    STAT_SCALE_DEFENSE_PER_ENERGY = auto()
-    STAT_SCALE_HITS_PER_HP_LOST = auto()
-    STAT_SCALE_ATTACK_DECAY = auto()
-    STAT_SCALE_METEOR_MARKS_PER_TURN = auto()
-    MARK_POWER_PER_METEOR = auto()
-    MARK_FREEZE_TO_METEOR = auto()
-    MARK_STACK_NO_REPLACE = auto()
-    MARK_STACK_DEBUFFS = auto()
-    DAMAGE_MOD_NON_STAB = auto()
-    DAMAGE_MOD_NON_LIGHT = auto()
-    DAMAGE_MOD_NON_WEAKNESS = auto()
-    DAMAGE_MOD_POLLUTANT_BLOOD = auto()
-    DAMAGE_MOD_LEADER_BLOOD = auto()
-    DAMAGE_RESIST_SAME_TYPE = auto()
-    HEAL_PER_TURN = auto()
-    HEAL_ON_GRASS_SKILL = auto()
-    SKILL_COST_REDUCTION_TYPE = auto()
-    POISON_STAT_DEBUFF = auto()
-    POISON_ON_SKILL_APPLY = auto()
-    FREEZE_IMMUNITY_AND_BUFF = auto()
-    EXTRA_FREEZE_ON_FREEZE = auto()
-    ON_SKILL_ELEMENT_BUFF = auto()
-    ON_SKILL_ELEMENT_POISON = auto()
-    ON_SKILL_ELEMENT_COST_REDUCE = auto()
-    ON_SKILL_ELEMENT_HEAL = auto()
-    ON_SKILL_ELEMENT_ENEMY_ENERGY = auto()
-    CARRY_SKILL_POWER_BONUS = auto()
-    CARRY_SKILL_COST_REDUCE = auto()
-    CARRY_ELEMENT_COUNT_BUFF = auto()
-    ON_KILL_BUFF = auto()
-    RECOIL_DAMAGE = auto()
-    ENTRY_BUFF = auto()
-    ON_ENTER_GRANT_DRAIN = auto()
-    ENEMY_ALL_COST_UP = auto()
-    ENTRY_FREEZE_EXTRA = auto()
-    LEAVE_HEAL_ALLY = auto()
-    LEAVE_BUFF_ALLY = auto()
-    LEAVE_ENERGY_REFILL = auto()
-    STEAL_ALL_ENEMY_ENERGY = auto()
-    ENEMY_SWITCH_DEBUFF = auto()
-    ENEMY_SWITCH_SELF_COST_REDUCE = auto()
-    ON_INTERRUPT_COOLDOWN = auto()
-    LOW_COST_SKILL_POWER_BONUS = auto()
-    ENERGY_COST_CONDITION_BUFF = auto()
-    ENEMY_TECH_TOTAL_POWER = auto()
-    HALF_METEOR_FULL_DAMAGE = auto()
-    SPECIFIC_SKILL_POWER_BONUS = auto()
-    ENERGY_NO_CAP = auto()
-    HP_FOR_ENERGY = auto()
-    SHUFFLE_SKILLS_REDUCE_LAST = auto()
-    WEATHER_CONDITIONAL_BUFF = auto()
-    FAINTED_ALLIES_BUFF = auto()
-    ON_SUPER_EFFECTIVE_BUFF = auto()
-    ENEMY_ELEMENT_DIVERSITY_POWER = auto()
-    KILL_MP_PENALTY = auto()
-    HIT_COUNT_PER_POISON = auto()
-    FIRST_ACTION_HIT_BONUS = auto()
-    FIXED_HIT_COUNT_ALL = auto()
-    EXTRA_POISON_TICK = auto()
-    CONDITIONAL_ENTRY_BUFF_TOTAL_COST = auto()
-    CONDITIONAL_ENTRY_BUFF_MP = auto()
-    IMMUNE_ZERO_ENERGY_ATTACKER = auto()
-    IMMUNE_LOW_COST_ATTACK = auto()
-    ENTRY_SELF_DAMAGE = auto()
-    ENERGY_DRAIN_BY_COST_DIFF = auto()
-    ENTRY_BUFF_PER_SKILL_COUNT = auto()
-    TURN_END_REPEAT = auto()
-    TURN_END_SKIP = auto()
-    COST_CHANGE_DOUBLE = auto()
-    NOISE_DEBUFF = auto()
-    SKILL_SLOT_LOCK = auto()
-    BUFF_EXTRA_LAYERS = auto()
-    BURST_ENEMY_COST_UP = auto()
-    BURST_ELEMENT_COST_REDUCE = auto()
-    BURST_EXTEND = auto()
-    DEVOTION_GRANT = auto()
-    DEVOTION_GRANT_RANDOM = auto()
-    DEVOTION_ON_HIT = auto()
-    DRIVE_POSITION_SHIFT = auto()
-    DRIVE_ON_POSITION_CHANGE = auto()
-    CHARGE_COST_REDUCE = auto()
-    CHARGE_FREE_SKILL = auto()
-    SHARE_GAINS = auto()
-    CONTRACT_ENTRY = auto()
-    BLOODLINE_ENTRY = auto()
-    CUTE_GAIN = auto()
-    CUTE_ENEMY_GAIN = auto()
-    CUTE_ALL_BENCH = auto()
-    CUTE_BOTH = auto()
-    CUTE_TRANSFER = auto()
-    CUTE_CLEAR_SELF = auto()
-    CUTE_IF_POWER_BONUS = auto()
-    CUTE_ON_GAIN_POWER_PERM = auto()
-    CUTE_ON_GAIN_COST_REDUCE = auto()
-    CUTE_ON_GAIN_SPEED_PERM = auto()
-    CUTE_TEAM_POWER = auto()
-    CUTE_LETHAL_SHIELD = auto()
-    CUTE_NO_CAP = auto()
-    CUTE_HIT_PER_STACK = auto()
-    CUTE_BENCH_COST_REDUCE = auto()
-    ON_SKILL_ELEMENT_BURN = auto()
-    ON_SKILL_ELEMENT_FREEZE = auto()
-    ON_SKILL_ELEMENT_HIT_COUNT = auto()
-    START_ZERO_ENERGY = auto()
-    ENTRY_ENERGY_FROM_ELEMENT_COUNT = auto()
-    ENTRY_ENERGY_FROM_COUNTER_COUNT = auto()
-    EXCHANGE_MOVES = auto()
-    EXCHANGE_HP_RATIO = auto()
-    BORROW_TEAM_SKILL = auto()
-    HIT_COUNT_DELTA = auto()
-    HEAL_ON_BURN_DAMAGE = auto()
-    HEAL_ON_POISON_DAMAGE = auto()
-    ANTI_HEAL = auto()
-    FIRST_ACTION_EXTRA_USE = auto()
-    POWER_BY_STATUS_COUNT_ELEMENTS = auto()
-    DEBUFF_EXTRA_LAYERS = auto()
-    HEAL_HP_PER_ENERGY_GAIN = auto()
-
+# ---------------------------------------------------------------------------
+# Dataclasses -- updated to use PakOp
+# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class EffectSpec:
     """Compiled effect primitive from data storage."""
 
-    tag: EffectTag
+    tag: PakOp
     timing: Timing
     params: MappingProxyType[str, Any] = EMPTY_PARAMS
     chance: float = 1.0

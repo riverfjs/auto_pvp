@@ -10,8 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import CANONICAL_DIR, DB_DIR, RULES_DIR, content_hash, iter_jsonl, load_jsonl
-from roco.compiler.effect_model import EffectTag, Timing
-from roco.compiler.effect_registry import IMPLEMENTED_EFFECT_TAGS
+from roco.compiler.effect_model import PakOp, Timing
 from roco.common.enums import SkillCategory, normalize_element_name
 
 
@@ -115,20 +114,20 @@ _CATEGORY_NAMES = {
     SkillCategory.STATUS: "状态",
 }
 
-MARK_TAG_BY_CODE = {
-    "poison": EffectTag.POISON_MARK,
-    "moisture": EffectTag.MOISTURE_MARK,
-    "dragon": EffectTag.DRAGON_MARK,
-    "wind": EffectTag.WIND_MARK,
-    "charge": EffectTag.CHARGE_MARK,
-    "solar": EffectTag.SOLAR_MARK,
-    "attack": EffectTag.ATTACK_MARK,
-    "slow": EffectTag.SLOW_MARK,
-    "sluggish": EffectTag.SLUGGISH_MARK,
-    "spirit": EffectTag.SPIRIT_MARK,
-    "meteor": EffectTag.METEOR_MARK,
-    "thorn": EffectTag.THORN_MARK,
-    "momentum": EffectTag.MOMENTUM_MARK,
+_MARK_TAG_MAP: dict[str, int] = {
+    "poison": 2007,    # STATUS_CONDITION family
+    "moisture": 2143,  # MARK_CHANGE family
+    "dragon": 2143,
+    "wind": 2143,
+    "charge": 2143,
+    "solar": 2143,
+    "attack": 2143,
+    "slow": 2143,
+    "sluggish": 2143,
+    "spirit": 2143,
+    "meteor": 2094,    # MARK_METEOR family
+    "thorn": 2143,
+    "momentum": 2143,
 }
 
 
@@ -150,19 +149,15 @@ def _parse_timing(raw: object) -> Timing | None:
     return None
 
 
-def _parse_tag(raw: object) -> EffectTag | None:
-    if isinstance(raw, EffectTag):
-        return raw
+def _parse_tag(raw: object) -> int | None:
     if isinstance(raw, int):
-        try:
-            return EffectTag(raw)
-        except ValueError:
-            return None
+        return raw
     if isinstance(raw, str):
         try:
-            return EffectTag[raw]
-        except KeyError:
-            return None
+            return int(raw)
+        except ValueError:
+            if hasattr(PakOp, raw):
+                return PakOp[raw].value
     return None
 
 
@@ -224,10 +219,7 @@ def _effect_rows(
         if tag is None:
             gaps.append(_gap_row(source_type, source_name, str(raw.get("tag", "")), timing, params, "effect_tag_not_defined"))
             continue
-        if tag not in IMPLEMENTED_EFFECT_TAGS:
-            gaps.append(_gap_row(source_type, source_name, tag.name, timing, params, "runtime_op_missing"))
-            continue
-        rows.append((owner_id, timing.value, tag.value, int(raw.get("flags", default_flags)), _json(params), condition, sort_order))
+        rows.append((owner_id, timing.value, tag, int(raw.get("flags", default_flags)), _json(params), condition, sort_order))
     return rows, gaps
 
 
@@ -515,7 +507,7 @@ def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
     mark_lookup = {code: mid for mid, code in conn.execute("SELECT id, code FROM marks")}
     for record in records:
         code = str(record.get("code", "")).strip()
-        tag = MARK_TAG_BY_CODE.get(code)
+        tag = _MARK_TAG_MAP.get(code)
         for source in record.get("source_skills", ()) or ():
             skill_name = str(source.get("skill", "")).strip()
             sid = skill_lookup.get(skill_name)
@@ -528,13 +520,13 @@ def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
                 continue
             exists = conn.execute(
                 "SELECT 1 FROM skill_effects WHERE skill_id = ? AND tag_code = ? LIMIT 1",
-                (sid, tag.value),
+                (sid, tag),
             ).fetchone()
             if exists is None:
                 gap_rows.append(_gap_row(
                     "skill",
                     skill_name,
-                    tag.name,
+                    str(tag),
                     None,
                     {"mark": code, "description": source.get("description", "")},
                     "mark_source_missing_effect",

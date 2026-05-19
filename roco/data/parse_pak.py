@@ -19,11 +19,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from roco.data.effect_classifier import (
-    classify_ability_record,
-    classify_skill_record,
-    load_manual_rules,
-)
+from roco.compiler.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
 from roco.data.utils import CANONICAL_DIR, content_hash, with_canonical_hash, write_jsonl
 
 
@@ -115,9 +111,10 @@ def main() -> None:
     args = parser.parse_args()
 
     data = PakData(args.pak_dir)
+    pak_tables = PakTables(data.root)
     desc_notes = _desc_notes(data.desc_note_conf)
-    skills, skill_names_by_id = build_skills(data, desc_notes)
-    abilities, ability_name_by_feature_id = build_abilities(data, desc_notes)
+    skills, skill_names_by_id = build_skills(data, desc_notes, pak_tables)
+    abilities, ability_name_by_feature_id = build_abilities(data, desc_notes, pak_tables)
     pets = build_pets(data, ability_name_by_feature_id, skill_names_by_id)
     marks = build_marks(data, desc_notes)
 
@@ -128,8 +125,7 @@ def main() -> None:
     print(f"Generated {write_jsonl(marks, args.out_dir / 'marks.jsonl')} marks")
 
 
-def build_skills(data: PakData, desc_notes: dict[int, str]) -> tuple[list[dict], dict[int, str]]:
-    manual_rules = load_manual_rules("skill")
+def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:
     selected: dict[int, dict[str, Any]] = {}
 
     for move in data.moves:
@@ -160,10 +156,8 @@ def build_skills(data: PakData, desc_notes: dict[int, str]) -> tuple[list[dict],
         if not name or name in emitted_names:
             continue
         record = _skill_record(row, desc_notes)
-        result = classify_skill_record(record, manual_rules)
-        record["flags"] = result.flags
-        record["effects"] = list(result.effects)
-        record["classification"] = result.meta()
+        skill_row = data.skill_conf.get(str(sid), row)
+        record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
         source = _source("skill", sid, row)
         record = with_canonical_hash(record, source)
         records.append(record)
@@ -172,8 +166,7 @@ def build_skills(data: PakData, desc_notes: dict[int, str]) -> tuple[list[dict],
     return records, id_to_name
 
 
-def build_abilities(data: PakData, desc_notes: dict[int, str]) -> tuple[list[dict], dict[int, str]]:
-    manual_rules = load_manual_rules("ability")
+def build_abilities(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:
     feature_ids = sorted({
         _int(row.get(field))
         for row in data.petbase_conf.values()
@@ -200,10 +193,7 @@ def build_abilities(data: PakData, desc_notes: dict[int, str]) -> tuple[list[dic
             "source_version": str(row.get("monitor_data_version", "")),
             "source_fields": row,
         }
-        result = classify_ability_record(record, manual_rules)
-        record["flags"] = result.flags
-        record["effects"] = list(result.effects)
-        record["classification"] = result.meta()
+        record["effect_rows"] = build_ability_effect_rows(row, pak_tables)
         records.append(with_canonical_hash(record, _source("ability", fid, row)))
         name_by_id[fid] = name
     return records, name_by_id

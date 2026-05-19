@@ -13,7 +13,7 @@ import sqlite3
 from pathlib import Path
 
 from roco.data.utils import DB_DIR
-from roco.compiler.effect_model import EffectTag, Timing
+from roco.compiler.effect_model import PakOp, Timing
 from roco.common.enums import ELEMENT_NAMES
 
 
@@ -294,9 +294,9 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT OR IGNORE INTO weather_effects (weather_id, timing_code, tag_code, params_json, sort_order) VALUES (?, ?, ?, ?, ?)",
         [
-            (1, Timing.ON_DAMAGE.value, EffectTag.DAMAGE.value, '{"element":"水","mult":1.5}', 0),
-            (2, Timing.TURN_END.value, EffectTag.DAMAGE.value, '{"fraction":0.0625,"immune":["地","机械"]}', 0),
-            (3, Timing.TURN_END.value, EffectTag.FREEZE.value, '{"stacks":2}', 0),
+            (1, Timing.CALC_DAMAGE.value, PakOp.EFF_DAMAGE.value, '{"element":"水","mult":1.5}', 0),
+            (2, Timing.TURN_END.value, PakOp.EFF_DAMAGE.value, '{"fraction":0.0625,"immune":["地","机械"]}', 0),
+            (3, Timing.TURN_END.value, PakOp.FREEZE_STATUS.value, '{"stacks":2}', 0),
         ],
     )
     conn.executemany(
