@@ -189,8 +189,10 @@ def test_get_type_multiplier_dual_cancel():
 
 
 def test_get_type_multiplier_dual_vulnerable_overlap():
-    # 普通 vs 机械+地 — both vulnerable to 普通 → 0.25
-    assert get_type_multiplier("普通", ("机械", "地")) == 0.25
+    # 普通 vs 机械+地 — both resist 普通.  Pak's ``double_restrained_percent``
+    # (7500 BPS) is the source of truth here, so the multiplier is 0.75×,
+    # not the legacy hand-coded 0.25× / 0.333× from the BWiki chart.
+    assert get_type_multiplier("普通", ("机械", "地")) == 0.75
 
 
 # ── Energy ─────────────────────────────────────────────────────

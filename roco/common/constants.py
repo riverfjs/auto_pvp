@@ -13,6 +13,7 @@ from roco.generated.pak_rules import (  # noqa: F401
     DAMAGE_PERCENT_LIMIT,
     PVP_LEVEL,
     SKILL_DAMAGE_MAX,
+    TYPE_DOUBLE_RESIST_BPS,
     TYPE_DOUBLE_WEAK_BPS,
     TYPE_NEUTRAL_BPS,
     TYPE_RESIST_BPS,
@@ -45,9 +46,11 @@ DAMAGE_CONST_BPS = 9_000
 STAB_BPS = 15_000
 MIN_DAMAGE = 1
 RAIN_WATER_BPS = 15_000
-# Kernel uses 1/3 for "both defender types resist" (multiplicative composite).
-# Not the same semantic as pak's `triple_restrained_percent`.
-TYPE_DOUBLE_RESIST_BPS = 3_333
+# ``TYPE_DOUBLE_RESIST_BPS`` (both defender types resist) is now pulled
+# from pak's ``double_restrained_percent`` via :mod:`pak_rules` (= 7500 BPS,
+# 0.75×).  The previous hand-coded 3333 (1/3×) is replaced; if the game
+# turns out to use a different composition rule a manual override would
+# go here with a justification, not silently in source.
 
 # ── Stat formula (nature / IV) ─────────────────────────────────────────────
 NATURE_BOOST = 0.10

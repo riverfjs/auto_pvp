@@ -6,6 +6,7 @@ from roco.common.constants import BLOODLINE_LEADER, BLOODLINE_POLLUTANT, BPS
 from roco.engine.kernel.catalog import ELEMENT_LIGHT
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1
+from roco.generated import catalog_hot as hot
 
 
 def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -31,9 +32,6 @@ def op_damage_mod_non_light(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_damage_mod_non_weakness(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    # Lazy import — catalog_hot may not exist during the first codegen pass.
-    from roco.generated import catalog_hot as hot
-
     first = hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_primary]
     second = BPS if ctx.target_secondary < 0 else hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_secondary]
     if not (first > BPS or second > BPS):

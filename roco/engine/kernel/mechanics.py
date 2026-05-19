@@ -118,10 +118,13 @@ def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResu
 
 
 def _start_turn(state: KernelState) -> KernelState:
-    # ``marks_dispelled`` is the only turn-transient field that lives on
-    # KernelState today; reset here so TURN_END ops only see this turn's
-    # dispels (e.g. 焚烧烙印's marks-to-burn payload).
-    state = state._replace(turn=state.turn + 1, marks_dispelled=0)
+    # Reset per-actor mark-dispel tallies so this turn's TURN_END ops
+    # only see dispels their own actor caused this turn.
+    state = state._replace(
+        turn=state.turn + 1,
+        marks_dispelled_a=0,
+        marks_dispelled_b=0,
+    )
     state, rng = _start_turn_side(state, SIDE_A, state.rng)
     state, rng = _start_turn_side(state._replace(rng=rng), SIDE_B, rng)
     return state._replace(rng=rng)

@@ -94,8 +94,18 @@ def op_consume_marks_heal(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_dispel_marks(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    ctx.clear_self_marks = 1
-    ctx.clear_enemy_marks = 1
+    """Clear marks on the targeted side.
+
+    Pak's 1042008 ("场地转换标记") emits this op as two rows — one with
+    target=self and one with target=enemy — so each row clears its own
+    side and the combined skill_result clears both.  Honouring
+    ``ROW_TARGET`` keeps the handler reusable for "single-side dispel"
+    effects that may show up in future pak data.
+    """
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.clear_self_marks = 1
+    else:
+        ctx.clear_enemy_marks = 1
 
 
 def op_dispel_marks_to_burn(ctx: StageCtx, row: tuple[int, ...]) -> None:

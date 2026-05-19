@@ -60,15 +60,17 @@ def apply_after_move(
     actor = actor_side.pets[actor_slot]
     if ctx.clear_self_marks:
         # Count the stacks we're about to drop so TURN_END ops like
-        # ``op_dispel_marks_to_burn`` can multiply by them.
+        # ``op_dispel_marks_to_burn`` can multiply by them.  Both
+        # self-clears and enemy-clears credit the *actor* side so two
+        # simultaneous dispellers don't poach each other's count.
         dropped = _sum_mark_stacks(actor_side.marks)
         if dropped:
-            state = state._replace(marks_dispelled=state.marks_dispelled + dropped)
+            state = _credit_dispel(state, actor_side_id, dropped)
         actor_side = actor_side._replace(marks=0)
     if ctx.clear_enemy_marks:
         dropped = _sum_mark_stacks(target_side.marks)
         if dropped:
-            state = state._replace(marks_dispelled=state.marks_dispelled + dropped)
+            state = _credit_dispel(state, actor_side_id, dropped)
         target_side = target_side._replace(marks=0)
     mark_apply = apply_mark_delta_no_replace if actor.ability_flags & int(AbilityFlag.MARK_STACK_NO_REPLACE) else apply_mark_delta
     if ctx.mark_self:
@@ -210,6 +212,14 @@ def _sum_mark_stacks(marks: int) -> int:
     for idx in MarkIdx:
         total += _unpack_mark(marks, idx)
     return total
+
+
+def _credit_dispel(state: KernelState, actor_side_id: int, dropped: int) -> KernelState:
+    """Add ``dropped`` stacks to the actor's per-side dispel tally."""
+    from roco.engine.common.choices import SIDE_A
+    if actor_side_id == SIDE_A:
+        return state._replace(marks_dispelled_a=state.marks_dispelled_a + dropped)
+    return state._replace(marks_dispelled_b=state.marks_dispelled_b + dropped)
 
 
 def _cute_after_delta(current: int, delta: int) -> int:

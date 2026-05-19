@@ -130,7 +130,11 @@ def _run_actor_turn_end(
     ctx.target_primary = target_row[PET_PRIMARY]
     ctx.target_secondary = target_row[PET_SECONDARY]
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
-    # Hand the turn-scoped mark-dispel tally to handlers that scale by it.
-    ctx.marks_dispelled = state.marks_dispelled
+    # Each actor reads only its own dispel tally so opposing actors that
+    # also cleared marks this turn don't bleed into this skill's
+    # mark→burn payload.
+    ctx.marks_dispelled = (
+        state.marks_dispelled_a if side_id == SIDE_A else state.marks_dispelled_b
+    )
     run_skill_timing(rows, rng_range, TIMING_TURN_END, ctx)
     return apply_after_move(state, side_id, slot, target_side_id, target_slot, ctx)

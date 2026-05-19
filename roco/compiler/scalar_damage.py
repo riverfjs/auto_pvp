@@ -6,7 +6,10 @@ from roco.common.constants import (
     BPS, DAMAGE_CONST_BPS, STAB_BPS, MIN_DAMAGE,
     BURN_HP_CAP, BURN_DAMAGE_BPS, POISON_DAMAGE_BPS,
     FOCUS_ENERGY_GAIN, MAX_ENERGY, IV_BONUS, NATURE_BOOST, NATURE_REDUCE,
+    TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS, TYPE_NEUTRAL_BPS,
 )
+from roco.common.enums import Element
+from roco.generated.type_chart import TYPE_CHART_BPS
 
 DAMAGE_FORMULA_CONSTANT = DAMAGE_CONST_BPS / BPS
 STAB_MULTIPLIER = STAB_BPS / BPS
@@ -14,7 +17,45 @@ BURN_DAMAGE_PCT = BURN_DAMAGE_BPS / BPS
 POISON_DAMAGE_PCT = POISON_DAMAGE_BPS / BPS
 from roco.common.natures import IV_STAT_MAP, NATURE_MOD
 from roco.common.packing import buff_multiplier as _bm
-from roco.compiler.type_chart import effectiveness_v2
+
+
+def _effectiveness_bps(move_element: str, defender_types: tuple[str, ...]) -> int:
+    """Float-API wrapper around the pak-derived BPS chart.
+
+    Mirrors :func:`roco.engine.kernel.damage.type_bps` in plain Python so
+    test / display callers don't need the kernel chain.  Returns the
+    final BPS multiplier (10000 = 1.0×).
+    """
+    types: list[int] = []
+    for t in defender_types:
+        if not t or t == "无":
+            continue
+        try:
+            types.append(Element.from_str(t).value)
+        except ValueError:
+            continue
+    if not types:
+        return TYPE_NEUTRAL_BPS
+    try:
+        move_id = Element.from_str(move_element).value
+    except ValueError:
+        return TYPE_NEUTRAL_BPS
+    first = TYPE_CHART_BPS[move_id][types[0]]
+    if len(types) == 1:
+        return first
+    second = TYPE_CHART_BPS[move_id][types[1]]
+    if first > BPS and second > BPS:
+        return TYPE_DOUBLE_WEAK_BPS
+    if first < BPS and second < BPS:
+        return TYPE_DOUBLE_RESIST_BPS
+    if (first > BPS and second < BPS) or (first < BPS and second > BPS):
+        # Weak + resist on opposite types cancel; matches kernel's
+        # ``damage.type_bps`` rule so the compiler/preview path stays in
+        # lockstep with the runtime.
+        return TYPE_NEUTRAL_BPS
+    # Otherwise exactly one side is neutral — fall through to the
+    # non-neutral one (or to neutral when both are).
+    return first if first != BPS else second
 
 
 def can_use_skill(current_energy: int, cost: int) -> bool:
@@ -86,7 +127,7 @@ def get_stab(move_element: str, pet_element: str) -> float:
     return STAB_MULTIPLIER if move_element == pet_element else 1.0
 
 def get_type_multiplier(move_element: str, defender_types: tuple[str, ...]) -> float:
-    return effectiveness_v2(move_element, defender_types)
+    return _effectiveness_bps(move_element, defender_types) / BPS
 
 def calc_burn_damage(max_hp: int, stacks: int, type_mult: float = 1.0, mid_turn: bool = False) -> int:
     if stacks <= 0: return 0

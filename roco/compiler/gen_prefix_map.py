@@ -280,13 +280,18 @@ def generate_prefix_map(handler_indices: dict[str, int], pak_data_dir: Path = PA
 # Kernel-specific composites (e.g. TYPE_DOUBLE_RESIST_BPS from multiplicative
 # stack of two single-resist mults) stay in common/constants.py.
 _PAK_RULES_KEYS = {
-    "TYPE_NEUTRAL_BPS":      "restraint_percent",
-    "TYPE_WEAK_BPS":         "double_restraint_percent",
-    "TYPE_DOUBLE_WEAK_BPS":  "triple_restraint_percent",
-    "TYPE_RESIST_BPS":       "restrained_percent",
-    "DAMAGE_PERCENT_LIMIT":  "damage_percent_limit",
-    "SKILL_DAMAGE_MAX":      "skill_damage_max",
-    "PVP_LEVEL":             "battle_pvp_level",
+    "TYPE_NEUTRAL_BPS":        "restraint_percent",
+    "TYPE_WEAK_BPS":           "double_restraint_percent",
+    "TYPE_DOUBLE_WEAK_BPS":    "triple_restraint_percent",
+    "TYPE_RESIST_BPS":         "restrained_percent",
+    # ``double_restrained_percent`` in pak = 7500 BPS (0.75×), used by the
+    # kernel as the multiplier when both defender types resist the move.
+    # The previous hand-coded value was 3333 (1/3×), which deliberately
+    # differed from pak; restore pak truth as the source.
+    "TYPE_DOUBLE_RESIST_BPS":  "double_restrained_percent",
+    "DAMAGE_PERCENT_LIMIT":    "damage_percent_limit",
+    "SKILL_DAMAGE_MAX":        "skill_damage_max",
+    "PVP_LEVEL":               "battle_pvp_level",
 }
 
 
