@@ -2,7 +2,7 @@
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = 'kernel-v1'
-SOURCE_HASH = 'd437a2cf9fa2bd1528c4b7888c3817d0d01773263c80b727eb0b052b9e1df2fa'
+SOURCE_HASH = '23513e860f864d19bc31f60e4bf0e0044828f43417b18753a0a66e98f6f62436'
 ELEMENT_NAMES = ('普通', '草', '火', '水', '光', '地', '冰', '龙', '电', '毒', '虫', '武', '翼', '萌', '幽', '恶', '机械', '幻')
 PET_NAMES = ('',
  '喵喵',

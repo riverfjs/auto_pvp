@@ -27,6 +27,17 @@ def op_counter_success_speed_priority(ctx: StageCtx, row: tuple[int, ...]) -> No
         ctx.priority_next += row[ROW_ARG0]
 
 
+def op_priority_next_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    """Unconditional priority boost for the actor's next turn.
+
+    Backs pak's "迅捷" family (1051001 …): a TURN_END payload that grants
+    +N priority next turn.  ``apply_after_move`` already folds
+    ``ctx.priority_next`` into the actor's ``priority_boost`` lane.
+    """
+    if row[ROW_ARG0] > 0:
+        ctx.priority_next += row[ROW_ARG0]
+
+
 def op_counter_accumulate_transform(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if not ctx.counter_success:
         return

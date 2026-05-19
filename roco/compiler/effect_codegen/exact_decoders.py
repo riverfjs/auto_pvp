@@ -32,6 +32,7 @@ from roco.generated.handler_indices import (
     H_DISPEL_MARKS,
     H_DISPEL_MARKS_TO_BURN,
     H_HIT_COUNT_DELTA,
+    H_PRIORITY_NEXT_DELTA,
     H_SET_SELF_COOLDOWN,
     H_WEATHER,
 )
@@ -77,6 +78,11 @@ EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
     1032008: (H_HIT_COUNT_DELTA, 8, 0, 0, 0, 0),
     1032009: (H_HIT_COUNT_DELTA, 9, 0, 0, 0, 0),
     1032010: (H_HIT_COUNT_DELTA, 10, 0, 0, 0, 0),
+    # "迅捷" — TURN_END payload that grants the actor +1 priority next
+    # turn.  Attached to 翼击 / 龙卷风 / 飞羽 / 羽化加速 / 风墙 and shows
+    # up 113 times across used skills.  ``apply_after_move`` already
+    # folds ``ctx.priority_next`` into ``actor.priority_boost``.
+    1051001: (H_PRIORITY_NEXT_DELTA, 1, 0, 0, 0, 0),
     # 标记转换灼烧 — skill text: "dispel both sides' marks, every dispelled
     # stack gives the enemy 5 burn".  The dispel half is 1042008 above and
     # runs at CALC_DAMAGE; this row fires at TURN_END (pak ``cast_moment=12``)
