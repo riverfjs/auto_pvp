@@ -1,19 +1,22 @@
-"""Pak-effect classification: buff_id → kernel handler index.
+"""Pak-effect classification — pak-first, no heuristics.
 
-Two layers:
+Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 
-1. ``classify_buff_handler`` — given a single buff_id, look up its
-   ``buff_base_ids`` in ``base_id_map`` (exact match) and then
-   ``prefix_map`` (family by ``base_id // 1000``).
-2. ``pick_effect_buff`` — given an ``EFFECT_CONF.effect_param`` payload
-   that may contain *multiple* buff_ids (compound effects like
-   "convert mark to burn", where slot 1 is a tracking marker and later
-   slots hold the buff to actually apply), choose the buff_id whose
-   classification is the most specific.
+* ``type=2`` decodes structurally from ``effect_param`` to ``H_DAMAGE``.
+* ``type=1`` whose ``effect_param`` contains exactly one buff_id in
+  BUFF_CONF is treated as "apply that buff"; the buff is then classified
+  via :func:`classify_buff_handler` (exact ``buff_base_id`` → prefix
+  family fallback).  Single-candidate effects are deterministic — pak
+  literally wrote one buff to apply.
+* ``type=1`` with multiple buff_ids in ``effect_param`` and any ``type=3``
+  state-change row require human-verified semantics: see
+  :mod:`.exact_decoders`.  Anything not in that table surfaces as an
+  audit gap rather than being heuristically guessed.
 
-Both maps are loaded once from ``prefix_handler_map.json`` (regenerated
-by ``gen_prefix_map.py``) so adding mappings is a codegen change, not a
-code change.
+``classify_buff_handler`` (exact ``buff_base_id`` then prefix) is also
+used by :func:`decode_buff_direct` when a skill_result references a
+buff in BUFF_CONF directly — that path has no ambiguity since the entry
+*is* the buff to apply.
 """
 
 from __future__ import annotations
@@ -21,55 +24,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from roco.common.enums import WeatherType
-from roco.generated.handler_indices import (
-    H_BURN,
-    H_DAMAGE,
-    H_DISPEL_MARKS,
-    H_NOOP,
-    H_SELF_BUFF,
-    H_WEATHER,
-)
+from roco.generated.handler_indices import H_DAMAGE, H_NOOP
 
 from roco.compiler.effect_codegen.params import (
     extract_int_list,
-    is_status_or_mark_handler,
     pack_handler_params,
     safe_int,
 )
 
 
-# Exact ``effect_id`` → kernel row override.  Used for pak effects that:
-#   * mean something the prefix/base-id scan cannot classify
-#     (1028xxx state-change weather effects — type=3 with a pak-internal
-#     weather code that no buff_base_id ever expresses);
-#   * are compound semantics where the heuristic picker would pick the
-#     wrong slot (1042014 "标记转换灼烧" — five burn buffs packed in slot 2
-#     after a marker buff in slot 1).
-#
-# Tuple shape: ``(handler_idx, p0, p1, p2, p3, timing_override)``.
-# ``timing_override = 0`` keeps the skill_result's own ``cast_moment``;
-# any non-zero value overrides it (used for 1042014 because the kernel
-# only runs skill effects at BEFORE_MOVE/CALC_DAMAGE/AFTER_MOVE today —
-# turn-end skill processing is a separate kernel project).
-EXACT_EFFECT_OVERRIDES: dict[int, tuple[int, int, int, int, int, int]] = {
-    # Weather setters — pak param[0] is a pak-internal weather code; map to
-    # the kernel's WeatherType enum and seed an 8-turn duration so the
-    # first end-of-turn tick lands the test expectation of 7 turns left.
-    1028001: (H_WEATHER, WeatherType.RAIN.value,      8, 0, 0, 0),  # 求雨
-    1028003: (H_WEATHER, WeatherType.SANDSTORM.value, 8, 0, 0, 0),  # 沙暴
-    1028004: (H_WEATHER, WeatherType.NONE.value,      0, 0, 0, 0),  # 晴天 (clear weather)
-    1028005: (H_WEATHER, WeatherType.SNOW.value,      8, 0, 0, 0),  # 暴风雪
-    # 场地转换标记 — pak crams two dozen mark buff_ids into one slot to
-    # signal "dispel all marks both sides", not "apply wind/water/...".
-    1042008: (H_DISPEL_MARKS, 0, 0, 0, 0, 0),
-    # 标记转换灼烧 — game text says "for each dispelled mark, apply 5 burn
-    # stacks".  Without a dedicated kernel op that counts dispelled marks,
-    # emit a fixed 5-stack burn at the pak-declared cast_moment (TURN_END,
-    # now handled by ``tick_skill_turn_end``).  Replace when a
-    # marks→burn primitive lands.
-    1042014: (H_BURN, 5, 0, 0, 0, 0),
-}
 
 
 def count_buff_repeats(params_raw: list, buff_id: int) -> int:
@@ -126,9 +89,9 @@ def collect_buff_candidates(
 ) -> list[int]:
     """Return every distinct buff_id referenced by an ``effect_param`` payload.
 
-    Order follows the slot order in pak; duplicates are removed but slot
-    ordering is preserved so consumers that want first-found semantics can
-    still take ``candidates[0]``.
+    Used by :mod:`.audit` to report which buffs a dropped effect referenced;
+    not used by classification (the structural decoder requires exactly one
+    candidate, the exact-decoder table covers everything else).
     """
     seen: list[int] = []
     for idx in range(len(params_raw)):
@@ -138,46 +101,10 @@ def collect_buff_candidates(
     return seen
 
 
-def pick_effect_buff(
-    candidates: list[int],
-    buff_conf: dict[int, dict],
-) -> int:
-    """Choose the most semantically-specific buff_id among ``candidates``.
-
-    Compound pak effects (e.g. ``effect_id`` 1042014 "标记转换灼烧") put a
-    tracking marker buff in slot 1 and the actually-applied buff in slot 2.
-    A naive "first non-zero" selector picks the marker (prefix 2001 STAT_MOD
-    → H_SELF_BUFF) and the burn is silently lost.
-
-    Tier order:
-
-    1. ``buff_base_id`` has an exact entry in :data:`BASE_ID_HANDLER_MAP`
-       (covers H_BURN/H_POISON/H_LEECH/marks — handlers configured by
-       :func:`gen_prefix_map.py` because their semantics are unambiguous).
-    2. prefix maps to a handler that is neither H_NOOP nor the generic
-       H_SELF_BUFF catch-all.
-    3. prefix maps to H_SELF_BUFF.
-    4. fall back to first candidate.
-    """
-    if not candidates:
-        return 0
-
-    def base_ids(c: int) -> list[int]:
-        return [bid for bid in (buff_conf[c].get("buff_base_ids") or []) if bid]
-
-    for c in candidates:
-        if any(bid in BASE_ID_HANDLER_MAP for bid in base_ids(c)):
-            return c
-    for c in candidates:
-        for bid in base_ids(c):
-            h = PREFIX_HANDLER_MAP.get(bid // 1000, H_NOOP)
-            if h not in (H_NOOP, H_SELF_BUFF):
-                return c
-    for c in candidates:
-        for bid in base_ids(c):
-            if PREFIX_HANDLER_MAP.get(bid // 1000, H_NOOP) == H_SELF_BUFF:
-                return c
-    return candidates[0]
+def _single_buff(params_raw: list, buff_conf: dict[int, dict]) -> int:
+    """If ``params_raw`` references exactly one BUFF_CONF id, return it; else 0."""
+    candidates = collect_buff_candidates(params_raw, buff_conf)
+    return candidates[0] if len(candidates) == 1 else 0
 
 
 def decode_effect(
@@ -187,9 +114,10 @@ def decode_effect(
 ) -> list[tuple[int, int, int, int, int, int]]:
     """Decode one ``EFFECT_CONF`` row into ``(handler, p0..p3, raw_stacks)`` tuples.
 
-    ``raw_stacks`` is the stack count inferred from pak — i.e. how many times
-    the chosen buff repeats in its slot.  Callers override it with
-    ``buff_group_level`` from the skill_result entry when that field is set.
+    Multi-candidate ``type=1`` effects and every ``type=3`` row must be
+    listed in :mod:`.exact_decoders` to produce an executable row; this
+    function intentionally returns H_NOOP for them so the audit pipeline
+    surfaces the coverage gap rather than guessing.
     """
     rec = effect_conf.get(effect_id)
     if rec is None:
@@ -199,8 +127,7 @@ def decode_effect(
     params_raw = rec.get("effect_param") or rec.get("params") or []
 
     if etype == 1:
-        candidates = collect_buff_candidates(params_raw, buff_conf)
-        buff_id = pick_effect_buff(candidates, buff_conf)
+        buff_id = _single_buff(params_raw, buff_conf)
         if buff_id:
             h = classify_buff_handler(buff_id, buff_conf)
             raw_stacks = count_buff_repeats(params_raw, buff_id)
@@ -215,8 +142,7 @@ def decode_effect(
         return [(H_DAMAGE, mode, power, self_damage, 0, 1)]
 
     if etype == 3:
-        # State changes (buff add/remove, weather, ...) — surface as a gap;
-        # specific kinds need dedicated handlers.
+        # All state-change rows must be in exact_decoders; default → gap.
         return [(H_NOOP, effect_id, 0, 0, 0, 1)]
 
     return [(H_NOOP, effect_id, etype, 0, 0, 1)]

@@ -16,7 +16,6 @@ from roco.compiler.effect_codegen.classify import (
     BASE_ID_HANDLER_MAP,
     PREFIX_HANDLER_MAP,
     collect_buff_candidates,
-    pick_effect_buff,
 )
 from roco.compiler.effect_codegen.pak import PakTables
 
@@ -25,11 +24,13 @@ def resolve_buff_metadata(
     effect_id: int,
     pak_data: PakTables,
 ) -> tuple[int, list[int]]:
-    """Locate the buff_id and ``buff_base_ids`` the classifier acted on.
+    """Locate one buff_id referenced by ``effect_id`` for audit reporting.
 
-    Mirrors :func:`pick_effect_buff` so the gap audit reports the same buff
-    the runtime classifier dropped.  Returns ``(0, [])`` when no buff can
-    be located.
+    Returns the buff_id (or 0) and its ``buff_base_ids``.  Used only by
+    gap-row metadata — never feeds back into classification.  When pak
+    references several buffs (a compound effect), the first slot wins
+    here purely so the gap row has *something* concrete to point at;
+    the gap's ``reason`` already records that the effect was compound.
     """
     if effect_id in pak_data.buff_conf:
         rec = pak_data.buff_conf[effect_id]
@@ -39,9 +40,9 @@ def resolve_buff_metadata(
         return 0, []
     params_raw = rec.get("effect_param") or rec.get("params") or []
     candidates = collect_buff_candidates(params_raw, pak_data.buff_conf)
-    chosen = pick_effect_buff(candidates, pak_data.buff_conf)
-    if not chosen:
+    if not candidates:
         return 0, []
+    chosen = candidates[0]
     buff_rec = pak_data.buff_conf[chosen]
     return chosen, [int(b) for b in (buff_rec.get("buff_base_ids") or []) if b]
 
@@ -66,6 +67,8 @@ def gap_reason(
       recognise.
     * ``effect_type_1_no_buff`` — type=1 effect whose params contain no
       buff_id present in BUFF_CONF.
+    * ``effect_type_1_compound`` — type=1 with multiple buff candidates;
+      needs an exact decoder so we don't guess which slot is the payload.
     * ``buff_no_base_ids`` — buff record exists but is empty (a stub).
     * ``prefix_{n}_intentional_noop`` — prefix is in the codegen seed but
       maps to H_NOOP on purpose (e.g. detection, cooldown).
@@ -75,13 +78,23 @@ def gap_reason(
     if effect_id not in pak_data.effect_conf and effect_id not in pak_data.buff_conf:
         return "effect_id_not_in_pak", f"effect_{effect_id}"
     if effect_id in pak_data.effect_conf:
-        etype = pak_data.effect_conf[effect_id].get("type", 0)
+        rec = pak_data.effect_conf[effect_id]
+        etype = rec.get("type", 0)
         if etype == 3:
             return "effect_type_3_state_change", f"effect_{effect_id}"
         if etype not in (1, 2):
             return f"effect_type_{etype}_unknown", f"effect_{effect_id}"
         if buff_id == 0:
             return "effect_type_1_no_buff", f"effect_{effect_id}"
+        # Multi-candidate type=1 falls here: the audit ran with the first
+        # candidate purely for reporting.  These need a hand-curated entry
+        # in :mod:`.exact_decoders`; flag distinctly so the strict-build
+        # diff is meaningful.
+        params_raw = rec.get("effect_param") or rec.get("params") or []
+        if sum(1 for slot in params_raw if isinstance(slot, dict)) and len(
+            collect_buff_candidates(params_raw, pak_data.buff_conf)
+        ) > 1:
+            return "effect_type_1_compound", f"effect_{effect_id}"
     if buff_id and not base_ids:
         return "buff_no_base_ids", f"buff_{buff_id}"
     if base_ids:

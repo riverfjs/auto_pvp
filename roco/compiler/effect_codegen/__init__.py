@@ -26,11 +26,8 @@ from roco.generated.handler_indices import *  # noqa: F401,F403
 from roco.generated.handler_indices import H_NOOP
 
 from roco.compiler.effect_codegen.audit import gap_reason, resolve_buff_metadata
-from roco.compiler.effect_codegen.classify import (
-    EXACT_EFFECT_OVERRIDES,
-    decode_buff_direct,
-    decode_effect,
-)
+from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
+from roco.compiler.effect_codegen.exact_decoders import decode_exact
 from roco.compiler.effect_codegen.pak import PakTables
 from roco.compiler.effect_codegen.params import is_status_or_mark_handler
 
@@ -72,12 +69,10 @@ def generate_effect_rows(
         success_rate = entry.get("success_rate", 10000)
         buff_group_level = int(entry.get("buff_group_level", 0) or 0)
 
-        # Exact pak effect_ids whose semantics don't fit prefix scanning
-        # (weather setters, mark-to-burn conversion, mark dispel) get a
-        # hand-curated row.  ``timing_override`` lets us pin a row to
-        # AFTER_MOVE even when pak says TURN_END, until the kernel grows
-        # a turn-end skill processor.
-        override = EXACT_EFFECT_OVERRIDES.get(effect_id)
+        # Hand-curated exact decoders (compound type=1 payloads, type=3
+        # state changes, weather setters) take precedence over the
+        # structural decoder.  See :mod:`.exact_decoders` for the policy.
+        override = decode_exact(effect_id)
         if override is not None:
             h, p0, p1, p2, p3, timing_override = override
             timing = timing_override or cast_moment
