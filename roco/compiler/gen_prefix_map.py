@@ -12,7 +12,7 @@ Run at build time:  uv run python -m roco.compiler.gen_prefix_map
 
 from __future__ import annotations
 
-import importlib
+import ast
 import json
 import sys
 from pathlib import Path
@@ -25,6 +25,7 @@ GEN_DIR = ROOT / "roco" / "generated"
 REGISTRY_PATH = GEN_DIR / "handler_registry.json"
 INDICES_PATH = GEN_DIR / "handler_indices.py"
 ORDER_PATH = GEN_DIR / "handler_order.py"
+TABLE_PATH = GEN_DIR / "handler_table.py"
 PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
 PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 
@@ -41,14 +42,21 @@ _OP_MODULES = (
 # Handler discovery + registry
 # ---------------------------------------------------------------------------
 
-def _discover_handlers() -> set[str]:
-    names: set[str] = set()
+def _module_funcs() -> dict[str, list[str]]:
+    """Return {mod_name: [op_func_names]} via AST parse — no imports."""
+    result: dict[str, list[str]] = {}
     for mod_name in _OP_MODULES:
-        mod = importlib.import_module(mod_name)
-        for attr in dir(mod):
-            if attr.startswith("op_") and callable(getattr(mod, attr)):
-                names.add(attr)
-    return names
+        path = ROOT / (mod_name.replace(".", "/") + ".py")
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        result[mod_name] = [
+            n.name for n in tree.body
+            if isinstance(n, ast.FunctionDef) and n.name.startswith("op_")
+        ]
+    return result
+
+
+def _discover_handlers() -> set[str]:
+    return {name for names in _module_funcs().values() for name in names}
 
 
 def _load_registry() -> list[str]:
@@ -111,7 +119,63 @@ def generate_handler_indices() -> dict[str, int]:
     order_lines.append("")
     ORDER_PATH.write_text("\n".join(order_lines), encoding="utf-8")
 
+    _write_handler_table(handlers)
     return index_map
+
+
+def _write_handler_table(handlers: list[str]) -> None:
+    """Emit a static HANDLERS tuple with explicit per-module imports.
+
+    Replaces runtime dir()-based assembly in ops.py with a generated table
+    every op_* function is imported by name.
+    """
+    func_to_module: dict[str, str] = {}
+    for mod_name, names in _module_funcs().items():
+        for name in names:
+            func_to_module[name] = mod_name
+
+    by_module: dict[str, list[str]] = {m: [] for m in _OP_MODULES}
+    for func_name in handlers:
+        if func_name == "_noop":
+            continue
+        mod_name = func_to_module.get(func_name)
+        if mod_name is None:
+            raise RuntimeError(f"handler '{func_name}' not found in any op_* module")
+        by_module[mod_name].append(func_name)
+
+    lines = [
+        "# Auto-generated from handler_registry.json — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+        "from roco.engine.kernel.ctx import StageCtx",
+        "",
+    ]
+    for mod_name in _OP_MODULES:
+        names = by_module[mod_name]
+        if not names:
+            continue
+        lines.append(f"from {mod_name} import (")
+        for n in names:
+            lines.append(f"    {n},")
+        lines.append(")")
+    lines.extend([
+        "",
+        "",
+        "def _noop(_ctx: StageCtx, _row: tuple[int, ...]) -> None:",
+        "    pass",
+        "",
+        "",
+        "HANDLERS: tuple = (",
+    ])
+    for idx, name in enumerate(handlers):
+        lines.append(f"    {name},  # {idx}")
+    lines.extend([
+        ")",
+        "",
+        "HANDLER_COUNT = len(HANDLERS)",
+        "",
+    ])
+    TABLE_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +380,7 @@ def generate_pak_rules(pak_data_dir: Path = PAK_DATA) -> dict[str, int]:
 def main() -> None:
     h = generate_handler_indices()
     print(f"handler_indices.py: {len(h)} constants -> {INDICES_PATH}")
+    print(f"handler_table.py:   {len(h)} handlers   -> {TABLE_PATH}")
 
     result = generate_prefix_map(h)
     PREFIX_MAP_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

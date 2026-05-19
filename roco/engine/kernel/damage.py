@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.engine.common.packing import (
+from roco.common.packing import (
     BUFF_ATK_MAG,
     BUFF_ATK_PHYS,
     BUFF_DEF_MAG,
@@ -35,7 +35,7 @@ from roco.common.constants import (
     TYPE_DOUBLE_WEAK_BPS,
     TYPE_NEUTRAL_BPS,
 )
-from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, WeatherType
+from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, WeatherType
 from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_FIRE,

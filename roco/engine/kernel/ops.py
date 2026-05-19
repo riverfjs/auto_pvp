@@ -1,9 +1,10 @@
-"""Kernel effect dispatch — handler array indexed by registry-assigned IDs.
+"""Kernel effect dispatch — HANDLERS comes from generated/handler_table.
 
 Handler indices are managed by handler_registry.json (see gen_prefix_map.py).
 To add a new handler:
   1. Write an op_* function in the appropriate op_*.py module.
-  2. Run `uv run python -m roco.compiler.gen_prefix_map` to register it.
+  2. Run `uv run python -m roco.compiler.gen_prefix_map` to register it
+     and regenerate handler_table.py / handler_indices.py / handler_order.py.
 """
 
 from __future__ import annotations
@@ -19,39 +20,8 @@ from roco.engine.kernel.op_rows import (  # noqa: F401
     TIMING_TAKE_DAMAGE, TIMING_TURN_END, TIMING_TURN_START,
 )
 
-from roco.generated.handler_order import HANDLER_ORDER
+from roco.generated.handler_table import HANDLERS, HANDLER_COUNT
 
-import roco.engine.kernel.op_mods as _op_mods
-import roco.engine.kernel.op_resources as _op_resources
-import roco.engine.kernel.op_marks as _op_marks
-import roco.engine.kernel.op_status as _op_status
-import roco.engine.kernel.op_cute as _op_cute
-
-
-def _noop(_ctx: StageCtx, _row: tuple[int, ...]) -> None:
-    pass
-
-
-_HANDLER_MODULES = (_op_mods, _op_resources, _op_marks, _op_status, _op_cute)
-
-
-def _build_handlers() -> tuple:
-    func_map: dict[str, object] = {"_noop": _noop}
-    for mod in _HANDLER_MODULES:
-        for name in dir(mod):
-            if name.startswith("op_") and callable(getattr(mod, name)):
-                func_map[name] = getattr(mod, name)
-    handlers = []
-    for name in HANDLER_ORDER:
-        func = func_map.get(name)
-        if func is None:
-            raise RuntimeError(f"Handler '{name}' in registry not found in any op_* module")
-        handlers.append(func)
-    return tuple(handlers)
-
-
-HANDLERS: tuple = _build_handlers()
-HANDLER_COUNT = len(HANDLERS)
 KERNEL_SUPPORTED_TAGS = tuple(range(HANDLER_COUNT))
 
 

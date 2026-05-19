@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.engine.common.packing import MarkIdx, _set_mark, _unpack_mark
+from roco.common.packing import MarkIdx, _set_mark, _unpack_mark
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_TARGET, TARGET_ALLY, TARGET_SELF, TARGET_TEAM
 

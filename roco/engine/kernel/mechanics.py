@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
-from roco.engine.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
+from roco.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
 from roco.common.constants import (
     BPS,
     FOCUS_ENERGY_GAIN,
@@ -18,7 +18,7 @@ from roco.common.constants import (
     WILLPOWER_POWER,
 )
 from roco.engine.common.rng import next_rng
-from roco.engine.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
+from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
 from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_GROUND,
@@ -45,7 +45,7 @@ from roco.engine.kernel.op_rows import (
     TIMING_CALC_DAMAGE,
     TIMING_TAKE_DAMAGE,
 )
-from roco.compiler.effect_codegen import H_BORROW_TEAM_SKILL, H_SKILL_MOD
+from roco.generated.handler_indices import H_BORROW_TEAM_SKILL, H_SKILL_MOD
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.residual import apply_after_move, end_turn, share_gains_on_side
 from roco.engine.kernel.state import (

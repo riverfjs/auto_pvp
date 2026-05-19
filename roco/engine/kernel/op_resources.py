@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roco.engine.common.packing import _unpack_skill_count
+from roco.common.packing import _unpack_skill_count
 from roco.common.constants import BPS
-from roco.engine.enums import Element, SkillCategory
+from roco.common.enums import Element, SkillCategory
 from roco.engine.kernel.catalog import ELEMENT_GRASS
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import (
