@@ -1,109 +1,91 @@
-"""Hand-curated exact ``effect_id`` → kernel row table.
+"""Loader for the hand-curated effect_id → kernel row table.
 
-Pak ``EFFECT_CONF`` rows fall into three buckets:
+Three sources feed :data:`EXACT_EFFECT_DECODERS`:
 
-* ``type=2`` damage rows decode structurally from ``effect_param`` —
-  done in :func:`classify.decode_effect`.
-* ``type=1`` rows with exactly one buff_id in their ``effect_param``
-  collapse to "apply that buff" deterministically — also handled
-  structurally.
-* Anything else (``type=1`` compound payloads with marker + apply-buff
-  slots, ``type=3`` state changes, weather setters, dispel chains, …)
-  needs human inspection of the pak record to map to a kernel
-  primitive.  Those land here.
+1. :file:`roco/compiler/rules/exact_effects.jsonl` — single-mapping
+   pak effects whose semantics need a human decision but whose row is
+   just a handler index plus literal args (cooldown, hit-count delta,
+   priority, life-drain, heal HP/energy, …).  The JSONL is the editable
+   surface; this module loads and validates it.
 
-Every entry MUST cite the pak record's ``editor_name`` and the in-game
-skill that uses it so future readers can re-verify against pak.  The
-row shape is the same as a normal effect row plus a ``timing_override``:
-``(handler_idx, p0, p1, p2, p3, timing_override)``.  ``timing_override``
-of zero keeps the skill_result's own ``cast_moment``; any non-zero
-value pins the row to that timing.
+2. :mod:`roco.generated.weather_decoders` — auto-derived from pak by
+   ``gen_prefix_map``.  pak ``effect_param[0]`` is the pak weather
+   code; the generator resolves it to a kernel ``WeatherType`` value
+   and picks a default duration.  Adding a new weather effect in pak
+   only needs the pak→kernel weather code map to be extended.
 
-To add an entry: read the pak ``EFFECT_CONF`` record, decide which
-kernel handler models its semantics, and add the tuple here.  Anything
-not in this table that the structural decoders cannot classify shows up
-as an :mod:`.audit` gap so coverage is honest by default.
+3. The two compound effects below — ``1042008`` and ``1042014`` — stay
+   in Python because their kernel ops are custom-built for the pak
+   compound semantic (mark dispel of either side; marks-→-burn payload
+   that reads ``ctx.marks_dispelled``).  Their row args are kernel
+   constants by design, not pak parameter pass-through.
 """
 
 from __future__ import annotations
 
-from roco.common.enums import WeatherType
-from roco.generated.handler_indices import (
-    H_DISPEL_MARKS,
-    H_DISPEL_MARKS_TO_BURN,
-    H_HEAL_ENERGY,
-    H_HEAL_HP,
-    H_HIT_COUNT_DELTA,
-    H_LIFE_DRAIN,
-    H_PRIORITY_NEXT_DELTA,
-    H_SET_SELF_COOLDOWN,
-    H_WEATHER,
-)
+import json
+from pathlib import Path
+
+from roco.generated import handler_indices as _hi
+from roco.generated.handler_indices import H_DISPEL_MARKS, H_DISPEL_MARKS_TO_BURN
+from roco.generated.weather_decoders import WEATHER_EFFECT_DECODERS
 
 
-# ``timing_override = 0`` → use the skill_result's own cast_moment.
-# Non-zero overrides exist for legacy effects whose pak timing predates
-# the kernel feature that processes them; they should shrink over time.
-EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
-    # Weather setters — pak ``type=3`` with ``effect_param[0]`` carrying a
-    # pak-internal weather code; map to the kernel's WeatherType enum and
-    # seed an 8-turn duration so the first end-turn tick lands the
-    # 7-turn-remaining expectation that the kernel tests assert.
-    1028001: (H_WEATHER, WeatherType.RAIN.value,      8, 0, 0, 0),  # 求雨
-    1028003: (H_WEATHER, WeatherType.SANDSTORM.value, 8, 0, 0, 0),  # 沙暴
-    1028004: (H_WEATHER, WeatherType.NONE.value,      0, 0, 0, 0),  # 晴天 (clear weather)
-    1028005: (H_WEATHER, WeatherType.SNOW.value,      8, 0, 0, 0),  # 暴风雪
-    # 场地转换标记 — pak crams two dozen mark buff_ids into one
-    # ``effect_param`` slot to signal "dispel all marks on both sides",
-    # not "apply wind/water/...".  Maps to the existing dispel-all-marks
-    # kernel primitive.
+_RULES_PATH = Path(__file__).resolve().parents[2] / "compiler" / "rules" / "exact_effects.jsonl"
+
+
+def _load_jsonl() -> dict[int, tuple[int, int, int, int, int, int]]:
+    """Parse ``exact_effects.jsonl`` into the row-tuple shape.
+
+    Each record carries ``effect_id``, ``handler`` (resolved against
+    ``handler_indices``), an ``args`` quadruple, and an optional
+    ``timing_override``.  Unknown handlers raise immediately so a
+    kernel rename cannot silently drop a decoder.
+    """
+    out: dict[int, tuple[int, int, int, int, int, int]] = {}
+    with _RULES_PATH.open("r", encoding="utf-8") as fp:
+        for line_no, raw in enumerate(fp, 1):
+            raw = raw.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            rec = json.loads(raw)
+            handler_name = rec["handler"]
+            if not hasattr(_hi, handler_name):
+                raise RuntimeError(
+                    f"exact_effects.jsonl line {line_no}: unknown handler "
+                    f"'{handler_name}'"
+                )
+            handler_idx = int(getattr(_hi, handler_name))
+            args = rec.get("args") or [0, 0, 0, 0]
+            if len(args) != 4:
+                raise RuntimeError(
+                    f"exact_effects.jsonl line {line_no}: ``args`` must have 4 entries"
+                )
+            timing_override = int(rec.get("timing_override", 0))
+            out[int(rec["effect_id"])] = (
+                handler_idx,
+                int(args[0]),
+                int(args[1]),
+                int(args[2]),
+                int(args[3]),
+                timing_override,
+            )
+    return out
+
+
+_COMPOUND: dict[int, tuple[int, int, int, int, int, int]] = {
     1042008: (H_DISPEL_MARKS, 0, 0, 0, 0, 0),
-    # "防御类技能公共冷却 1/2" — 3-turn cooldown on the actor's own skill
-    # slot, attached to defensive skills (防御 / 有效预防 / 风墙 / 听桥 /
-    # 截拳 / …).  Top strict-build blocker by used_count (1037002 alone
-    # appears on 42 used skills, 773 references).  The two pak variants
-    # share semantics; they just live in different cooldown groups in
-    # pak's bookkeeping which the kernel does not distinguish.
-    1037001: (H_SET_SELF_COOLDOWN, 3, 0, 0, 0, 0),
-    1037002: (H_SET_SELF_COOLDOWN, 3, 0, 0, 0, 0),
-    # "连击N" — each pak id adds N hits to the actor's attack at
-    # CALC_DAMAGE; target=self triggers the additive branch of
-    # ``op_hit_count_delta``.  Editor names like "连击10" actually mean
-    # variant index, not stack count — the per-id ``effect_param[0]`` is
-    # the real delta.  9 distinct skills use 1032002 (+2 hits) most.
-    1032001: (H_HIT_COUNT_DELTA, 1, 0, 0, 0, 0),
-    1032002: (H_HIT_COUNT_DELTA, 2, 0, 0, 0, 0),
-    1032003: (H_HIT_COUNT_DELTA, 3, 0, 0, 0, 0),
-    1032004: (H_HIT_COUNT_DELTA, 4, 0, 0, 0, 0),
-    1032005: (H_HIT_COUNT_DELTA, 5, 0, 0, 0, 0),
-    1032006: (H_HIT_COUNT_DELTA, 6, 0, 0, 0, 0),
-    1032007: (H_HIT_COUNT_DELTA, 7, 0, 0, 0, 0),
-    1032008: (H_HIT_COUNT_DELTA, 8, 0, 0, 0, 0),
-    1032009: (H_HIT_COUNT_DELTA, 9, 0, 0, 0, 0),
-    1032010: (H_HIT_COUNT_DELTA, 10, 0, 0, 0, 0),
-    # "迅捷" — TURN_END payload that grants the actor +1 priority next
-    # turn.  Attached to 翼击 / 龙卷风 / 飞羽 / 羽化加速 / 风墙 and shows
-    # up 113 times across used skills.  ``apply_after_move`` already
-    # folds ``ctx.priority_next`` into ``actor.priority_boost``.
-    1051001: (H_PRIORITY_NEXT_DELTA, 1, 0, 0, 0, 0),
-    # "汲取生命100" — heal 100% of damage dealt (pak BPS 10000).
-    # The kernel multiplies ``ctx.drain_bps`` by damage in apply_after_move.
-    1011001: (H_LIFE_DRAIN, 10000, 0, 0, 0, 0),
-    # "恢复15%生命" — heal 15% max HP via ``ctx.heal_hp_bps``
-    # (pak param[1] = 1500 BPS).  Other 1005xxx variants exist but the
-    # widely-used one is 1005015.
-    1005015: (H_HEAL_HP, 1500, 0, 0, 0, 0),
-    # "通用--获得1能量" — actor gains 1 energy via ``ctx.heal_energy``.
-    1019001: (H_HEAL_ENERGY, 1, 0, 0, 0, 0),
-    # 标记转换灼烧 — skill text: "dispel both sides' marks, every dispelled
-    # stack gives the enemy 5 burn".  The dispel half is 1042008 above and
-    # runs at CALC_DAMAGE; this row fires at TURN_END (pak ``cast_moment=12``)
-    # and reads the turn's running dispel tally off ``ctx.marks_dispelled``
-    # to scale the burn it applies.
     1042014: (H_DISPEL_MARKS_TO_BURN, 5, 0, 0, 0, 0),
 }
 
 
+EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
+    **_load_jsonl(),
+    **WEATHER_EFFECT_DECODERS,
+    **_COMPOUND,
+}
+
+
 def decode_exact(effect_id: int) -> tuple[int, int, int, int, int, int] | None:
-    """Return the row tuple for ``effect_id`` if it has a curated entry."""
+    """Return the curated row tuple for ``effect_id``, or ``None``."""
     return EXACT_EFFECT_DECODERS.get(effect_id)

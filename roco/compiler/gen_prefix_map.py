@@ -31,6 +31,30 @@ PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 MARK_GROUPS_PATH = GEN_DIR / "mark_groups.py"
 PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
 TYPE_CHART_PATH = GEN_DIR / "type_chart.py"
+WEATHER_DECODERS_PATH = GEN_DIR / "weather_decoders.py"
+
+
+# pak ``effect_param[0]`` weather code → kernel ``WeatherType`` enum value.
+# Hand-curated because pak ships no machine-readable cross-reference; keeping
+# it as a tight 4-entry table here (instead of in JSONL) is the smallest
+# version of "data, not Python source" — anybody touching weather decoding
+# updates this table once and ``generate_weather_decoders`` does the rest.
+_PAK_WEATHER_TO_KERNEL = {
+    1: "NONE",       # 晴天 (clears weather)
+    3: "RAIN",       # 求雨
+    5: "SNOW",       # 暴风雪
+    6: "SANDSTORM",  # 沙暴
+}
+
+# Default initial turn count per kernel ``WeatherType`` when pak supplies 0.
+# The first end-of-turn tick decrements once, so a value of 8 here matches
+# the canonical 7-turns-remaining state the kernel tests assert.
+_WEATHER_DEFAULT_TURNS = {
+    "NONE": 0,
+    "RAIN": 8,
+    "SNOW": 8,
+    "SANDSTORM": 8,
+}
 # Hand-curated prefix/base_id → handler seed used to bootstrap
 # ``generate_prefix_map``.  Editable JSONL keeps the semantic decisions
 # (which pak prefix family maps to which kernel handler) as data, not as
@@ -295,6 +319,64 @@ _PAK_RULES_KEYS = {
 }
 
 
+def generate_weather_decoders(pak_data_dir: Path = PAK_DATA) -> int:
+    """Emit ``roco/generated/weather_decoders.py`` — one row per pak
+    weather setter (``effect_order=28`` ``type=3``).
+
+    Each entry reads pak ``effect_param[0]`` as the pak-internal weather
+    code, looks it up in :data:`_PAK_WEATHER_TO_KERNEL`, and pairs the
+    kernel ``WeatherType`` enum value with a default duration from
+    :data:`_WEATHER_DEFAULT_TURNS`.  Effects whose pak weather code is
+    not in the table are skipped — they show up as audit gaps and the
+    pak→kernel table needs an entry before they decode.
+    """
+    from roco.common.enums import WeatherType
+
+    rows = json.loads((pak_data_dir / "EFFECT_CONF.json").read_text(encoding="utf-8"))
+    pak_effects = rows.get("RocoDataRows", rows)
+
+    decoded: list[tuple[int, str, int, int]] = []  # (effect_id, kernel_name, kernel_value, default_turns)
+    for eid_str, rec in pak_effects.items():
+        if rec.get("effect_order") != 28 or rec.get("type") != 3:
+            continue
+        params = rec.get("effect_param") or []
+        if not params or not isinstance(params[0], dict):
+            continue
+        inner = params[0].get("params") or []
+        if not inner:
+            continue
+        try:
+            pak_code = int(inner[0])
+        except (TypeError, ValueError):
+            continue
+        kernel_name = _PAK_WEATHER_TO_KERNEL.get(pak_code)
+        if kernel_name is None:
+            continue
+        kernel_value = int(getattr(WeatherType, kernel_name).value)
+        default_turns = _WEATHER_DEFAULT_TURNS.get(kernel_name, 0)
+        decoded.append((int(eid_str), kernel_name, kernel_value, default_turns))
+
+    decoded.sort()
+
+    lines = [
+        "# Auto-generated from EFFECT_CONF.json — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+        "from roco.generated.handler_indices import H_WEATHER",
+        "",
+        "# ``effect_id -> (handler_idx, weather_kernel_id, default_turns, 0, 0, timing_override)``",
+        "WEATHER_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {",
+    ]
+    for eid, kernel_name, kernel_value, default_turns in decoded:
+        lines.append(
+            f"    {eid}: (H_WEATHER, {kernel_value}, {default_turns}, 0, 0, 0),  # pak {kernel_name}"
+        )
+    lines.append("}")
+    lines.append("")
+    WEATHER_DECODERS_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return len(decoded)
+
+
 def generate_type_chart(pak_data_dir: Path = PAK_DATA) -> int:
     """Emit ``roco/generated/type_chart.py`` — single-defender BPS chart.
 
@@ -551,6 +633,9 @@ def main() -> None:
 
     chart_size = generate_type_chart()
     print(f"type_chart.py: {chart_size}x{chart_size} BPS table -> {TYPE_CHART_PATH}")
+
+    weather_count = generate_weather_decoders()
+    print(f"weather_decoders.py: {weather_count} pak weather effects -> {WEATHER_DECODERS_PATH}")
 
 
 if __name__ == "__main__":

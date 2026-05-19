@@ -1,0 +1,16 @@
+{"effect_id": 1005015, "pak_editor_name": "恢复15%生命", "handler": "H_HEAL_HP", "args": [1500, 0, 0, 0], "evidence": "type=1, effect_param[1]=1500 BPS; type=1_no_buff before mapping"}
+{"effect_id": 1011001, "pak_editor_name": "汲取生命100", "handler": "H_LIFE_DRAIN", "args": [10000, 0, 0, 0], "evidence": "type=1, effect_param[0]=10000 BPS = 100% damage→HP drain"}
+{"effect_id": 1019001, "pak_editor_name": "通用--获得1能量", "handler": "H_HEAL_ENERGY", "args": [1, 0, 0, 0], "evidence": "type=3, effect_param[0]=1 energy"}
+{"effect_id": 1032001, "pak_editor_name": "连击10", "handler": "H_HIT_COUNT_DELTA", "args": [1, 0, 0, 0], "evidence": "type=1 cast=6 target=self; pak effect_param[0]=1 is the hit delta. editor_name '10' is the variant index, not the count"}
+{"effect_id": 1032002, "pak_editor_name": "连击2", "handler": "H_HIT_COUNT_DELTA", "args": [2, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +2 hits"}
+{"effect_id": 1032003, "pak_editor_name": "连击3", "handler": "H_HIT_COUNT_DELTA", "args": [3, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +3 hits"}
+{"effect_id": 1032004, "pak_editor_name": "连击4", "handler": "H_HIT_COUNT_DELTA", "args": [4, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +4 hits"}
+{"effect_id": 1032005, "pak_editor_name": "连击5", "handler": "H_HIT_COUNT_DELTA", "args": [5, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +5 hits"}
+{"effect_id": 1032006, "pak_editor_name": "连击6", "handler": "H_HIT_COUNT_DELTA", "args": [6, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +6 hits"}
+{"effect_id": 1032007, "pak_editor_name": "连击7", "handler": "H_HIT_COUNT_DELTA", "args": [7, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +7 hits"}
+{"effect_id": 1032008, "pak_editor_name": "连击8", "handler": "H_HIT_COUNT_DELTA", "args": [8, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +8 hits"}
+{"effect_id": 1032009, "pak_editor_name": "连击9", "handler": "H_HIT_COUNT_DELTA", "args": [9, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +9 hits"}
+{"effect_id": 1032010, "pak_editor_name": "连击10", "handler": "H_HIT_COUNT_DELTA", "args": [10, 0, 0, 0], "evidence": "type=1 cast=6 target=self; +10 hits"}
+{"effect_id": 1037001, "pak_editor_name": "防御类技能公共冷却1", "handler": "H_SET_SELF_COOLDOWN", "args": [3, 0, 0, 0], "evidence": "type=3, effect_param[0]=3 turns lock on actor's own skill slot; attached to defensive skills"}
+{"effect_id": 1037002, "pak_editor_name": "防御类技能公共冷却2", "handler": "H_SET_SELF_COOLDOWN", "args": [3, 0, 0, 0], "evidence": "type=3, same as 1037001; pak uses different group IDs that the kernel does not distinguish"}
+{"effect_id": 1051001, "pak_editor_name": "迅捷", "handler": "H_PRIORITY_NEXT_DELTA", "args": [1, 0, 0, 0], "evidence": "type=1 cast=12; +1 priority for the actor next turn"}

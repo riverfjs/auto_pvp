@@ -1,0 +1,13 @@
+# Auto-generated from EFFECT_CONF.json — do not edit.
+# Regenerate with: uv run python -m roco.compiler.gen_prefix_map
+
+from roco.generated.handler_indices import H_WEATHER
+
+# ``effect_id -> (handler_idx, weather_kernel_id, default_turns, 0, 0, timing_override)``
+WEATHER_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
+    1028001: (H_WEATHER, 1, 8, 0, 0, 0),  # pak RAIN
+    1028002: (H_WEATHER, 1, 8, 0, 0, 0),  # pak RAIN
+    1028003: (H_WEATHER, 2, 8, 0, 0, 0),  # pak SANDSTORM
+    1028004: (H_WEATHER, 0, 0, 0, 0, 0),  # pak NONE
+    1028005: (H_WEATHER, 3, 8, 0, 0, 0),  # pak SNOW
+}
