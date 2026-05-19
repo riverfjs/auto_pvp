@@ -36,7 +36,7 @@ from roco.common.constants import (
     TYPE_NEUTRAL_BPS,
 )
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, WeatherType
-from roco.engine.generated import catalog_hot as hot
+from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_FIRE,
     ELEMENT_GROUND,

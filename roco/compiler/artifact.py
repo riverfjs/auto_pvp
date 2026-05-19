@@ -14,8 +14,8 @@ from roco.compiler.type_chart import effectiveness_v2
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v1"
-HOT_PATH = ROOT / "roco" / "engine" / "generated" / "catalog_hot.py"
-DEBUG_PATH = ROOT / "roco" / "engine" / "generated" / "catalog_debug.py"
+HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
+DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
 
 def _connect(path: Path | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path or DB_DIR / "data.db"))

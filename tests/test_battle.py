@@ -1,6 +1,6 @@
 from roco.common.constants import STARTING_ENERGY
-from roco.engine.generated import catalog_debug as debug
-from roco.engine.generated import catalog_hot as hot
+from roco.generated import catalog_debug as debug
+from roco.generated import catalog_hot as hot
 from roco.engine.facade.battle import BattleEngine
 from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice, switch_choice
 from roco.engine.kernel.catalog import SKILL_ENERGY

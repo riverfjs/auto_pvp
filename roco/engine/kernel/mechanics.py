@@ -19,7 +19,7 @@ from roco.common.constants import (
 )
 from roco.engine.common.rng import next_rng
 from roco.engine.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
-from roco.engine.generated import catalog_hot as hot
+from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_GROUND,
     PET_ABILITY,

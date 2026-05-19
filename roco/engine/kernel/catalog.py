@@ -44,7 +44,7 @@ def validate_catalog(catalog) -> None:
 
 
 def load_hot_catalog():
-    from roco.engine.generated import catalog_hot
+    from roco.generated import catalog_hot
 
     validate_catalog(catalog_hot)
     return catalog_hot

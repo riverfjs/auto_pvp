@@ -56,12 +56,13 @@ roco/
 │   ├── handler_order.py          # HANDLER_ORDER tuple
 │   ├── handler_registry.json     # append-only handler 注册表
 │   ├── prefix_handler_map.json   # buff prefix → handler 索引
-│   └── pak_rules.py              # 从 BATTLE_GLOBAL_CONFIG 提取的常量
+│   ├── pak_rules.py              # 从 BATTLE_GLOBAL_CONFIG 提取的常量
+│   ├── catalog_hot.py            # SQLite → kernel 热路径整数 catalog
+│   └── catalog_debug.py          # 名字反查 catalog (facade/调试用)
 ├── common/            # 跨层共享: 枚举、常量、natures、bit packing
 ├── engine/
 │   ├── common/        # Choice, RNG, kernel-local helpers
 │   ├── kernel/        # 热路径: mechanics, damage, state, ops, switch, residual
-│   ├── generated/     # catalog_hot.py, catalog_debug.py (DB 编译产物)
 │   └── facade/        # BattleEngine (名字↔ID 边界转换)
 ├── compiler/
 │   ├── effect_codegen.py   # pak → handler_idx 分类

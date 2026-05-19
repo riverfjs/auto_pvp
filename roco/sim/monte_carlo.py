@@ -10,8 +10,8 @@ from typing import NamedTuple
 
 from roco.common.constants import DEFAULT_MAX_TURNS
 from roco.data.utils import DB_DIR
-from roco.engine.generated import catalog_debug as debug
-from roco.engine.generated import catalog_hot as hot
+from roco.generated import catalog_debug as debug
+from roco.generated import catalog_hot as hot
 from roco.engine.facade.battle import BattleEngine
 from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, focus_choice, move_choice, switch_choice
 from roco.common.constants import TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS

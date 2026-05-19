@@ -195,7 +195,7 @@ def op_damage_mod_non_light(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_damage_mod_non_weakness(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    from roco.engine.generated import catalog_hot as hot
+    from roco.generated import catalog_hot as hot
     first = hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_primary]
     second = BPS if ctx.target_secondary < 0 else hot.TYPE_CHART_BPS[ctx.skill_element][ctx.target_secondary]
     if not (first > BPS or second > BPS):

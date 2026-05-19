@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY
-from roco.engine.generated import catalog_debug as debug
-from roco.engine.generated import catalog_hot as hot
+from roco.generated import catalog_debug as debug
+from roco.generated import catalog_hot as hot
 from roco.compiler.scalar_damage import calc_attack_damage
 from roco.engine.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
@@ -618,8 +618,8 @@ def test_retired_root_engine_modules_are_not_legacy_entrypoints():
     for rel in retired:
         assert not (root / rel).exists()
 
-    assert (root / "roco/engine/generated/catalog_hot.py").exists()
-    assert (root / "roco/engine/generated/catalog_debug.py").exists()
+    assert (root / "roco/generated/catalog_hot.py").exists()
+    assert (root / "roco/generated/catalog_debug.py").exists()
 
     forbidden_terms = (
         "EventBus",
