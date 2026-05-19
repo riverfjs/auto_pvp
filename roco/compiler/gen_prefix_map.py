@@ -28,6 +28,7 @@ ORDER_PATH = GEN_DIR / "handler_order.py"
 TABLE_PATH = GEN_DIR / "handler_table.py"
 PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
 PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
+MARK_GROUPS_PATH = GEN_DIR / "mark_groups.py"
 
 _OP_MODULES = (
     "roco.engine.kernel.op_mods",
@@ -347,6 +348,91 @@ _PAK_RULES_KEYS = {
 }
 
 
+def generate_mark_groups(
+    handler_indices: dict[str, int],
+    prefix_result: dict,
+    pak_data_dir: Path = PAK_DATA,
+) -> tuple[tuple[int, ...], ...]:
+    """Derive mark cover groups from pak ``buff_groupsigns``.
+
+    Two mark handlers belong to the same cover group when at least one
+    BUFF_CONF row classified to each handler shares a non-zero
+    ``buff_groupsigns`` entry.  Pak puts wind/moisture/meteor on
+    ``groupsign=26``; setting any of them clears the others.
+
+    Emits ``roco/generated/mark_groups.py`` with a ``MARK_COVER_GROUPS``
+    tuple of ``MarkIdx`` tuples.  ``op_marks._op_mark`` reads it to
+    enforce cover-group exclusivity.
+    """
+    h_poison_mark = handler_indices.get("H_POISON_MARK")
+    h_momentum_mark = handler_indices.get("H_MOMENTUM_MARK")
+    if h_poison_mark is None or h_momentum_mark is None:
+        MARK_GROUPS_PATH.write_text(
+            "# Auto-generated — do not edit. Regenerate with gen_prefix_map.\n"
+            "from roco.common.packing import MarkIdx  # noqa: F401\n"
+            "MARK_COVER_GROUPS: tuple = ()\n",
+            encoding="utf-8",
+        )
+        return ()
+    mark_range = set(range(h_poison_mark, h_momentum_mark + 1))
+
+    base_id_map = {int(k): v for k, v in prefix_result["base_id_map"].items()}
+    prefix_map = {int(k): v for k, v in prefix_result["prefix_map"].items()}
+
+    buff_path = pak_data_dir / "BUFF_CONF.json"
+    rows = json.loads(buff_path.read_text(encoding="utf-8")).get("RocoDataRows", {})
+
+    groups: dict[int, set[int]] = {}
+    for rec in rows.values():
+        base_ids = rec.get("buff_base_ids") or []
+        handler = 0
+        for bid in base_ids:
+            if not bid:
+                continue
+            if bid in base_id_map and base_id_map[bid] in mark_range:
+                handler = base_id_map[bid]
+                break
+            pfx = bid // 1000
+            if pfx in prefix_map and prefix_map[pfx] in mark_range:
+                handler = prefix_map[pfx]
+                break
+        if handler == 0:
+            continue
+        for sign in rec.get("buff_groupsigns") or []:
+            if sign:
+                groups.setdefault(int(sign), set()).add(handler)
+
+    handler_to_mark = {
+        handler_indices[k]: k.removeprefix("H_").removesuffix("_MARK")
+        for k in handler_indices
+        if k.endswith("_MARK") and k != "H_POISON_MARK_END"
+    }
+
+    cover_groups: list[tuple[str, ...]] = []
+    for sign, handlers in sorted(groups.items()):
+        if len(handlers) < 2:
+            continue
+        names = tuple(sorted(handler_to_mark[h] for h in handlers if h in handler_to_mark))
+        if len(names) >= 2:
+            cover_groups.append(names)
+
+    lines = [
+        "# Auto-generated from BUFF_CONF.buff_groupsigns — do not edit.",
+        "# Regenerate with: uv run python -m roco.compiler.gen_prefix_map",
+        "",
+        "from roco.common.packing import MarkIdx",
+        "",
+        "MARK_COVER_GROUPS: tuple[tuple[MarkIdx, ...], ...] = (",
+    ]
+    for names in cover_groups:
+        body = ", ".join(f"MarkIdx.{n}" for n in names)
+        lines.append(f"    ({body}),")
+    lines.append(")")
+    lines.append("")
+    MARK_GROUPS_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return tuple(cover_groups)
+
+
 def generate_pak_rules(pak_data_dir: Path = PAK_DATA) -> dict[str, int]:
     p = pak_data_dir / "BATTLE_GLOBAL_CONFIG.json"
     data = json.loads(p.read_text(encoding="utf-8"))
@@ -393,6 +479,9 @@ def main() -> None:
 
     rules = generate_pak_rules()
     print(f"pak_rules.py: {len(rules)} constants -> {PAK_RULES_PATH}")
+
+    groups = generate_mark_groups(h, result)
+    print(f"mark_groups.py: {len(groups)} cover groups -> {MARK_GROUPS_PATH}")
 
 
 if __name__ == "__main__":

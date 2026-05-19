@@ -93,11 +93,19 @@ def generate_effect_rows(
 
         for handler_idx, p0, p1, p2, p3, raw_stacks in decoded:
             if handler_idx != H_NOOP:
-                # Stack-count override priority: skill_result.buff_group_level
-                # (e.g. 剧毒's "buff_group_level":3) wins; otherwise fall back
-                # to the repeat count inferred from pak's effect_param
-                # (e.g. 焚烧烙印 packs 5 copies of the burn buff to mean 5).
-                stacks = buff_group_level if buff_group_level > 0 else raw_stacks
+                # Stack-count priority: pak's own ``effect_param`` shape
+                # (``raw_stacks`` — buff_id repeats, e.g. 焚烧烙印 packs 5
+                # burn copies to mean 5 stacks) wins because pak is the
+                # source of truth.  Only when pak does not encode a count
+                # at the param level do we fall back to the skill_result's
+                # ``buff_group_level`` (e.g. 剧毒 says ``buff_group_level=3``
+                # and stores a direct buff reference with no repeats).
+                if raw_stacks > 1:
+                    stacks = raw_stacks
+                elif buff_group_level > 0:
+                    stacks = buff_group_level
+                else:
+                    stacks = 1
                 if is_status_or_mark_handler(handler_idx) and stacks > 1:
                     p0 = stacks
                 rows.append((handler_idx, cast_moment, target_type, success_rate, p0, p1, p2, p3))

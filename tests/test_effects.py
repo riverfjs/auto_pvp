@@ -142,6 +142,42 @@ def test_generate_effect_rows_empty_skill_result(pak):
     assert gaps2 == []
 
 
+def test_generate_effect_rows_skips_blank_entry(pak):
+    """Bare ``{}`` slots in ``skill_result`` are pak padding, not gaps.
+
+    Lock this in — earlier the pipeline turned 436 such placeholders into
+    ``effect_0`` audit rows that polluted ``effect_gaps``/strict build.
+    """
+    skill_row = {"skill_result": [
+        {"effect_id": 20070010, "cast_moment": 11, "result_target_type": 2,
+         "success_rate": 10000, "buff_group_level": 1},
+        {},  # placeholder pak padding
+        {"effect_id": 0, "cast_moment": 11, "result_target_type": 1,
+         "success_rate": 10000},
+    ]}
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    assert len(rows) == 1
+    assert rows[0][0] == H_POISON
+    assert gaps == []
+
+
+def test_generate_effect_rows_stack_priority(pak):
+    """Stack priority: pak repeat > skill_result.buff_group_level > 1.
+
+    A direct buff reference with ``buff_group_level=3`` should pack p0=3
+    (剧毒-style), and a compound effect whose chosen buff repeats five
+    times in pak's effect_param should pack p0=5 (焚烧烙印-style) even
+    when no buff_group_level is set.
+    """
+    # buff_group_level path
+    rows, _ = generate_effect_rows({"skill_result": [{
+        "effect_id": 20070010, "cast_moment": 11, "result_target_type": 2,
+        "success_rate": 10000, "buff_group_level": 3,
+    }]}, pak)
+    assert rows[0][0] == H_POISON
+    assert rows[0][4] == 3  # p0 = buff_group_level
+
+
 def test_build_ability_effect_rows(pak):
     ability_row = {"skill_result": [{
         "effect_id": 20070010,
