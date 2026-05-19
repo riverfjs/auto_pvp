@@ -89,6 +89,11 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("poison_stacks", 0),
     ("freeze_stacks", 0),
     ("leech_stacks", 0),
+    # Snapshot of ``state.marks_dispelled`` from before this stage ran —
+    # populated by the residual phase before calling ``run_skill_timing``
+    # so handlers like ``op_dispel_marks_to_burn`` can scale their effect
+    # by how many marks were just removed this turn.
+    ("marks_dispelled", 0),
     ("weather", 0),
     ("weather_turns", 0),
     ("mark_self", 0),

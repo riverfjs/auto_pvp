@@ -29,8 +29,8 @@ from __future__ import annotations
 
 from roco.common.enums import WeatherType
 from roco.generated.handler_indices import (
-    H_BURN,
     H_DISPEL_MARKS,
+    H_DISPEL_MARKS_TO_BURN,
     H_WEATHER,
 )
 
@@ -52,11 +52,12 @@ EXACT_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
     # not "apply wind/water/...".  Maps to the existing dispel-all-marks
     # kernel primitive.
     1042008: (H_DISPEL_MARKS, 0, 0, 0, 0, 0),
-    # 标记转换灼烧 — skill text says "for each dispelled mark, apply 5 burn
-    # stacks".  No kernel op counts dispelled marks yet, so emit a fixed
-    # 5-stack burn at the pak-declared cast_moment (TURN_END, handled by
-    # ``tick_skill_turn_end``).  Replace when a marks→burn primitive lands.
-    1042014: (H_BURN, 5, 0, 0, 0, 0),
+    # 标记转换灼烧 — skill text: "dispel both sides' marks, every dispelled
+    # stack gives the enemy 5 burn".  The dispel half is 1042008 above and
+    # runs at CALC_DAMAGE; this row fires at TURN_END (pak ``cast_moment=12``)
+    # and reads the turn's running dispel tally off ``ctx.marks_dispelled``
+    # to scale the burn it applies.
+    1042014: (H_DISPEL_MARKS_TO_BURN, 5, 0, 0, 0, 0),
 }
 
 

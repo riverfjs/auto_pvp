@@ -103,6 +103,7 @@ from roco.engine.kernel.op_marks import (
     op_consume_marks_heal,
     op_dispel_marks,
     op_convert_poison_to_mark,
+    op_dispel_marks_to_burn,
 )
 from roco.engine.kernel.op_status import (
     op_burn,
@@ -249,6 +250,7 @@ HANDLERS: tuple = (
     op_cute_lethal_shield,  # 109
     op_cute_hit_per_stack,  # 110
     op_cute_bench_cost_reduce,  # 111
+    op_dispel_marks_to_burn,  # 112
 )
 
 HANDLER_COUNT = len(HANDLERS)

@@ -220,15 +220,27 @@ def test_kernel_after_move_status_and_status_ticks():
     burn_skill = _skill_id("焚烧烙印")
     poison_skill = _skill_id("剧毒")
 
-    burned = update(
-        make_state((fire,), (water,), team_a_moves=((burn_skill,),)),
-        move_choice(0),
-        move_choice(0),
-    ).state.side_b.pets[0]
+    # 焚烧烙印 dispels every mark on both sides at CALC_DAMAGE, then at
+    # TURN_END applies (dispelled stacks × 5) burn to the enemy.  Seed one
+    # mark on the actor's side so the dispel count is non-zero — 1 × 5 = 5
+    # burn stacks, matching the original expected burn damage.
+    seeded = make_state((fire,), (water,), team_a_moves=((burn_skill,),))
+    seeded = seeded._replace(side_a=seeded.side_a._replace(marks=_set_mark(0, MarkIdx.WIND, 1)))
+    burned = update(seeded, move_choice(0), move_choice(0)).state.side_b.pets[0]
     burn_damage = min(hot.PETS[water][1], 1000) * 5 * 200 * hot.TYPE_CHART_BPS[2][hot.PETS[water][7]] // (BPS * BPS)
     assert burned.current_hp == hot.PETS[water][1] - burn_damage
     assert status_stack(burned, StatusType.BURN) == 3
     assert burned.status_flags & int(StatusFlag.BURN)
+
+    # No marks → no burn (kernel must not lock the prior fixed-5-stack
+    # approximation).
+    no_marks = update(
+        make_state((fire,), (water,), team_a_moves=((burn_skill,),)),
+        move_choice(0),
+        move_choice(0),
+    ).state.side_b.pets[0]
+    assert status_stack(no_marks, StatusType.BURN) == 0
+    assert no_marks.current_hp == hot.PETS[water][1]
 
     poisoned = update(
         make_state((fire,), (water,), team_a_moves=((poison_skill,),)),

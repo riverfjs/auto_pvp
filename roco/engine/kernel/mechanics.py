@@ -118,7 +118,10 @@ def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResu
 
 
 def _start_turn(state: KernelState) -> KernelState:
-    state = state._replace(turn=state.turn + 1)
+    # ``marks_dispelled`` is the only turn-transient field that lives on
+    # KernelState today; reset here so TURN_END ops only see this turn's
+    # dispels (e.g. 焚烧烙印's marks-to-burn payload).
+    state = state._replace(turn=state.turn + 1, marks_dispelled=0)
     state, rng = _start_turn_side(state, SIDE_A, state.rng)
     state, rng = _start_turn_side(state._replace(rng=rng), SIDE_B, rng)
     return state._replace(rng=rng)
@@ -306,10 +309,14 @@ def _execute(
         actor = actor._replace(current_energy=max(0, actor.current_energy - cost))
         actor_side = replace_pet(actor_side, actor_slot, actor)
         state = replace_side(state, actor_side_id, actor_side)
+    if is_attack and first_strike:
+        _run_ability_timing(actor, TIMING_CALC_DAMAGE, ctx)
+    # Run the skill's CALC_DAMAGE side effects regardless of whether the
+    # skill itself does damage — pak attaches things like dispel-marks
+    # (焚烧烙印 / 1042008) to ``cast_moment=6`` on non-attack skills, and
+    # gating them behind ``is_attack`` would just silently drop them.
+    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_CALC_DAMAGE, ctx)
     if is_attack:
-        if first_strike:
-            _run_ability_timing(actor, TIMING_CALC_DAMAGE, ctx)
-        run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_CALC_DAMAGE, ctx)
         dealt = damage(actor, target, skill, ctx, state.weather, actor_side.marks, target_side.marks, first_strike)
         ctx.damage_dealt = dealt
         if dealt > 0:

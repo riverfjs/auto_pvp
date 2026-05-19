@@ -67,6 +67,12 @@ class KernelState(NamedTuple):
     winner: int
     side_a: SideState
     side_b: SideState
+    # Transient turn-scoped accumulator: total mark stacks dispelled this
+    # turn across both sides.  Set by ``apply_after_move`` whenever the
+    # ctx clears a side's marks; consumed by ``op_dispel_marks_to_burn``
+    # (e.g. 焚烧烙印's 1042014 — "each dispelled stack → 5 burn").  Reset
+    # in ``mechanics._start_turn``.
+    marks_dispelled: int = 0
 
 
 def pack_weather(weather: int, turns: int) -> int:
@@ -257,7 +263,7 @@ def copy_state(state: KernelState) -> KernelState:
         tuple(tuple(row) for row in state.side_b.moves),
         tuple(state.side_b.bloodlines),
     )
-    return KernelState(state.turn, state.weather, state.rng, state.winner, side_a, side_b)
+    return KernelState(state.turn, state.weather, state.rng, state.winner, side_a, side_b, state.marks_dispelled)
 
 
 def replace_pet(side: SideState, slot: int, pet: PetState) -> SideState:

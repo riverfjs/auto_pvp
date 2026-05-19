@@ -98,6 +98,22 @@ def op_dispel_marks(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.clear_enemy_marks = 1
 
 
+def op_dispel_marks_to_burn(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    """Apply burn stacks = (marks dispelled this turn) × ``row[ROW_ARG0]``.
+
+    Pak's 焚烧烙印 splits the work across two effect_ids: 1042008 dispels
+    every mark on both sides at CALC_DAMAGE, then 1042014 fires at
+    TURN_END with the per-mark multiplier 5.  By TURN_END the marks are
+    already gone, so this op reads the turn's running dispel count
+    handed in via ``ctx.marks_dispelled`` (snapshotted from
+    ``state.marks_dispelled`` in the residual turn-end runner).
+    """
+    multiplier = row[ROW_ARG0]
+    if multiplier <= 0 or ctx.marks_dispelled <= 0:
+        return
+    ctx.burn_stacks += ctx.marks_dispelled * multiplier
+
+
 def op_convert_poison_to_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     stacks = ctx.target_poison_stacks // 2
     if stacks > 0:

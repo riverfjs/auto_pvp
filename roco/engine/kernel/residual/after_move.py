@@ -59,8 +59,16 @@ def apply_after_move(
     target_side = side(state, target_side_id)
     actor = actor_side.pets[actor_slot]
     if ctx.clear_self_marks:
+        # Count the stacks we're about to drop so TURN_END ops like
+        # ``op_dispel_marks_to_burn`` can multiply by them.
+        dropped = _sum_mark_stacks(actor_side.marks)
+        if dropped:
+            state = state._replace(marks_dispelled=state.marks_dispelled + dropped)
         actor_side = actor_side._replace(marks=0)
     if ctx.clear_enemy_marks:
+        dropped = _sum_mark_stacks(target_side.marks)
+        if dropped:
+            state = state._replace(marks_dispelled=state.marks_dispelled + dropped)
         target_side = target_side._replace(marks=0)
     mark_apply = apply_mark_delta_no_replace if actor.ability_flags & int(AbilityFlag.MARK_STACK_NO_REPLACE) else apply_mark_delta
     if ctx.mark_self:
@@ -195,6 +203,13 @@ def apply_after_move(
     if ctx.force_enemy_switch:
         state = _auto_switch(state, target_side_id)
     return state
+
+
+def _sum_mark_stacks(marks: int) -> int:
+    total = 0
+    for idx in MarkIdx:
+        total += _unpack_mark(marks, idx)
+    return total
 
 
 def _cute_after_delta(current: int, delta: int) -> int:
