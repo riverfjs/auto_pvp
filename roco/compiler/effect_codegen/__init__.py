@@ -26,8 +26,13 @@ from roco.generated.handler_indices import *  # noqa: F401,F403
 from roco.generated.handler_indices import H_NOOP
 
 from roco.compiler.effect_codegen.audit import gap_reason, resolve_buff_metadata
-from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
+from roco.compiler.effect_codegen.classify import (
+    EXACT_EFFECT_OVERRIDES,
+    decode_buff_direct,
+    decode_effect,
+)
 from roco.compiler.effect_codegen.pak import PakTables
+from roco.compiler.effect_codegen.params import is_status_or_mark_handler
 
 __all__ = [
     "PakTables",
@@ -57,19 +62,44 @@ def generate_effect_rows(
 
     for entry in skill_row.get("skill_result") or []:
         effect_id = entry.get("effect_id", 0)
+        if not effect_id:
+            # Pak pads ``skill_result`` with bare ``{}`` placeholders between
+            # real effects.  These carry no semantics and would otherwise
+            # flood ``effect_gaps`` with ``effect_0`` noise.
+            continue
         cast_moment = entry.get("cast_moment", 11)
         target_type = entry.get("result_target_type", 1)
         success_rate = entry.get("success_rate", 10000)
+        buff_group_level = int(entry.get("buff_group_level", 0) or 0)
+
+        # Exact pak effect_ids whose semantics don't fit prefix scanning
+        # (weather setters, mark-to-burn conversion, mark dispel) get a
+        # hand-curated row.  ``timing_override`` lets us pin a row to
+        # AFTER_MOVE even when pak says TURN_END, until the kernel grows
+        # a turn-end skill processor.
+        override = EXACT_EFFECT_OVERRIDES.get(effect_id)
+        if override is not None:
+            h, p0, p1, p2, p3, timing_override = override
+            timing = timing_override or cast_moment
+            rows.append((h, timing, target_type, success_rate, p0, p1, p2, p3))
+            continue
 
         if effect_id in pak_data.effect_conf:
             decoded = decode_effect(effect_id, pak_data.effect_conf, pak_data.buff_conf)
         elif effect_id in pak_data.buff_conf:
             decoded = decode_buff_direct(effect_id, pak_data.buff_conf)
         else:
-            decoded = [(H_NOOP, effect_id, 0, 0, 0)]
+            decoded = [(H_NOOP, effect_id, 0, 0, 0, 1)]
 
-        for handler_idx, p0, p1, p2, p3 in decoded:
+        for handler_idx, p0, p1, p2, p3, raw_stacks in decoded:
             if handler_idx != H_NOOP:
+                # Stack-count override priority: skill_result.buff_group_level
+                # (e.g. 剧毒's "buff_group_level":3) wins; otherwise fall back
+                # to the repeat count inferred from pak's effect_param
+                # (e.g. 焚烧烙印 packs 5 copies of the burn buff to mean 5).
+                stacks = buff_group_level if buff_group_level > 0 else raw_stacks
+                if is_status_or_mark_handler(handler_idx) and stacks > 1:
+                    p0 = stacks
                 rows.append((handler_idx, cast_moment, target_type, success_rate, p0, p1, p2, p3))
                 continue
             buff_id, base_ids = resolve_buff_metadata(effect_id, pak_data)

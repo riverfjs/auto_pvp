@@ -325,11 +325,12 @@ def apply_status_effect(
     return pet
 
 
-def end_turn(state: KernelState) -> KernelState:
+def end_turn(state: KernelState, skill_a_id: int = 0, skill_b_id: int = 0) -> KernelState:
     state = tick_leech(state)
     state = tick_marks(state)
     if not _turn_end_effects_reduced(state):
         state = tick_ability_turn_end(state)
+    state = tick_skill_turn_end(state, skill_a_id, skill_b_id)
     state = tick_weather(state)
     state = tick_status(state)
     state = tick_side_cost_mods(state)
@@ -364,6 +365,44 @@ def _tick_side_turn_state(side_state):
         for pet in side_state.pets
     )
     return side_state._replace(cost_mods=tick_cost_mod(side_state.cost_mods), pets=pets)
+
+
+def tick_skill_turn_end(state: KernelState, skill_a_id: int, skill_b_id: int) -> KernelState:
+    """Run SKILL effect rows whose ``cast_moment`` is TURN_END (pak code 12).
+
+    Pak commonly attaches an actor's own buff/mark application to the
+    turn-end timing (e.g. 风起's wind mark, 焚烧烙印's burn payload).  The
+    kernel previously skipped these because no one called
+    ``run_skill_timing`` at TIMING_TURN_END for skills.  ``mechanics.update``
+    captures each side's chosen skill id at turn start and threads it here.
+    """
+    for side_id, target_side_id, skill_id in (
+        (SIDE_A, SIDE_B, skill_a_id),
+        (SIDE_B, SIDE_A, skill_b_id),
+    ):
+        if skill_id <= 0 or skill_id >= len(hot.SKILL_EFFECT_RANGES):
+            continue
+        side_state = side(state, side_id)
+        target_side = side(state, target_side_id)
+        slot = side_state.active
+        target_slot = target_side.active
+        pet = side_state.pets[slot]
+        if pet.fainted:
+            continue
+        ctx = StageCtx()
+        ctx.reset(side_id, slot, target_side_id, target_slot, skill_id)
+        pet_row = hot.PETS[pet.pet_id]
+        target_row = hot.PETS[target_side.pets[target_slot].pet_id]
+        ctx.actor_primary = pet_row[PET_PRIMARY]
+        ctx.actor_secondary = pet_row[PET_SECONDARY]
+        ctx.actor_bloodline = side_state.bloodlines[slot] if slot < len(side_state.bloodlines) else -1
+        ctx.actor_energy = pet.current_energy
+        ctx.target_primary = target_row[PET_PRIMARY]
+        ctx.target_secondary = target_row[PET_SECONDARY]
+        ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
+        run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_TURN_END, ctx)
+        state = apply_after_move(state, side_id, slot, target_side_id, target_slot, ctx)
+    return state
 
 
 def tick_ability_turn_end(state: KernelState) -> KernelState:

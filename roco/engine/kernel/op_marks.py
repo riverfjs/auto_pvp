@@ -7,7 +7,27 @@ from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_TARGET, TARGET_ALLY, TARGET_SELF, TARGET_TEAM
 
 
+# Marks that cover the same elemental axis and therefore replace one another
+# when a new mark in the group is applied.  Currently only the wind/moisture
+# pair is confirmed (风起 dispels 湿润 per skill text and the kernel test);
+# extend as more pairs are validated against pak/in-game behaviour.
+_MARK_COVER_GROUPS: tuple[tuple[MarkIdx, ...], ...] = (
+    (MarkIdx.WIND, MarkIdx.MOISTURE),
+)
+
+
+def _clear_group_peers(packed: int, idx: MarkIdx) -> int:
+    for group in _MARK_COVER_GROUPS:
+        if idx in group:
+            for other in group:
+                if other != idx:
+                    packed = _set_mark(packed, other, 0)
+            return packed
+    return packed
+
+
 def _mark_add(packed: int, idx: MarkIdx, stacks: int) -> int:
+    packed = _clear_group_peers(packed, idx)
     return _set_mark(packed, idx, min(15, _unpack_mark(packed, idx) + stacks))
 
 

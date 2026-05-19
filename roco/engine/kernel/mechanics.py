@@ -74,10 +74,25 @@ class KernelResult(NamedTuple):
     damage_b: int
 
 
+def _choice_to_skill_id(state: KernelState, side_id: int, choice: Choice) -> int:
+    """Resolve a move-choice to the skill id of the actor at the start of the turn.
+
+    Pak attaches some skill_result rows (e.g. 风起's wind mark, 焚烧烙印's
+    burn payload) to ``cast_moment=12`` (TURN_END).  ``end_turn`` re-runs
+    those rows for the skill captured here so the effect actually fires.
+    """
+    if choice.action_code != ACTION_MOVE or not (0 <= choice.data < 4):
+        return 0
+    side_state = side(state, side_id)
+    return side_state.moves[side_state.active][choice.data]
+
+
 def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResult:
     state = _start_turn(state)
     first_side, rng = _order(state, c1, c2)
     state = state._replace(rng=rng)
+    skill_a = _choice_to_skill_id(state, SIDE_A, c1)
+    skill_b = _choice_to_skill_id(state, SIDE_B, c2)
     ctx = StageCtx()
     damage_a = 0
     damage_b = 0
@@ -93,7 +108,7 @@ def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResu
         state, damage_b = _execute(state, SIDE_B, c2, SIDE_A, ctx, True, category_a, c1.data)
         if state.side_a.pets[second_slot].fainted == 0:
             state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, False, category_b, c2.data)
-    state = end_turn(state)
+    state = end_turn(state, skill_a, skill_b)
     state = check_winner(state)
     return KernelResult(state, state.winner, first_side, damage_a, damage_b)
 
