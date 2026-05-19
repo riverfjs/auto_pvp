@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.compiler.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
-from roco.data.utils import CANONICAL_DIR, RULES_DIR, content_hash, iter_jsonl, with_canonical_hash, write_jsonl
+from roco.data.utils import CANONICAL_DIR, content_hash, with_canonical_hash, write_jsonl
 
 
 DEFAULT_PAK_DATA_DIR = Path(
@@ -125,24 +125,8 @@ def main() -> None:
     print(f"Generated {write_jsonl(marks, args.out_dir / 'marks.jsonl')} marks")
 
 
-def _load_skill_effect_overrides() -> dict[str, list]:
-    """Load manual skill effect overrides from rules directory."""
-    path = RULES_DIR / "skill_effects_manual.jsonl"
-    if not path.exists():
-        return {}
-    overrides: dict[str, list] = {}
-    for record in iter_jsonl(path):
-        if record.get("kind") == "skill_effect_override":
-            name = str(record.get("skill_name", "")).strip()
-            rows = record.get("effect_rows", [])
-            if name and rows:
-                overrides[name] = rows
-    return overrides
-
-
 def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:
     selected: dict[int, dict[str, Any]] = {}
-    overrides = _load_skill_effect_overrides()
 
     for move in data.moves:
         sid = _int(move.get("id"))
@@ -173,11 +157,7 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
             continue
         record = _skill_record(row, desc_notes)
         skill_row = data.skill_conf.get(str(sid), row)
-        # Use manual override if available, otherwise codegen
-        if name in overrides:
-            record["effect_rows"] = overrides[name]
-        else:
-            record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
+        record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
         source = _source("skill", sid, row)
         record = with_canonical_hash(record, source)
         records.append(record)
