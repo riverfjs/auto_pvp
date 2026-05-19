@@ -578,10 +578,17 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "op_status.py",
         "op_marks.py",
         "op_cute.py",
-        "op_mods.py",
+        # op_mods became a package split by topic; the directory plus its
+        # canonical submodule names stand in for the legacy single file.
+        "op_mods/__init__.py",
+        "op_mods/damage.py",
+        "op_mods/buffs.py",
+        "op_mods/skill.py",
+        "op_mods/combat.py",
     ):
         assert (root / "roco/engine/kernel" / rel).exists()
     assert not (root / "roco/engine/kernel/op_tags.py").exists()
+    assert not (root / "roco/engine/kernel/op_mods.py").exists()
 
 
 def test_retired_root_engine_modules_are_not_legacy_entrypoints():

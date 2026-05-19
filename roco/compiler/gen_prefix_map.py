@@ -31,7 +31,13 @@ PAK_RULES_PATH = GEN_DIR / "pak_rules.py"
 MARK_GROUPS_PATH = GEN_DIR / "mark_groups.py"
 
 _OP_MODULES = (
-    "roco.engine.kernel.op_mods",
+    # op_mods is a package split by topic; gen scans each submodule
+    # directly so each op_* function ends up imported by its real source
+    # path in the generated handler_table.
+    "roco.engine.kernel.op_mods.damage",
+    "roco.engine.kernel.op_mods.buffs",
+    "roco.engine.kernel.op_mods.skill",
+    "roco.engine.kernel.op_mods.combat",
     "roco.engine.kernel.op_resources",
     "roco.engine.kernel.op_marks",
     "roco.engine.kernel.op_status",
