@@ -8,14 +8,18 @@ from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, 
 from roco.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
 from roco.common.constants import (
     BPS,
-    FOCUS_ENERGY_GAIN,
     HP_FOR_ENERGY_PCT_BPS,
-    BLOODLINE_LEADER,
     MAGIC_LEADER_TRANSFORM,
     MAGIC_WILLPOWER,
-    MAX_ENERGY,
     WILLPOWER_COUNTER_STATUS_BPS,
     WILLPOWER_POWER,
+)
+from roco.engine.kernel.actions import (
+    can_pay_hp_for_energy,
+    energy_cap,
+    focus as _focus,
+    leader_transform as _leader_transform,
+    pay_skill_cost_with_hp,
 )
 from roco.engine.common.rng import next_rng
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
@@ -292,8 +296,8 @@ def _execute(
         hp_for_energy = ctx.hp_for_energy
         if actor.ability_flags & int(AbilityFlag.HP_FOR_ENERGY):
             hp_for_energy = hp_for_energy or HP_FOR_ENERGY_PCT_BPS
-        if hp_for_energy and _can_pay_hp_for_energy(actor, cost - actor.current_energy, hp_for_energy):
-            actor = _pay_skill_cost_with_hp(actor, cost, hp_for_energy)
+        if hp_for_energy and can_pay_hp_for_energy(actor, cost - actor.current_energy, hp_for_energy):
+            actor = pay_skill_cost_with_hp(actor, cost, hp_for_energy)
             actor_side = replace_pet(actor_side, actor_slot, actor)
             state = replace_side(state, actor_side_id, actor_side)
         else:
@@ -406,65 +410,3 @@ def _borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> 
     return fallback
 
 
-def _focus(state: KernelState, side_id: int) -> KernelState:
-    side_state = side(state, side_id)
-    slot = side_state.active
-    pet = side_state.pets[slot]
-    if pet.fainted:
-        return state
-    before = pet.current_energy
-    pet = pet._replace(current_energy=_energy_cap(pet, pet.current_energy + FOCUS_ENERGY_GAIN))
-    side_state = replace_pet(side_state, slot, pet)
-    gained = pet.current_energy - before
-    if gained > 0 and pet.ability_flags & int(AbilityFlag.SHARE_GAINS):
-        side_state, rng = share_gains_on_side(side_state, slot, 0, gained, state.rng)
-        state = state._replace(rng=rng)
-    return replace_side(state, side_id, side_state)
-
-
-def _leader_transform(state: KernelState, side_id: int, slot: int) -> KernelState:
-    side_state = side(state, side_id)
-    if side_state.leader_uses <= 0 or slot >= len(side_state.bloodlines):
-        return state
-    if side_state.bloodlines[slot] != BLOODLINE_LEADER:
-        return state
-    pet = side_state.pets[slot]
-    if pet.fainted or pet.pet_id >= len(hot.LEADER_FORM_BY_PET):
-        return state
-    target_pet_id = hot.LEADER_FORM_BY_PET[pet.pet_id]
-    if target_pet_id <= 0 or target_pet_id == pet.pet_id:
-        return state
-    old_hp = max(1, hot.PETS[pet.pet_id][STAT_HP])
-    new_hp = max(1, hot.PETS[target_pet_id][STAT_HP])
-    scaled_hp = max(1, min(new_hp, pet.current_hp * new_hp // old_hp))
-    ability_id = hot.PETS[target_pet_id][PET_ABILITY]
-    ability_flags = hot.ABILITY_FLAGS[ability_id] if ability_id < len(hot.ABILITY_FLAGS) else 0
-    transformed = pet._replace(
-        pet_id=target_pet_id,
-        current_hp=scaled_hp,
-        ability_flags=ability_flags,
-    )
-    side_state = replace_pet(side_state, slot, transformed)
-    side_state = side_state._replace(leader_uses=side_state.leader_uses - 1)
-    return replace_side(state, side_id, side_state)
-
-
-def _energy_cap(pet: PetState, value: int) -> int:
-    if pet.ability_flags & int(AbilityFlag.ENERGY_NO_CAP):
-        return max(0, value)
-    return max(0, min(MAX_ENERGY, value))
-
-
-def _can_pay_hp_for_energy(pet: PetState, missing: int, pct_bps: int) -> bool:
-    if missing <= 0:
-        return True
-    max_hp = hot.PETS[pet.pet_id][STAT_HP]
-    cost = max(1, max_hp * pct_bps // BPS) * missing
-    return pet.current_hp > cost
-
-
-def _pay_skill_cost_with_hp(pet: PetState, cost: int, pct_bps: int) -> PetState:
-    missing = max(0, cost - pet.current_energy)
-    max_hp = hot.PETS[pet.pet_id][STAT_HP]
-    hp_cost = max(1, max_hp * pct_bps // BPS) * missing
-    return pet._replace(current_hp=max(1, pet.current_hp - hp_cost), current_energy=0)
