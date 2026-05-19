@@ -11,7 +11,7 @@ Timing values map 1:1 to pak cast_moment integers -- no translation layer.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import IntEnum, IntFlag, auto
+from enum import IntEnum
 from types import MappingProxyType
 from typing import Any
 
@@ -131,9 +131,124 @@ class PakOp(IntEnum):
     EFF_DAMAGE = 10002       # EFFECT_CONF type=2: damage effect
     EFF_STATE_CHANGE = 10003 # EFFECT_CONF type=3: state change / dispel
 
-
-# Legacy alias so downstream code referencing EffectTag still imports.
-EffectTag = PakOp
+    # --- Kernel-specific ops (3xxx range, no pak collision) -----------------
+    # These are effect primitives consumed by the fixed kernel op table.
+    # They bridge old TAG_* ids to PakOp-native dispatch.
+    DAMAGE = 3001
+    HEAL_HP = 3002
+    HEAL_ENERGY = 3003
+    STEAL_ENERGY = 3004
+    ENEMY_LOSE_ENERGY = 3005
+    LIFE_DRAIN = 3006
+    SELF_BUFF = 3007
+    SELF_DEBUFF = 3008
+    ENEMY_DEBUFF = 3009
+    BURN = 3010
+    POISON = 3011
+    FREEZE = 3012
+    DAMAGE_REDUCTION = 3014
+    ENERGY_ALL_IN = 3016
+    WEATHER = 3017
+    COUNTER_ATTACK = 3018
+    GRANT_LIFE_DRAIN = 3025
+    POISON_MARK = 3027
+    MOISTURE_MARK = 3028
+    DRAGON_MARK = 3029
+    WIND_MARK = 3030
+    CHARGE_MARK = 3031
+    SOLAR_MARK = 3032
+    ATTACK_MARK = 3033
+    SLOW_MARK = 3034
+    SLUGGISH_MARK = 3035
+    SPIRIT_MARK = 3036
+    METEOR_MARK = 3037
+    THORN_MARK = 3038
+    MOMENTUM_MARK = 3039
+    DISPEL_ENEMY_MARKS = 3040
+    CONSUME_MARKS_HEAL = 3043
+    STEAL_MARKS = 3045
+    FORCE_ENEMY_SWITCH = 3047
+    AGILITY = 3048
+    INTERRUPT = 3049
+    POWER_DYNAMIC = 3050
+    PERMANENT_MOD = 3052
+    SKILL_MOD = 3053
+    NEXT_ATTACK_MOD = 3054
+    CLEANSE = 3055
+    PASSIVE_ENERGY_REDUCE = 3060
+    CONVERT_POISON_TO_MARK = 3062
+    DISPEL_MARKS = 3063
+    DISPEL_BUFFS = 3065
+    DISPEL_DEBUFFS = 3066
+    ENEMY_ENERGY_COST_UP = 3068
+    TRANSFER_MODS = 3072
+    COUNTER_ACCUMULATE_TRANSFORM = 3076
+    MIRROR_ENEMY_BUFFS = 3080
+    COUNTER_SUCCESS_SPEED_PRIORITY = 3088
+    FIRST_STRIKE_POWER_BONUS = 3089
+    FIRST_STRIKE_HIT_COUNT = 3090
+    AUTO_SWITCH_ON_ZERO_ENERGY = 3092
+    AUTO_SWITCH_AFTER_ACTION = 3093
+    TEAM_SYNERGY_BUG_SWARM_ATTACK = 3094
+    STAT_SCALE_HITS_PER_HP_LOST = 3099
+    DAMAGE_MOD_NON_STAB = 3106
+    DAMAGE_MOD_NON_LIGHT = 3107
+    DAMAGE_MOD_NON_WEAKNESS = 3108
+    DAMAGE_MOD_POLLUTANT_BLOOD = 3109
+    DAMAGE_MOD_LEADER_BLOOD = 3110
+    HEAL_ON_GRASS_SKILL = 3113
+    SKILL_COST_REDUCTION_TYPE = 3114
+    POISON_ON_SKILL_APPLY = 3116
+    ON_SKILL_ELEMENT_BUFF = 3119
+    ON_SKILL_ELEMENT_POISON = 3120
+    ON_SKILL_ELEMENT_COST_REDUCE = 3121
+    ON_SKILL_ELEMENT_ENEMY_ENERGY = 3123
+    CARRY_SKILL_POWER_BONUS = 3124
+    CARRY_SKILL_COST_REDUCE = 3125
+    ENEMY_ALL_COST_UP = 3131
+    LEAVE_HEAL_ALLY = 3133
+    LEAVE_ENERGY_REFILL = 3135
+    STEAL_ALL_ENEMY_ENERGY = 3136
+    ENEMY_SWITCH_SELF_COST_REDUCE = 3138
+    ON_INTERRUPT_COOLDOWN = 3139
+    LOW_COST_SKILL_POWER_BONUS = 3140
+    SPECIFIC_SKILL_POWER_BONUS = 3144
+    HP_FOR_ENERGY = 3146
+    ON_SUPER_EFFECTIVE_BUFF = 3150
+    HIT_COUNT_PER_POISON = 3153
+    ENTRY_SELF_DAMAGE = 3161
+    ENERGY_DRAIN_BY_COST_DIFF = 3162
+    ENTRY_BUFF_PER_SKILL_COUNT = 3163
+    DEVOTION_GRANT_RANDOM = 3174
+    CHARGE_COST_REDUCE = 3178
+    CONTRACT_ENTRY = 3181
+    BLOODLINE_ENTRY = 3182
+    CUTE_GAIN = 3183
+    CUTE_ENEMY_GAIN = 3184
+    CUTE_BOTH = 3186
+    CUTE_TRANSFER = 3187
+    CUTE_CLEAR_SELF = 3188
+    CUTE_IF_POWER_BONUS = 3189
+    CUTE_ON_GAIN_POWER_PERM = 3190
+    CUTE_ON_GAIN_COST_REDUCE = 3191
+    CUTE_ON_GAIN_SPEED_PERM = 3192
+    CUTE_TEAM_POWER = 3193
+    CUTE_LETHAL_SHIELD = 3194
+    CUTE_HIT_PER_STACK = 3196
+    CUTE_BENCH_COST_REDUCE = 3197
+    ON_SKILL_ELEMENT_BURN = 3198
+    ON_SKILL_ELEMENT_FREEZE = 3199
+    ON_SKILL_ELEMENT_HIT_COUNT = 3200
+    ENTRY_ENERGY_FROM_ELEMENT_COUNT = 3202
+    ENTRY_ENERGY_FROM_COUNTER_COUNT = 3203
+    EXCHANGE_MOVES = 3204
+    EXCHANGE_HP_RATIO = 3205
+    BORROW_TEAM_SKILL = 3206
+    HIT_COUNT_DELTA = 3207
+    ANTI_HEAL = 3210
+    POWER_BY_STATUS_COUNT_ELEMENTS = 3212
+    DEBUFF_EXTRA_LAYERS = 3213
+    POWER_MULTIPLIER_BUFF = 3214
 
 
 # ---------------------------------------------------------------------------
@@ -154,22 +269,6 @@ class Timing(IntEnum):
     CHARGE = 25           # charge/prep
     PASSIVE_COND = 26     # passive conditional
     BATTLE_START = 27     # entry aura
-
-
-# ---------------------------------------------------------------------------
-# EffectFlag -- legacy, kept for downstream compatibility
-# ---------------------------------------------------------------------------
-
-class EffectFlag(IntFlag):
-    """Legacy flag bitfield.  Retained for records.py / skill_tags.py compat."""
-
-    NONE = 0; DRAIN = auto(); HEAL_HP = auto(); HEAL_ENERGY = auto()
-    STEAL_ENERGY = auto(); DEFENSE = auto(); BURN = auto(); POISON = auto()
-    FREEZE = auto(); LEECH = auto(); STAT_CHANGE = auto(); FORCE_SWITCH = auto()
-    CHARGE = auto(); ENERGY_ALL_IN = auto(); WEATHER = auto(); COUNTER = auto()
-    CONDITIONAL = auto(); MIRROR_DAMAGE = auto(); ENEMY_COST_UP = auto()
-    HP_FOR_ENERGY = auto(); PERMANENT_MOD = auto(); PURE_DAMAGE = auto()
-    BURST = auto(); AGILITY = auto(); IS_MARK = auto(); DEVOTION = auto()
 
 
 # ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from roco.engine.kernel.op_rows import (
     TARGET_SELF,
     TARGET_TEAM,
 )
-from roco.engine.kernel.op_tags import TAG_DAMAGE_MOD_LEADER_BLOOD
+from roco.compiler.effect_model import PakOp
 
 
 def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -204,7 +204,7 @@ def op_damage_mod_non_weakness(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_damage_mod_bloodline(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    required = BLOODLINE_LEADER if row[ROW_TAG] == TAG_DAMAGE_MOD_LEADER_BLOOD else BLOODLINE_POLLUTANT
+    required = BLOODLINE_LEADER if row[ROW_TAG] == PakOp.DAMAGE_MOD_LEADER_BLOOD else BLOODLINE_POLLUTANT
     if ctx.target_bloodline == required:
         ctx.power_bps = ctx.power_bps * row[ROW_ARG0] // BPS
 

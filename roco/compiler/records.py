@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from roco.compiler.effect_model import EffectFlag, SkillEffect
+from roco.compiler.effect_model import SkillEffect
 from roco.common.enums import SkillCategory, Stats
 
 
@@ -24,7 +24,7 @@ class SkillData:
     effect: str
     skill_id: int = 0
     element_id: int = 0
-    effect_flags: int = EffectFlag.NONE
+    effect_flags: int = 0
     effects: tuple[SkillEffect, ...] = ()
     hit_count: int = 1
     priority_mod: int = 0

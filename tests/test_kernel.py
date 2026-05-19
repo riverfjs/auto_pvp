@@ -24,7 +24,7 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.engine.kernel.op_tags import TAG_DAMAGE
+from roco.compiler.effect_codegen import H_DAMAGE
 from roco.engine.kernel.op_rows import TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
@@ -190,7 +190,7 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
-        ((TAG_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),),
+        ((H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),),
         (0, 1),
         TIMING_CALC_DAMAGE,
         ctx,
@@ -555,7 +555,8 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "sqlite3",
         "catalog_debug",
         "roco.data",
-        "roco.compiler",
+        "roco.compiler.artifact",
+        "roco.compiler.classifiers",
         "params.get",
         "record_event",
         "BattleEvent",
@@ -569,12 +570,10 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
     assert "from " not in init_text
     assert "import " not in init_text
     effect_exec = (root / "roco/engine/kernel/ops.py").read_text(encoding="utf-8")
-    assert "OP_TABLE[row[ROW_TAG]]" in effect_exec
-    assert "OP_TABLE.get" not in effect_exec
+    assert "HANDLERS[handler_idx]" in effect_exec
     assert len(effect_exec.splitlines()) < 300
     for rel in (
         "op_rows.py",
-        "op_tags.py",
         "op_resources.py",
         "op_status.py",
         "op_marks.py",
@@ -582,6 +581,7 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "op_mods.py",
     ):
         assert (root / "roco/engine/kernel" / rel).exists()
+    assert not (root / "roco/engine/kernel/op_tags.py").exists()
 
 
 def test_retired_root_engine_modules_are_not_legacy_entrypoints():

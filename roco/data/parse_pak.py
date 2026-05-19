@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.compiler.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
-from roco.data.utils import CANONICAL_DIR, content_hash, with_canonical_hash, write_jsonl
+from roco.data.utils import CANONICAL_DIR, RULES_DIR, content_hash, iter_jsonl, with_canonical_hash, write_jsonl
 
 
 DEFAULT_PAK_DATA_DIR = Path(
@@ -125,8 +125,24 @@ def main() -> None:
     print(f"Generated {write_jsonl(marks, args.out_dir / 'marks.jsonl')} marks")
 
 
+def _load_skill_effect_overrides() -> dict[str, list]:
+    """Load manual skill effect overrides from rules directory."""
+    path = RULES_DIR / "skill_effects_manual.jsonl"
+    if not path.exists():
+        return {}
+    overrides: dict[str, list] = {}
+    for record in iter_jsonl(path):
+        if record.get("kind") == "skill_effect_override":
+            name = str(record.get("skill_name", "")).strip()
+            rows = record.get("effect_rows", [])
+            if name and rows:
+                overrides[name] = rows
+    return overrides
+
+
 def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:
     selected: dict[int, dict[str, Any]] = {}
+    overrides = _load_skill_effect_overrides()
 
     for move in data.moves:
         sid = _int(move.get("id"))
@@ -157,7 +173,11 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
             continue
         record = _skill_record(row, desc_notes)
         skill_row = data.skill_conf.get(str(sid), row)
-        record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
+        # Use manual override if available, otherwise codegen
+        if name in overrides:
+            record["effect_rows"] = overrides[name]
+        else:
+            record["effect_rows"] = generate_effect_rows(skill_row, pak_tables)
         source = _source("skill", sid, row)
         record = with_canonical_hash(record, source)
         records.append(record)
@@ -282,6 +302,19 @@ def build_marks(data: PakData, desc_notes: dict[int, str]) -> list[dict]:
     return rows
 
 
+SKILL_FLAG_DEVOTION = 0x01000000  # 16777216 — marks a devotion-linked skill
+
+
+def _skill_flags(row: dict[str, Any]) -> int:
+    """Derive skill flags from pak data fields."""
+    flags = 0
+    # Devotion skills: use_type contains '连击技' (combo skill)
+    use_type = row.get("use_type") or []
+    if isinstance(use_type, list) and "连击技" in use_type:
+        flags |= SKILL_FLAG_DEVOTION
+    return flags
+
+
 def _skill_record(row: dict[str, Any], desc_notes: dict[int, str]) -> dict:
     move = row.get("_move_record") or {}
     name = _clean_name(row.get("name") or move.get("name"))
@@ -302,6 +335,7 @@ def _skill_record(row: dict[str, Any], desc_notes: dict[int, str]) -> dict:
         "flavor_text": _clean_desc(row.get("flavor_text", ""), desc_notes),
         "source_version": str(row.get("monitor_data_version", "")),
         "source_fields": {k: v for k, v in row.items() if k != "_move_record"},
+        "flags": _skill_flags(row),
     }
 
 

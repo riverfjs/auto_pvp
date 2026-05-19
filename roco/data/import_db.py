@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import CANONICAL_DIR, DB_DIR, RULES_DIR, content_hash, iter_jsonl, load_jsonl
-from roco.compiler.effect_model import PakOp, Timing
 from roco.common.enums import SkillCategory, normalize_element_name
 
 
@@ -131,41 +130,11 @@ _MARK_TAG_MAP: dict[str, int] = {
 }
 
 
-def _parse_timing(raw: object) -> Timing | None:
-    if raw is None:
-        return None
-    if isinstance(raw, Timing):
-        return raw
-    if isinstance(raw, int):
-        try:
-            return Timing(raw)
-        except ValueError:
-            return None
-    if isinstance(raw, str):
-        try:
-            return Timing[raw]
-        except KeyError:
-            return None
-    return None
-
-
-def _parse_tag(raw: object) -> int | None:
-    if isinstance(raw, int):
-        return raw
-    if isinstance(raw, str):
-        try:
-            return int(raw)
-        except ValueError:
-            if hasattr(PakOp, raw):
-                return PakOp[raw].value
-    return None
-
-
 def _gap_row(
     source_type: str,
     source_name: str,
     primitive: str,
-    timing: Timing | None,
+    timing_code: int | None,
     params: Mapping[str, Any] | None,
     reason: str,
 ) -> tuple:
@@ -173,54 +142,11 @@ def _gap_row(
         source_type,
         source_name,
         primitive,
-        timing.value if timing is not None else None,
+        timing_code,
         _json(dict(params or {})),
         reason,
         0,
     )
-
-
-def _classification_gaps(source_type: str, record: Record) -> list[tuple]:
-    name = str(record.get("name", ""))
-    classification = record.get("classification") or {}
-    rows: list[tuple] = []
-    for gap in classification.get("gaps", ()) if isinstance(classification, Mapping) else ():
-        timing = _parse_timing(gap.get("timing"))
-        rows.append(_gap_row(
-            source_type,
-            name,
-            str(gap.get("primitive", name)),
-            timing,
-            gap.get("params", {}),
-            str(gap.get("reason", "needs_manual")),
-        ))
-    return rows
-
-
-def _effect_rows(
-    *,
-    owner_id: int,
-    source_type: str,
-    source_name: str,
-    effects: Iterable[Mapping[str, Any]],
-    default_flags: int,
-) -> tuple[list[tuple], list[tuple]]:
-    rows: list[tuple] = []
-    gaps: list[tuple] = []
-    for order, raw in enumerate(effects):
-        timing = _parse_timing(raw.get("timing"))
-        tag = _parse_tag(raw.get("tag"))
-        params = dict(raw.get("params", {}) or {})
-        condition = str(raw.get("condition", "") or "")
-        sort_order = int(raw.get("sort_order", order))
-        if timing is None:
-            gaps.append(_gap_row(source_type, source_name, str(raw.get("timing", "")), None, params, "timing_not_defined"))
-            continue
-        if tag is None:
-            gaps.append(_gap_row(source_type, source_name, str(raw.get("tag", "")), timing, params, "effect_tag_not_defined"))
-            continue
-        rows.append((owner_id, timing.value, tag, int(raw.get("flags", default_flags)), _json(params), condition, sort_order))
-    return rows, gaps
 
 
 def _insert_gaps(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
@@ -252,31 +178,27 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
     )
     lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
     effect_rows: list[tuple] = []
-    gap_rows: list[tuple] = []
     for record in records:
         name = str(record.get("name", "")).strip()
         if not name:
             continue
-        built, gaps = _effect_rows(
-            owner_id=lookup[name],
-            source_type="ability",
-            source_name=name,
-            effects=record.get("effects", ()) or (),
-            default_flags=_required_int(record.get("flags"), 0),
-        )
-        effect_rows.extend(built)
-        gap_rows.extend(gaps)
-        gap_rows.extend(_classification_gaps("ability", record))
+        owner_id = lookup[name]
+        for order, row_tuple in enumerate(record.get("effect_rows", []) or []):
+            # row_tuple = (handler_idx, timing, target, rate, p0, p1, p2, p3)
+            handler_idx = row_tuple[0]
+            timing = row_tuple[1]
+            target = row_tuple[2]
+            rate = row_tuple[3]
+            params_json = json.dumps({"target": target, "rate": rate, "p0": row_tuple[4], "p1": row_tuple[5], "p2": row_tuple[6], "p3": row_tuple[7]})
+            effect_rows.append((owner_id, timing, handler_idx, 0, params_json, "", order))
     if effect_rows:
         conn.executemany(
             "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
-    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  abilities: {len(lookup)} inserted")
     print(f"  ability_effects: {len(effect_rows)} inserted")
-    print(f"  ability effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 
@@ -304,29 +226,25 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
     )
     lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     effect_rows: list[tuple] = []
-    gap_rows: list[tuple] = []
     for record in records:
         name = str(record["name"])
-        built, gaps = _effect_rows(
-            owner_id=lookup[name],
-            source_type="skill",
-            source_name=name,
-            effects=record.get("effects", ()) or (),
-            default_flags=_required_int(record.get("flags"), 0),
-        )
-        effect_rows.extend(built)
-        gap_rows.extend(gaps)
-        gap_rows.extend(_classification_gaps("skill", record))
+        owner_id = lookup[name]
+        for order, row_tuple in enumerate(record.get("effect_rows", []) or []):
+            # row_tuple = (handler_idx, timing, target, rate, p0, p1, p2, p3)
+            handler_idx = row_tuple[0]
+            timing = row_tuple[1]
+            target = row_tuple[2]
+            rate = row_tuple[3]
+            params_json = json.dumps({"target": target, "rate": rate, "p0": row_tuple[4], "p1": row_tuple[5], "p2": row_tuple[6], "p3": row_tuple[7]})
+            effect_rows.append((owner_id, timing, handler_idx, 0, params_json, "", order))
     if effect_rows:
         conn.executemany(
             "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
-    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  skills: {len(lookup)} inserted")
     print(f"  skill_effects: {len(effect_rows)} inserted")
-    print(f"  skill effect_gaps: {inserted_gaps} inserted")
     return lookup
 
 

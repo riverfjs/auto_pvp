@@ -9,7 +9,8 @@ from roco.engine.enums import AbilityFlag
 from roco.engine.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import ELEMENT_BUG, PET_ABILITY, PET_PRIMARY, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.ops import TIMING_ENEMY_SWITCH, TIMING_SWITCH_IN, TIMING_SWITCH_OUT, run_skill_timing
+from roco.engine.kernel.op_rows import TIMING_ENEMY_SWITCH, TIMING_SWITCH_IN, TIMING_SWITCH_OUT
+from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.state import KernelState, SideState, replace_pet, replace_side, side
 
 POSITIVE_MARK_MASK = sum(0xF << (idx.value * 4) for idx in (

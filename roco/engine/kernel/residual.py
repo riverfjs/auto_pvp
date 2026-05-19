@@ -19,7 +19,8 @@ from roco.engine.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import PET_ABILITY, PET_PRIMARY, PET_SECONDARY, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.damage import burn_damage, sandstorm_immune, status_immune
-from roco.engine.kernel.ops import TIMING_TURN_END, run_skill_timing
+from roco.engine.kernel.op_rows import TIMING_TURN_END
+from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.state import (
     KernelState,
     PetState,

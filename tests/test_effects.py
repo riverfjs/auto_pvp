@@ -11,6 +11,7 @@ from roco.compiler.effect_codegen import (
     generate_effect_rows,
     build_ability_effect_rows,
     report_coverage,
+    H_DAMAGE, H_STAT_BUFF, H_POISON, H_NOOP,
 )
 
 
@@ -90,7 +91,7 @@ def test_generate_effect_rows_buff_ref(pak):
     }]}
     rows = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == PakOp.STAT_MOD
+    assert rows[0][0] == H_STAT_BUFF
 
 
 def test_generate_effect_rows_damage_ref(pak):
@@ -102,7 +103,7 @@ def test_generate_effect_rows_damage_ref(pak):
     }]}
     rows = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == PakOp.EFF_DAMAGE
+    assert rows[0][0] == H_DAMAGE
 
 
 def test_generate_effect_rows_state_change_ref(pak):
@@ -113,8 +114,8 @@ def test_generate_effect_rows_state_change_ref(pak):
         "success_rate": 10000,
     }]}
     rows = generate_effect_rows(skill_row, pak)
-    assert len(rows) >= 1
-    assert rows[0][0] == PakOp.EFF_STATE_CHANGE
+    # type=3 (state change) defaults to NOOP — specific cases handled via overrides
+    assert len(rows) == 0
 
 
 def test_generate_effect_rows_timing_from_cast_moment(pak):
@@ -144,7 +145,7 @@ def test_build_ability_effect_rows(pak):
     }]}
     rows = build_ability_effect_rows(ability_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == PakOp.STATUS_CONDITION
+    assert rows[0][0] == H_POISON
 
 
 def test_report_coverage(pak):
