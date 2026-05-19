@@ -5,3 +5,4 @@
 {"kind":"ability_effect_rule","name":"煤渣草","mode":"replace","effects":[{"timing":"PASSIVE","tag":"BURN_NO_DECAY","params":{},"sort_order":0}]}
 {"kind":"ability_effect_rule","name":"加个雪球","mode":"replace","effects":[{"timing":"PASSIVE","tag":"EXTRA_FREEZE_ON_FREEZE","params":{"extra":2},"sort_order":0}]}
 {"kind":"ability_effect_rule","name":"复方汤剂","mode":"replace","effects":[{"timing":"PASSIVE","tag":"EXTRA_POISON_TICK","params":{},"sort_order":0}]}
+{"kind":"ability_effect_rule","name":"？？？","mode":"replace","no_effect":true,"effects":[]}

@@ -443,6 +443,15 @@ def _leader_transform_rows(conn: sqlite3.Connection) -> list[tuple[int, int, str
     for lineage_rows in rows_by_lineage.values():
         leaders = [row for row in lineage_rows if row["form_type"] == "首领形态"]
         if len(leaders) != 1:
+            preferred = [
+                row for row in leaders
+                if "#" not in str(row["name"]) and not str(row["name"]).startswith("首领-")
+            ]
+            if len(preferred) == 1:
+                leaders = preferred
+            else:
+                continue
+        if len(leaders) != 1:
             continue
         leader_id = int(leaders[0]["id"])
         for row in lineage_rows:
@@ -695,6 +704,16 @@ def _load_required(name: str) -> list[dict]:
     return load_jsonl(path)
 
 
+def _require_pak_source(name: str, rows: list[dict]) -> None:
+    bad = [
+        str(row.get("name", row.get("source_title", "")))
+        for row in rows
+        if not str(row.get("source_kind", "")).startswith("pak:")
+    ]
+    if bad:
+        raise RuntimeError(f"{name} must be generated from pak data; non-pak rows: {', '.join(bad[:8])}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DB_DIR / "data.db")
@@ -714,6 +733,9 @@ def main() -> None:
     skills = _load_required("skills.jsonl")
     abilities = _load_required("abilities.jsonl")
     pets = _load_required("pets.jsonl")
+    _require_pak_source("skills.jsonl", skills)
+    _require_pak_source("abilities.jsonl", abilities)
+    _require_pak_source("pets.jsonl", pets)
 
     ability_lookup = import_abilities(conn, abilities)
     skill_lookup = import_skills(conn, skills)
@@ -721,7 +743,9 @@ def main() -> None:
 
     marks_path = CANONICAL_DIR / "marks.jsonl"
     if marks_path.exists():
-        import_marks(conn, load_jsonl(marks_path))
+        marks = load_jsonl(marks_path)
+        _require_pak_source("marks.jsonl", marks)
+        import_marks(conn, marks)
 
     teams_path = CANONICAL_DIR / "teams.jsonl"
     if teams_path.exists():

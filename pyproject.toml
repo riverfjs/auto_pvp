@@ -10,7 +10,8 @@ dependencies = [
 
 [project.scripts]
 roco-mc = "roco.sim.monte_carlo:main"
-roco-fetch = "roco.data.fetch_index:main"
+roco-fetch-teams = "roco.data.fetch_teams:main"
+roco-parse-pak = "roco.data.parse_pak:main"
 roco-compile-kernel = "roco.compiler.artifact:main"
 
 [dependency-groups]

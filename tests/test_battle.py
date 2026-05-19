@@ -38,7 +38,7 @@ def test_battle_engine_name_facade_resolves_only_at_boundary():
         ("火花", "喵喵"),
         ("水蓝蓝",),
         team_a_moves=(("拍击",), ("拍击",)),
-        team_b_moves=(("拍击",),),
+        team_b_moves=(("抓挠",),),
     )
 
     assert engine.get_valid_moves(SIDE_A) == (0,)
@@ -71,7 +71,7 @@ def test_battle_engine_winner_and_turn_limit_draw():
 def test_battle_engine_uses_kernel_side_ids_for_queries():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
     engine = BattleEngine.from_team_ids(
         (fire,),
         (water,),

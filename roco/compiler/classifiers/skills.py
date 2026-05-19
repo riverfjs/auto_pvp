@@ -1,4 +1,4 @@
-"""BWiki skill text classifier for canonical skill rows."""
+"""Skill text classifier for canonical skill rows."""
 
 from __future__ import annotations
 

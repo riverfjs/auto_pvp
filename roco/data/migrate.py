@@ -1,8 +1,8 @@
 """Create or reset the normalized SQLite data store.
 
-The database is a warehouse for structured wiki data. Battle runtime loads a
-compiled catalog from these integer ids and packed flags instead of querying
-string-heavy JSON/dict data in the hot path.
+The database is a warehouse for pak-derived canonical data. Battle runtime
+loads a compiled catalog from these integer ids and packed flags instead of
+querying string-heavy JSON/dict data in the hot path.
 """
 
 from __future__ import annotations

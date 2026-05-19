@@ -113,8 +113,8 @@ def test_switch_priority_beats_move_speed():
     fire = _pet_id("火花")
     cat = _pet_id("喵喵")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
-    slap = _skill_id("拍击")
+    impact = _skill_id("猛烈撞击")
+    slap = _skill_id("抓挠")
     state = make_state(
         (fire, cat),
         (water,),
@@ -133,7 +133,7 @@ def test_switch_priority_beats_move_speed():
 def test_order_uses_speed_then_seeded_tie_break():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
     slap = _skill_id("拍击")
 
     faster = update(
@@ -161,7 +161,7 @@ def test_order_uses_speed_then_seeded_tie_break():
 def test_damage_matches_existing_formula_for_single_hit():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
     state = make_state((fire,), (water,), team_a_moves=((impact,),), team_b_moves=((impact,),))
     result = update(state, move_choice(0), move_choice(0))
     skill = hot.SKILLS[impact]
@@ -355,7 +355,7 @@ def test_kernel_marks_affect_speed_cost_damage_and_entry():
     fire = _pet_id("火花")
     cat = _pet_id("喵喵")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
     ground = _skill_id("地刺")
     slow_marks = _set_mark(0, MarkIdx.SLOW, 5)
     moisture_marks = _set_mark(0, MarkIdx.MOISTURE, 1)
@@ -407,7 +407,7 @@ def test_kernel_barrel_neutralizes_type_and_transfers_on_switch():
     cat = _pet_id("喵喵")
     water = _pet_id("水蓝蓝")
     ember = _skill_id("火苗")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
 
     base = update(
         make_state((fire,), (cat,), team_a_moves=((ember,),), team_b_moves=((0,),)),
@@ -459,7 +459,7 @@ def test_kernel_faint_reduces_magic_auto_switches_and_skips_replacement_action()
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
     cat = _pet_id("喵喵")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
     state = make_state((fire,), (water, cat), team_a_moves=((impact,),), team_b_moves=((impact,), (impact,)))
     weak = state.side_b.pets[0]._replace(current_hp=1)
     state = state._replace(side_b=replace_pet(state.side_b, 0, weak))
@@ -505,7 +505,7 @@ def test_kernel_leader_transform_magic_changes_pet_id_and_scales_hp():
 def test_kernel_cute_boosts_damage_shields_and_transfers_on_faint():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    impact = _skill_id("冲击")
+    impact = _skill_id("猛烈撞击")
 
     base = update(
         make_state((fire,), (water,), team_a_moves=((impact,),), team_b_moves=((0,),)),

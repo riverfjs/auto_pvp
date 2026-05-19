@@ -1,4 +1,4 @@
-"""Shared utilities for Roco Kingdom WIKI scraping and data files."""
+"""Shared utilities for pak/canonical data files and BWiki team samples."""
 
 import time
 import json
@@ -14,15 +14,10 @@ import requests
 API_BASE = "https://wiki.biligame.com/rocom/api.php"
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "_data"
-INDEX_DIR = DATA_DIR / "index"
 RAW_DIR = DATA_DIR / "raw"
 CANONICAL_DIR = DATA_DIR / "canonical"
 RULES_DIR = DATA_DIR / "rules"
 DB_DIR = ROOT / "_db"
-
-CATEGORY_PETS = "Category:精灵"
-CATEGORY_SKILLS = "Category:技能"
-MARK_SOURCE_PAGE = "印记"  # mark names are extracted from this page's wikitext
 
 SESSION = requests.Session()
 SESSION.headers.update(
@@ -67,7 +62,7 @@ REQUEST_LOCK = threading.Lock()
 
 
 class WikiPageMissing(RuntimeError):
-    """Raised when a BWiki index links to a page that does not exist."""
+    """Raised when a BWiki team page lookup targets a missing page."""
 
     def __init__(self, title: str, info: str):
         super().__init__(f"missingtitle: {title}: {info}")
@@ -112,40 +107,6 @@ def api_get(params: dict, use_post: bool = False) -> dict:
     if "query" not in data and "parse" not in data:
         raise RuntimeError(f"Unexpected API response keys: {list(data.keys())} — {resp.url}")
     return data
-
-
-def fetch_category_members(category: str) -> list[str]:
-    """Fetch all page titles in a category (handles pagination)."""
-    titles: list[str] = []
-    params: dict = {
-        "action": "query",
-        "list": "categorymembers",
-        "cmtitle": category,
-        "cmlimit": "max",
-        "format": "json",
-    }
-    while True:
-        data = api_get(params)
-        for member in data["query"]["categorymembers"]:
-            titles.append(member["title"])
-        if "continue" in data:
-            params["cmcontinue"] = data["continue"]["cmcontinue"]
-        else:
-            break
-    return titles
-
-
-def fetch_page_wikitext(title: str) -> str:
-    """Fetch the raw wikitext of a wiki page."""
-    data = api_get(
-        {
-            "action": "parse",
-            "page": title,
-            "prop": "wikitext",
-            "format": "json",
-        }
-    )
-    return data["parse"]["wikitext"]["*"]
 
 
 def save_json(data, path: Path) -> None:

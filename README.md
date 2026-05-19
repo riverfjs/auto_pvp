@@ -1,8 +1,8 @@
 # Auto PVP
 
-当前项目是洛克王国精灵 PVP 的计算引擎。战斗管道参考 `/Users/River/Documents/Code/engine` 的显式阶段、two-tier data model 和 packed bitfields：`BattleEngine` 是 fixed kernel 的薄 facade，真正热路径由 `update(state, c1, c2, options)` 推进，天气、印记、奉献、技能后效和特性状态都编译成整数 catalog 与固定 op/stage 流执行。
+当前项目是洛克王国精灵 PVP 的计算引擎。战斗管道参考 `../auto_pvprefclone`（[pkmn/engine](https://github.com/pkmn/engine)）的显式阶段、two-tier data model 和 packed bitfields：`BattleEngine` 是 fixed kernel 的薄 facade，真正热路径由 `update(state, c1, c2, options)` 推进，天气、印记、奉献、技能后效和特性状态都编译成整数 catalog 与固定 op/stage 流执行。
 
-默认事实源是本项目的 BWiki raw/canonical JSONL。技能、特性、天气、印记和血脉魔法先从 canonical 生成统一 effect rows；无法安全生成的语义进入 gap，再人工确认后写入 `_data/rules/*_manual.jsonl`。`/Users/River/Documents/Code/NRC_AI` 只作为可选对比和人工参考，不参与默认 build，也不进入 runtime。这里没有岩系，也不把钢作为属性；结构化属性字段只接受洛克王国规范属性，`地面系` 归一到 `地`，正式机械属性使用 `机械`。
+默认事实源是解包后的 pak 数据，默认路径为 `pak-public-kit/output/data`（git submodule），也可以用 `ROCO_PAK_DATA_DIR` 或 `roco-parse-pak --pak-dir` 指定。精灵、技能、特性、血脉、魔法、印记和数值先从 pak 生成 canonical JSONL，再导入 SQLite 并编译成 hot/debug catalog。BWiki 只保留为队伍样本来源，用于模拟测试；不会再作为精灵/技能/特性 fallback。`/Users/River/Documents/Code/NRC_AI` 只作为可选对比和人工参考，不参与默认 build，也不进入 runtime。这里没有岩系，也不把钢作为属性；结构化属性字段只接受洛克王国规范属性，`地面系` 归一到 `地`，正式机械属性使用 `机械`。
 
 核心边界：
 
@@ -11,5 +11,5 @@
 - `roco/engine/generated`: 编译生成的 `catalog_hot.py` / `catalog_debug.py`；kernel 只读 hot catalog，debug/facade 才读名字反查。
 - `roco/engine/facade`: 外层 `BattleEngine`，负责名字到整数 ID 的边界转换和持有 `KernelState`。
 - `roco/compiler`: 技能/特性效果分类、effect row 编译、artifact 生成；不进入 battle kernel。
-- `roco/data`: `raw/canonical JSONL -> SQLite` 的数据仓库管线，随后由 compiler 生成 hot/debug artifact。
+- `roco/data`: `pak -> canonical JSONL -> SQLite` 的数据仓库管线，随后由 compiler 生成 hot/debug artifact；BWiki 入口只允许队伍样本。
 - `_data` / `_db`: 生成数据产物。

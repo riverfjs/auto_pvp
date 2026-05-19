@@ -1,4 +1,4 @@
-"""BWiki ability description classifier for canonical ability rows."""
+"""Ability description classifier for canonical ability rows."""
 
 from __future__ import annotations
 
@@ -25,7 +25,8 @@ def classify_ability_record(
     desc = str(record.get("description", "")).strip()
     generated = generated_ability_effects(desc)
     effects, source = apply_manual("ability", name, generated, manual_rules)
-    gaps = missing_gaps("ability", name, desc, effects)
+    manual = manual_rules.get(name, {})
+    gaps = () if manual.get("no_effect") is True else missing_gaps("ability", name, desc, effects)
     return ClassificationResult(0, tuple(effects), gaps, source)
 
 

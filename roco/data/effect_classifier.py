@@ -1,4 +1,4 @@
-"""Thin public facade for BWiki-first effect classification."""
+"""Thin public facade for canonical text effect classification."""
 
 from roco.compiler.classifiers import (
     ClassificationResult,

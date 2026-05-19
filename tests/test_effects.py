@@ -217,7 +217,7 @@ def test_canonical_ability_missing_effect_is_explicit_gap():
     assert record["classification"]["gaps"][0]["reason"] == "structured_effect_missing"
 
 
-def test_bwiki_ability_rules_cover_used_structured_semantics():
+def test_ability_rules_cover_used_structured_semantics():
     examples = {
         "共鸣": ("携带的【虫鸣】技能威力+20。", "SPECIFIC_SKILL_POWER_BONUS"),
         "拨浪鼓": ("己方精灵每使用1次状态技能，自己入场时毒系和萌系技能威力+10。", "POWER_BY_STATUS_COUNT_ELEMENTS"),

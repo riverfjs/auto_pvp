@@ -1,0 +1,3 @@
+[submodule "pak-public-kit"]
+	path = pak-public-kit
+	url = https://github.com/riverfjs/pak-public-kit.git

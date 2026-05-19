@@ -1,19 +1,18 @@
+import json
 import sys
 from pathlib import Path
 
 import pytest
 
-import roco.data.fetch_details as fetch_details
-import roco.data.fetch_index as fetch_index
 import roco.data.fetch_teams as fetch_teams
-import roco.data.parse_skills as parse_skills
+import roco.data.parse_pak as parse_pak
 from roco.data.effect_classifier import refresh_ability_classification, refresh_skill_classification
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
 from roco.compiler.nrc_compare import project_report
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
-from roco.data.utils import content_hash, load_jsonl, with_canonical_hash, write_jsonl
+from roco.data.utils import content_hash, load_jsonl, write_jsonl
 from roco.compiler.effect_model import EffectTag
 
 
@@ -142,56 +141,83 @@ def test_jsonl_roundtrip_is_one_entity_per_line(tmp_path: Path):
     assert load_jsonl(path) == [{"kind": "skill", "name": "火花"}, {"kind": "skill", "name": "拍击"}]
 
 
-def test_fetch_index_incremental_marks_missing_and_force_rewrites(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(fetch_index, "INDEX_DIR", tmp_path)
-    write_jsonl([
-        {"kind": "index", "target": "skills", "title": "火花", "sort_order": 0},
-        {"kind": "index", "target": "skills", "title": "旧技能", "sort_order": 1},
-    ], tmp_path / "skills.jsonl")
-
-    merged = fetch_index._merge_index_records("skills", ["火花", "新技能"], force=False)
-    assert [row["title"] for row in merged] == ["火花", "新技能", "旧技能"]
-    assert merged[2]["missing_from_index"] is True
-
-    forced = fetch_index._merge_index_records("skills", ["火花"], force=True)
-    assert [row["title"] for row in forced] == ["火花"]
-    assert all("missing_from_index" not in row for row in forced)
-
-
-def test_fetch_details_incremental_preserves_unchanged_rows(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(fetch_details, "RAW_DIR", tmp_path)
-    old = {
-        "kind": "skill",
-        "name": "火花",
-        "source_title": "火花",
-        "source_kind": "skill",
-        "raw_text": "same",
-        "source_hash": content_hash({"raw_text": "same"}),
-        "fetched_at": "old",
-    }
-    write_jsonl([old], tmp_path / "skills_raw.jsonl")
-
-    merged = fetch_details._merge_raw_records(
-        "skills",
-        ["火花", "拍击"],
-        ["火花", "拍击"],
-        {"火花": "same", "拍击": "new"},
-        force=False,
-        fetched_at="new",
+def test_parse_pak_generates_canonical_from_extracted_tables(tmp_path: Path, monkeypatch):
+    pak = tmp_path / "pak"
+    bindata = pak / "BinData"
+    bindata.mkdir(parents=True)
+    _write_table(bindata / "SKILL_CONF.json", {
+        "7020880": {
+            "id": 7020880,
+            "name": "拍击",
+            "desc": "造成魔伤。",
+            "energy_cost": [1],
+            "dam_para": [65],
+            "Skill_Type": 1,
+            "damage_type": 3,
+            "skill_dam_type": 2,
+            "monitor_data_version": 1,
+        },
+        "200076": {
+            "id": 200076,
+            "name": "氧循环",
+            "desc": "使用草系技能后，回复10%生命。",
+            "energy_cost": [0],
+            "dam_para": [0],
+            "type": 2,
+            "damage_type": 1,
+            "skill_dam_type": 1,
+            "monitor_data_version": 1,
+        },
+    })
+    _write_table(bindata / "PETBASE_CONF.json", {
+        "3001": {
+            "id": 3001,
+            "name": "喵喵",
+            "pet_feature": 200076,
+            "hp_max_race": 63,
+            "phy_attack_race": 57,
+            "spe_attack_race": 57,
+            "phy_defence_race": 56,
+            "spe_defence_race": 59,
+            "speed_race": 33,
+            "stage": 1,
+            "description": "喜欢阳光。",
+        }
+    })
+    _write_table(bindata / "DESC_NOTE_CONF.json", {
+        str(desc_id): {"id": desc_id, "note": f"mark_{code}", "desc": f"{code} effect"}
+        for desc_id, code, _, _ in parse_pak.MARK_DEFS
+    })
+    (pak / "moves.json").write_text(
+        '[{"id":7020880,"name":"拍击","move_type":{"localized":{"zh":"普通"}},"move_category":"Magic Attack","energy_cost":1,"power":65,"description":"造成魔伤。"}]',
+        encoding="utf-8",
     )
-    assert merged[0]["fetched_at"] == "old"
-    assert merged[1]["fetched_at"] == "new"
-
-    changed = fetch_details._merge_raw_records(
-        "skills",
-        ["火花"],
-        ["火花"],
-        {"火花": "changed"},
-        force=False,
-        fetched_at="newer",
+    (pak / "Pets.json").write_text(
+        '[{"id":3001,"name":"miaomiao","localized":{"zh":{"name":"喵喵"}},"main_type":{"localized":{"zh":"草"}},"sub_type":null,"base_hp":63,"base_phy_atk":57,"base_mag_atk":57,"base_phy_def":56,"base_mag_def":59,"base_spd":33,"is_leader_form":false,"evolves_from_id":null}]',
+        encoding="utf-8",
     )
-    assert changed[0]["source_hash"] == content_hash({"raw_text": "changed"})
-    assert changed[0]["fetched_at"] == "newer"
+    (pak / "PetSkillIndex.json").write_text(
+        '{"entries":[{"pet_id":3001,"move_pool_ids":[7020880],"move_stone_ids":[]}],"skills":[]}',
+        encoding="utf-8",
+    )
+    out = tmp_path / "canonical"
+    monkeypatch.setattr(sys, "argv", ["parse_pak.py", "--pak-dir", str(pak), "--out-dir", str(out)])
+
+    parse_pak.main()
+
+    skills = load_jsonl(out / "skills.jsonl")
+    abilities = load_jsonl(out / "abilities.jsonl")
+    pets = load_jsonl(out / "pets.jsonl")
+    marks = load_jsonl(out / "marks.jsonl")
+    assert skills[0]["source_kind"] == "pak:skill"
+    assert skills[0]["name"] == "拍击"
+    assert skills[0]["category"] == "魔攻"
+    assert any(effect["tag"] == "DAMAGE" for effect in skills[0]["effects"])
+    assert abilities[0]["source_kind"] == "pak:ability"
+    assert abilities[0]["description"] == "使用草系技能后，回复10%生命。"
+    assert pets[0]["source_kind"] == "pak:pet"
+    assert pets[0]["ability"] == "氧循环"
+    assert marks[0]["source_kind"] == "pak:mark"
 
 
 def test_fetch_teams_incremental_merges_by_page_id(tmp_path: Path, monkeypatch):
@@ -224,34 +250,6 @@ def test_fetch_teams_incremental_merges_by_page_id(tmp_path: Path, monkeypatch):
     assert [row["page_id"] for row in forced] == ["101"]
 
 
-def test_parse_skills_preserves_unchanged_canonical_rows(tmp_path: Path, monkeypatch):
-    raw_dir = tmp_path / "raw"
-    canonical_dir = tmp_path / "canonical"
-    monkeypatch.setattr(parse_skills, "RAW_DIR", raw_dir)
-    monkeypatch.setattr(parse_skills, "CANONICAL_DIR", canonical_dir)
-    monkeypatch.setattr(sys, "argv", ["parse_skills.py"])
-    raw_text = "{{技能信息\n|技能名称=火花\n|属性=火\n|技能类别=魔攻\n|耗能=1\n|威力=60\n|效果=造成魔伤\n}}"
-    source = {
-        "kind": "skill",
-        "name": "火花",
-        "source_title": "火花",
-        "source_kind": "skill",
-        "raw_text": raw_text,
-        "source_hash": content_hash({"raw_text": raw_text}),
-    }
-    write_jsonl([source], raw_dir / "skills_raw.jsonl")
-    existing = with_canonical_hash(parse_skills.parse_one("火花", raw_text), source)
-    existing["sentinel"] = "kept"
-    existing = with_canonical_hash(existing)
-    write_jsonl([existing], canonical_dir / "skills.jsonl")
-
-    parse_skills.main()
-
-    rows = load_jsonl(canonical_dir / "skills.jsonl")
-    assert rows[0]["sentinel"] == "kept"
-    assert rows[0]["source_hash"] == source["source_hash"]
-
-
 def test_import_db_does_not_read_legacy_parsed_json():
     root = Path(__file__).resolve().parents[1]
     for rel in ("roco/data/import_db.py", "roco/data/build_db.py"):
@@ -268,6 +266,31 @@ def test_build_db_has_no_fallback_classifier_path():
     classifier = (root / "roco/data/effect_classifier.py").read_text(encoding="utf-8")
     assert "allow_fallback" not in text
     assert "allow_fallback" not in classifier
+
+
+def test_non_team_bwiki_data_entrypoints_are_retired():
+    root = Path(__file__).resolve().parents[1]
+    retired = [
+        "roco/data/fetch_index.py",
+        "roco/data/fetch_details.py",
+        "roco/data/parse_pets.py",
+        "roco/data/parse_skills.py",
+        "roco/data/parse_marks.py",
+        "scripts/fetch_index.py",
+        "scripts/fetch_details.py",
+        "scripts/parse_pets.py",
+        "scripts/parse_skills.py",
+        "scripts/parse_yinji.py",
+        "scripts/utils.py",
+    ]
+    assert [path for path in retired if (root / path).exists()] == []
+
+
+def _write_table(path: Path, rows: dict[str, dict]) -> None:
+    path.write_text(
+        '{"RocoDataRows":' + json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "}",
+        encoding="utf-8",
+    )
 
 
 def test_effect_classifier_entrypoints_stay_thin():

@@ -1,4 +1,4 @@
-"""BWiki ability text rules that generate canonical effect rows."""
+"""Ability text rules that generate canonical effect rows."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def generated_ability_effects(description: str) -> tuple[EffectRecord, ...]:
 
 
 def _append_damage_rules(rows: list[EffectRecord], description: str) -> None:
-    if match := re.search(r"携带的【([^】]+)】技能威力\+(\d+)", description):
+    if match := re.search(r"携带的[【「]([^】」]+)[】」]技能威力\+(\d+)", description):
         rows.append({
             "timing": "CALC_DAMAGE",
             "tag": "SPECIFIC_SKILL_POWER_BONUS",
@@ -92,7 +92,7 @@ def _append_passive_rules(rows: list[EffectRecord], description: str) -> None:
         rows.append({"timing": "PASSIVE", "tag": "SHUFFLE_SKILLS_REDUCE_LAST", "params": {}})
     if "蓄力状态下，可以使用任一携带技能" in description:
         rows.append({"timing": "PASSIVE", "tag": "CHARGE_FREE_SKILL", "params": {}})
-    if "触发星陨时消耗一半层数" in description:
+    if "触发星陨时消耗一半层数" in description or ("触发星陨印记" in description and "消耗一半层数" in description):
         rows.append({"timing": "PASSIVE", "tag": "HALF_METEOR_FULL_DAMAGE", "params": {}})
     if match := re.search(r"获得增益时，?额外获得层数\+(\d+)", description):
         rows.append({"timing": "PASSIVE", "tag": "BUFF_EXTRA_LAYERS", "params": {"layers": int(match.group(1))}})
@@ -190,6 +190,11 @@ def _append_skill_reaction_rules(rows: list[EffectRecord], description: str) -> 
         rows.append({"timing": "AFTER_MOVE", "tag": "BURN", "params": {"target": "enemy", "stacks": int(match.group(1))}})
     if "每受到1次攻击" in description and "50威力物理伤害" in description:
         rows.append({"timing": "TAKE_DAMAGE", "tag": "COUNTER_ATTACK", "params": {"power": 50}})
+    if "被攻击时" in description and "棘刺印记" in description:
+        stacks = 1
+        if match := re.search(r"赋予敌方(\d+)层棘刺印记", description):
+            stacks = int(match.group(1))
+        rows.append({"timing": "TAKE_DAMAGE", "tag": "THORN_MARK", "params": {"target": "enemy", "stacks": stacks}})
     if "打断敌方时" in description and "2回合冷却" in description:
         rows.append({"timing": "AFTER_MOVE", "tag": "ON_INTERRUPT_COOLDOWN", "params": {"turns": 2}})
     if match := re.search(r"携带的" + _ELEMENT_WORD + r"系技能获得迸发：能耗-(\d+)", description):
@@ -201,6 +206,15 @@ def _append_skill_reaction_rules(rows: list[EffectRecord], description: str) -> 
     if match := re.search(r"使用" + _ELEMENT_WORD + r"系技能后，?获得双攻\+(\d+)%", description):
         bonus = int(match.group(2)) / 100.0
         rows.append({"timing": "AFTER_MOVE", "tag": "ON_SKILL_ELEMENT_BUFF", "params": {"element": match.group(1), "buff": {"atk": bonus, "spatk": bonus}}})
+    if match := re.search(r"(?:释放|使用)" + _ELEMENT_WORD + r"系技能后，?物攻永久提升(\d+)%[，,]速度永久-(\d+)", description):
+        rows.append({
+            "timing": "AFTER_MOVE",
+            "tag": "ON_SKILL_ELEMENT_BUFF",
+            "params": {
+                "element": match.group(1),
+                "buff": {"atk": int(match.group(2)) / 100.0, "speed": -int(match.group(3)) / 100.0},
+            },
+        })
     if match := re.search(r"使用草系技能后，?回复(\d+)%生命", description):
         rows.append({"timing": "AFTER_MOVE", "tag": "HEAL_ON_GRASS_SKILL", "params": {"heal_pct": int(match.group(1)) / 100.0}})
     if match := re.search(r"使用" + _ELEMENT_WORD + r"系技能(?:后|时)，?敌方获得(\d*)层?中毒", description):
@@ -242,6 +256,13 @@ def _append_entry_rules(rows: list[EffectRecord], description: str) -> None:
         rows.append({"timing": "SWITCH_IN", "tag": "ENTRY_BUFF_PER_SKILL_COUNT", "params": {"element": match.group(1), "mode": "power", "amount": int(match.group(2))}})
     if "根据自己的血脉" in description or "根据自己的血脉，入场时" in description:
         rows.append({"timing": "SWITCH_IN", "tag": "BLOODLINE_ENTRY", "params": {"element": "萌"}})
+    if match := re.search(r"入场时，?若敌方本回合换宠，?全属性提升(\d+)%", description):
+        bonus = int(match.group(1)) / 100.0
+        rows.append({
+            "timing": "SWITCH_IN",
+            "tag": "SELF_BUFF",
+            "params": {"atk": bonus, "spatk": bonus, "def": bonus, "spdef": bonus, "speed": bonus},
+        })
 
 
 def _append_counter_and_combo_rules(rows: list[EffectRecord], description: str) -> None:

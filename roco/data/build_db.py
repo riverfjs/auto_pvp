@@ -1,4 +1,4 @@
-"""Rebuild the normalized SQLite database from canonical JSONL data."""
+"""Rebuild SQLite from pak-derived canonical JSONL data."""
 
 from __future__ import annotations
 
@@ -6,11 +6,6 @@ import argparse
 
 from roco.data.catalog import compile_catalog
 from roco.compiler.artifact import compile_artifacts
-from roco.data.effect_classifier import (
-    load_manual_rules,
-    refresh_ability_classification,
-    refresh_skill_classification,
-)
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import CANONICAL_DIR, DB_DIR, load_jsonl
@@ -23,23 +18,28 @@ def _load_required(name: str) -> list[dict]:
     return load_jsonl(path)
 
 
+def _require_pak_source(name: str, rows: list[dict]) -> None:
+    bad = [
+        str(row.get("name", row.get("source_title", "")))
+        for row in rows
+        if not str(row.get("source_kind", "")).startswith("pak:")
+    ]
+    if bad:
+        raise RuntimeError(f"{name} must be generated from pak data; non-pak rows: {', '.join(bad[:8])}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--allow-used-gaps", action="store_true")
     args = parser.parse_args()
 
     conn = migrate(reset=True)
-    skill_rules = load_manual_rules("skill")
-    ability_rules = load_manual_rules("ability")
-    skills = [
-        refresh_skill_classification(row, skill_rules)
-        for row in _load_required("skills.jsonl")
-    ]
-    abilities = [
-        refresh_ability_classification(row, ability_rules)
-        for row in _load_required("abilities.jsonl")
-    ]
+    skills = _load_required("skills.jsonl")
+    abilities = _load_required("abilities.jsonl")
     pets = _load_required("pets.jsonl")
+    _require_pak_source("skills.jsonl", skills)
+    _require_pak_source("abilities.jsonl", abilities)
+    _require_pak_source("pets.jsonl", pets)
 
     ability_lookup = import_abilities(conn, abilities)
     skill_lookup = import_skills(conn, skills)
@@ -47,7 +47,9 @@ def main() -> None:
 
     marks_path = CANONICAL_DIR / "marks.jsonl"
     if marks_path.exists():
-        import_marks(conn, load_jsonl(marks_path))
+        marks = load_jsonl(marks_path)
+        _require_pak_source("marks.jsonl", marks)
+        import_marks(conn, marks)
 
     teams_path = CANONICAL_DIR / "teams.jsonl"
     if teams_path.exists():
