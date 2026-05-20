@@ -399,7 +399,7 @@ def test_used_gap_fails_strict_validation(tmp_path: Path):
         "VALUES (?, ?, ?, ?, ?, ?)",
         ("ability", "某ability", "effect_9999", "{}", "effect_type_3_state_change", 5),
     )
-    with pytest.raises(RuntimeError, match="unclassified effect gaps"):
+    with pytest.raises(RuntimeError, match=r"used effect_gaps row\(s\) have no acknowledgement"):
         assert_no_blocking_effect_gaps(conn)
     conn.close()
 

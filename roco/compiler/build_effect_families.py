@@ -31,6 +31,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from roco.compiler.effect_codegen.acknowledgements_loader import (
+    Acknowledgement,
+    canonical_gap_key,
+    load_acknowledgements,
+)
 from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
 from roco.compiler.effect_codegen.exact_decoders import decode_exact
 from roco.compiler.effect_codegen.outcomes import (
@@ -723,7 +728,72 @@ def render_jsonl(families: list[dict]) -> str:
     return "\n".join(json.dumps(f, ensure_ascii=False, sort_keys=True) for f in families) + "\n"
 
 
-def render_markdown(families: list[dict]) -> str:
+def _render_ack_sections(acks: list[Acknowledgement]) -> list[str]:
+    """Render the four acknowledgement status sections.
+
+    Each section lists every ack row with the gap rows it claims to cover
+    (the ``matched gap rows`` list).  Acks themselves are validated by the
+    loader; the rendered list is read-only documentation so reviewers can
+    spot over-broad coverage at a glance.
+    """
+    by_status: dict[str, list[Acknowledgement]] = defaultdict(list)
+    for ack in acks:
+        by_status[ack.status].append(ack)
+
+    section_titles = [
+        ("evidence_available_deferred", "## Acknowledgements — evidence_available_deferred"),
+        ("evidence_available_weak", "## Acknowledgements — evidence_available_weak"),
+        ("evidence_missing", "## Acknowledgements — evidence_missing"),
+        ("confirmed_ignored", "## Acknowledgements — confirmed_ignored"),
+    ]
+    out: list[str] = []
+    out.append(f"## Acknowledgement totals\n")
+    for status, _title in section_titles:
+        out.append(f"- `{status}`: {len(by_status.get(status, []))}")
+    out.append("")
+    for status, title in section_titles:
+        rows = by_status.get(status, [])
+        out.append(title)
+        out.append("")
+        if not rows:
+            out.append("_(none)_")
+            out.append("")
+            continue
+        for ack in sorted(rows, key=lambda a: a.line_no):
+            gm = ack.gap_match
+            audit = ack.audit or {}
+            family_key = audit.get("family_key", "")
+            out.append(
+                f"- **line {ack.line_no}** family=`{family_key}` "
+                f"source={gm.get('source_type')}:{gm.get('source_name')} "
+                f"primitive=`{gm.get('primitive')}` "
+                f"timing={gm.get('timing_code')} reason=`{gm.get('reason')}`"
+            )
+            if ack.evidence:
+                kws = ack.evidence.get("anchor_keywords", []) or []
+                kw_str = ", ".join(kws) if kws else "(none)"
+                desc = str(ack.evidence.get("desc_quote", ""))[:80]
+                out.append(
+                    f"    - evidence: {ack.evidence.get('source_table')}[{ack.evidence.get('source_id')}]"
+                    f" anchors=[{kw_str}] desc={desc!r}"
+                )
+            if ack.weak_reason:
+                out.append(f"    - weak_reason: {ack.weak_reason}")
+            if ack.probe_summary:
+                out.append(f"    - probe_summary: {ack.probe_summary}")
+            if ack.ignored_reason:
+                out.append(f"    - ignored_reason: {ack.ignored_reason}")
+            matches = ack.expected_canonical_keys
+            out.append(f"    - matched gap rows ({len(matches)}):")
+            for key in matches:
+                out.append(f"        - `{key}`")
+            if ack.note:
+                out.append(f"    - note: {ack.note}")
+        out.append("")
+    return out
+
+
+def render_markdown(families: list[dict], acks: list[Acknowledgement] | None = None) -> str:
     lines: list[str] = []
     lines.append("# Effect Family Audit\n")
     lines.append(
@@ -738,6 +808,9 @@ def render_markdown(families: list[dict]) -> str:
     for status in sorted(by_status):
         lines.append(f"- `{status}`: {by_status[status]}")
     lines.append("")
+
+    if acks is not None:
+        lines.extend(_render_ack_sections(acks))
     for f in families:
         lines.append(f"## `{f['family_key']}` — {f['source_table']}")
         lines.append("")
@@ -779,18 +852,38 @@ def render_markdown(families: list[dict]) -> str:
 # ── CLI ───────────────────────────────────────────────────────────────────
 
 
+def _build_ack_payload(families: list[dict]) -> list[Acknowledgement]:
+    """Load + strictly validate acknowledgements against the family catalog.
+
+    Family keys from the freshly-built ``families`` list are passed to the
+    loader so a typo in ``audit.family_key`` is caught here, not at the
+    `effect_gaps` cross-check phase.
+    """
+    known_family_keys = {f["family_key"] for f in families}
+    return load_acknowledgements(known_family_keys=known_family_keys)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",
         action="store_true",
-        help="exit 1 if on-disk catalog differs from a fresh build",
+        help="exit 1 if on-disk catalog differs from a fresh build "
+        "or acknowledgements fail loader/schema validation",
     )
     args = parser.parse_args(argv)
 
     families = build_families()
     new_jsonl = render_jsonl(families)
-    new_md = render_markdown(families)
+
+    # Acknowledgements are validated unconditionally — any schema error or
+    # direct-reference mismatch surfaces before either write or --check.
+    try:
+        acks = _build_ack_payload(families)
+    except RuntimeError as exc:
+        sys.stderr.write(f"acknowledgements failed validation: {exc}\n")
+        return 1
+    new_md = render_markdown(families, acks)
 
     if args.check:
         return _check(new_jsonl, new_md)
@@ -800,6 +893,7 @@ def main(argv: list[str] | None = None) -> int:
     CATALOG_MD.write_text(new_md, encoding="utf-8")
     print(f"effect_families.jsonl: {len(families)} families -> {CATALOG_JSONL}")
     print(f"effect_family_audit.md -> {CATALOG_MD}")
+    print(f"acknowledgements: {len(acks)} rows validated")
     return 0
 
 
