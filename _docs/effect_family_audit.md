@@ -241,12 +241,12 @@ Total families: **177**
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|effect_1004076|11|effect_type_1_compound|fc1ac6ff37b9`
-    - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
+    - note: EFFECT_CONF[1004076] editor_name "驱散蓄力" — not exchange-moves semantic. See _docs/phase5c_ii_cuxu_family_audit.md.
 - **line 47** family=`buff_conf_direct:prefix_2003` source=skill:隐藏条款 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|prefix_2003|11|prefix_2003_unmapped|6ccb1e82a095`
-    - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
+    - note: BUFF_CONF[20030330] editor_name "免疫积蓄" — not exchange-moves semantic. See _docs/phase5c_ii_cuxu_family_audit.md.
 - **line 48** family=`buff_conf_direct:prefix_2040` source=skill:龙之利爪 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100160] anchors=[%] desc='<desc_id=1007>蓄力</>，造成物伤并吸血50%。'
     - matched gap rows (1):
