@@ -5,6 +5,34 @@ from __future__ import annotations
 import sqlite3
 
 
+def assert_no_kernel_noop_rows(conn: sqlite3.Connection) -> None:
+    """Reject any ``skill_effects`` / ``ability_effects`` row with ``tag_code = 0``.
+
+    H_NOOP (handler index 0) is the kernel-side dispatch sentinel —
+    decoders must never produce it.  This is a defensive invariant
+    check; if it ever fires, a decoder has regressed.
+    """
+    skill_rows = conn.execute(
+        "SELECT s.name FROM skill_effects se JOIN skills s ON s.id = se.skill_id "
+        "WHERE se.tag_code = 0 LIMIT 5"
+    ).fetchall()
+    ability_rows = conn.execute(
+        "SELECT a.name FROM ability_effects ae JOIN abilities a ON a.id = ae.ability_id "
+        "WHERE ae.tag_code = 0 LIMIT 5"
+    ).fetchall()
+    if not skill_rows and not ability_rows:
+        return
+    details = []
+    if skill_rows:
+        details.append("skills=" + ",".join(r[0] for r in skill_rows))
+    if ability_rows:
+        details.append("abilities=" + ",".join(r[0] for r in ability_rows))
+    raise RuntimeError(
+        "kernel noop rows leaked into runtime tables (tag_code=0); "
+        + "; ".join(details)
+    )
+
+
 def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
     rows = conn.execute(
         """

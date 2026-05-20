@@ -241,6 +241,12 @@ def _build_seed(h: dict[str, int]) -> tuple[dict[int, int], dict[int, int]]:
                 continue
             rec = json.loads(raw)
             handler_name = rec.get("handler")
+            if handler_name == "H_NOOP":
+                raise RuntimeError(
+                    f"prefix_handlers.jsonl line {line_no}: ``handler: H_NOOP`` "
+                    f"is forbidden — drop the row so the buff prefix surfaces "
+                    f"as an audit gap, or add a real handler"
+                )
             if handler_name not in h:
                 raise RuntimeError(
                     f"prefix_handlers.jsonl line {line_no}: unknown handler "

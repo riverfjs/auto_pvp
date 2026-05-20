@@ -1,4 +1,7 @@
-"""Pak-effect classification — pak-first, no heuristics.
+"""Pak-effect classification — pak-first, no H_NOOP at the boundary.
+
+Each decoder returns ``list[EmitOutcome | GapOutcome]`` (never H_NOOP
+tuples).  See :mod:`.outcomes` for the three-state contract.
 
 Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 
@@ -8,10 +11,10 @@ Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
   via :func:`classify_buff_handler` (exact ``buff_base_id`` → prefix
   family fallback).  Single-candidate effects are deterministic — pak
   literally wrote one buff to apply.
-* ``type=1`` with multiple buff_ids in ``effect_param`` and any ``type=3``
-  state-change row require human-verified semantics: see
-  :mod:`.exact_decoders`.  Anything not in that table surfaces as an
-  audit gap rather than being heuristically guessed.
+* ``type=1`` with multiple buff_ids and any ``type=3`` row require
+  human-verified semantics: see :mod:`.exact_decoders`.  Anything not in
+  that table surfaces as a :class:`GapOutcome` rather than being
+  heuristically guessed.
 
 ``classify_buff_handler`` (exact ``buff_base_id`` then prefix) is also
 used by :func:`decode_buff_direct` when a skill_result references a
@@ -24,15 +27,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from roco.generated.handler_indices import H_DAMAGE, H_NOOP
+from roco.generated.handler_indices import H_DAMAGE
 
+from roco.compiler.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler.effect_codegen.params import (
     extract_int_list,
     pack_handler_params,
     safe_int,
 )
-
-
 
 
 def count_buff_repeats(params_raw: list, buff_id: int) -> int:
@@ -67,20 +69,24 @@ PREFIX_HANDLER_MAP, BASE_ID_HANDLER_MAP = _load_handler_maps()
 
 
 def classify_buff_handler(buff_id: int, buff_conf: dict[int, dict]) -> int:
-    """Map a buff_id to a handler index via exact-base-id then prefix lookup."""
+    """Map a buff_id to a handler index via exact-base-id then prefix lookup.
+
+    Returns 0 when no mapping exists; callers must convert 0 into a
+    :class:`GapOutcome` rather than emitting a runtime row.
+    """
     rec = buff_conf.get(buff_id)
     if rec is None:
-        return H_NOOP
+        return 0
     base_ids = rec.get("buff_base_ids") or []
     for bid in base_ids:
         if bid and bid in BASE_ID_HANDLER_MAP:
             return BASE_ID_HANDLER_MAP[bid]
     for bid in base_ids:
         if bid:
-            h = PREFIX_HANDLER_MAP.get(bid // 1000, H_NOOP)
-            if h != H_NOOP:
+            h = PREFIX_HANDLER_MAP.get(bid // 1000, 0)
+            if h:
                 return h
-    return H_NOOP
+    return 0
 
 
 def collect_buff_candidates(
@@ -89,9 +95,9 @@ def collect_buff_candidates(
 ) -> list[int]:
     """Return every distinct buff_id referenced by an ``effect_param`` payload.
 
-    Used by :mod:`.audit` to report which buffs a dropped effect referenced;
-    not used by classification (the structural decoder requires exactly one
-    candidate, the exact-decoder table covers everything else).
+    Used by :mod:`.audit` to attach metadata to gap rows; not used by
+    classification (the structural decoder requires exactly one candidate,
+    the exact-decoder table covers everything else).
     """
     seen: list[int] = []
     for idx in range(len(params_raw)):
@@ -107,56 +113,157 @@ def _single_buff(params_raw: list, buff_conf: dict[int, dict]) -> int:
     return candidates[0] if len(candidates) == 1 else 0
 
 
+def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -> GapOutcome:
+    """Build a GapOutcome for a buff classification miss.
+
+    ``classify_buff_handler`` returned 0 — figure out *why* and pick a
+    precise reason so the audit row points at the actual coverage hole
+    (missing base_id mapping, intentional-noop-removed prefix, unseeded
+    prefix, or empty buff record).
+    """
+    rec = buff_conf.get(buff_id)
+    if rec is None:
+        return GapOutcome(
+            primitive=f"buff_{buff_id}",
+            effect_id=effect_id,
+            buff_id=buff_id,
+            reason="buff_not_in_pak",
+            params={"effect_id": effect_id, "buff_id": buff_id},
+        )
+    base_ids = [int(b) for b in (rec.get("buff_base_ids") or []) if b]
+    if not base_ids:
+        return GapOutcome(
+            primitive=f"buff_{buff_id}",
+            effect_id=effect_id,
+            buff_id=buff_id,
+            reason="buff_no_base_ids",
+            params={"effect_id": effect_id, "buff_id": buff_id, "buff_base_ids": []},
+        )
+    # base_id present but neither exact nor prefix matched.
+    # Report the first unmapped prefix as the primitive.
+    for bid in base_ids:
+        pfx = bid // 1000
+        if pfx not in PREFIX_HANDLER_MAP and bid not in BASE_ID_HANDLER_MAP:
+            return GapOutcome(
+                primitive=f"prefix_{pfx}",
+                effect_id=effect_id,
+                buff_id=buff_id,
+                reason=f"prefix_{pfx}_unmapped",
+                params={
+                    "effect_id": effect_id,
+                    "buff_id": buff_id,
+                    "buff_base_ids": base_ids,
+                    "prefixes": sorted({b // 1000 for b in base_ids}),
+                },
+            )
+    # All prefixes are in the map but only as 0 (no longer happens after
+    # we drop H_NOOP entries from prefix_handlers.jsonl) — keep a defensive
+    # fall-through.
+    return GapOutcome(
+        primitive=f"buff_{buff_id}",
+        effect_id=effect_id,
+        buff_id=buff_id,
+        reason="buff_unclassified",
+        params={
+            "effect_id": effect_id,
+            "buff_id": buff_id,
+            "buff_base_ids": base_ids,
+            "prefixes": sorted({b // 1000 for b in base_ids}),
+        },
+    )
+
+
 def decode_effect(
     effect_id: int,
     effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
-) -> list[tuple[int, int, int, int, int, int]]:
-    """Decode one ``EFFECT_CONF`` row into ``(handler, p0..p3, raw_stacks)`` tuples.
+) -> list[EmitOutcome | GapOutcome]:
+    """Decode one ``EFFECT_CONF`` row into outcomes.
 
-    Multi-candidate ``type=1`` effects and every ``type=3`` row must be
-    listed in :mod:`.exact_decoders` to produce an executable row; this
-    function intentionally returns H_NOOP for them so the audit pipeline
-    surfaces the coverage gap rather than guessing.
+    Returns at least one outcome.  ``type=1`` no-buff, compound, and every
+    ``type=3`` row produce a :class:`GapOutcome`; the structural ``type=1``
+    single-buff path and ``type=2`` damage produce :class:`EmitOutcome`.
     """
     rec = effect_conf.get(effect_id)
     if rec is None:
-        return [(H_NOOP, effect_id, 0, 0, 0, 1)]
+        return [GapOutcome(
+            primitive=f"effect_{effect_id}",
+            effect_id=effect_id,
+            buff_id=None,
+            reason="effect_id_not_in_pak",
+            params={"effect_id": effect_id},
+        )]
 
     etype = rec.get("type", 0)
     params_raw = rec.get("effect_param") or rec.get("params") or []
 
     if etype == 1:
-        buff_id = _single_buff(params_raw, buff_conf)
-        if buff_id:
+        candidates = collect_buff_candidates(params_raw, buff_conf)
+        if len(candidates) == 1:
+            buff_id = candidates[0]
             h = classify_buff_handler(buff_id, buff_conf)
-            raw_stacks = count_buff_repeats(params_raw, buff_id)
-            p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf, raw_stacks)
-            return [(h, p0, p1, p2, p3, raw_stacks)]
-        return [(H_NOOP, safe_int(params_raw, 0), safe_int(params_raw, 1), 0, 0, 1)]
+            if h:
+                raw_stacks = count_buff_repeats(params_raw, buff_id)
+                p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf, raw_stacks)
+                return [EmitOutcome(h, p0, p1, p2, p3, raw_stacks)]
+            return [_buff_gap(effect_id, buff_id, buff_conf)]
+        if len(candidates) > 1:
+            return [GapOutcome(
+                primitive=f"effect_{effect_id}",
+                effect_id=effect_id,
+                buff_id=candidates[0],  # first candidate for metadata only
+                reason="effect_type_1_compound",
+                params={
+                    "effect_id": effect_id,
+                    "buff_candidates": candidates,
+                },
+            )]
+        return [GapOutcome(
+            primitive=f"effect_{effect_id}",
+            effect_id=effect_id,
+            buff_id=None,
+            reason="effect_type_1_no_buff",
+            params={
+                "effect_id": effect_id,
+                "param_head": [safe_int(params_raw, 0), safe_int(params_raw, 1)],
+            },
+        )]
 
     if etype == 2:
         mode = safe_int(params_raw, 0)
         power = safe_int(params_raw, 2)
         self_damage = safe_int(params_raw, 6)
-        return [(H_DAMAGE, mode, power, self_damage, 0, 1)]
+        return [EmitOutcome(H_DAMAGE, mode, power, self_damage, 0, 1)]
 
     if etype == 3:
-        # All state-change rows must be in exact_decoders; default → gap.
-        return [(H_NOOP, effect_id, 0, 0, 0, 1)]
+        return [GapOutcome(
+            primitive=f"effect_{effect_id}",
+            effect_id=effect_id,
+            buff_id=None,
+            reason="effect_type_3_state_change",
+            params={"effect_id": effect_id},
+        )]
 
-    return [(H_NOOP, effect_id, etype, 0, 0, 1)]
+    return [GapOutcome(
+        primitive=f"effect_{effect_id}",
+        effect_id=effect_id,
+        buff_id=None,
+        reason=f"effect_type_{etype}_unknown",
+        params={"effect_id": effect_id, "type": etype},
+    )]
 
 
 def decode_buff_direct(
     buff_id: int,
     buff_conf: dict[int, dict],
-) -> list[tuple[int, int, int, int, int, int]]:
+) -> list[EmitOutcome | GapOutcome]:
     """Decode a direct ``BUFF_CONF`` reference (not via ``EFFECT_CONF``).
 
     No ``effect_param`` to inspect, so ``raw_stacks`` defaults to 1; the
     caller supplies ``buff_group_level`` from the skill_result entry.
     """
     h = classify_buff_handler(buff_id, buff_conf)
-    p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf)
-    return [(h, p0, p1, p2, p3, 1)]
+    if h:
+        p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf)
+        return [EmitOutcome(h, p0, p1, p2, p3, 1)]
+    return [_buff_gap(None, buff_id, buff_conf)]

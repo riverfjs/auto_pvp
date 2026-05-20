@@ -160,6 +160,33 @@ def _insert_gaps(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
     return len(gap_rows)
 
 
+def _ignored_row(source_type: str, source_name: str, entry: dict) -> tuple:
+    return (
+        source_type,
+        source_name,
+        str(entry.get("primitive", "")),
+        entry.get("effect_id"),
+        entry.get("buff_id"),
+        int(entry.get("effect_order", 0)),
+        entry.get("timing_code"),
+        str(entry.get("reason", "")),
+        str(entry.get("evidence", "")),
+        str(entry.get("pak_table", "")),
+    )
+
+
+def _insert_ignored(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
+    ignored_rows = list(rows)
+    if ignored_rows:
+        conn.executemany(
+            "INSERT INTO ignored_effects "
+            "(source_type, source_name, primitive, effect_id, buff_id, effect_order, timing_code, reason, evidence, pak_table) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ignored_rows,
+        )
+    return len(ignored_rows)
+
+
 def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> dict[str, int]:
     records = _records(abilities, "ability")
     rows = [
@@ -179,6 +206,7 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
     lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
     effect_rows: list[tuple] = []
     gap_rows: list[tuple] = []
+    ignored_rows: list[tuple] = []
     for record in records:
         name = str(record.get("name", "")).strip()
         if not name:
@@ -187,6 +215,12 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
         for order, row_tuple in enumerate(record.get("effect_rows", []) or []):
             # row_tuple = (handler_idx, timing, target, rate, p0, p1, p2, p3)
             handler_idx = row_tuple[0]
+            if handler_idx <= 0:
+                raise RuntimeError(
+                    f"ability '{name}' produced an effect row with "
+                    f"tag_code={handler_idx} — H_NOOP / 0 is forbidden at the "
+                    f"compile boundary; investigate the decoder"
+                )
             timing = row_tuple[1]
             target = row_tuple[2]
             rate = row_tuple[3]
@@ -201,6 +235,8 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
                 gap.get("params") or {},
                 str(gap.get("reason", "")),
             ))
+        for entry in record.get("ignored_effects", []) or []:
+            ignored_rows.append(_ignored_row("ability", name, entry))
     if effect_rows:
         conn.executemany(
             "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
@@ -208,9 +244,11 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
             effect_rows,
         )
     inserted_gaps = _insert_gaps(conn, gap_rows)
+    inserted_ignored = _insert_ignored(conn, ignored_rows)
     print(f"  abilities: {len(lookup)} inserted")
     print(f"  ability_effects: {len(effect_rows)} inserted")
     print(f"  ability effect_gaps: {inserted_gaps} inserted")
+    print(f"  ability ignored_effects: {inserted_ignored} inserted")
     return lookup
 
 
@@ -239,12 +277,19 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
     lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     effect_rows: list[tuple] = []
     gap_rows: list[tuple] = []
+    ignored_rows: list[tuple] = []
     for record in records:
         name = str(record["name"])
         owner_id = lookup[name]
         for order, row_tuple in enumerate(record.get("effect_rows", []) or []):
             # row_tuple = (handler_idx, timing, target, rate, p0, p1, p2, p3)
             handler_idx = row_tuple[0]
+            if handler_idx <= 0:
+                raise RuntimeError(
+                    f"skill '{name}' produced an effect row with "
+                    f"tag_code={handler_idx} — H_NOOP / 0 is forbidden at the "
+                    f"compile boundary; investigate the decoder"
+                )
             timing = row_tuple[1]
             target = row_tuple[2]
             rate = row_tuple[3]
@@ -259,6 +304,8 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
                 gap.get("params") or {},
                 str(gap.get("reason", "")),
             ))
+        for entry in record.get("ignored_effects", []) or []:
+            ignored_rows.append(_ignored_row("skill", name, entry))
     if effect_rows:
         conn.executemany(
             "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
@@ -266,9 +313,11 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             effect_rows,
         )
     inserted_gaps = _insert_gaps(conn, gap_rows)
+    inserted_ignored = _insert_ignored(conn, ignored_rows)
     print(f"  skills: {len(lookup)} inserted")
     print(f"  skill_effects: {len(effect_rows)} inserted")
     print(f"  skill effect_gaps: {inserted_gaps} inserted")
+    print(f"  skill ignored_effects: {inserted_ignored} inserted")
     return lookup
 
 
@@ -551,6 +600,10 @@ def import_teams(
         skill_rows,
     )
     refresh_effect_gap_usage(conn)
+    # ``assert_no_kernel_noop_rows`` is unconditional — H_NOOP leakage into
+    # runtime tables is always a bug, regardless of --allow-used-gaps.
+    from roco.data.validation import assert_no_kernel_noop_rows
+    assert_no_kernel_noop_rows(conn)
     if fail_used_gaps:
         from roco.data.validation import assert_no_blocking_effect_gaps, assert_no_missing_leader_transforms
         assert_no_missing_leader_transforms(conn)

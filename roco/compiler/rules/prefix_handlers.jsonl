@@ -1,5 +1,4 @@
 {"prefix": 2001, "handler": "H_SELF_BUFF", "alias": "STAT_MOD"}
-{"prefix": 2003, "handler": "H_NOOP", "alias": "IMMUNITY_LOCK"}
 {"prefix": 2004, "handler": "H_SELF_BUFF", "alias": "LOCK_SWITCH"}
 {"prefix": 2005, "handler": "H_LEECH", "alias": "LEECH"}
 {"prefix": 2006, "handler": "H_SELF_BUFF", "alias": "BOSS_STUN"}
@@ -24,7 +23,6 @@
 {"prefix": 2037, "handler": "H_PASSIVE_ENERGY_REDUCE", "alias": "EFFICIENCY"}
 {"prefix": 2038, "handler": "H_DAMAGE_REDUCTION", "alias": "SURVIVAL"}
 {"prefix": 2039, "handler": "H_SELF_BUFF", "alias": "DUCK"}
-{"prefix": 2040, "handler": "H_NOOP", "alias": "DETECTION"}
 {"prefix": 2041, "handler": "H_SELF_BUFF", "alias": "HP_CONDITIONAL"}
 {"prefix": 2042, "handler": "H_DAMAGE_REDUCTION", "alias": "NON_SE_REDUCE"}
 {"prefix": 2043, "handler": "H_SELF_BUFF", "alias": "QUICK_START"}
@@ -39,7 +37,6 @@
 {"prefix": 2054, "handler": "H_LIFE_DRAIN", "alias": "DRAIN"}
 {"prefix": 2056, "handler": "H_SELF_BUFF", "alias": "SKILL_COPY"}
 {"prefix": 2058, "handler": "H_FREEZE", "alias": "FREEZE_STATUS"}
-{"prefix": 2062, "handler": "H_NOOP", "alias": "COOLDOWN"}
 {"prefix": 2063, "handler": "H_SELF_BUFF", "alias": "CHAR_SPECIFIC_A"}
 {"prefix": 2064, "handler": "H_SELF_BUFF", "alias": "CONDITIONAL_TRIGGER"}
 {"prefix": 2067, "handler": "H_SELF_BUFF", "alias": "COUNTER_REWARD"}

@@ -385,3 +385,79 @@ def test_no_legacy_mark_engineering_name_guard():
                 if legacy in text or legacy.upper() in text:
                     offenders.append(str(path.relative_to(root)))
     assert offenders == []
+
+
+def test_used_gap_fails_strict_validation(tmp_path: Path):
+    """A used + unsupported effect must trip ``assert_no_blocking_effect_gaps``."""
+    import sqlite3
+    from roco.data.validation import assert_no_blocking_effect_gaps
+
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    conn.execute("INSERT INTO abilities (name, description) VALUES (?, ?)", ("某ability", "desc"))
+    conn.execute(
+        "INSERT INTO effect_gaps (source_type, source_name, primitive, params_json, reason, used_count) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        ("ability", "某ability", "effect_9999", "{}", "effect_type_3_state_change", 5),
+    )
+    with pytest.raises(RuntimeError, match="unclassified effect gaps"):
+        assert_no_blocking_effect_gaps(conn)
+    conn.close()
+
+
+def test_kernel_noop_row_fails_validation(tmp_path: Path):
+    """Defensive: ``assert_no_kernel_noop_rows`` rejects tag_code=0 rows.
+
+    Inserts a synthetic tag_code=0 row directly into ``skill_effects`` and
+    confirms the validator surfaces it.  Catches regressions where a
+    decoder bug lets H_NOOP=0 leak into runtime tables.
+    """
+    from roco.data.validation import assert_no_kernel_noop_rows
+
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    conn.execute(
+        "INSERT INTO skills (name, element_id, category_code, category_name, energy, power, flags) "
+        "VALUES (?, 0, 1, '物攻', 1, 50, 0)",
+        ("某skill",),
+    )
+    sid = conn.execute("SELECT id FROM skills WHERE name = ?", ("某skill",)).fetchone()[0]
+    conn.execute(
+        "INSERT INTO skill_effects (skill_id, timing_code, tag_code, params_json, sort_order) "
+        "VALUES (?, 11, 0, '{}', 0)",
+        (sid,),
+    )
+    with pytest.raises(RuntimeError, match="kernel noop rows leaked"):
+        assert_no_kernel_noop_rows(conn)
+    conn.close()
+
+
+def test_skill_effects_no_tag_code_zero_invariant(tmp_path: Path):
+    """After a clean build (allowing used gaps), no runtime row may carry tag_code=0.
+
+    Builds a tmp DB rather than reading the repo's _db so this test is
+    independent of stale on-disk artifacts.  Counts both skill_effects and
+    ability_effects.
+    """
+    import sqlite3
+    from roco.data.parse_pak import PakData, build_skills, build_abilities, _desc_notes, DEFAULT_PAK_DATA_DIR
+    from roco.compiler.effect_codegen import PakTables
+    from roco.data.import_db import import_abilities, import_skills
+
+    if not (DEFAULT_PAK_DATA_DIR / "BinData" / "EFFECT_CONF.json").exists():
+        pytest.skip("pak data not extracted")
+
+    data = PakData(DEFAULT_PAK_DATA_DIR)
+    pak_tables = PakTables(data.root)
+    desc_notes = _desc_notes(data.desc_note_conf)
+    skills, _ = build_skills(data, desc_notes, pak_tables)
+    abilities, _ = build_abilities(data, desc_notes, pak_tables)
+
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    import_abilities(conn, abilities)
+    import_skills(conn, skills)
+    conn.commit()
+
+    skill_noops = conn.execute("SELECT COUNT(*) FROM skill_effects WHERE tag_code = 0").fetchone()[0]
+    ability_noops = conn.execute("SELECT COUNT(*) FROM ability_effects WHERE tag_code = 0").fetchone()[0]
+    conn.close()
+    assert skill_noops == 0, f"{skill_noops} skill_effects rows have tag_code=0"
+    assert ability_noops == 0, f"{ability_noops} ability_effects rows have tag_code=0"

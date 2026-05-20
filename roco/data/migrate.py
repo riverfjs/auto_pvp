@@ -131,6 +131,24 @@ CREATE TABLE IF NOT EXISTS effect_gaps (
 );
 CREATE INDEX IF NOT EXISTS idx_effect_gaps_source ON effect_gaps(source_type, source_name);
 
+-- effect_id / buff_id are both nullable because the decoder input may be
+-- an EFFECT_CONF id (1052006) or a direct BUFF_CONF id (20400420 天光).
+-- ``primitive`` (effect_<id> / buff_<id> / prefix_<n>) is the stable key.
+CREATE TABLE IF NOT EXISTS ignored_effects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_type TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    primitive TEXT NOT NULL,
+    effect_id INTEGER,
+    buff_id INTEGER,
+    effect_order INTEGER NOT NULL,
+    timing_code INTEGER,
+    reason TEXT NOT NULL DEFAULT '',
+    evidence TEXT NOT NULL DEFAULT '',
+    pak_table TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_ignored_effects_source ON ignored_effects(source_type, source_name);
+
 CREATE TABLE IF NOT EXISTS statuses (
     id INTEGER PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
@@ -250,6 +268,7 @@ DROP_ORDER = (
     "mark_sources",
     "marks",
     "statuses",
+    "ignored_effects",
     "effect_gaps",
     "ability_effects",
     "skill_effects",
