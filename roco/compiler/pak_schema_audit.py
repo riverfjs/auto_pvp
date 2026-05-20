@@ -43,6 +43,7 @@ PAK_LUA = ROOT / "pak-public-kit" / "output" / "scripts" / "lua" / "Data" / "tin
 RULES_DIR = ROOT / "roco" / "compiler" / "rules"
 EXACT_JSONL = RULES_DIR / "exact_effects.jsonl"
 PREFIX_JSONL = RULES_DIR / "prefix_handlers.jsonl"
+BUFFBASE_ORDER_JSONL = RULES_DIR / "buffbase_order_handlers.jsonl"
 EFFECT_FAMILIES_JSONL = RULES_DIR / "effect_families.jsonl"
 CANONICAL_DIR = ROOT / "_data" / "canonical"
 AUDIT_MD = ROOT / "_docs" / "pak_schema_audit.md"
@@ -207,6 +208,22 @@ def _load_prefix_rules() -> tuple[dict[int, dict], list[dict]]:
     return by_prefix, overrides
 
 
+def _load_buffbase_order_rules() -> dict[int, dict]:
+    """Return ``{buffbase_order: rule_dict}`` from the 7C migration file."""
+    out: dict[int, dict] = {}
+    if not BUFFBASE_ORDER_JSONL.exists():
+        return out
+    with BUFFBASE_ORDER_JSONL.open("r", encoding="utf-8") as fp:
+        for line in fp:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            rec = json.loads(line)
+            if "buffbase_order" in rec:
+                out[int(rec["buffbase_order"])] = rec
+    return out
+
+
 # ── EFFECT_CONF families ──────────────────────────────────────────
 
 
@@ -272,15 +289,22 @@ def buffbase_families(
     buffbase_conf: dict[int, dict],
     buff_conf: dict[int, dict],
     prefix_rules: dict[int, dict],
+    buffbase_order_rules: dict[int, dict] | None = None,
 ) -> list[dict]:
     """One row per ``buffbase_order``.
 
     For each order the report includes: how many BUFFBASE_CONF records
     share it, their ``buffbase_param`` slot-count distribution, the
     distribution of ``trigger_type`` (numeric) and which prefix bucket
-    each base_id lives in.  Cross-references the prefix_handlers.jsonl
-    rule (if any) that nominally covers this order via its prefix.
+    each base_id lives in.  Cross-references both rule files:
+
+    * ``covering_buffbase_order_rule`` — the post-7C primary axis;
+      direct lookup in ``buffbase_order_handlers.jsonl``.
+    * ``covering_prefix_rule`` — the legacy axis; reports the dominant
+      prefix that nominally covers this order.
     """
+    if buffbase_order_rules is None:
+        buffbase_order_rules = {}
     by_order: defaultdict[int, list[tuple[int, dict]]] = defaultdict(list)
     for bid, rec in buffbase_conf.items():
         order = int(rec.get("buffbase_order", 0))
@@ -327,6 +351,7 @@ def buffbase_families(
             for _, r in entries
             if r.get("editor_name")
         })
+        covering_order = buffbase_order_rules.get(order)
         out.append({
             "buffbase_order": order,
             "count": len(entries),
@@ -334,6 +359,14 @@ def buffbase_families(
             "trigger_types": dict(sorted(trigger_types.items())),
             "prefix_distribution": dict(sorted(prefix_distribution.items())),
             "referencing_buff_ids_count": len(referencing_buff_ids),
+            "covering_buffbase_order_rule": (
+                {
+                    "handler": covering_order["handler"],
+                    "alias": covering_order.get("alias"),
+                }
+                if covering_order
+                else None
+            ),
             "covering_prefix_rule": covering,
             "editor_name_samples": names[:5],
         })
@@ -511,29 +544,37 @@ def render_markdown(
     lines.append("## 3. BUFFBASE_CONF families")
     lines.append("")
     lines.append(
-        f"Total `buffbase_order` families: **{len(buffbase_fams)}**. "
-        "`covering prefix-rule` is the dominant `prefix_handlers.jsonl` "
-        "prefix that contains base_ids of this order; "
-        "`share` is `count_of_dominant_prefix_in_order / total_base_ids_in_order`."
+        f"Total `buffbase_order` families: **{len(buffbase_fams)}**.  "
+        "`buffbase_order rule` is the post-7C primary axis "
+        "(`buffbase_order_handlers.jsonl`); `prefix rule` is the legacy "
+        "axis kept only for the 3 mixed prefixes whose buffbase_order "
+        "distribution is not 100% concentrated."
     )
     lines.append("")
     lines.append(
-        "| order | count | param slots | trigger_types | covering prefix-rule | refs | editor_name samples |"
+        "| order | count | param slots | trigger_types | buffbase_order rule | prefix rule (legacy) | refs | editor_name samples |"
     )
-    lines.append("|---:|---:|---|---|---|---:|---|")
+    lines.append("|---:|---:|---|---|---|---|---:|---|")
     for b in buffbase_fams:
         slots = _fmt_dict_inline(b["param_slot_count"])
         tt = _fmt_dict_inline(b["trigger_types"])
-        rule = b["covering_prefix_rule"]
-        if rule:
-            rule_str = f"`{rule['prefix']}`→`{rule['handler']}` ({rule['share']})"
+        order_rule = b["covering_buffbase_order_rule"]
+        if order_rule:
+            order_rule_str = f"`{order_rule['handler']}`"
+            if order_rule.get("alias"):
+                order_rule_str += f" ({order_rule['alias']})"
         else:
-            rule_str = "—"
+            order_rule_str = "—"
+        pfx_rule = b["covering_prefix_rule"]
+        if pfx_rule:
+            pfx_rule_str = f"`{pfx_rule['prefix']}`→`{pfx_rule['handler']}` ({pfx_rule['share']})"
+        else:
+            pfx_rule_str = "—"
         samples = ", ".join(b["editor_name_samples"][:3])
         lines.append(
             f"| **{b['buffbase_order']}** | {b['count']} | {slots} | "
-            f"{tt} | {rule_str} | {b['referencing_buff_ids_count']} | "
-            f"{samples} |"
+            f"{tt} | {order_rule_str} | {pfx_rule_str} | "
+            f"{b['referencing_buff_ids_count']} | {samples} |"
         )
     lines.append("")
 
@@ -637,7 +678,10 @@ def build_audit() -> str:
         effect_conf, skill_users, ability_users, catalog,
     )
     prefix_rules, _overrides = _load_prefix_rules()
-    bb_fams = buffbase_families(buffbase_conf, buff_conf, prefix_rules)
+    buffbase_order_rules = _load_buffbase_order_rules()
+    bb_fams = buffbase_families(
+        buffbase_conf, buff_conf, prefix_rules, buffbase_order_rules,
+    )
 
     exact_rules = _load_exact_rules()
     exact_debt = exact_rule_debt(exact_rules, effect_conf)

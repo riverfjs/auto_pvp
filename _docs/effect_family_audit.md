@@ -1730,7 +1730,7 @@ _(none)_
 - count: **82** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: P3剧情--驱散骨龙复活, npc挑战类恶魔狼规则-驱散, 净化伊里斯的噩梦1, 净化伊里斯的噩梦2, 净化伊里斯的噩梦3, 净化伊里斯的噩梦4, 净化小石头的噩梦1, 净化小石头的噩梦2, 净化小石头的噩梦3, 净化小石头的噩梦4
 - example_source_ids: [1004002, 1004005, 1004006, 1004046, 1004065]
-- coverage_breakdown: {'auto_structural_count': 22, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 59, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 70, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 11, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180200` 隐藏条款 — 与敌方交换携带的技能。
     - `7040610` 除厄 — 造成魔伤，驱散自己的减益。

@@ -1,9 +1,20 @@
 """Codegen for ``roco/generated/pak_ops.py``.
 
 Emits ``PAK_PREFIX_NAMES`` — debug/audit names for every pak buff prefix
-that appears in ``BUFF_CONF.json``.  Aliases come from
-``rules/prefix_handlers.jsonl``; unseen prefixes get a generic
-``PREFIX_<n>`` label so the table is exhaustive.
+that appears in ``BUFF_CONF.json``.  Aliases come from both rule files
+so the alias table stays exhaustive post-7C, when most prefixes
+migrated from ``prefix_handlers.jsonl`` to
+``buffbase_order_handlers.jsonl``:
+
+* Legacy axis: ``rules/prefix_handlers.jsonl`` — covers the few mixed
+  prefixes that did not migrate.
+* Pak axis: ``rules/buffbase_order_handlers.jsonl`` — aliases keyed by
+  ``buffbase_order``; mapped onto the nominal prefix via the
+  ``prefix = 2000 + buffbase_order`` identity that holds across all
+  current rules.
+
+Unseen prefixes get a generic ``PREFIX_<n>`` label so the table stays
+exhaustive.
 """
 
 from __future__ import annotations
@@ -17,13 +28,30 @@ PAK_DATA = ROOT / "pak-public-kit" / "output" / "data" / "BinData"
 GEN_DIR = ROOT / "roco" / "generated"
 RULES_DIR = ROOT / "roco" / "compiler" / "rules"
 PREFIX_SEED_PATH = RULES_DIR / "prefix_handlers.jsonl"
+BUFFBASE_ORDER_SEED_PATH = RULES_DIR / "buffbase_order_handlers.jsonl"
 PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
 
 
 def load_aliases() -> dict[int, str]:
-    """Read ``alias`` values for any record carrying both a ``prefix`` and
-    an ``alias`` field in ``prefix_handlers.jsonl``."""
+    """Collect prefix-display aliases from both rule files.
+
+    A ``buffbase_order_handlers.jsonl`` row's alias is associated with
+    the prefix ``2000 + buffbase_order`` (the structural identity that
+    holds across every current rule).  Legacy ``prefix_handlers.jsonl``
+    aliases override the buffbase_order ones when both refer to the
+    same prefix, since the mixed-prefix case is where the prefix axis
+    still owns the dispatch.
+    """
     aliases: dict[int, str] = {}
+    if BUFFBASE_ORDER_SEED_PATH.exists():
+        with BUFFBASE_ORDER_SEED_PATH.open("r", encoding="utf-8") as fp:
+            for raw in fp:
+                raw = raw.strip()
+                if not raw or raw.startswith("#"):
+                    continue
+                rec = json.loads(raw)
+                if "buffbase_order" in rec and rec.get("alias"):
+                    aliases[2000 + int(rec["buffbase_order"])] = rec["alias"]
     with PREFIX_SEED_PATH.open("r", encoding="utf-8") as fp:
         for raw in fp:
             raw = raw.strip()

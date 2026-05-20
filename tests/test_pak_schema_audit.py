@@ -185,16 +185,26 @@ def test_prefix_rule_debt_identity_universal(buffbase_conf):
     )
 
 
-def test_prefix_rule_debt_majority_clean(buffbase_conf):
-    """At least 90% of prefix rules reach 100% concentration.  Loose
-    sentinel — the current dataset has 88/91 clean, so this margin
-    catches a sudden regression while tolerating new prefixes with
-    minor outliers."""
+def test_prefix_rule_debt_only_mixed_remain(buffbase_conf):
+    """Post-7C: ``prefix_handlers.jsonl`` keeps only the 3 prefixes whose
+    buffbase_order distribution is *not* 100% concentrated; the 88 clean
+    prefixes have migrated to ``buffbase_order_handlers.jsonl``.
+
+    Regression guard: any prefix rule whose dominant order reaches 100%
+    concentration is migration debt and should be moved to the
+    buffbase_order axis.
+    """
     from roco.compiler.pak_schema_audit import _load_prefix_rules
     prefix_rules, _ = _load_prefix_rules()
     debt = prefix_rule_debt(prefix_rules, buffbase_conf)
-    clean = sum(1 for r in debt if r["clean_rewrite"])
-    assert clean / len(debt) >= 0.9
+    clean = [r for r in debt if r["clean_rewrite"]]
+    assert clean == [], (
+        f"prefix_handlers.jsonl has {len(clean)} 100%-clean prefix(es) — "
+        f"these should migrate to buffbase_order_handlers.jsonl: "
+        f"{[r['prefix'] for r in clean]}"
+    )
+    # The 3 known-mixed prefixes are the entire post-7C set.
+    assert {r["prefix"] for r in debt} == {2011, 2046, 2050}
 
 
 # ── render + check mode ───────────────────────────────────────────

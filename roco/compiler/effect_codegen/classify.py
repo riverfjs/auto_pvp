@@ -82,20 +82,43 @@ def count_buff_repeats(params_raw: list, buff_id: int) -> int:
 _MAP_PATH = Path(__file__).resolve().parents[2] / "generated" / "prefix_handler_map.json"
 
 
-def _load_handler_maps() -> tuple[dict[int, int], dict[int, int]]:
+def _load_handler_maps() -> tuple[dict[int, int], dict[int, int], dict[int, int]]:
+    """Load all three buff-handler lookup tables from the generated json.
+
+    Returns ``(prefix_map, base_id_map, base_id_via_order_map)``.  The
+    middle table holds hand-curated exact base_id overrides; the third
+    is the pak-axis pre-join of ``BUFFBASE_CONF.buffbase_order`` → handler
+    keyed by base_id; the first is the legacy prefix fallback covering
+    the few buffbase families whose order distribution is not 100%
+    concentrated under one prefix.
+    """
     if not _MAP_PATH.exists():
-        return {}, {}
+        return {}, {}, {}
     data = json.loads(_MAP_PATH.read_text(encoding="utf-8"))
     prefix_map = {int(k): v for k, v in data.get("prefix_map", {}).items()}
     base_id_map = {int(k): v for k, v in data.get("base_id_map", {}).items()}
-    return prefix_map, base_id_map
+    via_order_map = {
+        int(k): v for k, v in data.get("base_id_via_order_map", {}).items()
+    }
+    return prefix_map, base_id_map, via_order_map
 
 
-PREFIX_HANDLER_MAP, BASE_ID_HANDLER_MAP = _load_handler_maps()
+PREFIX_HANDLER_MAP, BASE_ID_HANDLER_MAP, BASE_ID_VIA_ORDER_MAP = _load_handler_maps()
 
 
 def classify_buff_handler(buff_id: int, buff_conf: dict[int, dict]) -> int:
-    """Map a buff_id to a handler index via exact-base-id then prefix lookup.
+    """Map a buff_id to a handler index via the three-layer axis stack.
+
+    Lookup order:
+
+    1. Exact ``base_id`` override (``BASE_ID_HANDLER_MAP``).  Hand-
+       curated single-row exceptions.
+    2. Pak-axis ``buffbase_order`` resolution
+       (``BASE_ID_VIA_ORDER_MAP``).  This is the primary axis post-7C —
+       most buff families dispatch here.
+    3. Legacy ``prefix`` map (``PREFIX_HANDLER_MAP``).  Only the few
+       prefixes whose buffbase_order distribution is not 100% concen-
+       trated remain at this layer; everything else has been migrated.
 
     Returns 0 when no mapping exists; callers must convert 0 into a
     :class:`GapOutcome` rather than emitting a runtime row.
@@ -107,6 +130,9 @@ def classify_buff_handler(buff_id: int, buff_conf: dict[int, dict]) -> int:
     for bid in base_ids:
         if bid and bid in BASE_ID_HANDLER_MAP:
             return BASE_ID_HANDLER_MAP[bid]
+    for bid in base_ids:
+        if bid and bid in BASE_ID_VIA_ORDER_MAP:
+            return BASE_ID_VIA_ORDER_MAP[bid]
     for bid in base_ids:
         if bid:
             h = PREFIX_HANDLER_MAP.get(bid // 1000, 0)

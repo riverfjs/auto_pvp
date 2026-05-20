@@ -48,11 +48,19 @@ def main() -> None:
 
     result = prefixes.write_prefix_handler_map(h)
     stats = result["stats"]
-    print(f"prefix_handler_map.json: {stats['mapped_prefixes']} mapped, "
-          f"{len(stats['unmapped_prefixes'])} unmapped (of {stats['total_prefixes']} seen) "
-          f"-> {prefixes.PREFIX_MAP_PATH}")
+    print(
+        f"prefix_handler_map.json: "
+        f"{stats['base_ids_via_order']} base_ids via buffbase_order axis + "
+        f"{stats['prefixes_in_legacy_map']} legacy prefix rules "
+        f"({len(stats['unmapped_prefixes'])} truly unmapped of "
+        f"{stats['total_prefixes']} seen) -> {prefixes.PREFIX_MAP_PATH}"
+    )
     if stats["unmapped_prefixes"]:
-        print(f"  unmapped: {stats['unmapped_prefixes']}", file=sys.stderr)
+        print(
+            f"  truly unmapped (no buffbase_order coverage either): "
+            f"{stats['unmapped_prefixes']}",
+            file=sys.stderr,
+        )
 
     rules = pak_rules.write_pak_rules_table()
     print(f"pak_rules.py: {len(rules)} constants -> {pak_rules.PAK_RULES_PATH}")
