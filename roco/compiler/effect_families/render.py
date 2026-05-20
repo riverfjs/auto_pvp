@@ -1,8 +1,19 @@
 """JSONL + markdown rendering and the on-disk drift check.
 
-Output is deliberately deterministic: ``render_jsonl`` sorts keys per
-record, ``render_markdown`` walks families in catalog order, and
-``_check`` does a literal text compare against the on-disk artifacts.
+Output is deliberately deterministic: :func:`render_jsonl` sorts keys per
+record, :func:`render_markdown` walks families in catalog order, and
+:func:`check_outputs` does a literal text compare against the on-disk
+artifacts.
+
+Public surface used by the CLI entry point:
+
+* :func:`render_jsonl`
+* :func:`render_markdown`
+* :func:`build_ack_payload`
+* :func:`check_outputs`
+
+``_render_ack_sections`` stays private — it is only called from
+``render_markdown``.
 """
 
 from __future__ import annotations
@@ -144,7 +155,7 @@ def render_markdown(families: list[dict], acks: list[Acknowledgement] | None = N
     return "\n".join(lines)
 
 
-def _build_ack_payload(families: list[dict]) -> list[Acknowledgement]:
+def build_ack_payload(families: list[dict]) -> list[Acknowledgement]:
     """Load + strictly validate acknowledgements against the family catalog.
 
     Family keys from the freshly-built ``families`` list are passed to the
@@ -155,7 +166,13 @@ def _build_ack_payload(families: list[dict]) -> list[Acknowledgement]:
     return load_acknowledgements(known_family_keys=known_family_keys)
 
 
-def _check(new_jsonl: str, new_md: str) -> int:
+def check_outputs(new_jsonl: str, new_md: str) -> int:
+    """Compare freshly-rendered output strings against the on-disk artifacts.
+
+    Returns 0 if both files exist and match byte-for-byte, 1 otherwise
+    (after writing a per-file drift report to stderr).  Used by the
+    ``--check`` mode of the CLI entry point.
+    """
     drift: list[str] = []
     for path, fresh in ((CATALOG_JSONL, new_jsonl), (CATALOG_MD, new_md)):
         if not path.exists():

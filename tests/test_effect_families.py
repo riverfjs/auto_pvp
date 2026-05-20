@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler import build_effect_families as bef
+from roco.compiler.build_effect_families import main as run_build_effect_families
+from roco.compiler.effect_families.classify import (
+    COVERAGE_STATUSES,
+    _buff_family_key,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,7 +96,7 @@ def test_effect_families_jsonl_well_formed(catalog, pak_tables):
             assert field in family, (
                 f"family {family.get('family_key')!r} missing field {field!r}"
             )
-        assert family["coverage_status"] in bef.COVERAGE_STATUSES, (
+        assert family["coverage_status"] in COVERAGE_STATUSES, (
             f"{family['family_key']}: unknown coverage_status "
             f"{family['coverage_status']!r}"
         )
@@ -194,7 +198,7 @@ def test_effect_families_buff_conf_direct_completeness(catalog, pak_tables):
     }
     expected_keys: set[str] = set()
     for bid in direct_buff_ids:
-        key, _ = bef._buff_family_key(bid, pak_tables.buff_conf)
+        key, _ = _buff_family_key(bid, pak_tables.buff_conf)
         expected_keys.add(key)
     actual = {f["family_key"] for f in catalog if f["source_table"] == "BUFF_CONF_DIRECT"}
     missing = expected_keys - actual
@@ -261,4 +265,4 @@ def test_effect_families_check_mode_clean():
     Equivalent to a PR-time gate: contributors must regenerate the catalog
     after touching anything that changes the build output.
     """
-    assert bef.main(["--check"]) == 0
+    assert run_build_effect_families(["--check"]) == 0

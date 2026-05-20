@@ -5,14 +5,23 @@
 build consumer / team indices, run the ability-flag cross-check, then
 emit one record per EFFECT_CONF (type, effect_order) bucket and one per
 BUFF_CONF_DIRECT prefix bucket.
+
+Helper functions live in sibling modules grouped by responsibility:
+
+* :mod:`.params`   — pak ``effect_param`` shape (``_collect_param_shape``)
+                     and the underlying ``_vec_from_param_slot``.
+* :mod:`.refs`     — cross-reference / desc-note extraction
+                     (``_cross_refs``, ``_desc_note_refs``,
+                     ``_sample_sorted``).
+* :mod:`.ignored`  — visual-only family detection (``_ignored_candidate``).
+* :mod:`.classify` — coverage bucketing per source id.
+* :mod:`.consumers`/ :mod:`.io` / :mod:`.validation` — preload helpers.
 """
 
 from __future__ import annotations
 
 import json
-import re
 from collections import defaultdict
-from typing import Any
 
 from roco.compiler.effect_codegen.ability_flags_from_effects import (
     load_ability_flags_from_effects,
@@ -26,251 +35,12 @@ from .classify import (
     _derive_coverage_status,
 )
 from .consumers import _build_consumer_index, _build_team_used
+from .ignored import _ignored_candidate
 from .io import _load_canonical, _load_desc_notes, _load_exact_rules
+from .params import _collect_param_shape, _vec_from_param_slot
 from .paths import PAK_DATA
+from .refs import _cross_refs, _desc_note_refs, _sample_sorted
 from .validation import _validate_ability_flag_rules
-
-
-# Editor-name keywords that mark a pak effect as visual-only candidate.
-# Only flags — Phase 1 does NOT promote these to ignored rules.
-VISUAL_KEYWORDS = ("动效", "飘字", "动画", "特效")
-
-DESC_ID_RE = re.compile(r"<desc_id=(\d+)>")
-
-
-def _vec_from_param_slot(slot: Any) -> tuple[int, ...]:
-    """pak slot → integer tuple.  Empty / non-list → ``()``."""
-    if isinstance(slot, dict):
-        inner = slot.get("params")
-        if isinstance(inner, list):
-            return tuple(int(x) for x in inner if isinstance(x, (int, float)))
-    if isinstance(slot, list):
-        return tuple(int(x) for x in slot if isinstance(x, (int, float)))
-    if isinstance(slot, (int, float)):
-        return (int(slot),)
-    return ()
-
-
-def _classify_slot_refs(
-    vectors: list[tuple[int, ...]],
-    effect_conf: dict[int, dict],
-    buff_conf: dict[int, dict],
-    skill_conf: dict[int, dict],
-) -> dict[str, int]:
-    """Per-slot count of how many values reference EFFECT/BUFF/SKILL ids."""
-    counts = {
-        "effect_ref_count": 0,
-        "buff_ref_count": 0,
-        "skill_ref_count": 0,
-        "non_ref_count": 0,
-    }
-    for vec in vectors:
-        for v in vec:
-            if v <= 0:
-                counts["non_ref_count"] += 1
-            elif v in effect_conf:
-                counts["effect_ref_count"] += 1
-            elif v in buff_conf:
-                counts["buff_ref_count"] += 1
-            elif v in skill_conf:
-                counts["skill_ref_count"] += 1
-            else:
-                counts["non_ref_count"] += 1
-    return counts
-
-
-def _sample_sorted(values: list[Any], limit: int = 5) -> list[Any]:
-    """Stable sample for catalog output: dedupe + sort + take first ``limit``."""
-    seen: list[Any] = []
-    seen_keys: set[str] = set()
-    for v in values:
-        key = json.dumps(v, ensure_ascii=False, sort_keys=True)
-        if key not in seen_keys:
-            seen_keys.add(key)
-            seen.append(v)
-    seen.sort(key=lambda x: json.dumps(x, ensure_ascii=False, sort_keys=True))
-    return seen[:limit]
-
-
-def _has_visual_keyword(text: str) -> str | None:
-    for kw in VISUAL_KEYWORDS:
-        if kw in text:
-            return kw
-    return None
-
-
-def _collect_param_shape(
-    source_ids: list[int],
-    record_lookup: dict[int, dict],
-    pak: PakTables,
-) -> dict:
-    """Build the ``param_shape`` sub-document from a family's source rows.
-
-    For each slot index seen across the family's effect_param rows, collect:
-    distinct vectors (up to 10), distinct count, sample vectors, and per-slot
-    cross-reference counts (effect / buff / skill / non_ref).
-    """
-    observed_lengths: set[int] = set()
-    by_slot: dict[int, list[tuple[int, ...]]] = defaultdict(list)
-    for sid in source_ids:
-        rec = record_lookup.get(sid)
-        if rec is None:
-            continue
-        params = rec.get("effect_param") or rec.get("params") or []
-        observed_lengths.add(len(params))
-        for idx, slot in enumerate(params):
-            by_slot[idx].append(_vec_from_param_slot(slot))
-    slots: list[dict] = []
-    for idx in sorted(by_slot):
-        vecs = by_slot[idx]
-        unique: list[tuple[int, ...]] = []
-        for v in vecs:
-            if v not in unique:
-                unique.append(v)
-        unique.sort()
-        distinct = len(unique)
-        if distinct <= 10:
-            observed_vectors = [list(v) for v in unique]
-            sample_vectors = observed_vectors
-        else:
-            observed_vectors = []
-            sample_vectors = [list(v) for v in unique[:5]]
-        refs = _classify_slot_refs(vecs, pak.effect_conf, pak.buff_conf, pak.skill_conf)
-        slots.append({
-            "slot": idx,
-            "observed_param_vectors": observed_vectors,
-            "distinct_vector_count": distinct,
-            "sample_vectors": sample_vectors,
-            **refs,
-        })
-    return {
-        "observed_lengths": sorted(observed_lengths),
-        "slots": slots,
-    }
-
-
-def _cross_refs(
-    source_ids: list[int],
-    record_lookup: dict[int, dict],
-    pak: PakTables,
-) -> dict:
-    """Concrete cross-reference samples (effect_refs / buff_refs / skill_refs).
-
-    Distinct from ``param_shape.slots[].*_count`` which only counts;
-    here we cite *specific* referenced ids + their pak ``editor_name``.
-    """
-    effect_refs: dict[int, dict] = {}
-    buff_refs: dict[int, dict] = {}
-    skill_refs: dict[int, dict] = {}
-    base_id_prefixes: set[int] = set()
-    for sid in source_ids:
-        rec = record_lookup.get(sid)
-        if rec is None:
-            continue
-        params = rec.get("effect_param") or rec.get("params") or []
-        for slot in params:
-            for v in _vec_from_param_slot(slot):
-                if v <= 0:
-                    continue
-                if v in pak.effect_conf and v not in source_ids:
-                    other = pak.effect_conf[v]
-                    effect_refs.setdefault(v, {
-                        "effect_id": v,
-                        "editor_name": str(other.get("editor_name", "")),
-                    })
-                if v in pak.buff_conf:
-                    other = pak.buff_conf[v]
-                    base_ids = [int(b) for b in (other.get("buff_base_ids") or []) if b]
-                    if base_ids:
-                        base_id_prefixes.add(base_ids[0] // 1000)
-                    buff_refs.setdefault(v, {
-                        "buff_id": v,
-                        "editor_name": str(other.get("editor_name", "")),
-                        "buff_base_id_prefix": (base_ids[0] // 1000) if base_ids else None,
-                    })
-                if v in pak.skill_conf:
-                    other = pak.skill_conf[v]
-                    skill_refs.setdefault(v, {
-                        "skill_id": v,
-                        "name": str(other.get("name", "")),
-                    })
-    return {
-        "effect_refs_sample": _sample_sorted(list(effect_refs.values())),
-        "buff_refs_sample": _sample_sorted(list(buff_refs.values())),
-        "skill_refs_sample": _sample_sorted(list(skill_refs.values())),
-        "buff_base_id_prefixes_seen": sorted(base_id_prefixes),
-    }
-
-
-def _desc_note_refs(
-    source_ids: list[int],
-    record_lookup: dict[int, dict],
-    buff_conf: dict[int, dict],
-    desc_notes: dict[int, str],
-) -> list[dict]:
-    """Find ``<desc_id=N>`` tags in editor_name and related buff descriptions."""
-    found: dict[int, dict] = {}
-    seen_text: set[str] = set()
-    for sid in source_ids:
-        rec = record_lookup.get(sid)
-        if rec is None:
-            continue
-        for haystack in (rec.get("editor_name", ""), rec.get("add_des", "")):
-            for m in DESC_ID_RE.finditer(str(haystack)):
-                did = int(m.group(1))
-                if did in desc_notes and did not in found:
-                    found[did] = {"desc_id": did, "note": desc_notes[did]}
-        # Pak effect_param may name buff_ids whose desc contains tags too.
-        for slot in rec.get("effect_param") or []:
-            for v in _vec_from_param_slot(slot):
-                buff = buff_conf.get(v)
-                if buff is None:
-                    continue
-                text = str(buff.get("desc", ""))
-                if text in seen_text:
-                    continue
-                seen_text.add(text)
-                for m in DESC_ID_RE.finditer(text):
-                    did = int(m.group(1))
-                    if did in desc_notes and did not in found:
-                        found[did] = {"desc_id": did, "note": desc_notes[did]}
-    return sorted(found.values(), key=lambda d: d["desc_id"])
-
-
-def _ignored_candidate(
-    source_ids: list[int],
-    record_lookup: dict[int, dict],
-) -> tuple[bool, str, list[dict]]:
-    """Determine ignored-candidate status at family granularity.
-
-    Returns ``(family_level_flag, reason, per_source_hits)``.
-
-    * ``family_level_flag`` is ``True`` only when **every** source_id in
-      the family has a visual-only keyword in its ``editor_name``.  This
-      avoids the prior false-positive where a single ``月牙雪熊飘字用``
-      row marked the whole ``buff_conf_direct:prefix_2040`` family
-      (which also contains 天光 / 月光合奏 / 击鼓传花 real blockers).
-    * ``per_source_hits`` lists every individual source_id whose
-      editor_name matched a visual keyword — those are real
-      ignored-rule candidates that future audit work should review.
-    """
-    hits: list[dict] = []
-    for sid in source_ids:
-        rec = record_lookup.get(sid) or {}
-        name = str(rec.get("editor_name") or rec.get("name") or "")
-        kw = _has_visual_keyword(name)
-        if kw:
-            hits.append({"source_id": sid, "editor_name": name, "keyword": kw})
-    hits.sort(key=lambda h: h["source_id"])
-    family_flag = bool(hits) and len(hits) == len(source_ids)
-    if family_flag:
-        reason = (
-            f"all {len(hits)} source ids carry visual-only keywords "
-            f"({', '.join(sorted({h['keyword'] for h in hits}))})"
-        )
-    else:
-        reason = ""
-    return family_flag, reason, hits
 
 
 def _build_family(
