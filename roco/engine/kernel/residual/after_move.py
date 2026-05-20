@@ -24,10 +24,12 @@ from roco.common.packing import (
     _unpack_mark,
 )
 from roco.engine.common.rng import next_rng
+from roco.engine.kernel.active_buffs import effective_immunity_flags
 from roco.engine.kernel.catalog import PET_ABILITY, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.residual._shared import energy_cap
 from roco.engine.kernel.residual.status_ticks import apply_status_effect
+from roco.generated.buff_immunity_table import IMMUNITY_FORCE_SWITCH
 from roco.engine.kernel.state import (
     KernelState,
     PetState,
@@ -207,9 +209,18 @@ def apply_after_move(
         actor_side = actor_side._replace(counter_skill_id=ctx.actor_counter_install_skill_id)
         state = replace_side(state, actor_side_id, actor_side)
     if ctx.force_switch:
+        # ``op_force_switch`` and ``op_auto_switch_on_zero_energy`` both
+        # set this flag for the *actor* (self-initiated switch).  Pak's
+        # ``免疫吹飞`` semantic targets being blown away by the opponent,
+        # not voluntary self-switches, so no immunity check here.
         state = _auto_switch(state, actor_side_id)
     if ctx.force_enemy_switch:
-        state = _auto_switch(state, target_side_id)
+        # The "blow away" semantic: actor forces the target's side to
+        # switch.  Pak buffs with IMMUNITY_FORCE_SWITCH protect the
+        # bearer of the buff (i.e. the target here) from this effect.
+        target_pet = side(state, target_side_id).pets[target_slot]
+        if not (effective_immunity_flags(target_pet.active_buffs) & IMMUNITY_FORCE_SWITCH):
+            state = _auto_switch(state, target_side_id)
     return state
 
 

@@ -260,6 +260,31 @@ def remove_active_buff(packed: int, slot_idx: int) -> int:
     return _clear_lane(packed, slot_idx)
 
 
+def effective_immunity_flags(packed: int) -> int:
+    """OR every non-empty lane's immunity contribution into a single flag word.
+
+    The lookup table comes from :mod:`roco.generated.buff_immunity_table`,
+    which is itself driven by ``rules/buff_immunity.jsonl`` (Phase 2A).
+    A ``buff_id`` absent from the table contributes nothing — silent zero
+    is correct here because not every active buff is an immunity carrier.
+
+    Pure function: no PetState dependency; callers do
+    ``effective_immunity_flags(pet.active_buffs)``.  Empty ledger returns 0,
+    so any code path that consults this on an unbuffed pet is
+    behaviour-neutral.
+    """
+    # Imported lazily to keep the active_buffs module free of generated/
+    # imports at module load time — only consumers of immunity pay the
+    # cost.  The table itself is a plain dict literal, no side effects.
+    from roco.generated.buff_immunity_table import BUFF_IMMUNITY_TABLE
+
+    _ensure_packed(packed)
+    flags = 0
+    for _slot_idx, lane in iter_active_buffs(packed):
+        flags |= BUFF_IMMUNITY_TABLE.get(active_buff_id(lane), 0)
+    return flags
+
+
 def tick_active_buffs(packed: int) -> int:
     """Decrement ``duration`` on every non-empty lane.
 

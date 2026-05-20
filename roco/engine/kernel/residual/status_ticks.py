@@ -5,6 +5,7 @@ from __future__ import annotations
 from roco.common.constants import BPS, LEECH_DAMAGE_BPS, POISON_DAMAGE_BPS
 from roco.common.enums import AbilityFlag, StatusFlag, StatusType
 from roco.engine.common.choices import SIDE_A, SIDE_B
+from roco.engine.kernel.active_buffs import effective_immunity_flags
 from roco.engine.kernel.catalog import STAT_HP
 from roco.engine.kernel.damage import burn_damage, status_immune
 from roco.engine.kernel.state import (
@@ -19,6 +20,27 @@ from roco.engine.kernel.state import (
     with_status,
 )
 from roco.generated import catalog_hot as hot
+from roco.generated.buff_immunity_table import (
+    IMMUNITY_BURN,
+    IMMUNITY_FREEZE,
+    IMMUNITY_LEECH,
+    IMMUNITY_POISON,
+)
+
+
+# StatusType -> active-buff immunity flag.  Distinct from
+# ``damage.status_immune`` (element-type immunities like fire-immune-to-burn);
+# this layer reads ``pet.active_buffs`` via :func:`effective_immunity_flags`
+# and OR-merges per the pak ``BUFF_CONF.desc`` evidence captured in
+# ``rules/buff_immunity.jsonl``.  Pak 20030011's ``免疫 ... 寄生`` shows
+# leech IS covered by buff immunity, so we include it here even though
+# ``status_immune`` deliberately skips leech for the type-based path.
+_BUFF_IMMUNITY_FLAG_BY_STATUS: dict[StatusType, int] = {
+    StatusType.POISON: IMMUNITY_POISON,
+    StatusType.BURN: IMMUNITY_BURN,
+    StatusType.FREEZE: IMMUNITY_FREEZE,
+    StatusType.LEECH: IMMUNITY_LEECH,
+}
 
 
 def apply_status_effect(
@@ -38,6 +60,14 @@ def apply_status_effect(
     if stacks <= 0:
         return pet
     if status != StatusType.LEECH and status_immune(pet, flag):
+        return pet
+    # Active-buff immunity (Phase 5B-mini).  Pak ``BUFF_CONF[id].desc`` is
+    # the source of truth for which statuses each buff blocks; the table
+    # lookup happens inside ``effective_immunity_flags``.  Unlike the
+    # element-type ``status_immune`` path, this layer DOES cover leech
+    # — pak 20030011 explicitly lists 寄生 in its immune list.
+    buff_immunity = effective_immunity_flags(pet.active_buffs)
+    if buff_immunity & _BUFF_IMMUNITY_FLAG_BY_STATUS.get(status, 0):
         return pet
     pet = with_status(pet, status, stacks)
     if status == StatusType.LEECH:
