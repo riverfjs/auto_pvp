@@ -34,7 +34,8 @@ Total families: **177**
 - pak_evidence:
     - BUFF_CONF.json: 20010010 buff_base_ids=[2001001] editor_name='通用物攻增加buff10%'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
-- **ignored_candidate**: editor_name '里拉鳐飘字' contains visual-only keyword '飘字'
+- ignored_candidate_source_ids:
+    - `20010837` 里拉鳐飘字 (keyword `飘字`)
 
 ## `buff_conf_direct:prefix_2003` — BUFF_CONF_DIRECT
 
@@ -140,7 +141,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2011` — BUFF_CONF_DIRECT
 
-- count: **21** | coverage: `auto_structural` | used_consumer_count: 41
+- count: **21** | coverage: `auto_structural` | used_consumer_count: 42
 - editor_names: 10减伤, 50减伤, 60减伤, 70减伤, 80减伤, 90减伤, 不减伤冒字表演, 免疫能耗小于3的技能, 剧情---收到光系伤害增加100%, 受到非敌方系别的技能威力降低25%
 - example_source_ids: [20110010, 20110030, 20110090, 20110110, 20110120]
 - coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -176,7 +177,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2017` — BUFF_CONF_DIRECT
 
-- count: **47** | coverage: `auto_structural` | used_consumer_count: 23
+- count: **47** | coverage: `auto_structural` | used_consumer_count: 25
 - editor_names: B1最终战--回合结束扣绩点, GM-回合结束回复大量生命, 偏振, 偏振首领, 光合作用, 冰钻, 可烤汪, 回合开始，自己的技能顺序随机打乱, 回合末加攻击, 回合末加物防减速度
 - example_source_ids: [20170010, 20170011, 20170090, 20170130, 20170170]
 - coverage_breakdown: {'auto_structural_count': 47, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -198,7 +199,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2019` — BUFF_CONF_DIRECT
 
-- count: **17** | coverage: `auto_structural` | used_consumer_count: 2
+- count: **17** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 7001019, 冰天雪地, 冰晶化, 刺肤, 可烤汪2, 嗜痛, 大笨蛋, 寒冰屏障, 崎岖外壳, 恶颜
 - example_source_ids: [20190050, 20190060, 20190070, 20190080, 20190150]
 - coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -219,7 +220,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2021` — BUFF_CONF_DIRECT
 
-- count: **4** | coverage: `auto_structural` | used_consumer_count: 2
+- count: **4** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 冬羽雀, 扇风--先手, 风起印记
 - example_source_ids: [20210040, 20210050, 20210051, 20210070]
 - coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -285,7 +286,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2032` — BUFF_CONF_DIRECT
 
-- count: **16** | coverage: `auto_structural` | used_consumer_count: 11
+- count: **16** | coverage: `auto_structural` | used_consumer_count: 12
 - editor_names: 冰化, 呱呱, 所有技能的能耗固定为5, 攻击技能+3费, 攻击技能+8费, 板板壳, 湿润印记--能耗-1, 激怒, 蓄势印记, 蓄水
 - example_source_ids: [20210060, 20320010, 20320040, 20320070, 20320071]
 - coverage_breakdown: {'auto_structural_count': 16, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -319,7 +320,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2035` — BUFF_CONF_DIRECT
 
-- count: **20** | coverage: `auto_structural` | used_consumer_count: 9
+- count: **20** | coverage: `auto_structural` | used_consumer_count: 11
 - editor_names: 使用攻击技能后驱散先手+1, 使用武后，物攻提高速度降低, 使用防御技能后，获得回合末脱离, 助燃, 攻击后立刻回到背包, 攻击技能驱散敌方星陨, 斗志燃烧新, 最好的伙伴, 每使用1次翼系技能，连击技能连击数+1, 浪潮
 - example_source_ids: [20230840, 20350030, 20350050, 20350180, 20350270]
 - coverage_breakdown: {'auto_structural_count': 20, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -355,7 +356,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2038` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `auto_structural` | used_consumer_count: 0
+- count: **6** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 主线剧情被动, 剧情--自己死亡，吹飞队友, 毛毛, 测试--无限免死, 血气, 邪恶纺锤
 - example_source_ids: [20380020, 20380031, 20380040, 20380043, 20380060]
 - coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -404,7 +405,8 @@ Total families: **177**
 - pak_evidence:
     - BUFF_CONF.json: 20400110 buff_base_ids=[2040011] editor_name='敌人每有一层冰冻，速度提升%'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
-- **ignored_candidate**: editor_name '月牙雪熊飘字用' contains visual-only keyword '飘字'
+- ignored_candidate_source_ids:
+    - `20400410` 月牙雪熊飘字用 (keyword `飘字`)
 
 ## `buff_conf_direct:prefix_2043` — BUFF_CONF_DIRECT
 
@@ -436,7 +438,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2046` — BUFF_CONF_DIRECT
 
-- count: **9** | coverage: `auto_structural` | used_consumer_count: 7
+- count: **9** | coverage: `auto_structural` | used_consumer_count: 8
 - editor_names: 传染病, 击杀获得6能量, 击杀获得威力翻倍, 击败对手后增加伤害, 击败敌人后，提高魔攻, 击败敌人后，连击+2, 击败敌人后，随机增强5次, 击败敌人后，额外掉魔力, 斩断--恢复满血
 - example_source_ids: [20460020, 20460030, 20460040, 20460090, 20460100]
 - coverage_breakdown: {'auto_structural_count': 9, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -514,7 +516,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2053` — BUFF_CONF_DIRECT
 
-- count: **4** | coverage: `auto_structural` | used_consumer_count: 0
+- count: **4** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 0能耗技能威力提升30%, 蒲公英娃娃, 鸭吉吉, 鸭吉吉（首领）
 - example_source_ids: [20530010, 20530020, 20530021, 20530130]
 - coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -592,7 +594,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2064` — BUFF_CONF_DIRECT
 
-- count: **21** | coverage: `auto_structural` | used_consumer_count: 10
+- count: **21** | coverage: `auto_structural` | used_consumer_count: 11
 - editor_names: 3能耗的技能强化攻防, 3能耗的技能永久强化攻防, 5能耗的技能威力提升10%, 不移, 两侧技能威力+10, 两侧技能能耗-1, 位于12号位时加效果, 位于13号位时加效果, 使用攻击技能增加减益层数, 旋叶虫
 - example_source_ids: [20530050, 20530070, 20530080, 20530090, 20640130]
 - coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -614,7 +616,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2067` — BUFF_CONF_DIRECT
 
-- count: **17** | coverage: `auto_structural` | used_consumer_count: 6
+- count: **17** | coverage: `auto_structural` | used_consumer_count: 8
 - editor_names: 受身, 应对成功下回合先制+1, 应对成功下回合威力翻倍, 应对成功下回合能耗-5, 应对成功下次无需蓄力, 应对成功强化特定技能连击, 擒拿, 攻击应对成功给目标加冻结, 攻击应对成功获得棋绮后标记, 武者鸡
 - example_source_ids: [20670030, 20670040, 20670050, 20670060, 20670070]
 - coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -855,7 +857,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2092` — BUFF_CONF_DIRECT
 
-- count: **7** | coverage: `auto_structural` | used_consumer_count: 3
+- count: **7** | coverage: `auto_structural` | used_consumer_count: 5
 - editor_names: 冰封, 友军免疫粉星星离场, 所有人连击数固定为3, 敌方入场中毒, 敌方入场失去能量, 敌方入场来源获得能耗降低
 - example_source_ids: [20920020, 20920080, 20920090, 20920100, 20920110]
 - coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -871,7 +873,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2093` — BUFF_CONF_DIRECT
 
-- count: **12** | coverage: `auto_structural` | used_consumer_count: 9
+- count: **12** | coverage: `auto_structural` | used_consumer_count: 10
 - editor_names: 入场首回合，技能可以释放2次。, 入场首回合，技能威力提高40, 护主犬, 护主犬首领, 攻击技能首次释放时敌方技能能耗+2, 电1, 电3, 电4, 电7, 电9
 - example_source_ids: [20930030, 20930040, 20930050, 20930060, 20930070]
 - coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -1284,7 +1286,7 @@ Total families: **177**
 
 ## `buff_conf_direct:prefix_2142` — BUFF_CONF_DIRECT
 
-- count: **7** | coverage: `auto_structural` | used_consumer_count: 5
+- count: **7** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 撒娇, 检测能否继续萌化, 甜心续航, 示弱, 赤子之心, 超级糖果
 - example_source_ids: [21420010, 21420020, 21420030, 21420040, 21420050]
 - coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
@@ -1893,7 +1895,9 @@ Total families: **177**
 - pak_evidence:
     - EFFECT_CONF.json: 1025001 type=3 effect_order=25 effect_param=[[0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
-- **ignored_candidate**: editor_name '测试--飘字用空eff' contains visual-only keyword '飘字'
+- ignored_candidate_source_ids:
+    - `1025001` 测试--飘字用空eff (keyword `飘字`)
+    - `1025002` 测试--飘字用空eff (keyword `飘字`)
 
 ## `effect_conf:t3:o28` — EFFECT_CONF
 
@@ -1964,7 +1968,7 @@ Total families: **177**
 
 ## `effect_conf:t3:o34` — EFFECT_CONF
 
-- count: **14** | coverage: `gap` | used_consumer_count: 5
+- count: **14** | coverage: `gap` | used_consumer_count: 7
 - editor_names: 200085, 200153, 200172, 200181, 优化eff34自己每释放两能耗技能成功应对，便给对面施加一层中毒, 入场时，每有1个友军触发迅捷，自身速度增加10%, 己方其他精灵每使用1次水系技能，入场时技能消耗-1。, 搜刮, 渗透, 自己的精灵每使用1次普通系技能，进战斗时会增加10%速度
 - example_source_ids: [1034011, 1034012, 1034013, 1034014, 1034015]
 - coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 14}
@@ -2235,7 +2239,7 @@ Total families: **177**
 
 ## `effect_conf:t3:o64` — EFFECT_CONF
 
-- count: **50** | coverage: `gap` | used_consumer_count: 2
+- count: **50** | coverage: `gap` | used_consumer_count: 3
 - editor_names: 入场时，技能栏中每有1个系别的技能，全属性提升10%, 呼呼猪, 技能栏中每有1个系别的技能，威力提高10, 新增eff64每携带一个普通系技能施加一层中毒, 每携带1个龙系技能，入场后速度增加20%, 每携带一个光系技能，电系技能延长一回合, 每携带一个幻系技能，地系加1星陨, 每携带一个水系技能，地系技能能耗-1, 每携带一个水系技能，翼系技能能耗-1, 每携带一个火系技能，草系技能赋予两层灼烧
 - example_source_ids: [1064001, 1064002, 1064003, 1064004, 1064005]
 - coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 50}
@@ -2360,7 +2364,7 @@ Total families: **177**
 
 ## `effect_conf:t3:o76` — EFFECT_CONF
 
-- count: **4** | coverage: `gap` | used_consumer_count: 1
+- count: **4** | coverage: `gap` | used_consumer_count: 2
 - editor_names: 中毒变寄生, 灼烧变寄生
 - example_source_ids: [1076001, 1076002, 1076003, 1076004]
 - coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
@@ -2419,7 +2423,8 @@ Total families: **177**
 - pak_evidence:
     - EFFECT_CONF.json: 1081001 type=3 effect_order=81 effect_param=[[1001]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
-- **ignored_candidate**: editor_name '给予场下恢复效果动效' contains visual-only keyword '动效'
+- ignored_candidate_source_ids:
+    - `1081001` 给予场下恢复效果动效 (keyword `动效`)
 
 ## `effect_conf:t3:o83` — EFFECT_CONF
 

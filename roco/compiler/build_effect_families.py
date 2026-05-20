@@ -161,29 +161,43 @@ def _build_consumer_index(
 
 
 def _build_team_used(teams: list[dict], pets: list[dict]) -> tuple[set[str], set[str]]:
-    """Return (team_used_skill_names, team_used_ability_names) by canonical name."""
+    """Return (team_used_skill_names, team_used_ability_names) by canonical name.
+
+    Mirrors :func:`roco.data.import_db.import_teams` pet resolution: a team
+    pet's full descriptive ``name`` (e.g. ``星光狮（月光能量的样子）``) often
+    has no canonical match because pets.jsonl carries form-stripped names
+    like ``星光狮``.  Fall back to the team pet's ``name_short`` so ability
+    lookups don't drop ~22 form-suffixed pet abilities (化茧 / 电流刺激 …).
+    """
     used_skill_names: set[str] = set()
-    used_pet_names: set[str] = set()
+    used_pet_lookup_keys: set[str] = set()
     for team in teams:
         for pet in team.get("pets") or []:
-            pname = pet.get("name")
-            if pname:
-                used_pet_names.add(str(pname))
+            full_name = str(pet.get("name", ""))
+            short_name = str(pet.get("name_short", ""))
+            if full_name:
+                used_pet_lookup_keys.add(full_name)
+            if short_name and short_name != full_name:
+                used_pet_lookup_keys.add(short_name)
             for move in pet.get("moves") or []:
                 if isinstance(move, str):
                     used_skill_names.add(move)
                 elif isinstance(move, dict) and move.get("name"):
                     used_skill_names.add(str(move["name"]))
-    # pet → ability mapping
+    # Canonical pet → ability: index by ``name`` AND ``display_name`` so the
+    # name_short fallback chain can hit either key (parse_pak emits both for
+    # form variants).
     ability_by_pet_name: dict[str, str] = {}
     for pet in pets:
-        name = str(pet.get("name", ""))
         ability = pet.get("ability")
-        if name and ability:
-            ability_by_pet_name[name] = str(ability)
+        if not ability:
+            continue
+        for key in (pet.get("name"), pet.get("display_name")):
+            if key:
+                ability_by_pet_name.setdefault(str(key), str(ability))
     used_ability_names = {
         ability_by_pet_name[name]
-        for name in used_pet_names
+        for name in used_pet_lookup_keys
         if name in ability_by_pet_name
     }
     return used_skill_names, used_ability_names
@@ -464,12 +478,40 @@ def _desc_note_refs(
     return sorted(found.values(), key=lambda d: d["desc_id"])
 
 
-def _ignored_candidate(editor_names: list[str]) -> tuple[bool, str]:
-    for name in editor_names:
+def _ignored_candidate(
+    source_ids: list[int],
+    record_lookup: dict[int, dict],
+) -> tuple[bool, str, list[dict]]:
+    """Determine ignored-candidate status at family granularity.
+
+    Returns ``(family_level_flag, reason, per_source_hits)``.
+
+    * ``family_level_flag`` is ``True`` only when **every** source_id in
+      the family has a visual-only keyword in its ``editor_name``.  This
+      avoids the prior false-positive where a single ``月牙雪熊飘字用``
+      row marked the whole ``buff_conf_direct:prefix_2040`` family
+      (which also contains 天光 / 月光合奏 / 击鼓传花 real blockers).
+    * ``per_source_hits`` lists every individual source_id whose
+      editor_name matched a visual keyword — those are real
+      ignored-rule candidates that future audit work should review.
+    """
+    hits: list[dict] = []
+    for sid in source_ids:
+        rec = record_lookup.get(sid) or {}
+        name = str(rec.get("editor_name") or rec.get("name") or "")
         kw = _has_visual_keyword(name)
         if kw:
-            return True, f"editor_name '{name}' contains visual-only keyword '{kw}'"
-    return False, ""
+            hits.append({"source_id": sid, "editor_name": name, "keyword": kw})
+    hits.sort(key=lambda h: h["source_id"])
+    family_flag = bool(hits) and len(hits) == len(source_ids)
+    if family_flag:
+        reason = (
+            f"all {len(hits)} source ids carry visual-only keywords "
+            f"({', '.join(sorted({h['keyword'] for h in hits}))})"
+        )
+    else:
+        reason = ""
+    return family_flag, reason, hits
 
 
 def _build_family(
@@ -535,7 +577,9 @@ def _build_family(
         )
         breakdown[bucket + "_count"] += 1
     coverage_status = _derive_coverage_status(breakdown)
-    ignored_candidate, ignored_reason = _ignored_candidate(editor_names)
+    ignored_candidate, ignored_reason, ignored_source_hits = _ignored_candidate(
+        source_ids, record_lookup,
+    )
     pak_evidence: list[str] = []
     if source_table == "EFFECT_CONF":
         if source_ids:
@@ -589,6 +633,7 @@ def _build_family(
         "pak_evidence": pak_evidence,
         "ignored_candidate": ignored_candidate,
         "ignored_candidate_reason": ignored_reason,
+        "ignored_candidate_source_ids": ignored_source_hits,
     }
 
 
@@ -719,7 +764,14 @@ def render_markdown(families: list[dict]) -> str:
             for e in f["pak_evidence"]:
                 lines.append(f"    - {e}")
         if f["ignored_candidate"]:
-            lines.append(f"- **ignored_candidate**: {f['ignored_candidate_reason']}")
+            lines.append(f"- **ignored_candidate (whole family)**: {f['ignored_candidate_reason']}")
+        if f.get("ignored_candidate_source_ids"):
+            lines.append("- ignored_candidate_source_ids:")
+            for hit in f["ignored_candidate_source_ids"]:
+                lines.append(
+                    f"    - `{hit['source_id']}` {hit['editor_name']} "
+                    f"(keyword `{hit['keyword']}`)"
+                )
         lines.append("")
     return "\n".join(lines)
 
