@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "auto-pvp"
 version = "0.2.0"
@@ -8,11 +12,15 @@ dependencies = [
     "requests>=2.34.2",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["roco"]
+
 [project.scripts]
 roco-mc = "roco.sim.monte_carlo:main"
 roco-fetch-teams = "roco.data.fetch_teams:main"
 roco-parse-pak = "roco.data.parse_pak:main"
 roco-compile-kernel = "roco.compiler.artifact:main"
+roco-refresh-artifacts = "roco.data.refresh_artifacts:main"
 
 [dependency-groups]
 dev = [
