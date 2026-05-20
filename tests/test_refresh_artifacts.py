@@ -55,6 +55,8 @@ def test_default_order(monkeypatch):
         "build_db",
         "build_effect_families",
         "build_effect_families --check",
+        "pak_schema_audit",
+        "pak_schema_audit --check",
     ]
 
 
@@ -133,6 +135,8 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
         "build_db",
         "build_effect_families",
         "build_effect_families --check",
+        "pak_schema_audit",
+        "pak_schema_audit --check",
         "pytest",
     ]
 
@@ -148,7 +152,8 @@ def test_check_paths_exclude_db_and_full_rules_dir():
     # hand-edited rule files as "drift".
     assert "roco/compiler/rules" not in refresh.CHECK_PATHS
     assert "roco/compiler/rules/effect_families.jsonl" in refresh.CHECK_PATHS
-    # Sanity: the other three expected output scopes are present.
+    # Sanity: the other expected output scopes are present.
     assert "_data/canonical" in refresh.CHECK_PATHS
     assert "roco/generated" in refresh.CHECK_PATHS
     assert "_docs/effect_family_audit.md" in refresh.CHECK_PATHS
+    assert "_docs/pak_schema_audit.md" in refresh.CHECK_PATHS

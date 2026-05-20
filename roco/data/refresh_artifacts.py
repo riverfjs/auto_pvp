@@ -1,6 +1,6 @@
 """One-command pak artifact refresh pipeline.
 
-Chains five canonical steps in order, each as an isolated subprocess so a
+Chains the canonical steps in order, each as an isolated subprocess so a
 failure in one cannot corrupt the next:
 
     1. roco.data.parse_pak           -> _data/canonical/*.jsonl
@@ -13,6 +13,10 @@ failure in one cannot corrupt the next:
                                         + _docs/effect_family_audit.md
     5. roco.compiler.build_effect_families --check
                                      -> stability self-check on step 4
+    6. roco.compiler.pak_schema_audit
+                                     -> _docs/pak_schema_audit.md (schema mining)
+    7. roco.compiler.pak_schema_audit --check
+                                     -> stability self-check on step 6
 
 Three optional flags layer on top:
 
@@ -53,6 +57,7 @@ CHECK_PATHS: tuple[str, ...] = (
     "roco/generated",
     "roco/compiler/rules/effect_families.jsonl",
     "_docs/effect_family_audit.md",
+    "_docs/pak_schema_audit.md",
 )
 
 
@@ -104,6 +109,11 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     steps.append((
         "build_effect_families --check",
         [py, "-m", "roco.compiler.build_effect_families", "--check"],
+    ))
+    steps.append(("pak_schema_audit", [py, "-m", "roco.compiler.pak_schema_audit"]))
+    steps.append((
+        "pak_schema_audit --check",
+        [py, "-m", "roco.compiler.pak_schema_audit", "--check"],
     ))
     return steps
 
