@@ -207,6 +207,69 @@ def test_build_ability_effect_rows(pak):
 # ── three-state contract tests ───────────────────────────────────────────
 
 
+def test_compound_type1_returns_gap(pak):
+    """type=1 effect with multiple BUFF_CONF candidates → GapOutcome.
+
+    Direct decoder coverage: until the new compound type was tested only
+    via exact_decoders override.  Inject an EFFECT_CONF row that names
+    both fixture buffs (20010010 STAT_MOD + 20070010 POISON) in its
+    ``effect_param`` and assert classify produces ``effect_type_1_compound``.
+    """
+    pak.effect_conf[1099001] = {
+        "id": 1099001,
+        "editor_name": "fixture-compound-type1",
+        "type": 1,
+        "effect_param": [
+            {"params": [20010010]},
+            {"params": [20070010]},
+            {"params": [0]},
+        ],
+    }
+    skill_row = {"skill_result": [{
+        "effect_id": 1099001,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}
+    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == []
+    assert ignored == []
+    assert len(gaps) == 1
+    assert gaps[0]["reason"] == "effect_type_1_compound"
+    assert gaps[0]["primitive"] == "effect_1099001"
+
+
+def test_no_buff_type1_returns_gap(pak):
+    """type=1 effect with zero BUFF_CONF candidates → GapOutcome.
+
+    Inject an EFFECT_CONF row whose effect_param contains only ints that
+    are NOT BUFF_CONF ids.  classify must return
+    ``effect_type_1_no_buff`` and emit no row.
+    """
+    pak.effect_conf[1099002] = {
+        "id": 1099002,
+        "editor_name": "fixture-no-buff-type1",
+        "type": 1,
+        "effect_param": [
+            {"params": [42]},   # not in BUFF_CONF
+            {"params": [1234]}, # not in BUFF_CONF
+            {"params": [0]},
+        ],
+    }
+    skill_row = {"skill_result": [{
+        "effect_id": 1099002,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}
+    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == []
+    assert ignored == []
+    assert len(gaps) == 1
+    assert gaps[0]["reason"] == "effect_type_1_no_buff"
+    assert gaps[0]["primitive"] == "effect_1099002"
+
+
 def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
     """A buff whose base_id prefix has no handler must surface as
     ``prefix_<n>_unmapped`` — not ``buff_unclassified``.

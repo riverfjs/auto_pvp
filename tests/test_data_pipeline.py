@@ -461,3 +461,45 @@ def test_skill_effects_no_tag_code_zero_invariant(tmp_path: Path):
     conn.close()
     assert skill_noops == 0, f"{skill_noops} skill_effects rows have tag_code=0"
     assert ability_noops == 0, f"{ability_noops} ability_effects rows have tag_code=0"
+
+
+def _jsonl_records(path: Path):
+    """Iterate JSONL rows, mirroring loader behaviour (skip empty + ``#`` comments)."""
+    with path.open("r", encoding="utf-8") as fp:
+        for line_no, raw in enumerate(fp, 1):
+            raw = raw.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            yield line_no, json.loads(raw)
+
+
+def test_exact_effects_jsonl_has_no_h_noop_rows():
+    """File-level grep guard: ``exact_effects.jsonl`` must contain zero H_NOOP rows.
+
+    The JSONL loader already rejects ``handler: H_NOOP`` at parse time
+    (``exact_decoders._load_jsonl``).  This test fires *before* loader
+    validation runs — catches editor/merge-conflict regressions where an
+    H_NOOP row sneaks back in.
+    """
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler" / "rules" / "exact_effects.jsonl"
+    offenders: list[tuple[int, int]] = []
+    for line_no, rec in _jsonl_records(path):
+        if rec.get("handler") == "H_NOOP":
+            offenders.append((line_no, int(rec.get("effect_id", 0))))
+    assert offenders == [], (
+        f"exact_effects.jsonl carries forbidden H_NOOP rows at "
+        f"{', '.join(f'L{ln}:effect_{eid}' for ln, eid in offenders)}"
+    )
+
+
+def test_prefix_handlers_jsonl_has_no_h_noop_rows():
+    """File-level grep guard for ``prefix_handlers.jsonl``."""
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler" / "rules" / "prefix_handlers.jsonl"
+    offenders: list[int] = []
+    for line_no, rec in _jsonl_records(path):
+        if rec.get("handler") == "H_NOOP":
+            offenders.append(line_no)
+    assert offenders == [], (
+        f"prefix_handlers.jsonl carries forbidden H_NOOP rows at "
+        f"lines {offenders}"
+    )
