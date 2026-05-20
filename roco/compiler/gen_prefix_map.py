@@ -281,13 +281,17 @@ def generate_prefix_map(handler_indices: dict[str, int], pak_data_dir: Path = PA
                 all_base_ids.add(bid)
                 all_prefixes.add(bid // 1000)
 
+    # Emit only prefixes that have a real handler (positive index).
+    # Unmapped prefixes — including the families previously seeded with
+    # ``handler: H_NOOP`` — are tracked in stats for visibility but not
+    # written into ``prefix_map`` so downstream lookups can use a clean
+    # "in map ⇔ has handler" invariant.
     prefix_map: dict[int, int] = {}
     unmapped: list[int] = []
     for pfx in sorted(all_prefixes):
         if pfx in prefix_seed:
             prefix_map[pfx] = prefix_seed[pfx]
         else:
-            prefix_map[pfx] = 0
             unmapped.append(pfx)
 
     return {
@@ -726,8 +730,9 @@ def main() -> None:
     PREFIX_MAP_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 
     stats = result["stats"]
-    print(f"prefix_handler_map.json: {stats['total_prefixes']} prefixes "
-          f"({stats['mapped_prefixes']} mapped, {len(stats['unmapped_prefixes'])} unmapped) -> {PREFIX_MAP_PATH}")
+    print(f"prefix_handler_map.json: {stats['mapped_prefixes']} mapped, "
+          f"{len(stats['unmapped_prefixes'])} unmapped (of {stats['total_prefixes']} seen) "
+          f"-> {PREFIX_MAP_PATH}")
     if stats["unmapped_prefixes"]:
         print(f"  unmapped: {stats['unmapped_prefixes']}", file=sys.stderr)
 

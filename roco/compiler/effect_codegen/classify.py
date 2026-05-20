@@ -139,11 +139,17 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
             reason="buff_no_base_ids",
             params={"effect_id": effect_id, "buff_id": buff_id, "buff_base_ids": []},
         )
-    # base_id present but neither exact nor prefix matched.
-    # Report the first unmapped prefix as the primitive.
+    # base_id present but neither exact nor prefix matched.  Report the
+    # first unmapped prefix as the primitive.  "Unmapped" means either
+    # the prefix is absent from PREFIX_HANDLER_MAP or it is present with
+    # a zero handler (defensive — the generator no longer emits zeros,
+    # but treat both shapes the same so a stale prefix_handler_map.json
+    # can't silently shadow gaps as ``buff_unclassified``).
     for bid in base_ids:
         pfx = bid // 1000
-        if pfx not in PREFIX_HANDLER_MAP and bid not in BASE_ID_HANDLER_MAP:
+        if bid in BASE_ID_HANDLER_MAP:
+            continue
+        if PREFIX_HANDLER_MAP.get(pfx, 0) == 0:
             return GapOutcome(
                 primitive=f"prefix_{pfx}",
                 effect_id=effect_id,
@@ -156,9 +162,8 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
                     "prefixes": sorted({b // 1000 for b in base_ids}),
                 },
             )
-    # All prefixes are in the map but only as 0 (no longer happens after
-    # we drop H_NOOP entries from prefix_handlers.jsonl) — keep a defensive
-    # fall-through.
+    # Every base_id has a mapped prefix but pack_handler_params (or some
+    # caller) still rejected — keep a precise fall-through.
     return GapOutcome(
         primitive=f"buff_{buff_id}",
         effect_id=effect_id,

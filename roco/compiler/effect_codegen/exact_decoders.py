@@ -78,14 +78,28 @@ def _load_jsonl() -> dict[int, EmitOutcome | IgnoredOutcome | tuple[EmitOutcome,
                         f"exact_effects.jsonl line {line_no}: ``kind: ignored`` "
                         f"requires both ``reason`` and ``evidence`` fields"
                     )
-                out[effect_id] = IgnoredOutcome(
-                    primitive=f"effect_{effect_id}",
-                    effect_id=effect_id,
-                    buff_id=None,
-                    reason=reason,
-                    evidence=evidence,
-                    pak_table=rec.get("pak_table", "EFFECT_CONF"),
-                )
+                pak_table = rec.get("pak_table", "EFFECT_CONF")
+                # Direct BUFF_CONF references (e.g. 20400420 天光) carry
+                # ``buff_id`` provenance, not ``effect_id``.  Use the
+                # ``pak_table`` discriminator to write the correct shape.
+                if pak_table == "BUFF_CONF":
+                    out[effect_id] = IgnoredOutcome(
+                        primitive=f"buff_{effect_id}",
+                        effect_id=None,
+                        buff_id=effect_id,
+                        reason=reason,
+                        evidence=evidence,
+                        pak_table=pak_table,
+                    )
+                else:
+                    out[effect_id] = IgnoredOutcome(
+                        primitive=f"effect_{effect_id}",
+                        effect_id=effect_id,
+                        buff_id=None,
+                        reason=reason,
+                        evidence=evidence,
+                        pak_table=pak_table,
+                    )
                 continue
 
             if kind != "emit":

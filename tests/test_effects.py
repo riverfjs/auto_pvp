@@ -207,6 +207,43 @@ def test_build_ability_effect_rows(pak):
 # ── three-state contract tests ───────────────────────────────────────────
 
 
+def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
+    """A buff whose base_id prefix has no handler must surface as
+    ``prefix_<n>_unmapped`` — not ``buff_unclassified``.
+
+    Locks in the fix for the regression where dropping
+    ``handler: H_NOOP`` rows from ``prefix_handlers.jsonl`` left zero
+    values in ``prefix_handler_map.json``; ``buff_<n>`` reason was
+    misclassifying buffs as ``buff_unclassified`` instead.
+    """
+    from roco.compiler.effect_codegen import classify
+
+    # Inject an extra buff whose base_id prefix (2999) is guaranteed
+    # absent from the prefix map.  Use monkeypatch so we don't have to
+    # rewrite the fixture tables on disk.
+    pak.buff_conf[29991234] = {
+        "id": 29991234,
+        "editor_name": "fixture-unmapped-prefix",
+        "buff_base_ids": [2999001],
+        "type": 1,
+    }
+    monkeypatch.setitem(classify.PREFIX_HANDLER_MAP, 2999, 0)  # ensure not mapped
+    classify.PREFIX_HANDLER_MAP.pop(2999, None)
+
+    skill_row = {"skill_result": [{
+        "effect_id": 29991234,  # direct buff reference path
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}
+    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == []
+    assert ignored == []
+    assert len(gaps) == 1
+    assert gaps[0]["reason"] == "prefix_2999_unmapped"
+    assert gaps[0]["primitive"] == "prefix_2999"
+
+
 def test_unknown_effect_id_becomes_gap(pak):
     """effect_id absent from both EFFECT_CONF and BUFF_CONF → GapOutcome."""
     skill_row = {"skill_result": [{
@@ -291,6 +328,32 @@ def test_jsonl_ignored_kind_routes_to_ignored_list(tmp_path, monkeypatch, pak):
     assert ignored[0]["reason"] == "visual_only_animation"
     assert ignored[0]["pak_table"] == "EFFECT_CONF"
     assert ignored[0]["evidence"].startswith("pak EFFECT_CONF")
+
+
+def test_jsonl_ignored_buff_conf_uses_buff_primitive(tmp_path, monkeypatch, pak):
+    """``kind: ignored`` with ``pak_table: BUFF_CONF`` writes buff_id provenance.
+
+    20400420 天光 etc. are direct BUFF_CONF references (no EFFECT_CONF
+    record).  An ignored row must carry ``primitive=buff_<id>``,
+    ``buff_id=<id>``, ``effect_id=None`` so downstream tools (and the
+    ``ignored_effects`` table) know which pak table to look in.
+    """
+    fake_jsonl = tmp_path / "exact_effects.jsonl"
+    fake_jsonl.write_text(
+        '{"effect_id": 20400420, "kind": "ignored", '
+        '"reason": "visual_only_weather_morph", '
+        '"evidence": "pak BUFF_CONF 20400420; element morphs visually, no combat mutation", '
+        '"pak_table": "BUFF_CONF"}\n',
+        encoding="utf-8",
+    )
+    from roco.compiler.effect_codegen import exact_decoders as ed
+    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
+    loaded = ed._load_jsonl()
+    entry = loaded[20400420]
+    assert entry.primitive == "buff_20400420"
+    assert entry.buff_id == 20400420
+    assert entry.effect_id is None
+    assert entry.pak_table == "BUFF_CONF"
 
 
 def test_jsonl_ignored_rejects_handler_args(tmp_path, monkeypatch):
