@@ -113,6 +113,7 @@ _CATEGORY_NAMES = {
     SkillCategory.STATUS: "状态",
 }
 
+# Semantic gap audit: see _docs/phase4_mark_tag_map_audit.md
 _MARK_TAG_MAP: dict[str, int] = {
     "poison": 2007,    # STATUS_CONDITION family
     "moisture": 2143,  # MARK_CHANGE family
