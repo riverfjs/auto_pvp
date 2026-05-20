@@ -1,0 +1,2 @@
+{"buff_id": 20030010, "pak_editor_name": "收集CE-首领", "pak_desc": "免疫吹飞", "immunities": ["force_switch"], "evidence": "BUFF_CONF.json[20030010].desc='免疫吹飞'"}
+{"buff_id": 20030011, "pak_editor_name": "免疫吹飞，中毒，寄生，灼烧，冻结", "pak_desc": "免疫吹飞，中毒，寄生，灼烧，冻结。", "immunities": ["force_switch", "poison", "burn", "freeze", "leech"], "evidence": "BUFF_CONF.json[20030011].desc='免疫吹飞，中毒，寄生，灼烧，冻结。'"}

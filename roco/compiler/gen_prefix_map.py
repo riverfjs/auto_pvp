@@ -754,6 +754,10 @@ def main() -> None:
     counter_count = generate_counter_skill_table()
     print(f"counter_skill_table.py: {counter_count} counter response skills -> {COUNTER_SKILL_TABLE_PATH}")
 
+    from roco.compiler.codegen.buff_immunity_codegen import write_buff_immunity_table
+    immunity_path = write_buff_immunity_table()
+    print(f"buff_immunity_table.py -> {immunity_path}")
+
 
 if __name__ == "__main__":
     main()
