@@ -17,6 +17,7 @@ from __future__ import annotations
 from roco.common.enums import AbilityFlag
 from roco.common.packing import _tick_cooldowns
 from roco.engine.common.choices import SIDE_A, SIDE_B
+from roco.engine.kernel.active_buffs import tick_active_buffs
 from roco.engine.kernel.catalog import PET_ABILITY, PET_PRIMARY, PET_SECONDARY
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import TIMING_TURN_END
@@ -65,8 +66,9 @@ def _tick_side_turn_state(side_state):
         pet._replace(
             anti_heal_multiplier=0,
             cooldowns=_tick_cooldowns(pet.cooldowns),
+            active_buffs=tick_active_buffs(pet.active_buffs),
         )
-        if pet.anti_heal_multiplier or pet.cooldowns else pet
+        if pet.anti_heal_multiplier or pet.cooldowns or pet.active_buffs else pet
         for pet in side_state.pets
     )
     return side_state._replace(cost_mods=tick_cost_mod(side_state.cost_mods), pets=pets)

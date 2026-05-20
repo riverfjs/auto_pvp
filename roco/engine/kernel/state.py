@@ -39,6 +39,11 @@ class PetState(NamedTuple):
     leech_source_side: int
     leech_source_slot: int
     fainted: int
+    # Packed active-buff ledger: 8 lanes × 64 bits per
+    # ``roco.engine.kernel.active_buffs`` schema.  Default 0 = all lanes
+    # empty, so existing code paths that never touch the ledger are
+    # behaviour-neutral.
+    active_buffs: int = 0
 
 
 class SideState(NamedTuple):
@@ -182,6 +187,7 @@ def _pet_state(pet_id: int) -> PetState:
         leech_source_side=-1,
         leech_source_slot=-1,
         fainted=0,
+        active_buffs=0,
     )
 
 
