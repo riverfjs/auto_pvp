@@ -98,10 +98,34 @@ Three options were considered before opening the phase:
 
 Phase 4 takes option (3) deliberately: no code change beyond a
 one-line comment above the dict pointing at this doc, no test
-modifications.  The test `test_marks_import_only_audits_source_skills`
-in `tests/test_data_pipeline.py` already locks the "audit gap = 0"
-baseline, which option (3) preserves and options (1)/(2) would
-either preserve trivially or break depending on the rewrite.
+modifications.  Two different invariants together hold the current
+behaviour in place and must not be confused:
+
+* **Real canonical build**: `mark audit effect_gaps rows: 0`,
+  because every row in `_data/canonical/marks.jsonl` ships
+  `source_skills: []`.  A fresh `uv run python -m roco.data.build_db`
+  reports this directly.
+* **Synthetic test scaffolding**:
+  `tests/test_data_pipeline.py::test_marks_import_only_audits_source_skills`
+  feeds one mark record with a *non-empty* `source_skills` entry
+  and asserts that the dispatch produces exactly one
+  `effect_gaps` row (`gaps == 1`, with `primitive = '2143'`).
+  That assertion is what locks the inert dict's current
+  behaviour: when `source_skills` *is* non-empty, the prefix
+  value flows into `effect_gaps` as-is even though
+  `skill_effects.tag_code` is a different namespace.
+
+Options (1) and (2) would each break the synthetic test:
+
+* (1) Deleting the dict and its consumer makes
+  `gaps == 1` impossible — the test would fail because no row
+  would be inserted.
+* (2) Rewriting values to handler indices changes the inserted
+  `primitive` from `'2143'` to e.g. `'41'`, so the
+  `WHERE primitive = '2143'` assertion would fail.
+
+Option (3) preserves both invariants exactly, leaving the
+decision for when real `source_skills` data exists.
 
 ## 4. Re-audit triggers
 
