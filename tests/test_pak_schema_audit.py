@@ -135,23 +135,22 @@ def test_buffbase_families_count_total(buffbase_conf, buff_conf):
 # ── rule debt ─────────────────────────────────────────────────────
 
 
-def test_exact_rule_debt_h_install_counter_cluster(effect_conf):
-    """All ``H_INSTALL_COUNTER`` rules must cluster under
-    ``effect_order=31`` and be flagged as migration candidates.
+def test_exact_rule_debt_h_install_counter_migrated_out():
+    """Post-7B: ``H_INSTALL_COUNTER`` no longer appears in
+    ``exact_effects.jsonl`` — the whole family is covered by the
+    ``effect_order=31`` decoder in
+    :mod:`roco.compiler.effect_codegen.family_axes`.
 
-    Locks the central headline used to motivate the upcoming 7B
-    counter-family decoder migration.
+    Locks the migration: re-adding a row by hand for any ``ET_COUNTER``
+    effect would fail this test, surfacing the regression at audit time.
     """
     from roco.compiler.pak_schema_audit import _load_exact_rules
-    exact_rules = _load_exact_rules()
-    debt = exact_rule_debt(exact_rules, effect_conf)
-    counter_rows = [r for r in debt if r["handler"] == "H_INSTALL_COUNTER"]
-    assert counter_rows, "no H_INSTALL_COUNTER exact rules in jsonl"
-    assert all(r["effect_order"] == 31 for r in counter_rows), (
-        "some H_INSTALL_COUNTER rules are NOT effect_order=31 — that breaks "
-        "the family-decoder migration premise"
+    handlers = {r["handler"] for r in _load_exact_rules()}
+    assert "H_INSTALL_COUNTER" not in handlers, (
+        "H_INSTALL_COUNTER row in exact_effects.jsonl — the counter "
+        "family is now decoded by family_axes; add the rule to the "
+        "family decoder instead of exact_effects."
     )
-    assert all(r["migration_candidate"] for r in counter_rows)
 
 
 def test_exact_rule_debt_cluster_size_at_least_threshold(effect_conf):

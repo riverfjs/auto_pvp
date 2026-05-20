@@ -30,7 +30,7 @@ Total `(type, effect_order)` families: **92**. `coverage` is sourced from `roco/
 | `effect_conf:t1:o22` | 1 | 22 | 3 | 5:3 | 0/1 | `auto_structural` | 争雄-筛选雄性, 灵魂号角-筛选死亡角色, 蜂群集结 |
 | `effect_conf:t1:o23` | 1 | 23 | 4 | 9:4 | 0/0 | `auto_structural` | 草系友善-队伍中存在草系精灵, 虫系友善-队伍中存在虫系, 青草抱枕-筛选草系, … (+1) |
 | `effect_conf:t1:o27` | 1 | 27 | 5 | 2:5 | 1/0 | `gap` | 临时-替换石壁, 光系替换技能, 替换首领技能 |
-| `effect_conf:t1:o31` | 1 | 31 | 38 | 6:1, 8:37 | 20/0 | `exact_jsonl_partial` | 丛林奇袭, 偷袭, 反制, … (+5) |
+| `effect_conf:t1:o31` | 1 | 31 | 38 | 6:1, 8:37 | 20/0 | `auto_structural` | 丛林奇袭, 偷袭, 反制, … (+5) |
 | `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 52/0 | `exact_jsonl_partial` | 糖果海浪, 虫鸣, 连击10, … (+5) |
 | `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 3/0 | `gap` | 释放两侧技能, 释放其他迅捷技能, 释放所有普通系技能 |
 | `effect_conf:t1:o34` | 1 | 34 | 10 | 8:10 | 0/2 | `mixed` | 与力, 焰胆-领主技能, 状态接力, … (+5) |
@@ -50,7 +50,7 @@ Total `(type, effect_order)` families: **92**. `coverage` is sourced from `roco/
 | `effect_conf:t2:o6` | 2 | 6 | 3 | 1:3 | 0/0 | `auto_structural` | 换宠技能通用, 通用强制换宠 |
 | `effect_conf:t2:o7` | 2 | 7 | 1 | 0:1 | 0/0 | `auto_structural` | 通用技能替换 |
 | `effect_conf:t2:o18` | 2 | 18 | 12 | 1:12 | 1/1 | `auto_structural` | 偷10能量, 偷1能量, 偷2能量, … (+5) |
-| `effect_conf:t2:o31` | 2 | 31 | 103 | 8:103 | 81/0 | `mixed` | 7040380, 7190400, 下坠, … (+5) |
+| `effect_conf:t2:o31` | 2 | 31 | 103 | 8:103 | 81/0 | `auto_structural` | 7040380, 7190400, 下坠, … (+5) |
 | `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 2/0 | `auto_structural` | 检测冰系标记，获得攻防速强化, 检测机械系标记，获得攻防速强化, 检测水系标记，强化速度, … (+5) |
 | `effect_conf:t2:o55` | 2 | 55 | 1 | 5:1 | 0/0 | `auto_structural` | 随机使携带的两个普通系技能能量加1 |
 | `effect_conf:t3:o1` | 3 | 1 | 5 | 7:5 | 4/0 | `gap` | 灾厄, 自伤10％, 自伤20％, … (+2) |
@@ -69,7 +69,7 @@ Total `(type, effect_order)` families: **92**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o28` | 3 | 28 | 5 | 2:5 | 4/0 | `generated_weather` | 晴天, 暴风雪, 求雨, … (+2) |
 | `effect_conf:t3:o29` | 3 | 29 | 1 | 0:1 | 1/0 | `gap` | 测试--重置天气 |
 | `effect_conf:t3:o30` | 3 | 30 | 1 | 1:1 | 1/0 | `gap` | 测试--重置火和冰地表 |
-| `effect_conf:t3:o31` | 3 | 31 | 62 | 8:62 | 36/0 | `exact_jsonl_partial` | 偷袭, 光4, 冥想, … (+5) |
+| `effect_conf:t3:o31` | 3 | 31 | 62 | 8:62 | 36/0 | `auto_structural` | 偷袭, 光4, 冥想, … (+5) |
 | `effect_conf:t3:o34` | 3 | 34 | 14 | 8:14 | 0/10 | `gap` | 200085, 200153, 200172, … (+5) |
 | `effect_conf:t3:o36` | 3 | 36 | 1 | 2:1 | 0/0 | `gap` | 毛毛 |
 | `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 97/0 | `exact_jsonl_partial` | 优化eff37释放的技能进入cd, 防御类技能公共冷却1, 防御类技能公共冷却2 |
@@ -257,13 +257,12 @@ Migration candidates per rule file.  An exact rule is a candidate when ≥3 rule
 
 | effect_order | handler | rule count | sample editor_names |
 |---:|---|---:|---|
-| 31 | `H_INSTALL_COUNTER` | **76** | 偷袭, 光4, 冥想 |
 | 32 | `H_HIT_COUNT_DELTA` | **10** | 连击10, 连击2, 连击3 |
 | 5 | `H_HEAL_HP` | **6** | 恢复15%生命, 恢复20%生命, 恢复25%生命 |
 | 19 | `H_HEAL_ENERGY` | **6** | 通用--获得10能量, 通用--获得1能量, 通用--获得2能量 |
 | 11 | `H_LIFE_DRAIN` | **3** | 汲取生命100, 汲取生命50, 汲取生命虫-汲取生命100% |
 
-_101 of 111 exact rules in migration clusters; 10 are singletons or sparse._
+_25 of 35 exact rules in migration clusters; 10 are singletons or sparse._
 
 ### 4b. `prefix_handlers.jsonl` rekey candidates
 

@@ -184,22 +184,25 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
 
 
 def _counter_response_skill_ids(pak_tables: PakTables) -> set[int]:
-    """Collect every 70xxxxx skill referenced by a 1031xxx counter trigger.
+    """Collect every 70xxxxx skill referenced by a counter-trigger effect.
 
-    The pak counter-trigger family (effect_id 1031041..1031117 etc.) stores
-    the 70xxxxx response skill_id in ``effect_param[0]``.  The kernel
-    consumes those skills by id and needs them in ``hot.SKILLS``, so they
-    must end up in ``skills.jsonl`` even though moves.json never
-    references them.  Returns an empty set when ``EFFECT_CONF`` is absent
-    (test fixtures only ship the tables they exercise).
+    The pak counter-trigger family stores the 70xxxxx response skill_id
+    in ``effect_param[0]``; pak's own axis for the family is
+    ``EFFECT_CONF.effect_order == 31`` (matches
+    ``Enum.EffectType.ET_COUNTER``, see
+    ``SkillPerformAutoBattleUtils.lua:189``).  The kernel consumes those
+    skills by id and needs them in ``hot.SKILLS``, so they must end up
+    in ``skills.jsonl`` even though moves.json never references them.
+    Returns an empty set when ``EFFECT_CONF`` is absent (test fixtures
+    only ship the tables they exercise).
     """
     try:
         effect_conf = pak_tables.effect_conf
     except FileNotFoundError:
         return set()
     out: set[int] = set()
-    for eid, rec in effect_conf.items():
-        if not (1031000 <= int(eid) <= 1031999):
+    for rec in effect_conf.values():
+        if int(rec.get("effect_order", 0)) != 31:
             continue
         params = rec.get("effect_param") or rec.get("params") or []
         if not params or not isinstance(params[0], dict):

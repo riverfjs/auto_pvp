@@ -48,6 +48,7 @@ from roco.generated.handler_indices import *  # noqa: F401,F403
 
 from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
 from roco.compiler.effect_codegen.exact_decoders import decode_exact
+from roco.compiler.effect_codegen.family_axes import decode_family_axes
 from roco.compiler.effect_codegen.outcomes import (
     AbilityFlagOutcome,
     EmitOutcome,
@@ -163,6 +164,30 @@ def generate_effect_rows(
         target_type = entry.get("result_target_type", 1)
         success_rate = entry.get("success_rate", 10000)
         buff_group_level = int(entry.get("buff_group_level", 0) or 0)
+
+        # Pak-axis family decoders win first — they read pak's own
+        # schema fields (e.g. ``effect_order``) so the whole family is
+        # covered uniformly without per-id rule rows.  Same return
+        # shape as ``decode_exact`` so the tuple/timing handling below
+        # serves both.
+        family = decode_family_axes(
+            effect_id, pak_data.effect_conf, pak_data.buff_conf,
+        )
+        if family is not None:
+            if isinstance(family, tuple):
+                outcome, timing_override = family
+                timing = timing_override or cast_moment
+            else:
+                outcome = family
+                timing = cast_moment
+            rows.append(_emit_row(
+                outcome,
+                timing=timing,
+                target_type=target_type,
+                success_rate=success_rate,
+                buff_group_level=buff_group_level,
+            ))
+            continue
 
         # Hand-curated exact decoders (compound type=1 payloads, type=3
         # state changes, weather setters, ignored visual-only effects)

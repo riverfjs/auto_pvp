@@ -7,12 +7,12 @@ Total families: **177**
 ## Coverage status
 
 - `ability_flag`: 1
-- `auto_structural`: 92
+- `auto_structural`: 95
 - `exact_jsonl`: 1
-- `exact_jsonl_partial`: 8
+- `exact_jsonl_partial`: 6
 - `gap`: 64
 - `generated_weather`: 1
-- `mixed`: 10
+- `mixed`: 9
 
 ## Acknowledgement totals
 
@@ -1638,10 +1638,10 @@ _(none)_
 
 ## `effect_conf:t1:o31` — EFFECT_CONF
 
-- count: **38** | coverage: `exact_jsonl_partial` | used_consumer_count: 19
+- count: **38** | coverage: `auto_structural` | used_consumer_count: 19
 - editor_names: 丛林奇袭, 偷袭, 反制, 反制气泡, 大法阵, 崩拳, 巧劲, 应激反应, 格斗小七2, 水刃
 - example_source_ids: [1031001, 1031002, 1031003, 1031004, 1031005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 19, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 38, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7020810` 无畏之心 — 减伤100%，<desc_id=1016>应对攻击</>：减免的伤害变为回复自己生命，且本技能能耗永久+2。
     - `7020800` 血气 — 减伤60%，<desc_id=1016>应对攻击</>：本回合受到致命伤害时，保留1生命值。
@@ -1651,7 +1651,6 @@ _(none)_
 - pak_evidence:
     - EFFECT_CONF.json: 1031001 type=1 effect_order=31 effect_param=[[7020071], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
-    - exact_effects.jsonl emit rows for: [1031043, 1031045, 1031046, 1031048, 1031049, 1031050, 1031051, 1031052, 1031053, 1031054]
 
 ## `effect_conf:t1:o32` — EFFECT_CONF
 
@@ -1935,10 +1934,10 @@ _(none)_
 
 ## `effect_conf:t2:o31` — EFFECT_CONF
 
-- count: **103** | coverage: `mixed` | used_consumer_count: 48
+- count: **103** | coverage: `auto_structural` | used_consumer_count: 48
 - editor_names: 7040380, 7190400, 下坠, 不动, 不可接触, 冥想新, 冰2, 冰之花, 冰刺, 冰化
 - example_source_ids: [1031065, 1031066, 1031074, 1031076, 1031077]
-- coverage_breakdown: {'auto_structural_count': 87, 'exact_jsonl_count': 16, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 103, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180190` 恶意逃离 — <desc_id=1003>脱离</>，<desc_id=1017>应对防御</>：额外使敌方攻击技能能耗+4。
     - `7040270` 热身 — 下一次攻击时，技能威力翻倍，<desc_id=1017>应对防御</>：改为威力变为4倍。
@@ -1948,7 +1947,6 @@ _(none)_
 - pak_evidence:
     - EFFECT_CONF.json: 1031065 type=2 effect_order=31 effect_param=[[7080161], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
-    - exact_effects.jsonl emit rows for: [1031065, 1031066, 1031074, 1031076, 1031077, 1031078, 1031079, 1031089, 1031090, 1031091]
 
 ## `effect_conf:t2:o4` — EFFECT_CONF
 
@@ -2200,10 +2198,10 @@ _(none)_
 
 ## `effect_conf:t3:o31` — EFFECT_CONF
 
-- count: **62** | coverage: `exact_jsonl_partial` | used_consumer_count: 30
+- count: **62** | coverage: `auto_structural` | used_consumer_count: 30
 - editor_names: 偷袭, 光4, 冥想, 冰盾, 冰锤, 冰锥, 剧毒, 十字斩, 反击, 地刺
 - example_source_ids: [1031021, 1031022, 1031023, 1031024, 1031025]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 41, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 21, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 62, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100130` 吹炎 — <desc_id=1007>蓄力</>，造成物伤，<desc_id=1015>应对状态</>：本次技能威力翻倍。
     - `7140180` 硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
@@ -2213,7 +2211,6 @@ _(none)_
 - pak_evidence:
     - EFFECT_CONF.json: 1031021 type=3 effect_order=31 effect_param=[[7050131], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
-    - exact_effects.jsonl emit rows for: [1031041, 1031042, 1031044, 1031047, 1031056, 1031057, 1031058, 1031061, 1031064, 1031067]
 
 ## `effect_conf:t3:o34` — EFFECT_CONF
 

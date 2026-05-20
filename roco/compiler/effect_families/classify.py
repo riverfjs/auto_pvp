@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
 from roco.compiler.effect_codegen.exact_decoders import decode_exact
+from roco.compiler.effect_codegen.family_axes import decode_family_axes
 from roco.compiler.effect_codegen.outcomes import (
     AbilityFlagOutcome,
     EmitOutcome,
@@ -68,6 +69,13 @@ def _classify_one_source_id(
             return "ignored"
         return "exact_jsonl"
     if sid in pak.effect_conf:
+        # Pak-axis family decoders (effect_order family etc.) — pak-native
+        # so they win over the type-based structural fallback.  Bucket the
+        # result as ``auto_structural`` since the source is pak's own
+        # schema rather than a hand-curated rule.
+        family = decode_family_axes(sid, pak.effect_conf, pak.buff_conf)
+        if family is not None:
+            return "auto_structural"
         outcomes = decode_effect(sid, pak.effect_conf, pak.buff_conf)
     elif sid in pak.buff_conf:
         outcomes = decode_buff_direct(sid, pak.buff_conf)

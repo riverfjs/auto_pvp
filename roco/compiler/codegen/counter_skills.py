@@ -1,11 +1,13 @@
 """Codegen for ``roco/generated/counter_skill_table.py``.
 
-The pak counter-trigger family (effect_ids 1031xxx) carries a 70xxxxx
-response skill_id in ``effect_param[0]``.  When ``op_install_counter``
-arms a side's ``counter_skill_id``, the kernel reads this table to
-resolve the response skill's combat stats (power, element, category,
-damage type code, priority).  Built directly from SKILL_CONF so adding
-a new "应对！X" pak skill only requires a parse_pak re-run.
+The pak counter-trigger family (``EFFECT_CONF.effect_order == 31``,
+matching ``Enum.EffectType.ET_COUNTER`` in
+``SkillPerformAutoBattleUtils.lua:189``) carries a 70xxxxx response
+skill_id in ``effect_param[0]``.  When ``op_install_counter`` arms a
+side's ``counter_skill_id``, the kernel reads this table to resolve
+the response skill's combat stats (power, element, category, damage
+type code, priority).  Built directly from SKILL_CONF so adding a new
+"应对！X" pak skill only requires a parse_pak re-run.
 
 The ``_PAK_SKILL_DAM_TYPE_TO_ELEMENT`` table below is a **schema adapter**
 (pak ``skill_dam_type`` → project ``Element`` enum value), not battle
@@ -64,9 +66,8 @@ def load_counter_skill_table(
     skill_rows = json.loads(skill_path.read_text(encoding="utf-8")).get("RocoDataRows", {})
 
     counter_skill_ids: set[int] = set()
-    for eid_str, rec in effect_rows.items():
-        eid = int(eid_str)
-        if not (1031000 <= eid <= 1031999):
+    for rec in effect_rows.values():
+        if int(rec.get("effect_order", 0)) != 31:
             continue
         params = rec.get("effect_param") or rec.get("params") or []
         if not params or not isinstance(params[0], dict):
