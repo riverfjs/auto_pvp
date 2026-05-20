@@ -29,6 +29,7 @@ from __future__ import annotations
 import sys
 
 from roco.compiler.codegen import (
+    buffbase_params_codegen,
     counter_skills,
     handlers,
     marks,
@@ -83,6 +84,12 @@ def main() -> None:
 
     immunity_path = write_buff_immunity_table()
     print(f"buff_immunity_table.py -> {immunity_path}")
+
+    bb_count = buffbase_params_codegen.write_buffbase_params()
+    print(
+        f"buffbase_params.py: {bb_count} base_ids "
+        f"-> {buffbase_params_codegen.BUFFBASE_PARAMS_PATH}"
+    )
 
 
 if __name__ == "__main__":
