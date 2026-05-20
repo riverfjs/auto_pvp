@@ -61,7 +61,7 @@ def _run_step(cmd: list[str], *, label: str) -> int:
 
     Tests monkeypatch this with a recorder; production calls subprocess.
     """
-    print(f"[refresh] {label}")
+    print(f"[refresh] {label}", flush=True)
     return subprocess.run(cmd, cwd=str(REPO_ROOT)).returncode
 
 
@@ -78,7 +78,7 @@ def _git_status_porcelain(paths: tuple[str, ...]) -> tuple[int, str]:
 
 
 def _check_artifacts_clean() -> int:
-    print("[refresh] check artifacts clean")
+    print("[refresh] check artifacts clean", flush=True)
     rc, out = _git_status_porcelain(CHECK_PATHS)
     if rc != 0:
         sys.stderr.write(f"[refresh] git status exited {rc}\n")
