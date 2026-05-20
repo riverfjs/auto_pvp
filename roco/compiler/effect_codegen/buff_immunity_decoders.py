@@ -125,6 +125,7 @@ def load_buff_immunity_table(
     tag_specs = _tag_to_spec()
 
     out: dict[int, int] = {}
+    first_seen_line: dict[int, int] = {}
     with path.open("r", encoding="utf-8") as fp:
         for line_no, raw in enumerate(fp, 1):
             raw = raw.strip()
@@ -132,6 +133,13 @@ def load_buff_immunity_table(
                 continue
             rec = json.loads(raw)
             buff_id = int(rec["buff_id"])
+            if buff_id in first_seen_line:
+                raise RuntimeError(
+                    f"buff_immunity.jsonl line {line_no}: duplicate buff_id "
+                    f"{buff_id} (already defined on line "
+                    f"{first_seen_line[buff_id]})"
+                )
+            first_seen_line[buff_id] = line_no
             if buff_id not in conf:
                 raise RuntimeError(
                     f"buff_immunity.jsonl line {line_no}: buff_id {buff_id} "

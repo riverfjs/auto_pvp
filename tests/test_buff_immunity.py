@@ -135,6 +135,35 @@ def test_loader_rejects_unknown_immunity_tag(tmp_path):
         bid.load_buff_immunity_table(rules_path=fake, buff_conf=conf)
 
 
+def test_loader_rejects_duplicate_buff_id(tmp_path):
+    """Two rows for the same buff_id must fail loudly.
+
+    Without this guard the second row silently overwrites the first —
+    catastrophic for any future merge conflict that resolves wrong, and
+    contradicts the "strict validation" goal of the spike.
+    """
+    fake = tmp_path / "fake.jsonl"
+    _write_jsonl(fake, [
+        {
+            "buff_id": 12345,
+            "pak_editor_name": "x",
+            "pak_desc": "免疫吹飞",
+            "immunities": ["force_switch"],
+            "evidence": "BUFF_CONF.json[12345].desc='免疫吹飞'",
+        },
+        {
+            "buff_id": 12345,
+            "pak_editor_name": "x2",
+            "pak_desc": "免疫吹飞",
+            "immunities": ["force_switch"],
+            "evidence": "BUFF_CONF.json[12345].desc='免疫吹飞'",
+        },
+    ])
+    conf = _stub_conf(12345, "免疫吹飞")
+    with pytest.raises(RuntimeError, match=r"duplicate buff_id 12345.*line 1"):
+        bid.load_buff_immunity_table(rules_path=fake, buff_conf=conf)
+
+
 def test_loader_rejects_empty_immunities_list(tmp_path):
     fake = tmp_path / "fake.jsonl"
     _write_jsonl(fake, [{
