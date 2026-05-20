@@ -1,7 +1,8 @@
 """Strict loader for ``rules/effect_gap_acknowledgements.jsonl``.
 
 Phase 3 introduces acknowledgements as a parallel audit axis to the
-existing emit / ignored / gap three-state contract.  An acknowledgement
+emit / ignored / gap / ability_flag four-state contract (see
+:mod:`.outcomes`).  An acknowledgement
 is **not** a runtime decoder rule — it does not emit kernel ops.  It is
 a compile-time declaration that a *used* :class:`effect_gaps` row has
 been audited and assigned to one of:

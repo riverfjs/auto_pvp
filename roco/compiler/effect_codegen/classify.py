@@ -1,7 +1,7 @@
 """Pak-effect classification — pak-first, no H_NOOP at the boundary.
 
-Each decoder returns ``list[EmitOutcome | GapOutcome]`` (never H_NOOP
-tuples).  See :mod:`.outcomes` for the three-state contract.
+Each decoder returns ``list[EmitOutcome | GapOutcome | AbilityFlagOutcome]``
+(never H_NOOP tuples).  See :mod:`.outcomes` for the four-state contract.
 
 Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 
@@ -12,9 +12,16 @@ Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
   family fallback).  Single-candidate effects are deterministic — pak
   literally wrote one buff to apply.
 * ``type=1`` with multiple buff_ids and any ``type=3`` row require
-  human-verified semantics: see :mod:`.exact_decoders`.  Anything not in
-  that table surfaces as a :class:`GapOutcome` rather than being
+  human-verified semantics: see :mod:`.exact_decoders` (runtime row) and
+  :mod:`.ability_flags_from_effects` (ability passive flag).  Anything
+  not covered surfaces as a :class:`GapOutcome` rather than being
   heuristically guessed.
+
+  ``type=3`` rows that match an entry in ``ability_flags_from_effects.jsonl``
+  surface as :class:`AbilityFlagOutcome` — the bit is compiled into
+  ``ABILITY_FLAGS`` rather than into a runtime row.  Only the ability
+  builder path accepts that outcome; the skill builder raises if it
+  ever sees one (see :func:`generate_effect_rows`).
 
 ``classify_buff_handler`` (exact ``buff_base_id`` then prefix) is also
 used by :func:`decode_buff_direct` when a skill_result references a
@@ -29,12 +36,31 @@ from pathlib import Path
 
 from roco.generated.handler_indices import H_DAMAGE
 
-from roco.compiler.effect_codegen.outcomes import EmitOutcome, GapOutcome
+from roco.compiler.effect_codegen.outcomes import AbilityFlagOutcome, EmitOutcome, GapOutcome
 from roco.compiler.effect_codegen.params import (
     extract_int_list,
     pack_handler_params,
     safe_int,
 )
+
+
+def _load_ability_flag_table() -> dict[int, AbilityFlagOutcome]:
+    """Load the effect → AbilityFlagOutcome map; empty on first-run boot.
+
+    Imported lazily inside the function so module import doesn't trigger
+    a full pak read at collect time (the loader pulls ``EFFECT_CONF.json``
+    when no override is supplied).
+    """
+    from roco.compiler.effect_codegen.ability_flags_from_effects import (
+        load_ability_flags_from_effects,
+    )
+    rules_path = Path(__file__).resolve().parents[2] / "compiler" / "rules" / "ability_flags_from_effects.jsonl"
+    if not rules_path.exists():
+        return {}
+    return load_ability_flags_from_effects(rules_path=rules_path)
+
+
+ABILITY_FLAG_OUTCOMES: dict[int, AbilityFlagOutcome] = _load_ability_flag_table()
 
 
 def count_buff_repeats(params_raw: list, buff_id: int) -> int:
@@ -182,13 +208,19 @@ def decode_effect(
     effect_id: int,
     effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
-) -> list[EmitOutcome | GapOutcome]:
+) -> list[EmitOutcome | GapOutcome | AbilityFlagOutcome]:
     """Decode one ``EFFECT_CONF`` row into outcomes.
 
     Returns at least one outcome.  ``type=1`` no-buff, compound, and every
-    ``type=3`` row produce a :class:`GapOutcome`; the structural ``type=1``
-    single-buff path and ``type=2`` damage produce :class:`EmitOutcome`.
+    ``type=3`` row default to :class:`GapOutcome`; the structural ``type=1``
+    single-buff path and ``type=2`` damage produce :class:`EmitOutcome`;
+    rows listed in ``ability_flags_from_effects.jsonl`` produce
+    :class:`AbilityFlagOutcome` (only the ability builder accepts that —
+    the skill builder rejects it loudly).
     """
+    flag_outcome = ABILITY_FLAG_OUTCOMES.get(effect_id)
+    if flag_outcome is not None:
+        return [flag_outcome]
     rec = effect_conf.get(effect_id)
     if rec is None:
         return [GapOutcome(

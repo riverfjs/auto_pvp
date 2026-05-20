@@ -2,18 +2,37 @@
 
 Public surface: :class:`PakTables`, :func:`generate_effect_rows`,
 :func:`build_ability_effect_rows`.  Each ``skill_result`` entry resolves
-to exactly one :class:`EmitOutcome`, :class:`IgnoredOutcome`, or
-:class:`GapOutcome` — never the H_NOOP sentinel.  ``H_NOOP`` itself only
-exists at the kernel dispatch layer (``ops.py``) as the "skip this row"
-index.
+to exactly one :class:`EmitOutcome`, :class:`IgnoredOutcome`,
+:class:`GapOutcome`, or :class:`AbilityFlagOutcome` — never the H_NOOP
+sentinel.  ``H_NOOP`` itself only exists at the kernel dispatch layer
+(``ops.py``) as the "skip this row" index.
+
+Four-state outcome routing:
+
+* :class:`EmitOutcome` → effect_rows (runtime kernel row).
+* :class:`IgnoredOutcome` → ``ignored_effects`` table.
+* :class:`GapOutcome` → ``effect_gaps`` table (blocks strict ``build_db``).
+* :class:`AbilityFlagOutcome` → dropped here; later compiled into the
+  catalog ``ABILITY_FLAGS`` tuple by
+  :mod:`roco.compiler.codegen.ability_flags_codegen` via the join of
+  the ``ability_effect_ids`` table × ``ability_flags_from_effects.jsonl``.
+  Only :func:`build_ability_effect_rows` accepts this outcome — the
+  generic ``generate_effect_rows`` rejects it unless explicitly opted
+  in via ``allow_ability_flags=True``, so a stray ability-passive
+  effect_id never silently applies to a per-cast skill row.
 
 Internal layout:
 
-* :mod:`.outcomes` — three-state dataclasses
+* :mod:`.outcomes` — four-state dataclasses
 * :mod:`.pak` — lazy pak table loaders
 * :mod:`.params` — pak ``effect_param`` extraction + handler-param packing
-* :mod:`.classify` — buff_id → handler index; structural + gap outcomes
+* :mod:`.classify` — buff_id → handler index; structural + gap outcomes;
+  also consults :mod:`.ability_flags_from_effects` to surface
+  :class:`AbilityFlagOutcome` for ``type=3`` rows mapped in the rules
+  JSONL.
 * :mod:`.exact_decoders` — hand-curated emit / ignored overrides
+* :mod:`.ability_flags_from_effects` — pak effect_id → AbilityFlag bit
+  rules loader (effects that compile to passive flags, not runtime rows)
 * :mod:`.audit` — gap-row metadata helper (no longer classifies)
 
 Timing = ``cast_moment`` directly; Target = ``result_target_type``;
@@ -29,7 +48,12 @@ from roco.generated.handler_indices import *  # noqa: F401,F403
 
 from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
 from roco.compiler.effect_codegen.exact_decoders import decode_exact
-from roco.compiler.effect_codegen.outcomes import EmitOutcome, GapOutcome, IgnoredOutcome
+from roco.compiler.effect_codegen.outcomes import (
+    AbilityFlagOutcome,
+    EmitOutcome,
+    GapOutcome,
+    IgnoredOutcome,
+)
 from roco.compiler.effect_codegen.pak import PakTables
 from roco.compiler.effect_codegen.params import is_status_or_mark_handler
 
@@ -86,8 +110,23 @@ def _emit_row(
 def generate_effect_rows(
     skill_row: dict,
     pak_data: PakTables,
+    *,
+    allow_ability_flags: bool = False,
 ) -> tuple[list[tuple[int, ...]], list[dict], list[dict]]:
-    """Decode a skill's ``skill_result`` into (rows, ignored, gaps).
+    """Decode a ``skill_result`` list into (rows, ignored, gaps).
+
+    Parameters
+    ----------
+    skill_row, pak_data
+        Standard inputs from the skill / ability builder.
+    allow_ability_flags : bool, default False
+        Whether to accept :class:`AbilityFlagOutcome` results from the
+        decoder.  Skill builders **must not** set this — ability-passive
+        bits silently applied to a per-cast skill row would corrupt the
+        runtime contract.  Ability builders set this to True via
+        :func:`build_ability_effect_rows`; the outcome is then dropped
+        from rows / ignored / gaps and the bit is set later by
+        :mod:`roco.compiler.codegen.ability_flags_codegen`.
 
     Returns
     -------
@@ -101,6 +140,13 @@ def generate_effect_rows(
     gaps : list[dict]
         Unsupported / unrecognised effects.  Used + non-zero ``used_count``
         rows block strict ``build_db``.
+
+    Raises
+    ------
+    RuntimeError
+        If a decoder returns :class:`AbilityFlagOutcome` while
+        ``allow_ability_flags`` is False — that means a pak ability-flag
+        effect_id leaked into a non-ability decoding path.
     """
     rows: list[tuple[int, ...]] = []
     ignored: list[dict] = []
@@ -165,6 +211,20 @@ def generate_effect_rows(
                 ))
             elif isinstance(outcome, GapOutcome):
                 gaps.append(_gap_dict(outcome, cast_moment, order, target_type, success_rate))
+            elif isinstance(outcome, AbilityFlagOutcome):
+                if not allow_ability_flags:
+                    raise RuntimeError(
+                        f"AbilityFlagOutcome leaked into a non-ability decoding "
+                        f"path (effect_id={outcome.effect_id}, "
+                        f"flag={outcome.flag_name}). generate_effect_rows must "
+                        f"be called with allow_ability_flags=True only from "
+                        f"ability builders."
+                    )
+                # The bit is set later by ability_flags_codegen via the
+                # ability_effect_ids × ability_flags_from_effects.jsonl join.
+                # Intentionally drop from rows / ignored / gaps — this is
+                # the fourth outcome type's whole point.
+                continue
             else:  # IgnoredOutcome — structural decoder doesn't emit these
                 ignored.append(_ignored_dict(outcome, cast_moment, order))
 
@@ -175,11 +235,18 @@ def build_ability_effect_rows(
     ability_row: dict,
     pak_data: PakTables,
 ) -> tuple[list[tuple[int, ...]], list[dict], list[dict]]:
-    """Same as :func:`generate_effect_rows` but tolerates the ``effect_list`` alias."""
+    """Decode an ability's effect rows; tolerates the ``effect_list`` alias.
+
+    Unlike a skill builder, this path accepts :class:`AbilityFlagOutcome`
+    results (passive bits compiled into ``ABILITY_FLAGS``).  The bit
+    itself is populated later by
+    :mod:`roco.compiler.codegen.ability_flags_codegen`; the outcome is
+    dropped here.
+    """
     if "skill_result" not in ability_row and "effect_list" in ability_row:
         ability_row = dict(ability_row)
         ability_row["skill_result"] = ability_row["effect_list"]
-    return generate_effect_rows(ability_row, pak_data)
+    return generate_effect_rows(ability_row, pak_data, allow_ability_flags=True)
 
 
 def _gap_dict(

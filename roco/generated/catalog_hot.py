@@ -2,7 +2,7 @@
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = 'kernel-v1'
-SOURCE_HASH = '01d0c96da19de34e3118e5d0ba6555bca89b16469f84e4c2770e9280b76b486f'
+SOURCE_HASH = 'c2dab248b5a4994fabebdfd71dd4cdbfeda898747ce83dc4eea03eb130b714d7'
 ELEMENT_COUNT = 18
 PETS = ((0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
  (1, 63, 57, 57, 56, 59, 33, 1, -1, 11),
@@ -7521,6 +7521,7 @@ ABILITY_FLAGS = (0,
  0,
  0,
  0,
+ 262144,
  0,
  0,
  0,
@@ -7602,8 +7603,7 @@ ABILITY_FLAGS = (0,
  0,
  0,
  0,
- 0,
- 0,
+ 524288,
  0,
  0,
  0,

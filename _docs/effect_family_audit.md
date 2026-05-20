@@ -6,253 +6,234 @@ Total families: **177**
 
 ## Coverage status
 
+- `ability_flag`: 1
 - `auto_structural`: 92
 - `exact_jsonl`: 1
 - `exact_jsonl_partial`: 8
-- `gap`: 65
+- `gap`: 64
 - `generated_weather`: 1
 - `mixed`: 10
 
 ## Acknowledgement totals
 
-- `evidence_available_deferred`: 47
+- `evidence_available_deferred`: 43
 - `evidence_available_weak`: 2
 - `evidence_missing`: 0
 - `confirmed_ignored`: 0
 
 ## Acknowledgements — evidence_available_deferred
 
-- **line 1** family=`effect_conf:t3:o76` source=ability:仁心 primitive=`effect_1076004` timing=11 reason=`effect_type_3_state_change`
-    - evidence: SKILL_CONF[200152] anchors=[灼烧, 生命, 伤害, 回复] desc='敌方受到<desc_id=1002>灼烧</>伤害时，自己回复等量生命。'
-    - matched gap rows (1):
-        - `ability|仁心|effect_1076004|11|effect_type_3_state_change|bba6749ab29a`
-    - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 2** family=`effect_conf:t3:o64` source=ability:冻土 primitive=`effect_1064002` timing=11 reason=`effect_type_3_state_change`
+- **line 1** family=`effect_conf:t3:o64` source=ability:冻土 primitive=`effect_1064002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200120] anchors=[携带, 威力, %, 冰系, 地系] desc='每携带1个冰系技能进入战斗，地系技能威力+10%。'
     - matched gap rows (1):
         - `ability|冻土|effect_1064002|11|effect_type_3_state_change|0449fa87f79b`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 3** family=`effect_conf:t3:o75` source=ability:吸灵 primitive=`effect_1075001` timing=11 reason=`effect_type_3_state_change`
+- **line 2** family=`effect_conf:t3:o75` source=ability:吸灵 primitive=`effect_1075001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200233] anchors=[入场, 己方, 力竭] desc='己方精灵力竭后，入场时继承其的除速度外最高的一项种族资质。'
     - matched gap rows (1):
         - `ability|吸灵|effect_1075001|11|effect_type_3_state_change|168d9879a96c`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 4** family=`effect_conf:t3:o77` source=ability:图书守卫者 primitive=`effect_1077001` timing=11 reason=`effect_type_3_state_change`
+- **line 3** family=`effect_conf:t3:o77` source=ability:图书守卫者 primitive=`effect_1077001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200244] anchors=[入场, %] desc='入场时，若自己魔力值为1，自己获得双攻+50%。'
     - matched gap rows (1):
         - `ability|图书守卫者|effect_1077001|11|effect_type_3_state_change|d6cf23600a61`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 5** family=`effect_conf:t3:o22` source=ability:壮胆 primitive=`effect_1022007` timing=11 reason=`effect_type_3_state_change`
+- **line 4** family=`effect_conf:t3:o22` source=ability:壮胆 primitive=`effect_1022007` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200090] anchors=[队伍, %, 虫系] desc='队伍存在虫系精灵，自己获得双攻+50%。'
     - matched gap rows (1):
         - `ability|壮胆|effect_1022007|11|effect_type_3_state_change|308eb9f83c09`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 6** family=`effect_conf:t3:o70` source=ability:契约的形状 primitive=`effect_1070001` timing=11 reason=`effect_type_3_state_change`
+- **line 5** family=`effect_conf:t3:o70` source=ability:契约的形状 primitive=`effect_1070001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200137] anchors=[入场] desc='根据捕捉所用的咕噜球，入场时获得不同效果。'
     - matched gap rows (1):
         - `ability|契约的形状|effect_1070001|11|effect_type_3_state_change|52834270ecd0`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 7** family=`buff_conf_direct:prefix_2040` source=ability:嫉妒 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
+- **line 6** family=`buff_conf_direct:prefix_2040` source=ability:嫉妒 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[200174] anchors=[携带, 使用] desc='<desc_id=1007>蓄力</>状态下，可以使用任一携带技能。'
     - matched gap rows (1):
         - `ability|嫉妒|prefix_2040|11|prefix_2040_unmapped|5afb1ad87fc2`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 8** family=`buff_conf_direct:prefix_2040` source=ability:守护者 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
+- **line 7** family=`buff_conf_direct:prefix_2040` source=ability:守护者 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[200109] anchors=[入场, 己方, 层, 萌化] desc='己方其他精灵每有1层<desc_id=1006>萌化</>，自己入场时全技能能耗-1。'
     - matched gap rows (1):
         - `ability|守护者|prefix_2040|11|prefix_2040_unmapped|074589e59642`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 9** family=`effect_conf:t3:o34` source=ability:定向精炼 primitive=`effect_1034017` timing=11 reason=`effect_type_3_state_change`
+- **line 8** family=`effect_conf:t3:o34` source=ability:定向精炼 primitive=`effect_1034017` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200172] anchors=[入场, 己方, 防御, 威力, %, 使用] desc='己方精灵每使用1次防御技能，自己入场时机械系和地面系技能威力+10%。'
     - matched gap rows (1):
         - `ability|定向精炼|effect_1034017|11|effect_type_3_state_change|c1d79a7331eb`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 10** family=`effect_conf:t3:o22` source=ability:悲悯 primitive=`effect_1022005` timing=11 reason=`effect_type_3_state_change`
+- **line 9** family=`effect_conf:t3:o22` source=ability:悲悯 primitive=`effect_1022005` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200140] anchors=[队伍, 己方, 力竭, %] desc='己方队伍中每有1只力竭的精灵，自己获得双攻+30%。'
     - matched gap rows (1):
         - `ability|悲悯|effect_1022005|11|effect_type_3_state_change|c4802da93346`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 11** family=`effect_conf:t3:o34` source=ability:拨浪鼓 primitive=`effect_1034018` timing=11 reason=`effect_type_3_state_change`
+- **line 10** family=`effect_conf:t3:o34` source=ability:拨浪鼓 primitive=`effect_1034018` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200181] anchors=[入场, 己方, 威力, 使用] desc='己方精灵每使用1次状态技能，自己入场时毒系和萌系技能威力+10。'
     - matched gap rows (1):
         - `ability|拨浪鼓|effect_1034018|11|effect_type_3_state_change|bf49e218f4c4`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 12** family=`effect_conf:t3:o34` source=ability:搜刮 primitive=`effect_1034019` timing=11 reason=`effect_type_3_state_change`
+- **line 11** family=`effect_conf:t3:o34` source=ability:搜刮 primitive=`effect_1034019` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200160] anchors=[入场, 魔攻, %, 使用] desc='敌方每使用1次「聚能」技能或更换精灵，自己入场时获得魔攻+20%。'
     - matched gap rows (1):
         - `ability|搜刮|effect_1034019|11|effect_type_3_state_change|48d9ec309666`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 13** family=`effect_conf:t3:o34` source=ability:搜刮 primitive=`effect_1034020` timing=11 reason=`effect_type_3_state_change`
+- **line 12** family=`effect_conf:t3:o34` source=ability:搜刮 primitive=`effect_1034020` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200160] anchors=[入场, 魔攻, %, 使用] desc='敌方每使用1次「聚能」技能或更换精灵，自己入场时获得魔攻+20%。'
     - matched gap rows (1):
         - `ability|搜刮|effect_1034020|11|effect_type_3_state_change|bdeeae05e821`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 14** family=`buff_conf_direct:prefix_2040` source=ability:月牙雪糕 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
+- **line 13** family=`buff_conf_direct:prefix_2040` source=ability:月牙雪糕 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[200205] anchors=[层, 冻结, 攻击, 使用] desc='使用攻击技能时，敌方每层冻结视为1层额外<desc_id=1035>星陨印记</>。'
     - matched gap rows (1):
         - `ability|月牙雪糕|prefix_2040|11|prefix_2040_unmapped|b519bf90f1a7`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 15** family=`effect_conf:t3:o77` source=ability:构装契约者 primitive=`effect_1077002` timing=11 reason=`effect_type_3_state_change`
+- **line 14** family=`effect_conf:t3:o77` source=ability:构装契约者 primitive=`effect_1077002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200245] anchors=[入场, %] desc='入场时，若敌方魔力值为1，自己获得双防+50%。'
     - matched gap rows (1):
         - `ability|构装契约者|effect_1077002|11|effect_type_3_state_change|191e7ae6cf5b`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 16** family=`effect_conf:t3:o34` source=ability:水翼推进 primitive=`effect_1034012` timing=11 reason=`effect_type_3_state_change`
+- **line 15** family=`effect_conf:t3:o34` source=ability:水翼推进 primitive=`effect_1034012` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200110] anchors=[入场, 己方, 水系, 使用] desc='己方精灵每使用1次水系技能，自己入场时获得全技能能耗-1。'
     - matched gap rows (1):
         - `ability|水翼推进|effect_1034012|11|effect_type_3_state_change|a6474d3b3fa7`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 17** family=`effect_conf:t3:o64` source=ability:消波块 primitive=`effect_1064010` timing=11 reason=`effect_type_3_state_change`
+- **line 16** family=`effect_conf:t3:o64` source=ability:消波块 primitive=`effect_1064010` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200224] anchors=[携带, 水系, 地系] desc='每携带1个水系技能进入战斗，地系技能能耗-1。'
     - matched gap rows (1):
         - `ability|消波块|effect_1064010|11|effect_type_3_state_change|d5f616ce6325`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 18** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034021` timing=11 reason=`effect_type_3_state_change`
+- **line 17** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034021` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200212] anchors=[入场, 己方, %, 地系, 武系, 使用] desc='己方精灵每使用1次武系或地系技能，自己入场时获得攻防+5%。'
     - matched gap rows (1):
         - `ability|渗透|effect_1034021|11|effect_type_3_state_change|d815ccbaf8ab`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 19** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034022` timing=11 reason=`effect_type_3_state_change`
+- **line 18** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034022` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200212] anchors=[入场, 己方, %, 地系, 武系, 使用] desc='己方精灵每使用1次武系或地系技能，自己入场时获得攻防+5%。'
     - matched gap rows (1):
         - `ability|渗透|effect_1034022|11|effect_type_3_state_change|a5af9e102bfb`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 20** family=`effect_conf:t3:o64` source=ability:溶解扩散 primitive=`effect_1064001` timing=11 reason=`effect_type_3_state_change`
+- **line 19** family=`effect_conf:t3:o64` source=ability:溶解扩散 primitive=`effect_1064001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200111] anchors=[层, 携带, 中毒, 水系] desc='每携带1个毒系技能进入战斗，水系技能使敌方获得1层<desc_id=1001>中毒</>。'
     - matched gap rows (1):
         - `ability|溶解扩散|effect_1064001|11|effect_type_3_state_change|b47ecb24ab69`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 21** family=`effect_conf:t3:o66` source=ability:盲拧 primitive=`effect_1066001` timing=11 reason=`effect_type_3_state_change`
+- **line 20** family=`effect_conf:t3:o66` source=ability:盲拧 primitive=`effect_1066001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200170] anchors=[回合] desc='回合开始时，技能顺序打乱，4号位的技能能耗-4。'
     - matched gap rows (1):
         - `ability|盲拧|effect_1066001|11|effect_type_3_state_change|90e0aca7cd13`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 22** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076001` timing=11 reason=`effect_type_3_state_change`
-    - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
-    - matched gap rows (1):
-        - `ability|耐活王|effect_1076001|11|effect_type_3_state_change|9809a278b676`
-    - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 23** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076002` timing=11 reason=`effect_type_3_state_change`
-    - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
-    - matched gap rows (1):
-        - `ability|耐活王|effect_1076002|11|effect_type_3_state_change|bc2fc13b35c3`
-    - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 24** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076003` timing=11 reason=`effect_type_3_state_change`
-    - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
-    - matched gap rows (1):
-        - `ability|耐活王|effect_1076003|11|effect_type_3_state_change|c9fef5a1ebfa`
-    - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 25** family=`effect_conf:t3:o34` source=ability:蒸汽膨胀 primitive=`effect_1034016` timing=11 reason=`effect_type_3_state_change`
+- **line 21** family=`effect_conf:t3:o34` source=ability:蒸汽膨胀 primitive=`effect_1034016` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200153] anchors=[入场, 己方, 威力, 火系, 使用] desc='己方精灵每使用1次火系技能，自己入场时获得全技能威力+10。'
     - matched gap rows (1):
         - `ability|蒸汽膨胀|effect_1034016|11|effect_type_3_state_change|224ac3b5ba3f`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 26** family=`effect_conf:t3:o61` source=ability:蓄电池 primitive=`effect_1061002` timing=11 reason=`effect_type_3_state_change`
+- **line 22** family=`effect_conf:t3:o61` source=ability:蓄电池 primitive=`effect_1061002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200169] anchors=[入场, %] desc='每入场1次，永久获得双攻+20%。'
     - matched gap rows (1):
         - `ability|蓄电池|effect_1061002|11|effect_type_3_state_change|5d4716ad6324`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 27** family=`effect_conf:t3:o22` source=ability:虫群鼓舞 primitive=`effect_1022004` timing=11 reason=`effect_type_3_state_change`
+- **line 23** family=`effect_conf:t3:o22` source=ability:虫群鼓舞 primitive=`effect_1022004` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200132] anchors=[入场, 队伍, %, 虫系] desc='队伍中每有1只其他的虫系精灵，自己入场时获得攻防速+10%。'
     - matched gap rows (1):
         - `ability|虫群鼓舞|effect_1022004|11|effect_type_3_state_change|648a3fb7d9e4`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 28** family=`effect_conf:t3:o34` source=ability:身经百练 primitive=`effect_1034014` timing=11 reason=`effect_type_3_state_change`
+- **line 24** family=`effect_conf:t3:o34` source=ability:身经百练 primitive=`effect_1034014` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200178] anchors=[入场, 己方, 威力, %, 水系, 武系, 应对] desc='己方精灵每应对1次，自己入场时水系和武系技能威力+20%。'
     - matched gap rows (1):
         - `ability|身经百练|effect_1034014|11|effect_type_3_state_change|a369b2f21af1`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 30** family=`effect_conf:t1:o53` source=skill:以毒攻毒 primitive=`effect_1053002` timing=11 reason=`effect_type_1_compound`
+- **line 26** family=`effect_conf:t1:o53` source=skill:以毒攻毒 primitive=`effect_1053002` timing=11 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7120150] anchors=[层, 中毒, 魔攻, %] desc='敌方每有1层<desc_id=1036>中毒效果</>，自己获得魔攻+30%。'
     - matched gap rows (1):
         - `skill|以毒攻毒|effect_1053002|11|effect_type_1_compound|b1f08f0df27d`
     - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
-- **line 31** family=`buff_conf_direct:prefix_2040` source=skill:击鼓传花 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
+- **line 27** family=`buff_conf_direct:prefix_2040` source=skill:击鼓传花 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7160270] anchors=[入场, 增益] desc='自己<desc_id=1003>脱离</>，下个入场精灵继承自己<desc_id=1012>增益</>。'
     - matched gap rows (1):
         - `skill|击鼓传花|prefix_2040|6|prefix_2040_unmapped|4d781ab1013b`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 32** family=`buff_conf_direct:prefix_2040` source=skill:升龙咆哮 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 28** family=`buff_conf_direct:prefix_2040` source=skill:升龙咆哮 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100150] anchors=[伤害] desc='<desc_id=1007>蓄力</>，对敌方造成魔法伤害。'
     - matched gap rows (1):
         - `skill|升龙咆哮|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 33** family=`buff_conf_direct:prefix_2040` source=skill:吹炎 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 29** family=`buff_conf_direct:prefix_2040` source=skill:吹炎 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100130] anchors=[威力, 应对] desc='<desc_id=1007>蓄力</>，造成物伤，<desc_id=1015>应对状态</>：本次技能威力翻倍。'
     - matched gap rows (1):
         - `skill|吹炎|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 34** family=`buff_conf_direct:prefix_2040` source=skill:天光 primitive=`prefix_2040` timing=24 reason=`prefix_2040_unmapped`
+- **line 30** family=`buff_conf_direct:prefix_2040` source=skill:天光 primitive=`prefix_2040` timing=24 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7060220] anchors=[系别] desc='造成魔伤，本技能系别和天气系别相同。'
     - matched gap rows (1):
         - `skill|天光|prefix_2040|24|prefix_2040_unmapped|253c4aae8079`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 35** family=`effect_conf:t3:o81` source=skill:富养化 primitive=`effect_1081001` timing=11 reason=`effect_type_3_state_change`
+- **line 31** family=`effect_conf:t3:o81` source=skill:富养化 primitive=`effect_1081001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7030510] anchors=[能量, 场下, 回复] desc='为场下每个精灵回复3能量。'
     - matched gap rows (1):
         - `skill|富养化|effect_1081001|11|effect_type_3_state_change|dbc8cded2274`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 37** family=`effect_conf:t3:o43` source=skill:撕咬 primitive=`effect_1043002` timing=7 reason=`effect_type_3_state_change`
+- **line 33** family=`effect_conf:t3:o43` source=skill:撕咬 primitive=`effect_1043002` timing=7 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7180110] anchors=[生命, %, 连击] desc='造成物伤，3连击，若自己的生命低于50%，本次技能连击数+2。'
     - matched gap rows (1):
         - `skill|撕咬|effect_1043002|7|effect_type_3_state_change|8b05b55c7c1a`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 38** family=`buff_conf_direct:prefix_2040` source=skill:月光合奏 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
+- **line 34** family=`buff_conf_direct:prefix_2040` source=skill:月光合奏 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7160280] anchors=[层, 携带, 萌化, 连击] desc='造成物伤，1连击，双方携带的所有精灵每有1层<desc_id=1006>萌化</>，本次技能连击数+1。'
     - matched gap rows (1):
         - `skill|月光合奏|prefix_2040|6|prefix_2040_unmapped|b17bd680b5ad`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 39** family=`effect_conf:t3:o43` source=skill:极限撕裂 primitive=`effect_1043003` timing=11 reason=`effect_type_3_state_change`
+- **line 35** family=`effect_conf:t3:o43` source=skill:极限撕裂 primitive=`effect_1043003` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7180130] anchors=[生命, %, 使用] desc='造成物伤，若生命高于50%，使用后自己获得双攻-50%。'
     - matched gap rows (1):
         - `skill|极限撕裂|effect_1043003|11|effect_type_3_state_change|33a956723b26`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 40** family=`effect_conf:t1:o52` source=skill:生日蛋糕 primitive=`effect_1052006` timing=11 reason=`effect_type_1_no_buff`
+- **line 36** family=`effect_conf:t1:o52` source=skill:生日蛋糕 primitive=`effect_1052006` timing=11 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7160160] anchors=[增益, 减益] desc='驱散自己的<desc_id=1013>减益</>，自己的<desc_id=1012>增益</>翻倍。'
     - matched gap rows (1):
         - `skill|生日蛋糕|effect_1052006|11|effect_type_1_no_buff|3a31ef032383`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 41** family=`effect_conf:t3:o59` source=skill:疾风刺 primitive=`effect_1059003` timing=6 reason=`effect_type_3_state_change`
+- **line 37** family=`effect_conf:t3:o59` source=skill:疾风刺 primitive=`effect_1059003` timing=6 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7150090] anchors=[攻击, 连击] desc='造成物伤，1连击，若先于敌方攻击，改为3连击。'
     - matched gap rows (1):
         - `skill|疾风刺|effect_1059003|6|effect_type_3_state_change|d7f025dbb6fb`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 42** family=`effect_conf:t1:o33` source=skill:疾风连袭 primitive=`effect_1033003` timing=11 reason=`effect_type_1_no_buff`
+- **line 38** family=`effect_conf:t1:o33` source=skill:疾风连袭 primitive=`effect_1033003` timing=11 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7150320] anchors=[使用, 释放] desc='释放自己释放过的迅捷技能，其能耗之和的二分之一加至本技能能耗，每次使用后能耗+1。'
     - matched gap rows (1):
         - `skill|疾风连袭|effect_1033003|11|effect_type_1_no_buff|da65c2da71e4`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 43** family=`effect_conf:t1:o53` source=skill:腐化 primitive=`effect_1053020` timing=12 reason=`effect_type_1_compound`
+- **line 39** family=`effect_conf:t1:o53` source=skill:腐化 primitive=`effect_1053020` timing=12 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7120230] anchors=[层, 中毒, %] desc='敌方每有1层<desc_id=1036>中毒效果</>，敌方获得双攻-30%。'
     - matched gap rows (1):
         - `skill|腐化|effect_1053020|12|effect_type_1_compound|d7264825680d`
     - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
-- **line 44** family=`effect_conf:t3:o16` source=skill:虫群智慧 primitive=`effect_1016003` timing=11 reason=`effect_type_3_state_change`
+- **line 40** family=`effect_conf:t3:o16` source=skill:虫群智慧 primitive=`effect_1016003` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7130200] anchors=[队伍, 己方] desc='己方队伍获得2次随机<desc_id=1009>奉献</>。'
     - matched gap rows (1):
         - `skill|虫群智慧|effect_1016003|11|effect_type_3_state_change|ddb33aab669c`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 45** family=`effect_conf:t1:o32` source=skill:虫鸣 primitive=`effect_1032012` timing=6 reason=`effect_type_1_no_buff`
+- **line 41** family=`effect_conf:t1:o32` source=skill:虫鸣 primitive=`effect_1032012` timing=6 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7130160] anchors=[队伍, 携带, 连击] desc='造成魔伤，队伍中的精灵每携带1个虫鸣，本次技能连击数+1。'
     - matched gap rows (1):
         - `skill|虫鸣|effect_1032012|6|effect_type_1_no_buff|ede91d0362fd`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 46** family=`effect_conf:t1:o4` source=skill:隐藏条款 primitive=`effect_1004076` timing=11 reason=`effect_type_1_compound`
+- **line 42** family=`effect_conf:t1:o4` source=skill:隐藏条款 primitive=`effect_1004076` timing=11 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|effect_1004076|11|effect_type_1_compound|fc1ac6ff37b9`
     - note: EFFECT_CONF[1004076] editor_name "驱散蓄力" — not exchange-moves semantic. See _docs/phase5c_ii_cuxu_family_audit.md.
-- **line 47** family=`buff_conf_direct:prefix_2003` source=skill:隐藏条款 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
+- **line 43** family=`buff_conf_direct:prefix_2003` source=skill:隐藏条款 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|prefix_2003|11|prefix_2003_unmapped|6ccb1e82a095`
     - note: BUFF_CONF[20030330] editor_name "免疫积蓄" — not exchange-moves semantic. See _docs/phase5c_ii_cuxu_family_audit.md.
-- **line 48** family=`buff_conf_direct:prefix_2040` source=skill:龙之利爪 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 44** family=`buff_conf_direct:prefix_2040` source=skill:龙之利爪 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100160] anchors=[%] desc='<desc_id=1007>蓄力</>，造成物伤并吸血50%。'
     - matched gap rows (1):
         - `skill|龙之利爪|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 49** family=`effect_conf:t3:o84` source=skill:龙血 primitive=`effect_1084001` timing=6 reason=`effect_type_3_state_change`
+- **line 45** family=`effect_conf:t3:o84` source=skill:龙血 primitive=`effect_1084001` timing=6 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7100250] anchors=[攻击, %, 应对, 使用] desc='减伤70%，本技能可以在蓄力状态下使用，<desc_id=1016>应对攻击</>：下次技能无需<desc_id=1007>蓄力</>。'
     - matched gap rows (1):
         - `skill|龙血|effect_1084001|6|effect_type_3_state_change|09cb2335feeb`
@@ -260,13 +241,13 @@ Total families: **177**
 
 ## Acknowledgements — evidence_available_weak
 
-- **line 29** family=`effect_conf:t3:o83` source=skill:主轴 primitive=`effect_1083001` timing=11 reason=`effect_type_3_state_change`
+- **line 25** family=`effect_conf:t3:o83` source=skill:主轴 primitive=`effect_1083001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7070160] anchors=[(none)] desc='造成物伤，此技能位置不会改变。'
     - weak_reason: Consumer SKILL_CONF.desc is non-empty but contains no entry/teammate/layer/turn anchor keyword that pins the gap's semantic; kept as acknowledged weak evidence pending manual review.
     - matched gap rows (1):
         - `skill|主轴|effect_1083001|11|effect_type_3_state_change|7161e520930e`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 36** family=`effect_conf:t3:o79` source=skill:岩脉崩毁 primitive=`effect_1079002` timing=24 reason=`effect_type_3_state_change`
+- **line 32** family=`effect_conf:t3:o79` source=skill:岩脉崩毁 primitive=`effect_1079002` timing=24 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7080340] anchors=[(none)] desc='造成物伤，本技能能耗固定为4。'
     - weak_reason: Consumer SKILL_CONF.desc is non-empty but contains no entry/teammate/layer/turn anchor keyword that pins the gap's semantic; kept as acknowledged weak evidence pending manual review.
     - matched gap rows (1):
@@ -286,7 +267,7 @@ _(none)_
 - count: **38** | coverage: `auto_structural` | used_consumer_count: 32
 - editor_names: 乌拉塔, 仅精灵先制+1, 免疫蓄力标记, 减猫教练间歇式训练, 减速印记, 剧情--双人老师buff, 剧情--研磨标记, 剧情-幻王属性增加, 受伤, 属性强化10%
 - example_source_ids: [20010010, 20010014, 20010015, 20010020, 20010030]
-- coverage_breakdown: {'auto_structural_count': 38, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 38, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030490` 花炮 — 2连击，每次连击自己获得魔攻+60%。
     - `7100170` 龙吟 — <desc_id=1007>蓄力</>，自己获得双攻+100%和速度+60。
@@ -310,7 +291,7 @@ _(none)_
 - count: **6** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: 免疫倾泻, 免疫吹飞，中毒，寄生，灼烧，冻结, 免疫积蓄, 收集CE-首领, 溯源钟免疫, 电咩咩免疫
 - example_source_ids: [20030010, 20030011, 20030160, 20030220, 20030330]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180200` 隐藏条款 — 与敌方交换携带的技能。
     - `7130221` 应对！掩护 — 减伤70%，<desc_id=1026>紧急脱离</>，<desc_id=1016>应对攻击</>：下个入场精灵获得减伤。
@@ -329,7 +310,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 禁止更换
 - example_source_ids: [20040010, 20040014]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7080191` 应对！流沙 — 敌方3回合无法更换精灵，<desc_id=1017>应对防御</>：敌方获得双防-60%。
     - `7080190` 流沙 — 敌方3回合无法更换精灵，<desc_id=1017>应对防御</>：敌方获得双防-60%。
@@ -345,7 +326,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 寄生种子
 - example_source_ids: [20050010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030260` 孢子 — 敌方获得1层<desc_id=1008>寄生</>。
     - `7030541` 应对！草1 — 造成魔伤，<desc_id=1015>应对状态</>：赋予敌方一层<desc_id=1008>寄生</>。
@@ -358,7 +339,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 剧情-眩晕, 技能封印, 无法使用状态技能
 - example_source_ids: [20060040, 20060050, 20060051, 20060080]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7021161` 应对！摇篮曲 — 敌方获得全技能能耗+3，<desc_id=1017>应对防御</>：额外造成<desc_id=1011>打断</>，且敌方下回合获得眩晕。
     - `7030271` 应对！芳香诱引 — 自己获得<desc_id=3005>连击数</>+3，<desc_id=1017>应对防御</>：额外造成<desc_id=1011>打断</>，且敌方下回合获
@@ -375,7 +356,7 @@ _(none)_
 - count: **6** | coverage: `auto_structural` | used_consumer_count: 11
 - editor_names: 中毒印记, 剧情--幻王必杀, 通用中毒, 通用灼烧, 黑魔法诅咒——掉血
 - example_source_ids: [20010702, 20070010, 20070011, 20070012, 20070020]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7040260` 引燃 — 敌方获得10层<desc_id=1002>灼烧</>。
     - `7040290` 天火 — 敌方获得10层<desc_id=1002>灼烧</>，<desc_id=1017>应对防御</>：改为获得30层。
@@ -394,7 +375,7 @@ _(none)_
 - count: **7** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 下个精灵加攻击，免疫灼烧, 下个精灵加防御，免疫冻结, 下个精灵变箱子, 下个精灵回血, 下个精灵回血，并且免疫寄生, 下个精灵继承增益减益, 和下个入场精灵交换血量
 - example_source_ids: [20100010, 20100020, 20100040, 20100050, 20100060]
-- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7021180` 普1 — <desc_id=1003>脱离</>。下个入场的精灵回复20%生命
 - sample_ability_consumers:
@@ -412,7 +393,7 @@ _(none)_
 - count: **21** | coverage: `auto_structural` | used_consumer_count: 42
 - editor_names: 10减伤, 50减伤, 60减伤, 70减伤, 80减伤, 90减伤, 不减伤冒字表演, 免疫能耗小于3的技能, 剧情---收到光系伤害增加100%, 受到非敌方系别的技能威力降低25%
 - example_source_ids: [20110010, 20110030, 20110090, 20110110, 20110120]
-- coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800340` 应对！首领形态 — 免疫50%伤害，应对时进化为首领形态。应对：攻击类技能。
     - `7020811` 应对！无畏之心 — 减伤100%，<desc_id=1016>应对攻击</>：减免的伤害变为回复自己生命，且本技能能耗永久+2。
@@ -433,7 +414,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 小螂, 蓄力, 酷拉噼啪
 - example_source_ids: [20150060, 20150071, 20150080]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7000011` 积蓄 — 可继续蓄力一回合，最终技能释放次数+1。
 - sample_ability_consumers:
@@ -448,7 +429,7 @@ _(none)_
 - count: **47** | coverage: `auto_structural` | used_consumer_count: 25
 - editor_names: B1最终战--回合结束扣绩点, GM-回合结束回复大量生命, 偏振, 偏振首领, 光合作用, 冰钻, 可烤汪, 回合开始，自己的技能顺序随机打乱, 回合末加攻击, 回合末加物防减速度
 - example_source_ids: [20170010, 20170011, 20170090, 20170130, 20170170]
-- coverage_breakdown: {'auto_structural_count': 47, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 47, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140181` 应对！硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
     - `7990137` 检测工具返场 — <desc_id=1024>返场</>，下回合额外所选技能使用次数+1。
@@ -470,7 +451,7 @@ _(none)_
 - count: **17** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 7001019, 冰天雪地, 冰晶化, 刺肤, 可烤汪2, 嗜痛, 大笨蛋, 寒冰屏障, 崎岖外壳, 恶颜
 - example_source_ids: [20190050, 20190060, 20190070, 20190080, 20190150]
-- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7021131` 应对！吓退 — 减伤60%，<desc_id=1016>应对攻击</>：敌方<desc_id=1003>脱离</>。
     - `7090341` 应对！冰蛋壳 — 减伤60%，<desc_id=1016>应对攻击</>：敌方获得2层<desc_id=1032>减速印记</>。
@@ -491,7 +472,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 冬羽雀, 扇风--先手, 风起印记
 - example_source_ids: [20210040, 20210050, 20210051, 20210070]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7150130` 风起 — 自己获得1层<desc_id=1027>风起印记</>。
     - `7150060` 扇风 — 造成物伤，若先于敌方攻击，本次技能威力+50%。
@@ -507,7 +488,7 @@ _(none)_
 - count: **27** | coverage: `auto_structural` | used_consumer_count: 16
 - editor_names: 伤害威力增加10, 伤害威力增加70, 使用非本系技能威力提升50%, 光系技能威力提升20%, 光系技能威力永久提高10%, 冥古龙--下次行动技能威力翻倍, 威力提升50%, 威力翻倍, 幽幽羊, 应对！机械2
 - example_source_ids: [20190360, 20230010, 20230020, 20230270, 20230350]
-- coverage_breakdown: {'auto_structural_count': 27, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 27, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100131` 应对！吹炎 — <desc_id=1007>蓄力</>，造成物伤，<desc_id=1015>应对状态</>：本次技能威力翻倍。
     - `7000347` 威压 — 下一次攻击技能威力翻倍
@@ -529,7 +510,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 仅技能血能代偿, 罗隐
 - example_source_ids: [20240030, 20240040]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180331` 应对！虚假破产 — 减伤80%，能量不足时，消耗5%生命代替1能量，<desc_id=1016>应对攻击</>。
     - `7180330` 虚假破产 — 减伤80%，能量不足时，消耗5%生命代替1能量，<desc_id=1016>应对攻击</>。
@@ -545,7 +526,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 测试28
 - example_source_ids: [20280010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7300002` 测试buff28 — 造成物伤
 - pak_evidence:
@@ -557,7 +538,7 @@ _(none)_
 - count: **16** | coverage: `auto_structural` | used_consumer_count: 12
 - editor_names: 冰化, 呱呱, 所有技能的能耗固定为5, 攻击技能+3费, 攻击技能+8费, 板板壳, 湿润印记--能耗-1, 激怒, 蓄势印记, 蓄水
 - example_source_ids: [20210060, 20320010, 20320040, 20320070, 20320071]
-- coverage_breakdown: {'auto_structural_count': 16, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 16, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090320` 冰捆缚 — 2连击，每次连击敌方获得全技能能耗+1。
     - `7180191` 应对！恶意逃离 — <desc_id=1003>脱离</>，<desc_id=1017>应对防御</>：额外使敌方攻击技能能耗+4。
@@ -579,7 +560,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 反向两倍回血
 - example_source_ids: [20340030]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180350` 伪造账单 — 若敌方本回合回复生命，改为失去2倍。<desc_id=1020>先手</>+1。
 - pak_evidence:
@@ -591,7 +572,7 @@ _(none)_
 - count: **20** | coverage: `auto_structural` | used_consumer_count: 11
 - editor_names: 使用攻击技能后驱散先手+1, 使用武后，物攻提高速度降低, 使用防御技能后，获得回合末脱离, 助燃, 攻击后立刻回到背包, 攻击技能驱散敌方星陨, 斗志燃烧新, 最好的伙伴, 每使用1次翼系技能，连击技能连击数+1, 浪潮
 - example_source_ids: [20230840, 20350030, 20350050, 20350180, 20350270]
-- coverage_breakdown: {'auto_structural_count': 20, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 20, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140181` 应对！硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
     - `7990030` 毒系地表 — 对对手赋予毒系地表。
@@ -610,7 +591,7 @@ _(none)_
 - count: **5** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 中毒赋予效率+1, 加个雪球, 加速时空, 获得的增益效果层数+2, 虫蜕
 - example_source_ids: [20370010, 20370030, 20370040, 20370060, 20370100]
-- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190310` 超新星馈赠 — 敌方获得2层<desc_id=1035>星陨印记</>，每使用1次，赋予的<desc_id=1035>星陨印记</>层数+1。
     - `7130210` 贮藏 — 自己获得双攻+50%，每携带1个0能耗技能，额外+50%。
@@ -627,7 +608,7 @@ _(none)_
 - count: **6** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 主线剧情被动, 剧情--自己死亡，吹飞队友, 毛毛, 测试--无限免死, 血气, 邪恶纺锤
 - example_source_ids: [20380020, 20380031, 20380040, 20380043, 20380060]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7020801` 应对！血气 — 减伤60%，<desc_id=1016>应对攻击</>：本回合受到致命伤害时，保留1生命值。
 - sample_ability_consumers:
@@ -645,7 +626,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 草头鸭
 - example_source_ids: [20390010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200213` 得寸进尺 — 天气为<desc_id=3008>雨天</>，或处于其他水系环境中时，获得双攻+100%。
 - pak_evidence:
@@ -657,7 +638,7 @@ _(none)_
 - count: **12** | coverage: `gap` | used_consumer_count: 9
 - editor_names: 击鼓传花, 加物防时加物攻, 加魔防时加魔攻, 天光, 敌人每有一层中毒，防御提高10%, 敌人每有一层冰冻，速度提升%, 月光合奏, 月牙雪熊飘字用, 每有一层萌化，获得技能能耗-1, 获得蓄力时，休息变蓄力
 - example_source_ids: [20400110, 20400130, 20400160, 20400200, 20400210]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100150` 升龙咆哮 — <desc_id=1007>蓄力</>，对敌方造成魔法伤害。
     - `7100170` 龙吟 — <desc_id=1007>蓄力</>，自己获得双攻+100%和速度+60。
@@ -681,7 +662,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 凡鹰
 - example_source_ids: [20430030]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200125` 咔咔冲刺 — 若先于敌方行动，行动后获得<desc_id=3005>连击数</>+1。
 - pak_evidence:
@@ -693,7 +674,7 @@ _(none)_
 - count: **7** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 孢子爆散连击数+1, 聚盐连击数+1, 连击次数+1, 连击次数翻倍, 通用连击次数+1, 通用连击次数-1
 - example_source_ids: [20450020, 20450030, 20450031, 20450050, 20450090]
-- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己回复5%生命和1能量，使用后本技能连击数永久+1。
     - `7150311` 应对！羽翼庇护 — 减伤70%，<desc_id=1016>应对攻击</>：自己获得<desc_id=3005>连击数</>+3。
@@ -709,7 +690,7 @@ _(none)_
 - count: **9** | coverage: `auto_structural` | used_consumer_count: 8
 - editor_names: 传染病, 击杀获得6能量, 击杀获得威力翻倍, 击败对手后增加伤害, 击败敌人后，提高魔攻, 击败敌人后，连击+2, 击败敌人后，随机增强5次, 击败敌人后，额外掉魔力, 斩断--恢复满血
 - example_source_ids: [20460020, 20460030, 20460040, 20460090, 20460100]
-- coverage_breakdown: {'auto_structural_count': 9, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 9, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7000220` 暗黑切断 — 受到黑魔法影响，造成大量物理伤害，如果击败对手，完全恢复自身生命。
     - `7180340` 趁火打劫 — 造成物伤，2连击，若击败敌方，本技能连击数永久+2。
@@ -729,7 +710,7 @@ _(none)_
 - count: **17** | coverage: `auto_structural` | used_consumer_count: 10
 - editor_names: 击鼓传花, 应对蜕壳, 恶魔低语, 技能检测工具脱离, 技能检测工具返场, 水隐, 电5, 移花接木, 脱离, 蜕壳
 - example_source_ids: [20480020, 20480030, 20480031, 20480032, 20480033]
-- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7021180` 普1 — <desc_id=1003>脱离</>。下个入场的精灵回复20%生命
     - `7180191` 应对！恶意逃离 — <desc_id=1003>脱离</>，<desc_id=1017>应对防御</>：额外使敌方攻击技能能耗+4。
@@ -745,7 +726,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 入场回复10能量, 入场获得先手+1, 小鬼当家, 棘刺
 - example_source_ids: [20490020, 20490030, 20490040, 20490320]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7110281` 应对！集中 — 减伤80%，<desc_id=1016>应对攻击</>：自己回合结束<desc_id=1024>返场</>。
     - `7020740` 棘刺 — 敌方获得1层<desc_id=1019>棘刺印记</>。
@@ -760,7 +741,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 潜水吹飞自己, 闪电步吹飞自己
 - example_source_ids: [20500110, 20500120]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050150` 潜水遁逃 — <desc_id=1003>脱离</>。
     - `7110050` 闪电步 — <desc_id=1003>脱离</>。
@@ -773,7 +754,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 能量为0时，换上粉星星, 能量为0时，脱离, 能量为10时，获得防御buff
 - example_source_ids: [20520050, 20520080, 20520090]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200166` 星地善良 — 回合结束时，若场上的己方精灵能量等于0，自己立即替换此精灵。
     - `200272` 咕德帽帽 — 敌方能量等于0时，自身回合末<desc_id=1003>脱离</>。
@@ -787,7 +768,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 0能耗技能威力提升30%, 蒲公英娃娃, 鸭吉吉, 鸭吉吉（首领）
 - example_source_ids: [20530010, 20530020, 20530021, 20530130]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `280005` 水翼飞升 — 己方精灵每使用1次水系技能，自己入场时获得全技能能耗-1，且能耗为0的技能威力+30%。
     - `200088` 挺起胸脯 — 携带的能耗为1的技能，威力+50%。
@@ -802,7 +783,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 吸血100, 通用吸血10%
 - example_source_ids: [20540010, 20540030]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180211` 应对！等价交换 — 减伤90%，<desc_id=1016>应对攻击</>：自己获得50%<desc_id=1029>吸血</>。
     - `7180160` 贪婪 — 自己获得100%<desc_id=1029>吸血</>。
@@ -817,7 +798,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 5
 - editor_names: 冻结
 - example_source_ids: [20580010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090190` 霜天 — 敌方获得1层冻结，且每有1层<desc_id=1004>冻结</>获得全技能能耗+1。
     - `7090160` 霜降 — 敌方获得4层<desc_id=1004>冻结</>。
@@ -833,7 +814,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 敌人CD+2
 - example_source_ids: [20620020]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140161` 应对！破防 — 敌方获得双防-130%，<desc_id=1017>应对防御</>：额外使被应对技能冷却2回合。
 - pak_evidence:
@@ -845,7 +826,7 @@ _(none)_
 - count: **12** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 仪式巨像, 仪式巨像首领, 冰钻, 剧情--检测有加水标记，赋予加热标记, 剧情--检测有研磨标记，赋予加水标记, 天通地明, 每层印记赋予一层星陨, 画间沉铁兽, 疾光千兽, 窃光蚊
 - example_source_ids: [20630040, 20630060, 20630070, 20630080, 20630100]
-- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7000332` 加水 — 在研磨好的药物中加入适量清水，能让药效更好哦。
     - `7190320` 心灵洞悉 — 敌方获得<desc_id=1035>星陨印记</>，获得层数等于敌方<desc_id=3010>印记</>层数。
@@ -865,7 +846,7 @@ _(none)_
 - count: **21** | coverage: `auto_structural` | used_consumer_count: 11
 - editor_names: 3能耗的技能强化攻防, 3能耗的技能永久强化攻防, 5能耗的技能威力提升10%, 不移, 两侧技能威力+10, 两侧技能能耗-1, 位于12号位时加效果, 位于13号位时加效果, 使用攻击技能增加减益层数, 旋叶虫
 - example_source_ids: [20530050, 20530070, 20530080, 20530090, 20640130]
-- coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 21, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070060` 轴承支撑 — 主动：本技能被动额外-1能耗，被动：两侧技能能耗-1，<desc_id=1033>传动</>1。
     - `7070071` 应对！联动装置 — 使用后两侧技能的威力永久+20，<desc_id=1017>应对防御</>：变为威力永久+30。
@@ -887,7 +868,7 @@ _(none)_
 - count: **17** | coverage: `auto_structural` | used_consumer_count: 8
 - editor_names: 受身, 应对成功下回合先制+1, 应对成功下回合威力翻倍, 应对成功下回合能耗-5, 应对成功下次无需蓄力, 应对成功强化特定技能连击, 擒拿, 攻击应对成功给目标加冻结, 攻击应对成功获得棋绮后标记, 武者鸡
 - example_source_ids: [20670030, 20670040, 20670050, 20670060, 20670070]
-- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 17, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140270` 叠势 — 造成魔伤，2连击，每成功应对1次，本技能连击数永久+2。
 - sample_ability_consumers:
@@ -905,7 +886,7 @@ _(none)_
 - count: **7** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 准备期间，防御提高, 准备都能吸血, 小怂猫, 每准备1次，能耗-1。, 赋予中毒时，降低魔攻魔防, 赋予冻结时，加个标记, 赋予冻结时，加个标记（首领）
 - example_source_ids: [20680040, 20680070, 20680080, 20680090, 20680120]
-- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200176` 傲慢 — <desc_id=1007>蓄力</>技能获得50%吸血效果。
     - `280018` 游弋 — <desc_id=1007>蓄力</>时可以使用任一携带技能，且获得双防+100%。
@@ -921,7 +902,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 在场下时，每回合获得2层攻击强化，在场上时，每回合减少1层
 - example_source_ids: [20710020]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200168` 自发电 — 在场下时回合结束时攻击提升10%；在场上时，回合结束时攻击降低30%。
 - pak_evidence:
@@ -933,7 +914,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 小鼠獭
 - example_source_ids: [20720010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200094` 保守派 — 总技能能耗小于4时，自己获得双防+80%。
 - pak_evidence:
@@ -945,7 +926,7 @@ _(none)_
 - count: **6** | coverage: `auto_structural` | used_consumer_count: 5
 - editor_names: 死亡时给敌方加攻防, 死亡获得倒计时复活, 离场强化7110380, 离场强化7110400, 离场时回满能量, 离场获得清除对方20100091
 - example_source_ids: [20730070, 20730110, 20730120, 20730130, 20730160]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7110400` 电容循环 — 每离场一次，本技能能耗-2，将天气改为雷暴天气
     - `7110380` 感电 — 造成魔伤，每<desc_id=3009>离场</>1次，本技能使用次数永久+1。
@@ -963,7 +944,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 中毒触发两次, 所有回合开始和结束时的效果不会触发, 所有回合开始和结束时的效果会被触发2次
 - example_source_ids: [20750010, 20750020, 20750030]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200186` 复方汤剂 — 回合结束时，<desc_id=1036>中毒效果</>触发次数+1。
     - `200241` 陨落 — 在场时，双方回合结束时触发的效果，触发次数-1。
@@ -977,7 +958,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 猛犸象, 绒绒特攻
 - example_source_ids: [20760020, 20760040]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200192` 绒粉星光 — 攻击时，若敌方血脉是非本系的系别血脉，技能威力+100%。
     - `200086` 蛰伏 — 攻击生命小于自身的精灵时，威力提升50%。
@@ -990,7 +971,7 @@ _(none)_
 - count: **5** | coverage: `auto_structural` | used_consumer_count: 4
 - editor_names: 4号技能传动, 4号技能赋予6灼烧, 技能栏内第一技能，会获得迅捷和传动, 锤头鹳, 龙系技能获得迅捷
 - example_source_ids: [20770010, 20770030, 20770090, 20770100, 20770110]
-- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200234` 翼轴 — 1号位技能获得<desc_id=1005>迅捷</>和<desc_id=1033>传动</>1。
     - `200171` 贪心算法 — 1号位技能获得<desc_id=1033>传动</>1，且使用后使敌方获得6层<desc_id=1002>灼烧</>。
@@ -1006,7 +987,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 双灯鱼
 - example_source_ids: [20790010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200113` 对流 — 自己的能耗增加变为能耗降低；能耗降低变为能耗增加。
 - pak_evidence:
@@ -1018,7 +999,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 独眼怪1
 - example_source_ids: [20800010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200144` 障眼交易 — 回合结束时，交换双方本回合使用的技能的能耗。
 - pak_evidence:
@@ -1030,7 +1011,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 和己方的同名的技能获得迅捷
 - example_source_ids: [20830010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200211` 飓风 — 对本精灵的技能，若其他翼系精灵携带相同技能，则获得<desc_id=1005>迅捷</>。被敌方精灵击败时，自己额外损失1点魔力。
 - pak_evidence:
@@ -1042,7 +1023,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 敌人的效果同步给自己
 - example_source_ids: [20840040]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200221` 衡量 — 入场时，复制敌方的<desc_id=1012>增益</>。在场时，若敌方获得<desc_id=1012>增益</>自己也会获得。
 - pak_evidence:
@@ -1054,7 +1035,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 收到驱散时给来源奉献, 物防提升时加物攻, 魔防提升时加魔攻
 - example_source_ids: [20860040, 20860050, 20860060]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200255` 扫拖一体 — 回合结束时驱散敌方1层<desc_id=3010>印记</>，且驱散后己方队伍获得1次随机<desc_id=1009>奉献</>。
     - `200260` 夜回犀牛 — 当精灵获得防御增益时，提高对应的攻击增益
@@ -1067,7 +1048,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 回能量回血
 - example_source_ids: [20870010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200083` 腐植循环 — 每回复1能量，同时回复5%生命。
 - pak_evidence:
@@ -1079,7 +1060,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 蓄力假
 - example_source_ids: [20880010, 20880020]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100150` 升龙咆哮 — <desc_id=1007>蓄力</>，对敌方造成魔法伤害。
     - `7100170` 龙吟 — <desc_id=1007>蓄力</>，自己获得双攻+100%和速度+60。
@@ -1095,7 +1076,7 @@ _(none)_
 - count: **6** | coverage: `auto_structural` | used_consumer_count: 4
 - editor_names: 天通地明, 折射, 疾光千兽, 窃光蚊, 绒绒, 花蕾兽
 - example_source_ids: [20890020, 20890041, 20890050, 20890060, 20890070]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7060130` 折射 — 造成魔伤，携带其他系别技能会给本技能带来不同效果。
 - sample_ability_consumers:
@@ -1113,7 +1094,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 动态修正连击, 目标每层星陨连击+1, 自身每层萌化连击+1
 - example_source_ids: [20910010, 20910020, 20910030]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190260` 多维击打 — 造成魔伤，1连击，敌方每有1层<desc_id=1035>星陨印记</>，本次技能连击数+1。
 - sample_ability_consumers:
@@ -1128,7 +1109,7 @@ _(none)_
 - count: **7** | coverage: `auto_structural` | used_consumer_count: 5
 - editor_names: 冰封, 友军免疫粉星星离场, 所有人连击数固定为3, 敌方入场中毒, 敌方入场失去能量, 敌方入场来源获得能耗降低
 - example_source_ids: [20920020, 20920080, 20920090, 20920100, 20920110]
-- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `280024` 悼亡 — 双方队伍中每有1只力竭的精灵，自己获得双攻+30%。
     - `200166` 星地善良 — 回合结束时，若场上的己方精灵能量等于0，自己立即替换此精灵。
@@ -1144,7 +1125,7 @@ _(none)_
 - count: **12** | coverage: `auto_structural` | used_consumer_count: 10
 - editor_names: 入场首回合，技能可以释放2次。, 入场首回合，技能威力提高40, 护主犬, 护主犬首领, 攻击技能首次释放时敌方技能能耗+2, 电1, 电3, 电4, 电7, 电9
 - example_source_ids: [20930030, 20930040, 20930050, 20930060, 20930070]
-- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7110260` 增程电池 — 自己获得1层<desc_id=1023>蓄电印记</>。
     - `7110180` 电弧 — 造成物伤，<desc_id=1010>迸发</>：本次技能威力+40。
@@ -1166,7 +1147,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 4
 - editor_names: 星陨印记, 星陨新
 - example_source_ids: [20940010, 20940011]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190300` 星链 — 2连击，每次连击使敌方获得1层<desc_id=1035>星陨印记</>。
     - `7190290` 星轨裂变 — 敌方获得2层<desc_id=1035>星陨印记</>。
@@ -1182,7 +1163,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 4
 - editor_names: 每用冰系回X。, 每用地系回X。, 每用火系回X。, 队友应对回能量
 - example_source_ids: [21000010, 21000020, 21000030, 21000060]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200177` 慢热型 — 初始能量为0，入场前己方精灵每成功应对1次，回复5能量。
     - `200118` 打雪仗#200118 — 初始能量为0，入场前己方精灵每放1次冰系技能，回复3能量。
@@ -1197,7 +1178,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 延长入场效果一回合
 - example_source_ids: [21010010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200219` 连续负荷 — 自己技能的<desc_id=1010>迸发</>效果延长1回合。
 - pak_evidence:
@@ -1209,7 +1190,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 变身幻王--剧情, 萌化
 - example_source_ids: [21020040, 21020100]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7020770` 退化 — 敌方获得1层<desc_id=1006>萌化</>。
     - `7160200` 甜心续航 — 自己和敌方获得<desc_id=1006>萌化</>：回复40%生命和4能量。
@@ -1225,7 +1206,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 上回合一样的技能加威力
 - example_source_ids: [21030020]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200130` 回声定位 — 连续使用相同技能威力增加50。
 - pak_evidence:
@@ -1237,7 +1218,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 棋绮国王, 魔力杀手
 - example_source_ids: [21040011, 21040012]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200141` 付给恶魔的赎价 — 击败敌方精灵时，敌方额外损失1点魔力。被敌方精灵击败时，自己额外损失1点魔力。
     - `200211` 飓风 — 对本精灵的技能，若其他翼系精灵携带相同技能，则获得<desc_id=1005>迅捷</>。被敌方精灵击败时，自己额外损失1点魔力。
@@ -1251,7 +1232,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 检测已经学习技能
 - example_source_ids: [21050020]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `280025` 伙伴的力量#280025 — 每学会1个不同系别的技能，获得攻防+5%，且光系技能威力+20%。
     - `280028` 伙伴的力量#280028 — 每学会一个不同系别技能，攻防提升5%。水系技能威力提升20%
@@ -1266,7 +1247,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 改变位置时威力+20, 改变位置时能耗-1
 - example_source_ids: [21060010, 21060020]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070020` 齿轮扭矩 — 造成物伤，每回合位置发生变化时，本技能威力永久+20。
 - sample_ability_consumers:
@@ -1280,7 +1261,7 @@ _(none)_
 - count: **10** | coverage: `auto_structural` | used_consumer_count: 9
 - editor_names: 若敌方本回合入场则回7魔力, 若敌方本回合入场则威力+20, 若敌方本回合入场则威力翻倍, 若敌方本回合入场则提高技能威力, 若敌方本回合入场则提高魔攻, 若敌方本回合入场则连击+2, 若敌方本回合入场则连击翻倍, 若敌方本回合入场则降低速度
 - example_source_ids: [21070010, 21070020, 21070030, 21070040, 21070050]
-- coverage_breakdown: {'auto_structural_count': 10, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 10, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140280` 提气 — 自己获得全技能威力+40，若敌方本回合更换精灵，额外获得威力+50。
     - `7170240` 嘲弄 — 自己获得魔攻+90%，若敌方本回合更换精灵，自己获得速度+70。
@@ -1296,7 +1277,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 仅精灵先制+1, 仅精灵先制-1
 - example_source_ids: [21080174, 21080181]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7021111` 应对！有效预防 — 减伤50%，<desc_id=1016>应对攻击</>：下一次行动获得<desc_id=1020>先手</>+1。
     - `7110251` 应对！麻痹 — 敌方<desc_id=1020>先手</>-1，<desc_id=1017>应对防御</>：额外使敌方获得双攻-70%。
@@ -1311,7 +1292,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 溢出恢复给场下精灵
 - example_source_ids: [21090010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200085` 系统发育 — 获得能量或生命时，会将等量的能量或生命随机分配给场下的精灵。
 - pak_evidence:
@@ -1323,7 +1304,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 星陨不减少层数
 - example_source_ids: [21100011]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200210` 守望星 — 触发<desc_id=1035>星陨印记</>时仅消耗一半层数，仍造成满层伤害。
 - pak_evidence:
@@ -1335,7 +1316,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 灼烧反向衰减, 灼烧变中毒
 - example_source_ids: [21110010, 21110020]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200203` 煤渣草 — 在场时，所有<desc_id=1002>灼烧</>的衰减变为增长。
     - `200273` 烟花伯爵 — 在场时，衰减的<desc_id=1002>灼烧</>转化为中毒
@@ -1348,7 +1329,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 掩护
 - example_source_ids: [21120010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7130221` 应对！掩护 — 减伤70%，<desc_id=1026>紧急脱离</>，<desc_id=1016>应对攻击</>：下个入场精灵获得减伤。
 - pak_evidence:
@@ -1360,7 +1341,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 提高上限
 - example_source_ids: [21140010, 21140011]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `280007` 地脉馈赠 — 突破能量上限并立即回复10能量，入场前己方精灵每放1次地系技能，回复3能量。
     - `200215` 多人宿舍 — 自己的能量可以超过能量上限。
@@ -1373,7 +1354,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 7
 - editor_names: 传动
 - example_source_ids: [21150010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070060` 轴承支撑 — 主动：本技能被动额外-1能耗，被动：两侧技能能耗-1，<desc_id=1033>传动</>1。
     - `7070170` 啮合传递 — 自己获得速度+80，本技能位于1号或3号位时额外获得物攻+100%，<desc_id=1033>传动</>1。
@@ -1389,7 +1370,7 @@ _(none)_
 - count: **10** | coverage: `auto_structural` | used_consumer_count: 5
 - editor_names: 1号位置威力+30, 1号位置威力+60, 1号位置威力+90, 1号位置能耗-2, 1号位置连击+1, 3号位置威力+40, 3号位置连击+1, 3号位置连击+30, X位威力加10X
 - example_source_ids: [21170010, 21170030, 21170070, 21170080, 21170090]
-- coverage_breakdown: {'auto_structural_count': 10, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 10, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070120` 传感器 — 造成物伤，2连击，本技能位于1号或3号位时连击+1，<desc_id=1033>传动</>1。
     - `7070010` 械斗 — 造成物伤，本技能位于1号位时威力+60，<desc_id=1033>传动</>1。
@@ -1405,7 +1386,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 归位
 - example_source_ids: [21180010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200246` 整点报时 — 回合末，若所有技能都在初始位置，<desc_id=1033>传动</>技能能耗永久-5。
 - pak_evidence:
@@ -1417,7 +1398,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 4号位技能首次释放时能耗-
 - example_source_ids: [21190020]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200229` 四轴机床 — 若释放的4号位技能为该精灵未使用过的技能，能耗-3。
 - pak_evidence:
@@ -1429,7 +1410,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 两侧技能能耗-1
 - example_source_ids: [21200010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070060` 轴承支撑 — 主动：本技能被动额外-1能耗，被动：两侧技能能耗-1，<desc_id=1033>传动</>1。
 - pak_evidence:
@@ -1441,7 +1422,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 失去能量时给敌方一个检测蜜果灵标记效果
 - example_source_ids: [21210060]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200264` 半朽蜜果灵 — 敌方失去能量时，自身回复等量能量
 - pak_evidence:
@@ -1453,7 +1434,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 预警, 预警狐獴, 预警首领
 - example_source_ids: [21300010, 21300020, 21300030]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200262` 哨兵 — 回合开始时若敌方技能足够击败自己，自己获得速度+50，行动后<desc_id=1003>脱离</>。
     - `200222` 预警 — 若敌方技能足够击败自己，回合开始时自己获得速度+50。
@@ -1467,7 +1448,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 借用, 取念, 复写
 - example_source_ids: [21320010, 21320020, 21320030]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7020840` 借用 — 每回合随机变成己方队伍中其他精灵的技能。
     - `7020850` 取念 — 每回合随机变成敌方任意精灵的技能，且该技能能耗-2。
@@ -1481,7 +1462,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 上岸蛙
 - example_source_ids: [21330010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200269` 张弛有度 — 周末时自己获得双攻+40%，其他时间获得双防+40%。
 - pak_evidence:
@@ -1493,7 +1474,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 分段血量
 - example_source_ids: [21340010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7300003` 测试buff134 — 造成物伤
 - pak_evidence:
@@ -1505,7 +1486,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 连击加灼烧
 - example_source_ids: [21350010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200151` 急性子 — 每次连击赋予敌方2层<desc_id=1002>灼烧</>。
 - pak_evidence:
@@ -1517,7 +1498,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 无限萌化, 萌化不降低种族资质
 - example_source_ids: [21360010, 21360020]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200184` 磁力 — 0
     - `200182` 无忧无虑 — 可获得的<desc_id=1006>萌化</>层数不受限制。
@@ -1530,7 +1511,7 @@ _(none)_
 - count: **5** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 小光1淳朴, 小光2淳朴, 水星龙弦技能1_效果1, 水星龙弦技能1_效果2, 空灵斗士技能1
 - example_source_ids: [21380010, 21380020, 21380030, 21380040, 21380050]
-- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 5, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030551` 应对！空灵斗士草1 — 造成物伤，<desc_id=1015>应对状态</>：本次攻击受攻击属性增益影响翻倍
     - `7050471` 应对！水星水1 — 造成魔伤，<desc_id=1015>应对状态</>：本次伤害不受自身属性减益和敌方属性增益影响
@@ -1545,7 +1526,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 能耗变化效率翻倍
 - example_source_ids: [21410010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200112` 倾轧 — 携带的技能受能耗变化效果的影响翻倍。
 - pak_evidence:
@@ -1557,7 +1538,7 @@ _(none)_
 - count: **7** | coverage: `auto_structural` | used_consumer_count: 6
 - editor_names: 撒娇, 检测能否继续萌化, 甜心续航, 示弱, 赤子之心, 超级糖果
 - example_source_ids: [21420010, 21420020, 21420030, 21420040, 21420050]
-- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7160200` 甜心续航 — 自己和敌方获得<desc_id=1006>萌化</>：回复40%生命和4能量。
     - `7160180` 赤子之心 — 自己获得<desc_id=1006>萌化</>：全技能能耗永久-3。
@@ -1575,7 +1556,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 1
 - editor_names: 改变赋予印记鲤拉鳐
 - example_source_ids: [21430010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200225` 吟游之弦 — 赋予的<desc_id=3010>印记</>不会替换其他<desc_id=3010>印记</>，而是同时生效。
 - pak_evidence:
@@ -1587,7 +1568,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 养分回收, 春花兔
 - example_source_ids: [1010001, 1010002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1010001 type=1 effect_order=10 effect_param=[[0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1597,7 +1578,7 @@ _(none)_
 - count: **10** | coverage: `exact_jsonl_partial` | used_consumer_count: 4
 - editor_names: 丛林奇袭汲取生命, 吸血30%, 恶魔叮1, 汲取生命10, 汲取生命100, 汲取生命15, 汲取生命20, 汲取生命50, 汲取生命虫-汲取生命100%, 荆棘场地汲取生命
 - example_source_ids: [1011001, 1011003, 1011004, 1011005, 1011006]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 3, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 3, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100160` 龙之利爪 — <desc_id=1007>蓄力</>，造成物伤并吸血50%。
     - `7990129` 应对！检测工具攻击 — 检测工具用
@@ -1614,7 +1595,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 逃跑
 - example_source_ids: [1015001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7000020` 逃跑 — 脱离战斗。
 - pak_evidence:
@@ -1626,7 +1607,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 争雄-筛选雄性, 灵魂号角-筛选死亡角色, 蜂群集结
 - example_source_ids: [1022001, 1022002, 1022003]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200066` 灵力号角 — 登场时，背包内每存在1个力竭精灵提升25%攻击。
 - pak_evidence:
@@ -1638,7 +1619,7 @@ _(none)_
 - count: **4** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 草系友善-队伍中存在草系精灵, 虫系友善-队伍中存在虫系, 青草抱枕-筛选草系, 食草大军-筛选草系
 - example_source_ids: [1023010, 1023011, 1023012, 1023013]
-- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 4, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1023010 type=1 effect_order=23 effect_param=[[13], [0], [0], [1], [20230210], [0], [299901], [0], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1648,7 +1629,7 @@ _(none)_
 - count: **5** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 临时-替换石壁, 光系替换技能, 替换首领技能
 - example_source_ids: [1027004, 1027005, 1027006, 1027007, 1027008]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800250` 首领形态 — 恢复100%生命并进化为首领形态。
 - pak_evidence:
@@ -1660,7 +1641,7 @@ _(none)_
 - count: **38** | coverage: `exact_jsonl_partial` | used_consumer_count: 19
 - editor_names: 丛林奇袭, 偷袭, 反制, 反制气泡, 大法阵, 崩拳, 巧劲, 应激反应, 格斗小七2, 水刃
 - example_source_ids: [1031001, 1031002, 1031003, 1031004, 1031005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 19, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 19, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7020810` 无畏之心 — 减伤100%，<desc_id=1016>应对攻击</>：减免的伤害变为回复自己生命，且本技能能耗永久+2。
     - `7020800` 血气 — 减伤60%，<desc_id=1016>应对攻击</>：本回合受到致命伤害时，保留1生命值。
@@ -1677,7 +1658,7 @@ _(none)_
 - count: **12** | coverage: `exact_jsonl_partial` | used_consumer_count: 40
 - editor_names: 糖果海浪, 虫鸣, 连击10, 连击2, 连击3, 连击4, 连击5, 连击6, 连击7, 连击8
 - example_source_ids: [1032001, 1032002, 1032003, 1032004, 1032005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 10, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 10, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190300` 星链 — 2连击，每次连击使敌方获得1层<desc_id=1035>星陨印记</>。
     - `7090320` 冰捆缚 — 2连击，每次连击敌方获得全技能能耗+1。
@@ -1694,7 +1675,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 释放两侧技能, 释放其他迅捷技能, 释放所有普通系技能
 - example_source_ids: [1033001, 1033002, 1033003]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7999112` 核心萃取 — 释放四次主体剥离
     - `7020750` 荟萃 — 释放携带的所有普通系技能，但能耗翻倍。
@@ -1708,7 +1689,7 @@ _(none)_
 - count: **10** | coverage: `mixed` | used_consumer_count: 0
 - editor_names: 与力, 焰胆-领主技能, 状态接力, 盾牌滑板, 聚魔, 蛛网-筛选领主效果虫, 阿布特性, 食梦, 驱能, 鳞脊
 - example_source_ids: [1034001, 1034002, 1034003, 1034004, 1034005]
-- coverage_breakdown: {'auto_structural_count': 9, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 9, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200010` 聚魔 — 每有一个我方精灵使用过魔攻技能，魔攻伤害提升10%。
     - `200016` 驱能 — 首次登场时，每有一个我方精灵使用过魔攻技能，对手失去1能量。
@@ -1721,7 +1702,7 @@ _(none)_
 - count: **50** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 伊里斯-释放特定技能, 再次释放敌人本回合释放技能, 小石头-释放特定技能, 微风-释放特定技能, 法瑞莎莎-释放特定技能, 狂风-释放特定技能, 老大-释放特定技能, 芙拉沃-释放特定技能, 葛朗台-释放特定技能, 蛰蛰-释放特定技能
 - example_source_ids: [1035001, 1035002, 1035003, 1035004, 1035005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 50}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 50, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800552` 念头涌现 — 暂时被遮蔽了，找回名字以揭示该技能。
     - `7800554` 突触失活 — 暂时被遮蔽了，找回名字以揭示该技能。
@@ -1737,7 +1718,7 @@ _(none)_
 - count: **4** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 变身-首领水灵, 变身-首领火神, 变身-首领魔力猫, 退化光线
 - example_source_ids: [1036003, 1036011, 1036012, 1036013]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800340` 应对！首领形态 — 免疫50%伤害，应对时进化为首领形态。应对：攻击类技能。
     - `7800250` 首领形态 — 恢复100%生命并进化为首领形态。
@@ -1750,7 +1731,7 @@ _(none)_
 - count: **82** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: P3剧情--驱散骨龙复活, npc挑战类恶魔狼规则-驱散, 净化伊里斯的噩梦1, 净化伊里斯的噩梦2, 净化伊里斯的噩梦3, 净化伊里斯的噩梦4, 净化小石头的噩梦1, 净化小石头的噩梦2, 净化小石头的噩梦3, 净化小石头的噩梦4
 - example_source_ids: [1004002, 1004005, 1004006, 1004046, 1004065]
-- coverage_breakdown: {'auto_structural_count': 22, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 59}
+- coverage_breakdown: {'auto_structural_count': 22, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 59, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180200` 隐藏条款 — 与敌方交换携带的技能。
     - `7040610` 除厄 — 造成魔伤，驱散自己的减益。
@@ -1769,7 +1750,7 @@ _(none)_
 - count: **15** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: ?, debuff转换buff, dot转化为回血, 场地转换星陨, 场地转换标记, 将buff转换成印记, 将buff转换成毒, 将中毒转换成中毒印记, 将毒转换成光羽, 标记转换灼烧
 - example_source_ids: [1042001, 1042002, 1042003, 1042004, 1042005]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7120130` 毒雾 — 将敌方所有<desc_id=1012>增益</>，转化成<desc_id=1001>中毒</>。
     - `7040500` 焚烧烙印 — 驱散双方所有<desc_id=3010>印记</>，每驱散1层，敌方获得5层<desc_id=1002>灼烧</>。
@@ -1786,7 +1767,7 @@ _(none)_
 - count: **27** | coverage: `mixed` | used_consumer_count: 8
 - editor_names: 恢复1%生命, 恢复1%生命（上限100）, 恢复10%生命, 恢复100%生命, 恢复100%生命--无上限, 恢复12%生命, 恢复15%生命, 恢复2%生命, 恢复20%生命, 恢复25%生命
 - example_source_ids: [1005001, 1005002, 1005003, 1005005, 1005010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 6, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 20}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 6, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 20, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己回复5%生命和1能量，使用后本技能连击数永久+1。
     - `7030321` 应对！酶浓度调整 — 减伤80%，<desc_id=1016>应对攻击</>：自己回复20%生命。
@@ -1803,7 +1784,7 @@ _(none)_
 - count: **14** | coverage: `mixed` | used_consumer_count: 3
 - editor_names: 偷敌方一个随机效果, 复制敌方增益, 复制给目标buff, 复制自己的正面buff, 嫁祸, 转移debuff, 转移一层印记, 转移印记, 转移正面, 转移萌化
 - example_source_ids: [1050001, 1050002, 1050003, 1050004, 1050005]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 11}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 11, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7160190` 反弹 — 将自己的<desc_id=1006>萌化</>转移给敌方。
     - `7130291` 应对！翅刃 — 造成物伤，驱散敌方所有<desc_id=3010>印记</>，<desc_id=1015>应对状态</>：改为偷取<desc_id=3010>印记</>。
@@ -1820,7 +1801,7 @@ _(none)_
 - count: **3** | coverage: `exact_jsonl_partial` | used_consumer_count: 5
 - editor_names: 迅捷, 锤头鹳迅捷, 高脚鹳迅捷
 - example_source_ids: [1051001, 1051002, 1051003]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7150260` 飞羽 — <desc_id=1005>迅捷</>，驱散敌方1种<desc_id=1012>增益</>。
     - `7150151` 应对！风墙 — 减伤50%，<desc_id=1005>迅捷</>，<desc_id=1016>应对攻击</>。
@@ -1837,7 +1818,7 @@ _(none)_
 - count: **9** | coverage: `mixed` | used_consumer_count: 1
 - editor_names: 冻结翻倍, 增益翻倍, 扩散侵蚀, 毒的层数增加1, 病入膏肓, 系别效果层数+2, 魔攻增益翻倍
 - example_source_ids: [1052001, 1052002, 1052003, 1052004, 1052005]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 6, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7120160` 落井下毒 — 使敌方精灵<desc_id=1013>减益</>的层数翻倍。
     - `7080201` 应对！泥浆铠甲 — 自己获得物攻和物防+60%，<desc_id=1017>应对防御</>：额外使自己的<desc_id=1012>增益</>翻倍。
@@ -1853,7 +1834,7 @@ _(none)_
 - count: **16** | coverage: `mixed` | used_consumer_count: 3
 - editor_names: 冻结换星陨, 刻蚀, 吞噬秒杀效果, 拥有印记赋予驱散印记, 星陨翻倍, 每层中毒印记加两层毒, 每层萌化给敌方一层萌化, 每有一层毒，便获得一层光羽, 灼烧翻倍, 猛毒烟花
 - example_source_ids: [1053001, 1053002, 1053004, 1053005, 1053007]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 13}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 13, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7040280` 充分燃烧 — 使敌方身上的<desc_id=1002>灼烧</>翻倍，并触发1次灼烧伤害。
     - `7999111` 抹除存在 — 击败所有没有名字的精灵。
@@ -1869,7 +1850,7 @@ _(none)_
 - count: **5** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 光芒祝福, 激化核心, 齿轮扭矩
 - example_source_ids: [1055002, 1055003, 1055004, 1055005, 1055006]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1055002 type=1 effect_order=55 effect_param=[[0], [1], [1], [0], [40]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1879,7 +1860,7 @@ _(none)_
 - count: **6** | coverage: `mixed` | used_consumer_count: 0
 - editor_names: 若携带被格斗系克制的技能超过2则获得光羽, 龙吼, 龙噬特权, 龙息, 龙爪, 龙舞
 - example_source_ids: [1058001, 1058002, 1058003, 1058004, 1058005]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1058001 type=1 effect_order=58 effect_param=[[14], [0], [2], [20010011], [299901], [20010810], [-1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1889,7 +1870,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 若出手时速度为全场最慢则释放“撞击”
 - example_source_ids: [1059001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1059001 type=1 effect_order=59 effect_param=[[-1], [7020010]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1899,7 +1880,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 改变技能
 - example_source_ids: [1009001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1009001 type=1 effect_order=9 effect_param=[[700003], [3]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1909,7 +1890,7 @@ _(none)_
 - count: **18** | coverage: `auto_structural` | used_consumer_count: 3
 - editor_names: 10%最大生命值伤害, 150威力, 20%最大生命值伤害, 40威力, 刺肤, 剧情-幻王奥义, 噩梦自杀, 撒钉, 星陨, 点到为止
 - example_source_ids: [1001001, 1001002, 1001003, 1001004, 1001005]
-- coverage_breakdown: {'auto_structural_count': 18, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 18, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7040280` 充分燃烧 — 使敌方身上的<desc_id=1002>灼烧</>翻倍，并触发1次灼烧伤害。
     - `7999998` 点到为止 — 点到为止
@@ -1927,7 +1908,7 @@ _(none)_
 - count: **12** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 偷10能量, 偷1能量, 偷2能量, 偷3能量, 偷4能量, 偷5能量, 偷6能量, 偷7能量, 偷8能量, 偷99能量
 - example_source_ids: [1016002, 1018001, 1018002, 1018003, 1018004]
-- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 12, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7170250` 勾魂 — 偷取敌方3能量。
 - sample_ability_consumers:
@@ -1941,7 +1922,7 @@ _(none)_
 - count: **2** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 应对打断, 通用打断
 - example_source_ids: [1003001, 1003003]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140181` 应对！硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
     - `7021161` 应对！摇篮曲 — 敌方获得全技能能耗+3，<desc_id=1017>应对防御</>：额外造成<desc_id=1011>打断</>，且敌方下回合获得眩晕。
@@ -1957,7 +1938,7 @@ _(none)_
 - count: **103** | coverage: `mixed` | used_consumer_count: 48
 - editor_names: 7040380, 7190400, 下坠, 不动, 不可接触, 冥想新, 冰2, 冰之花, 冰刺, 冰化
 - example_source_ids: [1031065, 1031066, 1031074, 1031076, 1031077]
-- coverage_breakdown: {'auto_structural_count': 87, 'exact_jsonl_count': 16, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 87, 'exact_jsonl_count': 16, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180190` 恶意逃离 — <desc_id=1003>脱离</>，<desc_id=1017>应对防御</>：额外使敌方攻击技能能耗+4。
     - `7040270` 热身 — 下一次攻击时，技能威力翻倍，<desc_id=1017>应对防御</>：改为威力变为4倍。
@@ -1974,7 +1955,7 @@ _(none)_
 - count: **64** | coverage: `auto_structural` | used_consumer_count: 9
 - editor_names: 倾泻专用, 助燃, 复原光线, 守护者临时配置, 守护者移除40, 挺起胸脯, 氧循环, 水翼推进, 洗礼, 浸润
 - example_source_ids: [1004003, 1004008, 1004009, 1004010, 1004011]
-- coverage_breakdown: {'auto_structural_count': 64, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 64, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7150260` 飞羽 — <desc_id=1005>迅捷</>，驱散敌方1种<desc_id=1012>增益</>。
     - `7180180` 欺诈契约 — 与敌方交换<desc_id=1012>增益</>和<desc_id=1013>减益</>。
@@ -1996,7 +1977,7 @@ _(none)_
 - count: **13** | coverage: `auto_structural` | used_consumer_count: 2
 - editor_names: 检测冰系标记，获得攻防速强化, 检测机械系标记，获得攻防速强化, 检测水系标记，强化速度, 检测水系标记，获得随机强化, 检测翼系标记，攻击提高, 检测草系标记，防御提高, 每层印记加攻防, 每层印记，回血10%, 每有一层冻结，能耗加2, 每有一层星陨，能耗加1
 - example_source_ids: [1053003, 1053008, 1053009, 1053010, 1053011]
-- coverage_breakdown: {'auto_structural_count': 13, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 13, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090190` 霜天 — 敌方获得1层冻结，且每有1层<desc_id=1004>冻结</>获得全技能能耗+1。
     - `7130310` 食腐 — 驱散敌方<desc_id=3010>印记</>，每层<desc_id=3010>印记</>回复自己10%生命。
@@ -2009,7 +1990,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 随机使携带的两个普通系技能能量加1
 - example_source_ids: [1055001]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1055001 type=2 effect_order=55 effect_param=[[0], [2], [2], [1], [1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2019,7 +2000,7 @@ _(none)_
 - count: **3** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 换宠技能通用, 通用强制换宠
 - example_source_ids: [1006001, 1006002, 1006003]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 3, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1006001 type=2 effect_order=6 effect_param=[[1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2029,7 +2010,7 @@ _(none)_
 - count: **1** | coverage: `auto_structural` | used_consumer_count: 0
 - editor_names: 通用技能替换
 - example_source_ids: [1007001]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1007001 type=2 effect_order=7 effect_param=[]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2039,7 +2020,7 @@ _(none)_
 - count: **5** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 灾厄, 自伤10％, 自伤20％, 自伤60％, 自伤80％
 - example_source_ids: [1001007, 1001008, 1001010, 1001011, 1001017]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030350` 奇怪的种子弹 — 奇怪的种子弹，不知道效果如何
     - `7000290` 轻伤 — 精灵受了点轻伤
@@ -2054,7 +2035,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 突然袭击（汲取生命）
 - example_source_ids: [1011002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1011002 type=3 effect_order=11 effect_param=[[10000], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2064,7 +2045,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 随机释放敌人技能
 - example_source_ids: [1011301]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1011301 type=3 effect_order=13 effect_param=[[1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2074,7 +2055,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 打雷-斩杀效果
 - example_source_ids: [1014001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1014001 type=3 effect_order=14 effect_param=[[50]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2084,7 +2065,7 @@ _(none)_
 - count: **19** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 呆璐璐, 将噬爪缩：受到伤害后，获得一个随机效果：回复10%最大生命值，物防魔防+20%，恢复4能量, 族群守护：随机获得10次奉献, 棱镜球, 神秘仪式：每回合随机为场上的单位添加一种印记效果, 绿草精灵, 翼魔法--随机获得1个增益, 虫之秘法, 规则--随机获得1个增益, 规则--随机获得一个增益
 - example_source_ids: [1016001, 1016003, 1016004, 1016005, 1016006]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7130321` 应对！虫结阵 — 减伤80%，<desc_id=1016>应对攻击</>：己方队伍获得1次随机<desc_id=1009>奉献</>。
     - `7130200` 虫群智慧 — 己方队伍获得2次随机<desc_id=1009>奉献</>。
@@ -2099,7 +2080,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 移除自身随机1种非印记的负面效果
 - example_source_ids: [1017001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1017001 type=3 effect_order=17 effect_param=[[2], [3], [1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2109,7 +2090,7 @@ _(none)_
 - count: **51** | coverage: `exact_jsonl_partial` | used_consumer_count: 12
 - editor_names: 伊贝儿, 优化eff19获得能耗总和之差的绝对值的能量, 半朽蜜果灵, 小幽灵脸, 小灵菇, 小石头, 快充, 搜刮, 深度睡眠-恢复3能量, 滋养-获得2能量
 - example_source_ids: [1019001, 1019002, 1019003, 1019004, 1019005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 6, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 45}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 6, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 45, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己回复5%生命和1能量，使用后本技能连击数永久+1。
     - `7180191` 应对！恶意逃离 — <desc_id=1003>脱离</>，<desc_id=1017>应对防御</>：额外使敌方攻击技能能耗+4。
@@ -2128,7 +2109,7 @@ _(none)_
 - count: **12** | coverage: `gap` | used_consumer_count: 3
 - editor_names: Npc挑战类恶魔狼规则友军死亡的精灵越多，强化越多，每只增加20%全属性, 优化eff22每有一只受伤精灵施加一层中毒, 怯场, 登场时，友军死亡的精灵越多，强化越多，每只增加20%双攻, 登场时，友军死亡的精灵越多，强化越多，每只增加30%吸血, 绒, 背包中每存在1个受伤的精灵，物理和魔法攻击提升10%, 背包中每有1个虫系，进入战斗后自身全属性提升10%（攻击，防御，速度）
 - example_source_ids: [1022004, 1022005, 1022006, 1022007, 1022008]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 12, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `280024` 悼亡 — 双方队伍中每有1只力竭的精灵，自己获得双攻+30%。
     - `200140` 悲悯 — 己方队伍中每有1只力竭的精灵，自己获得双攻+30%。
@@ -2144,7 +2125,7 @@ _(none)_
 - count: **49** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 冰系友善, 地源, 地系友善, 宝箱幻化-释放技能, 普通系友善, 武系友善, 毒系友善, 水系友善, 火系友善, 犀牛鸟1
 - example_source_ids: [1023001, 1023002, 1023003, 1023004, 1023005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 49}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 49, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1023001 type=3 effect_order=23 effect_param=[[15], [0], [0], [1], [20010430], [0], [299901], [0], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2154,7 +2135,7 @@ _(none)_
 - count: **7** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 测试--赋予冰光环, 测试--赋予毒光环, 测试--赋予水光环, 测试--赋予火焰光环, 测试--赋予电光环, 测试--飘字用空eff
 - example_source_ids: [1025001, 1025002, 1025003, 1025004, 1025005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7990020` 火系地表 — 对全体对手造成巨量火焰伤害。
     - `7990030` 毒系地表 — 对对手赋予毒系地表。
@@ -2172,7 +2153,7 @@ _(none)_
 - count: **5** | coverage: `generated_weather` | used_consumer_count: 3
 - editor_names: 晴天, 暴风雪, 求雨, 沙暴, 测试--求雨，不带出战斗
 - example_source_ids: [1028001, 1028002, 1028003, 1028004, 1028005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 5, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 5, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7080210` 沙涌 — 将天气改为<desc_id=3006>沙暴</>，持续8回合。
     - `7090370` 冬至 — 将天气改为<desc_id=3007>暴风雪</>，持续8回合。
@@ -2188,7 +2169,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 测试--重置天气
 - example_source_ids: [1029001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7990050` 重置天气 — 测试机能，重置战场天气。
 - pak_evidence:
@@ -2200,7 +2181,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 优化eff3打断并施加中毒, 通用打断2
 - example_source_ids: [1003002, 1099003]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1003002 type=3 effect_order=3 effect_param=[[1], [1004055], [3]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2210,7 +2191,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 测试--重置火和冰地表
 - example_source_ids: [1030001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7990060` 重置地表 — 测试机能，重置自己脚下火和冰地表。
 - pak_evidence:
@@ -2222,7 +2203,7 @@ _(none)_
 - count: **62** | coverage: `exact_jsonl_partial` | used_consumer_count: 30
 - editor_names: 偷袭, 光4, 冥想, 冰盾, 冰锤, 冰锥, 剧毒, 十字斩, 反击, 地刺
 - example_source_ids: [1031021, 1031022, 1031023, 1031024, 1031025]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 41, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 21}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 41, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 21, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100130` 吹炎 — <desc_id=1007>蓄力</>，造成物伤，<desc_id=1015>应对状态</>：本次技能威力翻倍。
     - `7140180` 硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
@@ -2239,7 +2220,7 @@ _(none)_
 - count: **14** | coverage: `gap` | used_consumer_count: 7
 - editor_names: 200085, 200153, 200172, 200181, 优化eff34自己每释放两能耗技能成功应对，便给对面施加一层中毒, 入场时，每有1个友军触发迅捷，自身速度增加10%, 己方其他精灵每使用1次水系技能，入场时技能消耗-1。, 搜刮, 渗透, 自己的精灵每使用1次普通系技能，进战斗时会增加10%速度
 - example_source_ids: [1034011, 1034012, 1034013, 1034014, 1034015]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 14}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 14, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200212` 渗透 — 己方精灵每使用1次武系或地系技能，自己入场时获得攻防+5%。
     - `200110` 水翼推进 — 己方精灵每使用1次水系技能，自己入场时获得全技能能耗-1。
@@ -2255,7 +2236,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 毛毛
 - example_source_ids: [1036014]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1036014 type=3 effect_order=36 effect_param=[[1], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2265,7 +2246,7 @@ _(none)_
 - count: **3** | coverage: `exact_jsonl_partial` | used_consumer_count: 42
 - editor_names: 优化eff37释放的技能进入cd, 防御类技能公共冷却1, 防御类技能公共冷却2
 - example_source_ids: [1037001, 1037002, 1099037]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140181` 应对！硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
     - `7140180` 硬门 — <desc_id=1016>应对攻击</>：<desc_id=1011>打断</>被应对技能，并造成90威力物伤。
@@ -2282,7 +2263,7 @@ _(none)_
 - count: **19** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 主角-黑魔法（新）, 威力爆发, 威力爆发--NPC, 治疗术, 治疗术-NPC, 测试--临时净化, 测试--恢复能量, 测试-根据血脉获得buff, 测试-根据血脉获得buff--黑魔法, 激活能量
 - example_source_ids: [1038001, 1038002, 1038003, 1038004, 1038005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 19, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1038001 type=3 effect_order=38 effect_param=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], [20010010, 20010010, 20010010], [1], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2292,7 +2273,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 共鸣魔法:改变宠物技能列表, 血脉强化
 - example_source_ids: [1039001, 1039002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1039001 type=3 effect_order=39 effect_param=[[2], [7030010, 7030020, 7030030]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2302,7 +2283,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 移除1个debuff, 移除再生, 移除黑雾
 - example_source_ids: [1004001, 1004007, 1004014]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1004001 type=3 effect_order=4 effect_param=[[3], [20010440], [0], [3], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2312,7 +2293,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 共鸣魔法:改变宠物(换宠)
 - example_source_ids: [1040001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1040001 type=3 effect_order=40 effect_param=[[2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2322,7 +2303,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 首领化
 - example_source_ids: [1041001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1041001 type=3 effect_order=41 effect_param=[[3005, 3006, 3007, 3012, 3019, 3332, 3157, 3105, 3031, 3117, 3002, 3003, 3004, 3001, 3008, 3009, 3010, 3038, 3014, 3017, 3020, 3026, 3034, 3028, 3029, 3040, 3043, 3045, 3049, 3052, 3055, 3058, 3060, 3062, 3065, 3070, 3072, 3075, 3078, 3081, 3083, 3086, 3090, 3093, 3159, 3098, 3103, 3106, 3109, 3112, 3115, 3118, 3121, 3124, 3127, 3130, 3133, 3136, 3139, 3142, 3145, 3148, 3151, 3154, 3161, 3165, 3168, 3170, 3172, 3175, 3178, 3180, 3183, 3188, 3190, 3193, 3195, 3198, 3200, 3203, 3206, 3209, 3211, 3213, 3215, 3217, 3225, 3228, 3230, 3234, 3237, 3239, 3242, 3244, 3248, 3250, 3253, 3255, 3257, 3260, 3264, 3266, 3413, 3414, 3415, 3276, 3282, 3283, 3284, 3288, 3289, 3290, 3297, 3298, 3299, 3307, 3309, 3315, 3330, 3333, 3344, 3351, 3357, 3367, 3376, 3378, 3382, 3384, 3387, 3395, 3398, 3403, 3406, 3408, 3410, 3419, 3421, 3423, 3425, 3428, 3434, 3436, 3438, 3440, 3442, 3033, 3032, 3048, 3025, 3015, 3018, 3021, 3030, 3041, 3046, 3101, 3053, 3056, 3059, 3061, 3073, 3076, 3079, 3082, 3084, 3087, 3091, 3094, 3160, 3099, 3104, 3107, 3110, 3113, 3116, 3119, 3122, 3125, 3128, 3131, 3134, 3137, 3140, 3143, 3146, 3149, 3152, 3155, 3162, 3166, 3173, 3176, 3181, 3191, 3196, 3201, 3204, 3207, 3218, 3231, 3240, 3245, 3251, 3258, 3277, 3291, 3292, 3293, 3300, 3301, 3302, 3310, 3316, 3331, 3334, 3358, 3379, 3385, 3396, 3399, 3303, 3304, 3305], [5001, 5002, 5003, 5004, 5005, 5006, 5007, 5009, 5008, 5010, 3033, 3032, 3048, 3025, 3067, 3023, 3039, 3013, 3015, 3018, 3021, 3035, 3027, 3037, 3030, 3041, 3044, 3046, 3101, 3053, 3056, 3059, 3061, 3063, 3066, 3071, 3073, 3076, 3079, 3082, 3084, 3087, 3091, 3094, 3160, 3099, 3104, 3107, 3110, 3113, 3116, 3119, 3122, 3125, 3128, 3131, 3134, 3137, 3140, 3143, 3146, 3149, 3152, 3155, 3162, 3166, 3169, 3171, 3173, 3176, 3179, 3181, 3185, 3189, 3191, 3194, 3196, 3199, 3201, 3204, 3207, 3210, 3412, 3214, 3216, 3218, 3226, 3229, 3231, 3235, 3238, 3240, 3243, 3245, 3249, 3251, 3254, 3256, 3258, 3261, 3265, 3267, 3270, 3272, 3274, 3277, 3285, 3286, 3287, 3291, 3292, 3293, 3300, 3301, 3302, 3308, 3310, 3316, 3331, 3334, 3345, 3352, 3358, 3368, 3377, 3379, 3383, 3385, 3388, 3396, 3399, 3404, 3407, 3409, 3411, 3420, 3422, 3424, 3426, 3429, 3435, 3437, 3439, 3441, 3443, 3005, 3006, 3051, 3007, 3016, 3019, 3022, 3031, 3042, 3047, 3102, 3054, 3057, 3157, 3405, 3074, 3077, 3080, 3350, 3085, 3088, 3092, 3095, 3097, 3100, 3105, 3108, 3111, 3114, 3117, 3120, 3123, 3126, 3129, 3132, 3135, 3138, 3141, 3144, 3147, 3150, 3153, 3156, 3372, 3167, 3174, 3177, 3182, 3192, 3197, 3202, 3205, 3208, 3219, 3232, 3241, 3246, 3252, 3259, 3278, 3294, 3295, 3296, 3303, 3304, 3305, 3311, 3317, 3332, 3335, 3359, 3380, 3386, 3397, 3400, 5005, 5005, 5005]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2332,7 +2313,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 优化eff42将敌人的随机两层buff转换为中毒
 - example_source_ids: [1099042]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1099042 type=3 effect_order=42 effect_param=[[2], [1], [7020010], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2342,7 +2323,7 @@ _(none)_
 - count: **7** | coverage: `gap` | used_consumer_count: 2
 - editor_names: 撕咬, 生命值高于百分之50的获得一层毒，低于的获得光羽, 血量高于25%时，获得4连击，低于25，获得6连击, 血量高于50%时，获得2连击，低于50，获得1043007, 血量高于50%时，造成伤害提升30%；血量低于50%时，受到伤害提升30%, 血量高于75%时，无事发生，低于75时获得1043006, 黑暗契约
 - example_source_ids: [1043001, 1043002, 1043003, 1043004, 1043005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180110` 撕咬 — 造成物伤，3连击，若自己的生命低于50%，本次技能连击数+2。
     - `7180130` 极限撕裂 — 造成物伤，若生命高于50%，使用后自己获得双攻-50%。
@@ -2355,7 +2336,7 @@ _(none)_
 - count: **2** | coverage: `exact_jsonl` | used_consumer_count: 2
 - editor_names: 交换状态, 交换生命比例
 - example_source_ids: [1044001, 1044002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 2, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180180` 欺诈契约 — 与敌方交换<desc_id=1012>增益</>和<desc_id=1013>减益</>。
     - `7180230` 恶念交换 — 与敌方交换生命比例。
@@ -2369,7 +2350,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 平均双方能量值
 - example_source_ids: [1045001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1045001 type=3 effect_order=45 effect_param=[[2], [5000]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2379,7 +2360,7 @@ _(none)_
 - count: **5** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 副属性变化为抵抗系别, 技能变为上个技能系别, 技能变为格斗系技能, 技能随机获得新系别, 荧光
 - example_source_ids: [1046001, 1046002, 1046003, 1046004, 1046005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1046001 type=3 effect_order=46 effect_param=[[3], [14], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2389,7 +2370,7 @@ _(none)_
 - count: **2** | coverage: `exact_jsonl_partial` | used_consumer_count: 1
 - editor_names: 交换双方技能, 交换本回合释放的技能
 - example_source_ids: [1047001, 1047002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 1, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180200` 隐藏条款 — 与敌方交换携带的技能。
 - pak_evidence:
@@ -2402,7 +2383,7 @@ _(none)_
 - count: **7** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 光影, 取念, 复写, 摄魂, 特殊战斗被动-随机变成已学习的技能, 随机变为一个场上敌人的技能, 随机变成敌人技能
 - example_source_ids: [1049001, 1049002, 1049003, 1049004, 1049005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1049001 type=3 effect_order=49 effect_param=[[1], [1], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2412,7 +2393,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 生日蛋糕
 - example_source_ids: [1053006]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1053006 type=3 effect_order=53 effect_param=[[20010790], [20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010010, 20010020, 20010100, 20010100, 20010100], [299901]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2422,7 +2403,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 生日蛋糕, 随机分配场上所有毒的层数给全场
 - example_source_ids: [1056001, 1056002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1056001 type=3 effect_order=56 effect_param=[[20070010], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2432,7 +2413,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 交换齿轮, 此技能两侧的技能位置对调
 - example_source_ids: [1057001, 1057002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070050` 杠杆置换 — 自己回复2能量，交换两侧技能位置。
 - pak_evidence:
@@ -2444,7 +2425,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 优化eff58增加技能威力
 - example_source_ids: [1099058]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1099058 type=3 effect_order=58 effect_param=[[0], [1], [1], [20640070], [299901], [20640070], [50]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2454,7 +2435,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 反击拳, 扇风, 疾风刺
 - example_source_ids: [1059002, 1059003, 1059004]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7150090` 疾风刺 — 造成物伤，1连击，若先于敌方攻击，改为3连击。
     - `7140100` 反击拳 — 造成物伤，2连击，若后手攻击，改为3连击。
@@ -2467,7 +2448,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 新增eff60获得本次战斗中的中毒数
 - example_source_ids: [1099060]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1099060 type=3 effect_order=60 effect_param=[[0], [0], [0], [7020010], [2], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2477,7 +2458,7 @@ _(none)_
 - count: **4** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 奔波鼠, 新增eff61每更换一次施加一次中毒印记, 每次进入战斗，物理和魔法攻击增加20%, 每次进入战斗，物理和魔法攻击增加30%
 - example_source_ids: [1061001, 1061002, 1061003, 1099061]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200169` 蓄电池 — 每入场1次，永久获得双攻+20%。
     - `280016` 超级电池 — 每入场1次，获得双攻永久+30%。
@@ -2490,7 +2471,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 当背包中有其他存活精灵时，无法被替换上场, 新增eff62无法更换
 - example_source_ids: [1062001, 1099062]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1062001 type=3 effect_order=62 effect_param=[[0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2500,7 +2481,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 新增eff63让能量变为5, 能量上限为20，但无法回复能量, 能量变成0
 - example_source_ids: [1063001, 1063002, 1099063]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1063001 type=3 effect_order=63 effect_param=[[20]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2510,7 +2491,7 @@ _(none)_
 - count: **50** | coverage: `gap` | used_consumer_count: 3
 - editor_names: 入场时，技能栏中每有1个系别的技能，全属性提升10%, 呼呼猪, 技能栏中每有1个系别的技能，威力提高10, 新增eff64每携带一个普通系技能施加一层中毒, 每携带1个龙系技能，入场后速度增加20%, 每携带一个光系技能，电系技能延长一回合, 每携带一个幻系技能，地系加1星陨, 每携带一个水系技能，地系技能能耗-1, 每携带一个水系技能，翼系技能能耗-1, 每携带一个火系技能，草系技能赋予两层灼烧
 - example_source_ids: [1064001, 1064002, 1064003, 1064004, 1064005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 50}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 50, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200120` 冻土 — 每携带1个冰系技能进入战斗，地系技能威力+10%。
     - `200111` 溶解扩散 — 每携带1个毒系技能进入战斗，水系技能使敌方获得1层<desc_id=1001>中毒</>。
@@ -2525,7 +2506,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 剧毒狼蛛, 新增eff65复活死去的精灵, 骨龙
 - example_source_ids: [1065001, 1065002, 1099065]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1065001 type=3 effect_order=65 effect_param=[[13], [0], [1], [10000], [1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2535,7 +2516,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 新增eff66打乱技能顺序, 盲拧
 - example_source_ids: [1066001, 1099066]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200170` 盲拧 — 回合开始时，技能顺序打乱，4号位的技能能耗-4。
 - pak_evidence:
@@ -2547,7 +2528,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 逃跑（共鸣魔法）
 - example_source_ids: [1067001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800380` 超级咆哮 — 首领技，让对方离开战场
 - pak_evidence:
@@ -2559,7 +2540,7 @@ _(none)_
 - count: **6** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 新增eff69星陨推条, 星陨推条, 星陨推条减半
 - example_source_ids: [1069001, 1069002, 1069003, 1069004, 1069005]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 6}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 6, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1069001 type=3 effect_order=69 effect_param=[[20940010], [2], [50]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2569,7 +2550,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 咕噜球
 - example_source_ids: [1070001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200137` 契约的形状 — 根据捕捉所用的咕噜球，入场时获得不同效果。
 - pak_evidence:
@@ -2581,7 +2562,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 增加传说精灵技能次数限制
 - example_source_ids: [1071001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7999108` 加尔临时用 — 造成物伤，获得1能量。
 - pak_evidence:
@@ -2593,7 +2574,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 不听话
 - example_source_ids: [1072001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1072001 type=3 effect_order=72 effect_param=[]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2603,7 +2584,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 预警
 - example_source_ids: [1073001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1073001 type=3 effect_order=73 effect_param=[[20070010]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2613,7 +2594,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 交换两侧技能基础能耗
 - example_source_ids: [1074001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1074001 type=3 effect_order=74 effect_param=[[2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2623,7 +2604,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 继承亡灵
 - example_source_ids: [1075001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200233` 吸灵 — 己方精灵力竭后，入场时继承其的除速度外最高的一项种族资质。
 - pak_evidence:
@@ -2632,10 +2613,10 @@ _(none)_
 
 ## `effect_conf:t3:o76` — EFFECT_CONF
 
-- count: **4** | coverage: `gap` | used_consumer_count: 2
+- count: **4** | coverage: `ability_flag` | used_consumer_count: 2
 - editor_names: 中毒变寄生, 灼烧变寄生
 - example_source_ids: [1076001, 1076002, 1076003, 1076004]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 0, 'ability_flag_count': 4}
 - sample_ability_consumers:
     - `200152` 仁心 — 敌方受到<desc_id=1002>灼烧</>伤害时，自己回复等量生命。
     - `200240` 耐活王 — 敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。
@@ -2648,7 +2629,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 2
 - editor_names: 敌方1魔力出场时全属性提高, 自身1魔力出场时全属性提高
 - example_source_ids: [1077001, 1077002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200245` 构装契约者 — 入场时，若敌方魔力值为1，自己获得双防+50%。
     - `200244` 图书守卫者 — 入场时，若自己魔力值为1，自己获得双攻+50%。
@@ -2661,7 +2642,7 @@ _(none)_
 - count: **3** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 能耗不改变, 能耗变化效果翻倍, 能耗降低效果翻倍
 - example_source_ids: [1079001, 1079002, 1079003]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7080340` 岩脉崩毁 — 造成物伤，本技能能耗固定为4。
 - pak_evidence:
@@ -2673,7 +2654,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 无视属性抵抗, 绒绒
 - example_source_ids: [1008001, 1008002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7130151` 应对！虫击 — 造成物伤，<desc_id=1015>应对状态</>：本次技能威力变为2倍，无视敌方系别抵抗。
 - pak_evidence:
@@ -2685,7 +2666,7 @@ _(none)_
 - count: **4** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 给予场下恢复效果动效, 给予场下精灵萌化, 通用复活, 预警
 - example_source_ids: [1081001, 1081002, 1081003, 1081004]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030510` 富养化 — 为场下每个精灵回复3能量。
 - pak_evidence:
@@ -2699,7 +2680,7 @@ _(none)_
 - count: **1** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 镶嵌
 - example_source_ids: [1083001]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070160` 主轴 — 造成物伤，此技能位置不会改变。
 - pak_evidence:
@@ -2711,7 +2692,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 1
 - editor_names: 蓄力时可放, 蓄力时可放不打断蓄力
 - example_source_ids: [1084001, 1084002]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7100251` 应对！龙血 — 减伤70%，本技能可以在蓄力状态下使用，<desc_id=1016>应对攻击</>：下次技能无需<desc_id=1007>蓄力</>。
     - `7100250` 龙血 — 减伤70%，本技能可以在蓄力状态下使用，<desc_id=1016>应对攻击</>：下次技能无需<desc_id=1007>蓄力</>。
@@ -2725,7 +2706,7 @@ _(none)_
 - count: **20** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 光, 冰, 土, 幻, 幽, 恶魔, 普, 普通系变翼系, 机械, 武
 - example_source_ids: [1085002, 1085003, 1085004, 1085005, 1085006]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 20}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 20, 'ability_flag_count': 0}
 - pak_evidence:
     - EFFECT_CONF.json: 1085002 type=3 effect_order=85 effect_param=[[7060220], [2], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2735,7 +2716,7 @@ _(none)_
 - count: **2** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 伊利斯, 跳过空技能
 - example_source_ids: [1086001, 1086007]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200275` 巨鼓象 — 技能携带上限为3
     - `280009` 夺目 — 额外获得三个未携带的随机技能，且非光系技能威力+25%。
@@ -2748,7 +2729,7 @@ _(none)_
 - count: **4** | coverage: `gap` | used_consumer_count: 0
 - editor_names: 失去绩点--B1最终战, 获得绩点--B1最终战（技能1）, 获得绩点--B1最终战（技能2）, 获得绩点--B1最终战（聚能）
 - example_source_ids: [1089001, 1089002, 1089003, 1089004]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 4, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7000342` 熵增 — 全属性增加50%，使用后回复400绩点。
     - `7000343` 聚变 — 回复40%生命值和200绩点。

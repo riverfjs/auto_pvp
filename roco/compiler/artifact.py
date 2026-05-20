@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.utils import DB_DIR, ROOT, content_hash
+from roco.compiler.codegen import ability_flags_codegen
 from roco.generated.type_chart import TYPE_CHART_BPS as _PAK_TYPE_CHART_BPS
 
 CATALOG_VERSION = 1
@@ -36,6 +37,12 @@ def _source_payload(conn: sqlite3.Connection) -> dict[str, Any]:
         "pet_skills": [tuple(row) for row in _rows(conn, "SELECT pet_id, skill_id, sort_order FROM pet_skills WHERE skill_id IS NOT NULL ORDER BY pet_id, sort_order, id")],
         "skill_effects": [tuple(row) for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id")],
         "ability_effects": [tuple(row) for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id")],
+        # Pak effect-id provenance for ability_flags codegen (5C-iii).
+        # Inputs to ABILITY_FLAGS — must be in the hash so that adding a
+        # rule row, renaming an effect, or shifting the canonical sort
+        # order invalidates SOURCE_HASH alongside the catalog rebuild.
+        "ability_effect_ids": [tuple(row) for row in _rows(conn, "SELECT ability_id, source_ability_id, effect_id, timing_code, target_type, success_rate, sort_order FROM ability_effect_ids ORDER BY ability_id, sort_order")],
+        "ability_flags_from_effects_rules": list(ability_flags_codegen.normalized_payload()),
         "bloodlines": [tuple(row) for row in _rows(conn, "SELECT id, code, name, kind, element_id FROM bloodlines ORDER BY id")],
         "bloodline_magics": [tuple(row) for row in _rows(conn, "SELECT id, code, name, uses_per_battle FROM bloodline_magics ORDER BY id")],
     }
@@ -180,6 +187,15 @@ def compile_artifacts(
             effect = _effect_row(row)
             ability_effect_keyed.append((row["ability_id"], effect))
         ability_effect_rows = tuple(item[1] for item in ability_effect_keyed)
+        # Populate ABILITY_FLAGS from rules/ability_flags_from_effects.jsonl
+        # joined against the ability_effect_ids provenance table.  This is
+        # the "fourth outcome" path — runtime row codegen above stays
+        # untouched; passive bits are layered on after.
+        ability_flags_codegen.populate(
+            conn,
+            effect_to_flag=ability_flags_codegen.load_effect_flag_table(),
+            ability_flags=ability_flags,
+        )
         skipped_effect_stats: tuple[tuple[int, int], ...] = ()
 
         hot = _format_module(

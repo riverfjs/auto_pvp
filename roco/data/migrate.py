@@ -119,6 +119,22 @@ CREATE TABLE IF NOT EXISTS ability_effects (
 );
 CREATE INDEX IF NOT EXISTS idx_ability_effects_ability ON ability_effects(ability_id);
 
+-- ability_id is the normalized id (FK to abilities.id) and is what the
+-- compiler / artifact code joins on.  source_ability_id is the raw pak
+-- feature_id (e.g. 200152 / 200240) preserved for pak provenance and
+-- test fixtures; never use it for runtime indexing.
+CREATE TABLE IF NOT EXISTS ability_effect_ids (
+    ability_id INTEGER NOT NULL REFERENCES abilities(id) ON DELETE CASCADE,
+    source_ability_id INTEGER NOT NULL,
+    effect_id INTEGER NOT NULL,
+    timing_code INTEGER NOT NULL,
+    target_type INTEGER NOT NULL,
+    success_rate INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL,
+    PRIMARY KEY (ability_id, sort_order)
+);
+CREATE INDEX IF NOT EXISTS idx_ability_effect_ids_effect ON ability_effect_ids(effect_id);
+
 CREATE TABLE IF NOT EXISTS effect_gaps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_type TEXT NOT NULL,
@@ -270,6 +286,7 @@ DROP_ORDER = (
     "statuses",
     "ignored_effects",
     "effect_gaps",
+    "ability_effect_ids",
     "ability_effects",
     "skill_effects",
     "pet_transforms",

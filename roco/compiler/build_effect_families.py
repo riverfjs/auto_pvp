@@ -31,6 +31,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from roco.compiler.effect_codegen.ability_flags_from_effects import (
+    load_ability_flags_from_effects,
+)
 from roco.compiler.effect_codegen.acknowledgements_loader import (
     Acknowledgement,
     canonical_gap_key,
@@ -39,6 +42,7 @@ from roco.compiler.effect_codegen.acknowledgements_loader import (
 from roco.compiler.effect_codegen.classify import decode_buff_direct, decode_effect
 from roco.compiler.effect_codegen.exact_decoders import decode_exact
 from roco.compiler.effect_codegen.outcomes import (
+    AbilityFlagOutcome,
     EmitOutcome,
     GapOutcome,
     IgnoredOutcome,
@@ -66,6 +70,8 @@ COVERAGE_STATUSES = frozenset({
     "generated_weather",
     "ignored",
     "gap",
+    "ability_flag",
+    "ability_flag_partial",
     "mixed",
 })
 
@@ -272,11 +278,17 @@ def _classify_one_source_id(
     weather_ids: set[int],
     exact_emit_ids: set[int],
     exact_ignored_ids: set[int],
+    ability_flag_ids: frozenset[int],
 ) -> str:
     """Run the actual decoder path and report which bucket ``sid`` falls in.
 
-    Order matters: ``decode_exact`` wins first (exact_jsonl / ignored / weather);
-    fall back to structural decode for EFFECT_CONF and direct BUFF_CONF refs.
+    Order matters: weather / ignored / exact_jsonl / ability_flag win
+    before structural decode.  ``ability_flag_ids`` is consulted *before*
+    :func:`decode_effect` so the bucket is stable regardless of the
+    decode call's consumer-context (decode_effect's AbilityFlagOutcome
+    branch only fires when the rules file is present, which is also true
+    here, but the explicit check makes the family-audit semantics
+    deterministic).
     """
     if sid in weather_ids:
         return "generated_weather"
@@ -284,6 +296,8 @@ def _classify_one_source_id(
         return "ignored"
     if sid in exact_emit_ids:
         return "exact_jsonl"
+    if sid in ability_flag_ids:
+        return "ability_flag"
     # Defensive: decode_exact may still return something (e.g. compound),
     # though the two id sets above are derived from the same JSONL.
     override = decode_exact(sid)
@@ -297,6 +311,12 @@ def _classify_one_source_id(
         outcomes = decode_buff_direct(sid, pak.buff_conf)
     else:
         return "gap"
+    # The earlier ``sid in ability_flag_ids`` short-circuit catches this in
+    # the normal path; this fallback guards against any future case where
+    # decode_effect emits the outcome but our ``ability_flag_ids`` set
+    # diverges from the loader's table (build-time misconfiguration).
+    if any(isinstance(o, AbilityFlagOutcome) for o in outcomes):
+        return "ability_flag"
     has_emit = any(isinstance(o, EmitOutcome) for o in outcomes)
     has_gap = any(isinstance(o, GapOutcome) for o in outcomes)
     if has_emit and not has_gap:
@@ -316,9 +336,19 @@ def _derive_coverage_status(breakdown: dict[str, int]) -> str:
             "generated_weather_count": "generated_weather",
             "ignored_count": "ignored",
             "gap_count": "gap",
+            "ability_flag_count": "ability_flag",
         }[only]
     if set(nonzero) == {"exact_jsonl_count", "gap_count"}:
         return "exact_jsonl_partial"
+    if set(nonzero) == {"ability_flag_count", "gap_count"}:
+        return "ability_flag_partial"
+    if "ability_flag_count" in nonzero and "exact_jsonl_count" in nonzero:
+        # Belt-and-suspenders against the cross-check that already runs in
+        # build_families(): a family that's both runtime-row and
+        # ability-flag has incompatible semantics.  Surface as "mixed" so
+        # the audit explicitly flags it even if the cross-check were
+        # somehow disabled.
+        return "mixed"
     return "mixed"
 
 
@@ -536,6 +566,7 @@ def _build_family(
     weather_ids: set[int],
     exact_emit_ids: set[int],
     exact_ignored_ids: set[int],
+    ability_flag_ids: frozenset[int],
 ) -> dict:
     source_ids = sorted(source_ids)
     record_names = []
@@ -571,6 +602,7 @@ def _build_family(
         "generated_weather_count": 0,
         "ignored_count": 0,
         "gap_count": 0,
+        "ability_flag_count": 0,
     }
     for sid in source_ids:
         bucket = _classify_one_source_id(
@@ -579,6 +611,7 @@ def _build_family(
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
             exact_ignored_ids=exact_ignored_ids,
+            ability_flag_ids=ability_flag_ids,
         )
         breakdown[bucket + "_count"] += 1
     coverage_status = _derive_coverage_status(breakdown)
@@ -645,11 +678,69 @@ def _build_family(
 # ── top-level assembly ────────────────────────────────────────────────────
 
 
+def _validate_ability_flag_rules(
+    rules: dict[int, AbilityFlagOutcome],
+    effect_conf: dict[int, dict],
+    consumer_index: dict[int, list[dict]],
+    exact_emit_ids: set[int],
+    exact_ignored_ids: set[int],
+    weather_ids: set[int],
+) -> None:
+    """Pak + canonical static cross-check for the ability-flag rules table.
+
+    Does **not** query SQLite — keep ``build_effect_families`` a pure
+    static audit (pak + canonical jsonl).  Raises ``RuntimeError`` on:
+
+    * Any rule effect_id missing from ``EFFECT_CONF`` (defence in depth
+      against loader-side bugs / stub overrides).
+    * Any rule effect_id that also appears in ``exact_effects.jsonl``
+      (either emit or ignored kind) or in the generated weather decoders
+      table — those rule tables must be disjoint, else routing is
+      ambiguous and a future edit could cause silent reordering.
+    * Any rule effect_id whose recorded consumers include something
+      other than an ability (skill / weather / mark / bloodline_magic).
+      Mirrors the runtime ``allow_ability_flags`` gate in
+      ``generate_effect_rows`` but at static-audit time, before any DB
+      build, so a misuse never reaches the runtime hot path.
+    """
+    for effect_id in sorted(rules):
+        if effect_id not in effect_conf:
+            raise RuntimeError(
+                f"ability_flags_from_effects.jsonl effect_id {effect_id} is "
+                f"missing from EFFECT_CONF.json (loader override?)"
+            )
+        if effect_id in exact_emit_ids or effect_id in exact_ignored_ids:
+            raise RuntimeError(
+                f"effect_id {effect_id} appears in "
+                f"ability_flags_from_effects.jsonl AND exact_effects.jsonl; "
+                f"these rule tables must be disjoint."
+            )
+        if effect_id in weather_ids:
+            raise RuntimeError(
+                f"effect_id {effect_id} appears in "
+                f"ability_flags_from_effects.jsonl AND generated_weather "
+                f"(WEATHER_EFFECT_DECODERS); these rule tables must be disjoint."
+            )
+        for consumer in consumer_index.get(effect_id, []):
+            kind = str(consumer.get("kind", ""))
+            if kind != "ability":
+                source_id = consumer.get("source_id")
+                name = consumer.get("name")
+                raise RuntimeError(
+                    f"effect_id {effect_id} is mapped as ability_flag but "
+                    f"consumed by kind={kind!r} source={source_id} name={name!r}; "
+                    f"ability_flag outcome must not silently apply to non-ability "
+                    f"consumers."
+                )
+
+
 def build_families() -> list[dict]:
     pak = PakTables(PAK_DATA)
     desc_notes = _load_desc_notes()
     exact_emit_ids, exact_ignored_ids = _load_exact_rules()
     weather_ids = set(WEATHER_EFFECT_DECODERS.keys())
+    ability_flag_rules = load_ability_flags_from_effects(effect_conf=pak.effect_conf)
+    ability_flag_ids: frozenset[int] = frozenset(ability_flag_rules.keys())
 
     skills = _load_canonical("skills.jsonl")
     abilities = _load_canonical("abilities.jsonl")
@@ -658,6 +749,14 @@ def build_families() -> list[dict]:
 
     consumer_index = _build_consumer_index(skills, abilities)
     team_used_skills, team_used_abilities = _build_team_used(teams, pets)
+    _validate_ability_flag_rules(
+        ability_flag_rules,
+        pak.effect_conf,
+        consumer_index,
+        exact_emit_ids,
+        exact_ignored_ids,
+        weather_ids,
+    )
 
     families: list[dict] = []
 
@@ -683,6 +782,7 @@ def build_families() -> list[dict]:
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
             exact_ignored_ids=exact_ignored_ids,
+            ability_flag_ids=ability_flag_ids,
         ))
 
     # BUFF_CONF_DIRECT families — every skill_result effect_id that exists
@@ -715,6 +815,7 @@ def build_families() -> list[dict]:
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
             exact_ignored_ids=exact_ignored_ids,
+            ability_flag_ids=ability_flag_ids,
         ))
 
     families.sort(key=lambda f: f["family_key"])

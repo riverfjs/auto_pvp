@@ -208,11 +208,32 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
     effect_rows: list[tuple] = []
     gap_rows: list[tuple] = []
     ignored_rows: list[tuple] = []
+    ability_effect_id_rows: list[tuple] = []
     for record in records:
         name = str(record.get("name", "")).strip()
         if not name:
             continue
         owner_id = lookup[name]
+        # ability_effect_ids: pak provenance of every skill_result row this
+        # ability declares.  Independent of decoder outcome — even effects
+        # that compile to ABILITY_FLAGS bits (AbilityFlagOutcome) are
+        # recorded here so the codegen layer can join effect_id → flag
+        # without re-reading canonical jsonl.
+        source_fields = record.get("source_fields") or {}
+        source_ability_id = int(record.get("source_id") or source_fields.get("id") or 0)
+        for sort_order, entry in enumerate(source_fields.get("skill_result") or []):
+            entry_effect_id = int(entry.get("effect_id", 0) or 0)
+            if entry_effect_id <= 0:
+                continue
+            ability_effect_id_rows.append((
+                owner_id,
+                source_ability_id,
+                entry_effect_id,
+                int(entry.get("cast_moment", 0) or 0),
+                int(entry.get("result_target_type", 0) or 0),
+                int(entry.get("success_rate", 0) or 0),
+                sort_order,
+            ))
         for order, row_tuple in enumerate(record.get("effect_rows", []) or []):
             # row_tuple = (handler_idx, timing, target, rate, p0, p1, p2, p3)
             handler_idx = row_tuple[0]
@@ -244,10 +265,18 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             effect_rows,
         )
+    if ability_effect_id_rows:
+        conn.executemany(
+            "INSERT INTO ability_effect_ids "
+            "(ability_id, source_ability_id, effect_id, timing_code, target_type, success_rate, sort_order) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ability_effect_id_rows,
+        )
     inserted_gaps = _insert_gaps(conn, gap_rows)
     inserted_ignored = _insert_ignored(conn, ignored_rows)
     print(f"  abilities: {len(lookup)} inserted")
     print(f"  ability_effects: {len(effect_rows)} inserted")
+    print(f"  ability_effect_ids: {len(ability_effect_id_rows)} inserted")
     print(f"  ability effect_gaps: {inserted_gaps} inserted")
     print(f"  ability ignored_effects: {inserted_ignored} inserted")
     return lookup
