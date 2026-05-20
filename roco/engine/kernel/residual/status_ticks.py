@@ -20,27 +20,7 @@ from roco.engine.kernel.state import (
     with_status,
 )
 from roco.generated import catalog_hot as hot
-from roco.generated.buff_immunity_table import (
-    IMMUNITY_BURN,
-    IMMUNITY_FREEZE,
-    IMMUNITY_LEECH,
-    IMMUNITY_POISON,
-)
-
-
-# StatusType -> active-buff immunity flag.  Distinct from
-# ``damage.status_immune`` (element-type immunities like fire-immune-to-burn);
-# this layer reads ``pet.active_buffs`` via :func:`effective_immunity_flags`
-# and OR-merges per the pak ``BUFF_CONF.desc`` evidence captured in
-# ``rules/buff_immunity.jsonl``.  Pak 20030011's ``免疫 ... 寄生`` shows
-# leech IS covered by buff immunity, so we include it here even though
-# ``status_immune`` deliberately skips leech for the type-based path.
-_BUFF_IMMUNITY_FLAG_BY_STATUS: dict[StatusType, int] = {
-    StatusType.POISON: IMMUNITY_POISON,
-    StatusType.BURN: IMMUNITY_BURN,
-    StatusType.FREEZE: IMMUNITY_FREEZE,
-    StatusType.LEECH: IMMUNITY_LEECH,
-}
+from roco.generated.buff_immunity_table import STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE
 
 
 def apply_status_effect(
@@ -62,12 +42,14 @@ def apply_status_effect(
     if status != StatusType.LEECH and status_immune(pet, flag):
         return pet
     # Active-buff immunity (Phase 5B-mini).  Pak ``BUFF_CONF[id].desc`` is
-    # the source of truth for which statuses each buff blocks; the table
-    # lookup happens inside ``effective_immunity_flags``.  Unlike the
+    # the source of truth for which statuses each buff blocks; the
+    # StatusType→IMMUNITY_* join is generated into
+    # :data:`STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE` from
+    # :data:`IMMUNITY_SPECS` × :class:`StatusType`.  Unlike the
     # element-type ``status_immune`` path, this layer DOES cover leech
     # — pak 20030011 explicitly lists 寄生 in its immune list.
     buff_immunity = effective_immunity_flags(pet.active_buffs)
-    if buff_immunity & _BUFF_IMMUNITY_FLAG_BY_STATUS.get(status, 0):
+    if buff_immunity & STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE.get(int(status), 0):
         return pet
     pet = with_status(pet, status, stacks)
     if status == StatusType.LEECH:

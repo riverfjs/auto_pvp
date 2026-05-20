@@ -195,3 +195,35 @@ def test_generated_table_matches_loader(tmp_path):
         "roco/generated/buff_immunity_table.py is out of date; "
         "re-run `uv run python -m roco.compiler.gen_prefix_map`"
     )
+
+
+def test_generated_status_immunity_map_exact_content():
+    """Generated ``STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE`` must be the
+    name-match join of ``IMMUNITY_SPECS`` × :class:`StatusType`, keyed by
+    ``int(StatusType.X)``.  ``force_switch`` / ``energy_drain`` must not
+    leak into this map — they are not StatusType members.
+    """
+    from roco.common.enums import StatusType
+    from roco.generated.buff_immunity_table import (
+        IMMUNITY_BURN,
+        IMMUNITY_FREEZE,
+        IMMUNITY_LEECH,
+        IMMUNITY_POISON,
+        STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE,
+    )
+
+    assert STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE == {
+        int(StatusType.BURN):   IMMUNITY_BURN,
+        int(StatusType.POISON): IMMUNITY_POISON,
+        int(StatusType.FREEZE): IMMUNITY_FREEZE,
+        int(StatusType.LEECH):  IMMUNITY_LEECH,
+    }
+    # Defensive: no StatusType value should map to force_switch /
+    # energy_drain IMMUNITY_* bits, since those aren't status conditions.
+    from roco.generated.buff_immunity_table import (
+        IMMUNITY_ENERGY_DRAIN,
+        IMMUNITY_FORCE_SWITCH,
+    )
+    for flag in STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE.values():
+        assert not (flag & IMMUNITY_FORCE_SWITCH)
+        assert not (flag & IMMUNITY_ENERGY_DRAIN)
