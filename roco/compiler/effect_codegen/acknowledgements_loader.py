@@ -300,19 +300,36 @@ def _validate_row(
             evidence, gap_match, status, line_no, accessor
         )
 
-    # 11. audit.family_key cross-check (optional — only when catalog supplied)
+    # 11. audit.family_key cross-check.  Two-pass:
+    #     (a) catalog membership — guards against bogus / typo strings;
+    #     (b) **derivation** from gap_match.primitive + pak — guards against
+    #         a typo that *happens* to be a real family_key but for a
+    #         different gap (e.g. mislabelling effect_1076004 with another
+    #         family's t/o).  Without (b) Phase 4 would walk into Phase 5
+    #         with wrong family-grouped burn-down work.
     audit = rec.get("audit") or {}
     if not isinstance(audit, dict):
         raise RuntimeError(
             f"effect_gap_acknowledgements.jsonl line {line_no}: audit must be an object"
         )
     family_key = audit.get("family_key")
-    if known_family_keys is not None:
-        if not isinstance(family_key, str) or family_key not in known_family_keys:
-            raise RuntimeError(
-                f"effect_gap_acknowledgements.jsonl line {line_no}: audit.family_key "
-                f"{family_key!r} not present in the effect-family catalog"
-            )
+    if not isinstance(family_key, str) or not family_key:
+        raise RuntimeError(
+            f"effect_gap_acknowledgements.jsonl line {line_no}: audit.family_key required"
+        )
+    if known_family_keys is not None and family_key not in known_family_keys:
+        raise RuntimeError(
+            f"effect_gap_acknowledgements.jsonl line {line_no}: audit.family_key "
+            f"{family_key!r} not present in the effect-family catalog"
+        )
+    expected_family_key = _expected_family_key_from_gap_match(gap_match, accessor, line_no)
+    if expected_family_key != family_key:
+        raise RuntimeError(
+            f"effect_gap_acknowledgements.jsonl line {line_no}: audit.family_key "
+            f"{family_key!r} does not match the family_key derived from "
+            f"gap_match ({expected_family_key!r}); update the audit field or "
+            f"fix the gap_match"
+        )
 
     # 12. allow_multi_match constraints
     allow_multi_match = bool(rec.get("allow_multi_match", False))
@@ -365,6 +382,88 @@ def _validate_row(
         allow_stale=allow_stale,
         stale_reason=stale_reason if isinstance(stale_reason, str) else None,
         line_no=line_no,
+    )
+
+
+def _expected_family_key_from_gap_match(
+    gap_match: dict,
+    accessor: _PakAccessor,
+    line_no: int,
+) -> str:
+    """Derive the canonical family_key the catalog would assign to this gap row.
+
+    Mirrors the family-grouping logic in
+    :mod:`roco.compiler.build_effect_families`:
+
+    * ``primitive == "effect_<id>"`` → ``effect_conf:t<type>:o<effect_order>``
+      from ``EFFECT_CONF[id]``.
+    * ``primitive == "prefix_<N>"``  → ``buff_conf_direct:prefix_<N>`` where
+      ``N`` is ``buff_base_ids[0] // 1000`` of the buff referenced by
+      ``params.buff_id``.  ``N`` parsed off the primitive *must* match
+      the buff_base_id-derived prefix; mismatch fails because that means
+      either the primitive or the buff_id was hand-edited inconsistently.
+    * ``primitive == "buff_<id>"``  → ``buff_conf_direct:buff_no_base_ids``
+      (matches the family-builder fallback when a direct buff ref carries
+      no ``buff_base_ids``).
+    """
+    primitive = gap_match["primitive"]
+    params = gap_match.get("params") or {}
+    if primitive.startswith("effect_"):
+        try:
+            effect_id = int(primitive.split("_", 1)[1])
+        except (IndexError, ValueError) as exc:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: cannot parse "
+                f"effect_id from primitive {primitive!r}"
+            ) from exc
+        effect_conf = accessor.get("EFFECT_CONF")
+        rec = effect_conf.get(effect_id)
+        if rec is None:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: primitive "
+                f"{primitive!r} references EFFECT_CONF[{effect_id}] which is "
+                f"absent from pak"
+            )
+        return f"effect_conf:t{int(rec.get('type', 0))}:o{int(rec.get('effect_order', 0))}"
+    if primitive.startswith("prefix_"):
+        try:
+            prefix_from_primitive = int(primitive.split("_", 1)[1])
+        except (IndexError, ValueError) as exc:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: cannot parse "
+                f"prefix from primitive {primitive!r}"
+            ) from exc
+        buff_id = params.get("buff_id")
+        if buff_id is None:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: primitive "
+                f"{primitive!r} requires gap_match.params.buff_id"
+            )
+        buff_conf = accessor.get("BUFF_CONF")
+        rec = buff_conf.get(int(buff_id))
+        if rec is None:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: gap_match "
+                f"references BUFF_CONF[{buff_id}] which is absent from pak"
+            )
+        base_ids = [int(b) for b in (rec.get("buff_base_ids") or []) if b]
+        if not base_ids:
+            return "buff_conf_direct:buff_no_base_ids"
+        derived = base_ids[0] // 1000
+        if derived != prefix_from_primitive:
+            raise RuntimeError(
+                f"effect_gap_acknowledgements.jsonl line {line_no}: primitive "
+                f"prefix {prefix_from_primitive} disagrees with "
+                f"BUFF_CONF[{buff_id}].buff_base_ids[0]//1000 = {derived}; "
+                f"primitive or buff_id was hand-edited inconsistently"
+            )
+        return f"buff_conf_direct:prefix_{derived}"
+    if primitive.startswith("buff_"):
+        return "buff_conf_direct:buff_no_base_ids"
+    raise RuntimeError(
+        f"effect_gap_acknowledgements.jsonl line {line_no}: cannot derive "
+        f"family_key for primitive {primitive!r}; add a branch when a new "
+        f"primitive shape ships"
     )
 
 
@@ -442,14 +541,39 @@ def _validate_evidence_against_pak(
             f"effect_id and buff_id; cannot verify direct reference"
         )
     skill_result = pak_row.get("skill_result") or pak_row.get("effect_list") or []
-    referenced_ids = {
-        int(entry.get("effect_id", 0))
-        for entry in skill_result
-        if isinstance(entry, dict) and entry.get("effect_id") is not None
-    }
-    if int(target_id) not in referenced_ids:
+    # Match the *full* skill_result entry — same effect_id, cast_moment,
+    # result_target_type, success_rate.  Looking up only the id leaves the
+    # ack vulnerable to "this skill has two results for the same buff at
+    # different timings; the ack proves the wrong one".
+    expected_timing = gap_match.get("timing_code")
+    expected_target = params.get("target_type")
+    expected_rate = params.get("success_rate")
+    matching: list[dict] = []
+    for entry in skill_result:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("effect_id") is None:
+            continue
+        if int(entry["effect_id"]) != int(target_id):
+            continue
+        if expected_timing is not None and int(entry.get("cast_moment", 0)) != int(expected_timing):
+            continue
+        if (
+            expected_target is not None
+            and int(entry.get("result_target_type", 0)) != int(expected_target)
+        ):
+            continue
+        if (
+            expected_rate is not None
+            and int(entry.get("success_rate", 0)) != int(expected_rate)
+        ):
+            continue
+        matching.append(entry)
+    if not matching:
         raise RuntimeError(
             f"effect_gap_acknowledgements.jsonl line {line_no}: {source_table}[{source_id}]."
-            f"skill_result does not reference id {target_id}; this evidence row is "
-            f"unrelated to the declared gap_match"
+            f"skill_result has no entry matching gap_match "
+            f"(effect_id={target_id}, cast_moment={expected_timing}, "
+            f"target_type={expected_target}, success_rate={expected_rate}); "
+            f"the evidence may point at a sibling result row, not this gap"
         )

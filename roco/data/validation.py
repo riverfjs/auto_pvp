@@ -33,56 +33,35 @@ def assert_no_kernel_noop_rows(conn: sqlite3.Connection) -> None:
     )
 
 
-def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
-    """Reject used :class:`effect_gaps` rows that have not been acknowledged.
+def compute_gap_validation_errors(
+    used_gap_rows: list[dict],
+    acks: list,  # list[Acknowledgement]
+) -> list[str]:
+    """Pure error-list builder for the three-way ack/gap validation.
 
-    Phase 3 introduced ``roco/compiler/rules/effect_gap_acknowledgements.jsonl``
-    as a parallel audit axis.  A used gap row passes this gate iff it has a
-    matching acknowledgement (canonical key); the gate also rejects stale
-    acks (acks that no longer match any used gap) and over-broad acks
-    (acks whose match count differs from the declared expectation), so the
-    ack table stays in lockstep with the gap reality and burn-down is forced
-    instead of silently drifting.
+    Inputs are already-materialised: ``used_gap_rows`` is what the caller
+    fetched from ``effect_gaps WHERE used_count > 0`` (each row is a dict
+    of the seven gap columns), and ``acks`` is the loader output.
+
+    Splitting the SQL + ack-loading away from the matching logic lets
+    tests drive every failure branch (unack / stale / under-match /
+    over-match / allow_stale opt-in) with synthetic inputs, no real DB
+    or rules file required.
     """
     from roco.compiler.effect_codegen.acknowledgements_loader import (
         canonical_gap_key_from_row,
-        load_acknowledgements,
     )
 
-    # A totally empty ``effect_gaps`` table means the caller is operating on
-    # a synthetic / fixture DB that never ran the canonical import.  In
-    # that environment the real acknowledgements file is unrelated to the
-    # DB state, so skip the gate entirely instead of erroring on stale
-    # acks the test never set up.
-    total_gap_rows = conn.execute("SELECT COUNT(*) FROM effect_gaps").fetchone()[0]
-    if total_gap_rows == 0:
-        return
-
-    rows = conn.execute(
-        """
-        SELECT source_type, source_name, primitive, timing_code, params_json, reason, used_count
-        FROM effect_gaps
-        WHERE used_count > 0
-        """
-    ).fetchall()
-    gap_key_to_row: dict[str, tuple] = {}
-    for row in rows:
-        key = canonical_gap_key_from_row({
-            "source_type": row[0],
-            "source_name": row[1],
-            "primitive": row[2],
-            "timing_code": row[3],
-            "params_json": row[4],
-            "reason": row[5],
-        })
+    gap_key_to_row: dict[str, dict] = {}
+    for row in used_gap_rows:
+        key = canonical_gap_key_from_row(row)
         gap_key_to_row[key] = row
     gap_keys = set(gap_key_to_row)
 
-    acks = load_acknowledgements()
     ack_keys: set[str] = set()
     ack_key_to_line: dict[str, int] = {}
-    ack_match_counts: dict[int, int] = {}  # line_no -> matches against gap rows
-    ack_expected: dict[int, int] = {}      # line_no -> expected match count
+    ack_match_counts: dict[int, int] = {}
+    ack_expected: dict[int, int] = {}
     ack_allow_stale: dict[int, bool] = {}
     for ack in acks:
         keys = ack.expected_canonical_keys
@@ -102,8 +81,8 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
         for key in unacked[:20]:
             row = gap_key_to_row[key]
             sample.append(
-                f"{row[0]}:{row[1]} primitive={row[2]} timing={row[3]} "
-                f"reason={row[5]} used={row[6]}"
+                f"{row['source_type']}:{row['source_name']} primitive={row['primitive']} "
+                f"timing={row['timing_code']} reason={row['reason']} used={row['used_count']}"
             )
         errors.append(
             f"{len(unacked)} used effect_gaps row(s) have no acknowledgement; "
@@ -114,9 +93,6 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
     # Direction B: stale ack
     stale = sorted(ack_keys - gap_keys)
     if stale:
-        # Filter out ack rows that opt in to ``allow_stale``.  An ack with
-        # all of its expected matches missing AND allow_stale=true is
-        # tolerated; partial mismatches still fail.
         truly_stale_lines: dict[int, list[str]] = {}
         for key in stale:
             line_no = ack_key_to_line[key]
@@ -139,7 +115,7 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
     for line_no, expected in ack_expected.items():
         actual = ack_match_counts.get(line_no, 0)
         if ack_allow_stale.get(line_no) and actual == 0:
-            continue  # opt-in stale row is tolerated above
+            continue
         if actual != expected:
             mismatched.append(
                 f"line {line_no}: expected {expected} match(es), got {actual}"
@@ -152,6 +128,52 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
             "Sample: " + "; ".join(mismatched[:20])
         )
 
+    return errors
+
+
+def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
+    """Reject used :class:`effect_gaps` rows that have not been acknowledged.
+
+    Phase 3 introduced ``roco/compiler/rules/effect_gap_acknowledgements.jsonl``
+    as a parallel audit axis.  A used gap row passes this gate iff it has a
+    matching acknowledgement (canonical key); the gate also rejects stale
+    acks (acks that no longer match any used gap) and over-broad acks
+    (acks whose match count differs from the declared expectation), so the
+    ack table stays in lockstep with the gap reality and burn-down is forced
+    instead of silently drifting.
+    """
+    from roco.compiler.effect_codegen.acknowledgements_loader import load_acknowledgements
+
+    # A totally empty ``effect_gaps`` table means the caller is operating on
+    # a synthetic / fixture DB that never ran the canonical import.  In
+    # that environment the real acknowledgements file is unrelated to the
+    # DB state, so skip the gate entirely instead of erroring on stale
+    # acks the test never set up.
+    total_gap_rows = conn.execute("SELECT COUNT(*) FROM effect_gaps").fetchone()[0]
+    if total_gap_rows == 0:
+        return
+
+    rows = conn.execute(
+        """
+        SELECT source_type, source_name, primitive, timing_code, params_json, reason, used_count
+        FROM effect_gaps
+        WHERE used_count > 0
+        """
+    ).fetchall()
+    used_gap_rows = [
+        {
+            "source_type": row[0],
+            "source_name": row[1],
+            "primitive": row[2],
+            "timing_code": row[3],
+            "params_json": row[4],
+            "reason": row[5],
+            "used_count": row[6],
+        }
+        for row in rows
+    ]
+
+    errors = compute_gap_validation_errors(used_gap_rows, load_acknowledgements())
     if errors:
         raise RuntimeError("; ".join(errors))
 
