@@ -166,3 +166,31 @@ Phase 5 three-rule gate:
    for the ack row being removed.
 
 The ledger alone deletes no acks.
+
+## TIMING_PASSIVE_COND deferred (Phase 5C-i note)
+
+`TIMING_PASSIVE_COND` (cast_moment 26) is defined in
+`roco/engine/kernel/op_rows.py` but **no dispatcher currently runs
+ability rows at that timing**.  `tick_ability_turn_end` only calls
+`run_skill_timing(..., TIMING_TURN_END=12, ctx)`; `mechanics._execute`
+only dispatches BEFORE_MOVE / CALC_DAMAGE / TAKE_DAMAGE / AFTER_MOVE.
+
+Pak buff `20030160` (zero-energy auto self-switch) is registered on
+ability `200166` at **both** cast_moment 11 (TIMING_AFTER_MOVE) and
+cast_moment 26 (TIMING_PASSIVE_COND).  Phase 5C-i wires the base_id
+seed `2003016 → H_AUTO_SWITCH_ON_ZERO_ENERGY`, which lets the
+decoder classify both rows and removes the matching ack entries
+under the strict bidirectional gate.  The cast_moment 11 row runs
+via the existing `_run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)`
+path and delivers the buff's behaviour.  The cast_moment 26 row is
+decoder-classified to the same handler but runtime-inert — it sits
+in `ABILITY_EFFECT_ROWS` and never executes.
+
+This is acceptable because pak registers the same buff at two
+timings and either dispatcher would do the same thing; honest naming
+matters more than dual coverage.  Wiring `TIMING_PASSIVE_COND` is a
+separate phase — pak says nothing about whether 26 belongs at
+turn_end, after_move, or in a per-residual pass, and guessing would
+freeze the wrong contract.  Future phase: investigate pak's intent
+for cast_moment 26 (cross-reference other rows that use it) before
+choosing a dispatcher position.

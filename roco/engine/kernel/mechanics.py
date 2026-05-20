@@ -370,6 +370,14 @@ def _execute(
         ctx.actor_counter_count = actor.counter_success_count
         actor_side = replace_pet(actor_side, actor_slot, actor)._replace(counter_count=min(255, actor_side.counter_count + 1))
         state = replace_side(state, actor_side_id, actor_side)
+    # ``ctx.actor_energy`` was set to the actor's *pre-cost* energy back at the
+    # top of _execute (so BEFORE_MOVE / CALC_DAMAGE ops see the same reading
+    # pak documents for those timings).  By the time TIMING_AFTER_MOVE runs,
+    # the skill cost, HP-for-energy substitution, counter, and first-action
+    # branches have all settled — refresh the reading once here so AFTER_MOVE
+    # ops (e.g. ``op_auto_switch_on_zero_energy`` for buff 20030160) see the
+    # actor's actual remaining energy.  No other ctx field is refreshed.
+    ctx.actor_energy = actor.current_energy
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_AFTER_MOVE, ctx)
     _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)

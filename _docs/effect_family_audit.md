@@ -9,13 +9,13 @@ Total families: **177**
 - `auto_structural`: 92
 - `exact_jsonl`: 1
 - `exact_jsonl_partial`: 8
-- `gap`: 66
+- `gap`: 65
 - `generated_weather`: 1
-- `mixed`: 9
+- `mixed`: 10
 
 ## Acknowledgement totals
 
-- `evidence_available_deferred`: 49
+- `evidence_available_deferred`: 47
 - `evidence_available_weak`: 2
 - `evidence_missing`: 0
 - `confirmed_ignored`: 0
@@ -87,182 +87,172 @@ Total families: **177**
     - matched gap rows (1):
         - `ability|搜刮|effect_1034020|11|effect_type_3_state_change|bdeeae05e821`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 14** family=`buff_conf_direct:prefix_2003` source=ability:星地善良 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
-    - evidence: SKILL_CONF[200166] anchors=[替换, 己方, 回合, 能量, 场上] desc='回合结束时，若场上的己方精灵能量等于0，自己立即替换此精灵。'
-    - matched gap rows (1):
-        - `ability|星地善良|prefix_2003|11|prefix_2003_unmapped|d4bcb95cd294`
-    - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 15** family=`buff_conf_direct:prefix_2003` source=ability:星地善良 primitive=`prefix_2003` timing=26 reason=`prefix_2003_unmapped`
-    - evidence: SKILL_CONF[200166] anchors=[替换, 己方, 回合, 能量, 场上] desc='回合结束时，若场上的己方精灵能量等于0，自己立即替换此精灵。'
-    - matched gap rows (1):
-        - `ability|星地善良|prefix_2003|26|prefix_2003_unmapped|b558aec84860`
-    - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 16** family=`buff_conf_direct:prefix_2040` source=ability:月牙雪糕 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
+- **line 14** family=`buff_conf_direct:prefix_2040` source=ability:月牙雪糕 primitive=`prefix_2040` timing=11 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[200205] anchors=[层, 冻结, 攻击, 使用] desc='使用攻击技能时，敌方每层冻结视为1层额外<desc_id=1035>星陨印记</>。'
     - matched gap rows (1):
         - `ability|月牙雪糕|prefix_2040|11|prefix_2040_unmapped|b519bf90f1a7`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 17** family=`effect_conf:t3:o77` source=ability:构装契约者 primitive=`effect_1077002` timing=11 reason=`effect_type_3_state_change`
+- **line 15** family=`effect_conf:t3:o77` source=ability:构装契约者 primitive=`effect_1077002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200245] anchors=[入场, %] desc='入场时，若敌方魔力值为1，自己获得双防+50%。'
     - matched gap rows (1):
         - `ability|构装契约者|effect_1077002|11|effect_type_3_state_change|191e7ae6cf5b`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 18** family=`effect_conf:t3:o34` source=ability:水翼推进 primitive=`effect_1034012` timing=11 reason=`effect_type_3_state_change`
+- **line 16** family=`effect_conf:t3:o34` source=ability:水翼推进 primitive=`effect_1034012` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200110] anchors=[入场, 己方, 水系, 使用] desc='己方精灵每使用1次水系技能，自己入场时获得全技能能耗-1。'
     - matched gap rows (1):
         - `ability|水翼推进|effect_1034012|11|effect_type_3_state_change|a6474d3b3fa7`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 19** family=`effect_conf:t3:o64` source=ability:消波块 primitive=`effect_1064010` timing=11 reason=`effect_type_3_state_change`
+- **line 17** family=`effect_conf:t3:o64` source=ability:消波块 primitive=`effect_1064010` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200224] anchors=[携带, 水系, 地系] desc='每携带1个水系技能进入战斗，地系技能能耗-1。'
     - matched gap rows (1):
         - `ability|消波块|effect_1064010|11|effect_type_3_state_change|d5f616ce6325`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 20** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034021` timing=11 reason=`effect_type_3_state_change`
+- **line 18** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034021` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200212] anchors=[入场, 己方, %, 地系, 武系, 使用] desc='己方精灵每使用1次武系或地系技能，自己入场时获得攻防+5%。'
     - matched gap rows (1):
         - `ability|渗透|effect_1034021|11|effect_type_3_state_change|d815ccbaf8ab`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 21** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034022` timing=11 reason=`effect_type_3_state_change`
+- **line 19** family=`effect_conf:t3:o34` source=ability:渗透 primitive=`effect_1034022` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200212] anchors=[入场, 己方, %, 地系, 武系, 使用] desc='己方精灵每使用1次武系或地系技能，自己入场时获得攻防+5%。'
     - matched gap rows (1):
         - `ability|渗透|effect_1034022|11|effect_type_3_state_change|a5af9e102bfb`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 22** family=`effect_conf:t3:o64` source=ability:溶解扩散 primitive=`effect_1064001` timing=11 reason=`effect_type_3_state_change`
+- **line 20** family=`effect_conf:t3:o64` source=ability:溶解扩散 primitive=`effect_1064001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200111] anchors=[层, 携带, 中毒, 水系] desc='每携带1个毒系技能进入战斗，水系技能使敌方获得1层<desc_id=1001>中毒</>。'
     - matched gap rows (1):
         - `ability|溶解扩散|effect_1064001|11|effect_type_3_state_change|b47ecb24ab69`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 23** family=`effect_conf:t3:o66` source=ability:盲拧 primitive=`effect_1066001` timing=11 reason=`effect_type_3_state_change`
+- **line 21** family=`effect_conf:t3:o66` source=ability:盲拧 primitive=`effect_1066001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200170] anchors=[回合] desc='回合开始时，技能顺序打乱，4号位的技能能耗-4。'
     - matched gap rows (1):
         - `ability|盲拧|effect_1066001|11|effect_type_3_state_change|90e0aca7cd13`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 24** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076001` timing=11 reason=`effect_type_3_state_change`
+- **line 22** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
     - matched gap rows (1):
         - `ability|耐活王|effect_1076001|11|effect_type_3_state_change|9809a278b676`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 25** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076002` timing=11 reason=`effect_type_3_state_change`
+- **line 23** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
     - matched gap rows (1):
         - `ability|耐活王|effect_1076002|11|effect_type_3_state_change|bc2fc13b35c3`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 26** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076003` timing=11 reason=`effect_type_3_state_change`
+- **line 24** family=`effect_conf:t3:o76` source=ability:耐活王 primitive=`effect_1076003` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200240] anchors=[中毒, 生命, 伤害, 回复] desc='敌方受到<desc_id=1036>中毒效果</>伤害时，自己回复等量生命。'
     - matched gap rows (1):
         - `ability|耐活王|effect_1076003|11|effect_type_3_state_change|c9fef5a1ebfa`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 27** family=`effect_conf:t3:o34` source=ability:蒸汽膨胀 primitive=`effect_1034016` timing=11 reason=`effect_type_3_state_change`
+- **line 25** family=`effect_conf:t3:o34` source=ability:蒸汽膨胀 primitive=`effect_1034016` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200153] anchors=[入场, 己方, 威力, 火系, 使用] desc='己方精灵每使用1次火系技能，自己入场时获得全技能威力+10。'
     - matched gap rows (1):
         - `ability|蒸汽膨胀|effect_1034016|11|effect_type_3_state_change|224ac3b5ba3f`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 28** family=`effect_conf:t3:o61` source=ability:蓄电池 primitive=`effect_1061002` timing=11 reason=`effect_type_3_state_change`
+- **line 26** family=`effect_conf:t3:o61` source=ability:蓄电池 primitive=`effect_1061002` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200169] anchors=[入场, %] desc='每入场1次，永久获得双攻+20%。'
     - matched gap rows (1):
         - `ability|蓄电池|effect_1061002|11|effect_type_3_state_change|5d4716ad6324`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 29** family=`effect_conf:t3:o22` source=ability:虫群鼓舞 primitive=`effect_1022004` timing=11 reason=`effect_type_3_state_change`
+- **line 27** family=`effect_conf:t3:o22` source=ability:虫群鼓舞 primitive=`effect_1022004` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200132] anchors=[入场, 队伍, %, 虫系] desc='队伍中每有1只其他的虫系精灵，自己入场时获得攻防速+10%。'
     - matched gap rows (1):
         - `ability|虫群鼓舞|effect_1022004|11|effect_type_3_state_change|648a3fb7d9e4`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 30** family=`effect_conf:t3:o34` source=ability:身经百练 primitive=`effect_1034014` timing=11 reason=`effect_type_3_state_change`
+- **line 28** family=`effect_conf:t3:o34` source=ability:身经百练 primitive=`effect_1034014` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[200178] anchors=[入场, 己方, 威力, %, 水系, 武系, 应对] desc='己方精灵每应对1次，自己入场时水系和武系技能威力+20%。'
     - matched gap rows (1):
         - `ability|身经百练|effect_1034014|11|effect_type_3_state_change|a369b2f21af1`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 32** family=`effect_conf:t1:o53` source=skill:以毒攻毒 primitive=`effect_1053002` timing=11 reason=`effect_type_1_compound`
+- **line 30** family=`effect_conf:t1:o53` source=skill:以毒攻毒 primitive=`effect_1053002` timing=11 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7120150] anchors=[层, 中毒, 魔攻, %] desc='敌方每有1层<desc_id=1036>中毒效果</>，自己获得魔攻+30%。'
     - matched gap rows (1):
         - `skill|以毒攻毒|effect_1053002|11|effect_type_1_compound|b1f08f0df27d`
     - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
-- **line 33** family=`buff_conf_direct:prefix_2040` source=skill:击鼓传花 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
+- **line 31** family=`buff_conf_direct:prefix_2040` source=skill:击鼓传花 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7160270] anchors=[入场, 增益] desc='自己<desc_id=1003>脱离</>，下个入场精灵继承自己<desc_id=1012>增益</>。'
     - matched gap rows (1):
         - `skill|击鼓传花|prefix_2040|6|prefix_2040_unmapped|4d781ab1013b`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 34** family=`buff_conf_direct:prefix_2040` source=skill:升龙咆哮 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 32** family=`buff_conf_direct:prefix_2040` source=skill:升龙咆哮 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100150] anchors=[伤害] desc='<desc_id=1007>蓄力</>，对敌方造成魔法伤害。'
     - matched gap rows (1):
         - `skill|升龙咆哮|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 35** family=`buff_conf_direct:prefix_2040` source=skill:吹炎 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 33** family=`buff_conf_direct:prefix_2040` source=skill:吹炎 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100130] anchors=[威力, 应对] desc='<desc_id=1007>蓄力</>，造成物伤，<desc_id=1015>应对状态</>：本次技能威力翻倍。'
     - matched gap rows (1):
         - `skill|吹炎|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 36** family=`buff_conf_direct:prefix_2040` source=skill:天光 primitive=`prefix_2040` timing=24 reason=`prefix_2040_unmapped`
+- **line 34** family=`buff_conf_direct:prefix_2040` source=skill:天光 primitive=`prefix_2040` timing=24 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7060220] anchors=[系别] desc='造成魔伤，本技能系别和天气系别相同。'
     - matched gap rows (1):
         - `skill|天光|prefix_2040|24|prefix_2040_unmapped|253c4aae8079`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 37** family=`effect_conf:t3:o81` source=skill:富养化 primitive=`effect_1081001` timing=11 reason=`effect_type_3_state_change`
+- **line 35** family=`effect_conf:t3:o81` source=skill:富养化 primitive=`effect_1081001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7030510] anchors=[能量, 场下, 回复] desc='为场下每个精灵回复3能量。'
     - matched gap rows (1):
         - `skill|富养化|effect_1081001|11|effect_type_3_state_change|dbc8cded2274`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 39** family=`effect_conf:t3:o43` source=skill:撕咬 primitive=`effect_1043002` timing=7 reason=`effect_type_3_state_change`
+- **line 37** family=`effect_conf:t3:o43` source=skill:撕咬 primitive=`effect_1043002` timing=7 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7180110] anchors=[生命, %, 连击] desc='造成物伤，3连击，若自己的生命低于50%，本次技能连击数+2。'
     - matched gap rows (1):
         - `skill|撕咬|effect_1043002|7|effect_type_3_state_change|8b05b55c7c1a`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 40** family=`buff_conf_direct:prefix_2040` source=skill:月光合奏 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
+- **line 38** family=`buff_conf_direct:prefix_2040` source=skill:月光合奏 primitive=`prefix_2040` timing=6 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7160280] anchors=[层, 携带, 萌化, 连击] desc='造成物伤，1连击，双方携带的所有精灵每有1层<desc_id=1006>萌化</>，本次技能连击数+1。'
     - matched gap rows (1):
         - `skill|月光合奏|prefix_2040|6|prefix_2040_unmapped|b17bd680b5ad`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 41** family=`effect_conf:t3:o43` source=skill:极限撕裂 primitive=`effect_1043003` timing=11 reason=`effect_type_3_state_change`
+- **line 39** family=`effect_conf:t3:o43` source=skill:极限撕裂 primitive=`effect_1043003` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7180130] anchors=[生命, %, 使用] desc='造成物伤，若生命高于50%，使用后自己获得双攻-50%。'
     - matched gap rows (1):
         - `skill|极限撕裂|effect_1043003|11|effect_type_3_state_change|33a956723b26`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 42** family=`effect_conf:t1:o52` source=skill:生日蛋糕 primitive=`effect_1052006` timing=11 reason=`effect_type_1_no_buff`
+- **line 40** family=`effect_conf:t1:o52` source=skill:生日蛋糕 primitive=`effect_1052006` timing=11 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7160160] anchors=[增益, 减益] desc='驱散自己的<desc_id=1013>减益</>，自己的<desc_id=1012>增益</>翻倍。'
     - matched gap rows (1):
         - `skill|生日蛋糕|effect_1052006|11|effect_type_1_no_buff|3a31ef032383`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 43** family=`effect_conf:t3:o59` source=skill:疾风刺 primitive=`effect_1059003` timing=6 reason=`effect_type_3_state_change`
+- **line 41** family=`effect_conf:t3:o59` source=skill:疾风刺 primitive=`effect_1059003` timing=6 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7150090] anchors=[攻击, 连击] desc='造成物伤，1连击，若先于敌方攻击，改为3连击。'
     - matched gap rows (1):
         - `skill|疾风刺|effect_1059003|6|effect_type_3_state_change|d7f025dbb6fb`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 44** family=`effect_conf:t1:o33` source=skill:疾风连袭 primitive=`effect_1033003` timing=11 reason=`effect_type_1_no_buff`
+- **line 42** family=`effect_conf:t1:o33` source=skill:疾风连袭 primitive=`effect_1033003` timing=11 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7150320] anchors=[使用, 释放] desc='释放自己释放过的迅捷技能，其能耗之和的二分之一加至本技能能耗，每次使用后能耗+1。'
     - matched gap rows (1):
         - `skill|疾风连袭|effect_1033003|11|effect_type_1_no_buff|da65c2da71e4`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 45** family=`effect_conf:t1:o53` source=skill:腐化 primitive=`effect_1053020` timing=12 reason=`effect_type_1_compound`
+- **line 43** family=`effect_conf:t1:o53` source=skill:腐化 primitive=`effect_1053020` timing=12 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7120230] anchors=[层, 中毒, %] desc='敌方每有1层<desc_id=1036>中毒效果</>，敌方获得双攻-30%。'
     - matched gap rows (1):
         - `skill|腐化|effect_1053020|12|effect_type_1_compound|d7264825680d`
     - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
-- **line 46** family=`effect_conf:t3:o16` source=skill:虫群智慧 primitive=`effect_1016003` timing=11 reason=`effect_type_3_state_change`
+- **line 44** family=`effect_conf:t3:o16` source=skill:虫群智慧 primitive=`effect_1016003` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7130200] anchors=[队伍, 己方] desc='己方队伍获得2次随机<desc_id=1009>奉献</>。'
     - matched gap rows (1):
         - `skill|虫群智慧|effect_1016003|11|effect_type_3_state_change|ddb33aab669c`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 47** family=`effect_conf:t1:o32` source=skill:虫鸣 primitive=`effect_1032012` timing=6 reason=`effect_type_1_no_buff`
+- **line 45** family=`effect_conf:t1:o32` source=skill:虫鸣 primitive=`effect_1032012` timing=6 reason=`effect_type_1_no_buff`
     - evidence: SKILL_CONF[7130160] anchors=[队伍, 携带, 连击] desc='造成魔伤，队伍中的精灵每携带1个虫鸣，本次技能连击数+1。'
     - matched gap rows (1):
         - `skill|虫鸣|effect_1032012|6|effect_type_1_no_buff|ede91d0362fd`
     - note: EFFECT_CONF type=1 with no resolvable buff candidate; needs a bespoke decoder or kernel op once the semantic is implemented.
-- **line 48** family=`effect_conf:t1:o4` source=skill:隐藏条款 primitive=`effect_1004076` timing=11 reason=`effect_type_1_compound`
+- **line 46** family=`effect_conf:t1:o4` source=skill:隐藏条款 primitive=`effect_1004076` timing=11 reason=`effect_type_1_compound`
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|effect_1004076|11|effect_type_1_compound|fc1ac6ff37b9`
     - note: EFFECT_CONF type=1 compound buff application; needs decoder + kernel coordination across multiple buff_ids before emission.
-- **line 49** family=`buff_conf_direct:prefix_2003` source=skill:隐藏条款 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
+- **line 47** family=`buff_conf_direct:prefix_2003` source=skill:隐藏条款 primitive=`prefix_2003` timing=11 reason=`prefix_2003_unmapped`
     - evidence: SKILL_CONF[7180200] anchors=[携带] desc='与敌方交换携带的技能。'
     - matched gap rows (1):
         - `skill|隐藏条款|prefix_2003|11|prefix_2003_unmapped|6ccb1e82a095`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 50** family=`buff_conf_direct:prefix_2040` source=skill:龙之利爪 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
+- **line 48** family=`buff_conf_direct:prefix_2040` source=skill:龙之利爪 primitive=`prefix_2040` timing=27 reason=`prefix_2040_unmapped`
     - evidence: SKILL_CONF[7100160] anchors=[%] desc='<desc_id=1007>蓄力</>，造成物伤并吸血50%。'
     - matched gap rows (1):
         - `skill|龙之利爪|prefix_2040|27|prefix_2040_unmapped|a972f89a93a8`
     - note: Direct BUFF_CONF reference via skill_result; needs active-buff lifecycle in kernel before the buff_id can drive an effective op.
-- **line 51** family=`effect_conf:t3:o84` source=skill:龙血 primitive=`effect_1084001` timing=6 reason=`effect_type_3_state_change`
+- **line 49** family=`effect_conf:t3:o84` source=skill:龙血 primitive=`effect_1084001` timing=6 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7100250] anchors=[攻击, %, 应对, 使用] desc='减伤70%，本技能可以在蓄力状态下使用，<desc_id=1016>应对攻击</>：下次技能无需<desc_id=1007>蓄力</>。'
     - matched gap rows (1):
         - `skill|龙血|effect_1084001|6|effect_type_3_state_change|09cb2335feeb`
@@ -270,13 +260,13 @@ Total families: **177**
 
 ## Acknowledgements — evidence_available_weak
 
-- **line 31** family=`effect_conf:t3:o83` source=skill:主轴 primitive=`effect_1083001` timing=11 reason=`effect_type_3_state_change`
+- **line 29** family=`effect_conf:t3:o83` source=skill:主轴 primitive=`effect_1083001` timing=11 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7070160] anchors=[(none)] desc='造成物伤，此技能位置不会改变。'
     - weak_reason: Consumer SKILL_CONF.desc is non-empty but contains no entry/teammate/layer/turn anchor keyword that pins the gap's semantic; kept as acknowledged weak evidence pending manual review.
     - matched gap rows (1):
         - `skill|主轴|effect_1083001|11|effect_type_3_state_change|7161e520930e`
     - note: EFFECT_CONF type=3 state change; needs a kernel hook for the corresponding state primitive before emission.
-- **line 38** family=`effect_conf:t3:o79` source=skill:岩脉崩毁 primitive=`effect_1079002` timing=24 reason=`effect_type_3_state_change`
+- **line 36** family=`effect_conf:t3:o79` source=skill:岩脉崩毁 primitive=`effect_1079002` timing=24 reason=`effect_type_3_state_change`
     - evidence: SKILL_CONF[7080340] anchors=[(none)] desc='造成物伤，本技能能耗固定为4。'
     - weak_reason: Consumer SKILL_CONF.desc is non-empty but contains no entry/teammate/layer/turn anchor keyword that pins the gap's semantic; kept as acknowledged weak evidence pending manual review.
     - matched gap rows (1):
@@ -317,10 +307,10 @@ _(none)_
 
 ## `buff_conf_direct:prefix_2003` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `gap` | used_consumer_count: 2
+- count: **6** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: 免疫倾泻, 免疫吹飞，中毒，寄生，灼烧，冻结, 免疫积蓄, 收集CE-首领, 溯源钟免疫, 电咩咩免疫
 - example_source_ids: [20030010, 20030011, 20030160, 20030220, 20030330]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 6}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_jsonl_count': 0, 'generated_weather_count': 0, 'ignored_count': 0, 'gap_count': 5}
 - sample_skill_consumers:
     - `7180200` 隐藏条款 — 与敌方交换携带的技能。
     - `7130221` 应对！掩护 — 减伤70%，<desc_id=1026>紧急脱离</>，<desc_id=1016>应对攻击</>：下个入场精灵获得减伤。

@@ -96,3 +96,4 @@
 {"base_id": 2032007, "handler": "H_MOISTURE_MARK", "note": "湿润印记"}
 {"base_id": 2094001, "handler": "H_METEOR_MARK", "note": "陨石印记"}
 {"base_id": 2143001, "handler": "H_MOISTURE_MARK", "note": "湿润印记 (mark_change)"}
+{"base_id": 2003016, "handler": "H_AUTO_SWITCH_ON_ZERO_ENERGY", "note": "20030160 ability 200166 星地善良: zero-energy auto self-switch. cast_moment 11 runs at TIMING_AFTER_MOVE; cast_moment 26 is decoder-classified but TIMING_PASSIVE_COND is not yet dispatched."}
