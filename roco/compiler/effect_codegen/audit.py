@@ -1,6 +1,6 @@
 """Gap-row metadata helper.
 
-After the three-state refactor, gap classification lives inside the
+After the four-state (Emit / Ignored / Gap / AbilityFlag) refactor, gap classification lives inside the
 decoders themselves (see :mod:`.classify`).  This module retains only
 :func:`resolve_buff_metadata` for downstream tools that want to walk
 an effect_id and report its associated buff_id / base_ids (e.g.

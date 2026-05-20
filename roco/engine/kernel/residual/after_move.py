@@ -54,9 +54,54 @@ def apply_after_move(
     target_slot: int,
     ctx: StageCtx,
 ) -> KernelState:
+    state = _apply_weather_delta(state, ctx)
+    state = _apply_mark_deltas(state, actor_side_id, actor_slot, target_side_id, ctx)
+
+    actor_side = side(state, actor_side_id)
+    target_side = side(state, target_side_id)
+    actor = actor_side.pets[actor_slot]
+    target = target_side.pets[target_slot]
+
+    actor, target = _apply_buff_and_cleanse_deltas(actor, target, ctx)
+    actor, target, hp_gain, energy_gain = _apply_resource_deltas(actor, target, ctx)
+    actor, target = _apply_cooldown_and_counter_deltas(actor, target, ctx)
+
+    actor_side = replace_pet(actor_side, actor_slot, actor)
+    if (hp_gain or energy_gain) and actor.ability_flags & int(AbilityFlag.SHARE_GAINS):
+        actor_side, rng = share_gains_on_side(actor_side, actor_slot, hp_gain, energy_gain, state.rng)
+        state = state._replace(rng=rng)
+    target_side = replace_pet(target_side, target_slot, target)
+    state = _apply_move_swap_and_mark_heal(
+        state, actor_side, target_side, actor_side_id, actor_slot, target_side_id, target_slot, ctx,
+    )
+
+    target_side = side(state, target_side_id)
+    target = target_side.pets[target_slot]
+    target = _apply_status_deltas(target, actor, actor_side_id, actor_slot, ctx)
+    target_side = replace_pet(target_side, target_slot, target)
+    state = replace_side(state, target_side_id, target_side)
+
+    state = _apply_switch_deltas(state, actor_side_id, target_side_id, target_slot, ctx)
+    return state
+
+
+def _apply_weather_delta(state: KernelState, ctx: StageCtx) -> KernelState:
     if ctx.weather:
         from roco.engine.kernel.state import pack_weather
         state = state._replace(weather=pack_weather(ctx.weather, ctx.weather_turns))
+    return state
+
+
+def _apply_mark_deltas(
+    state: KernelState,
+    actor_side_id: int,
+    actor_slot: int,
+    target_side_id: int,
+    ctx: StageCtx,
+) -> KernelState:
+    # Side-level deltas: mark clears + adds, enemy skill cost mod, and
+    # devotion (jiamei) accrual.  Grouped together because they all
+    # mutate ``actor_side`` / ``target_side`` before any pet-level work.
     actor_side = side(state, actor_side_id)
     target_side = side(state, target_side_id)
     actor = actor_side.pets[actor_slot]
@@ -90,10 +135,14 @@ def apply_after_move(
         actor_side = actor_side._replace(devotion=_add_devotion(actor_side.devotion, DevotionIdx.JIAMEI, ctx.devotion_random))
     state = replace_side(state, actor_side_id, actor_side)
     state = replace_side(state, target_side_id, target_side)
-    actor_side = side(state, actor_side_id)
-    target_side = side(state, target_side_id)
-    actor = actor_side.pets[actor_slot]
-    target = target_side.pets[target_slot]
+    return state
+
+
+def _apply_buff_and_cleanse_deltas(
+    actor: PetState,
+    target: PetState,
+    ctx: StageCtx,
+) -> tuple[PetState, PetState]:
     if ctx.clear_self_buffs or ctx.clear_self_debuffs:
         actor = actor._replace(buff_stages=_clear_buff_lanes(
             actor.buff_stages,
@@ -123,6 +172,18 @@ def apply_after_move(
         actor_buff = actor.buff_stages
         actor = actor._replace(buff_stages=target.buff_stages)
         target = target._replace(buff_stages=actor_buff)
+    return actor, target
+
+
+def _apply_resource_deltas(
+    actor: PetState,
+    target: PetState,
+    ctx: StageCtx,
+) -> tuple[PetState, PetState, int, int]:
+    # Returns (actor, target, hp_gain, energy_gain).  hp_gain/energy_gain
+    # accumulate from heal/drain/steal so the SHARE_GAINS ability bit
+    # downstream can redistribute them; HEAL_HP_PER_ENERGY_GAIN folds
+    # the energy gain back into hp_gain in this same helper.
     if ctx.exchange_hp_ratio:
         actor_max = hot.PETS[actor.pet_id][STAT_HP]
         target_max = hot.PETS[target.pet_id][STAT_HP]
@@ -168,6 +229,14 @@ def apply_after_move(
         before = actor.current_hp
         actor = _apply_heal_hp(actor, max_hp * energy_gain * 500 // BPS)
         hp_gain += max(0, actor.current_hp - before)
+    return actor, target, hp_gain, energy_gain
+
+
+def _apply_cooldown_and_counter_deltas(
+    actor: PetState,
+    target: PetState,
+    ctx: StageCtx,
+) -> tuple[PetState, PetState]:
     if ctx.priority_next:
         actor = actor._replace(priority_boost=min(15, actor.priority_boost + ctx.priority_next))
     if ctx.enemy_hit_delta:
@@ -180,11 +249,22 @@ def apply_after_move(
         actor = actor._replace(current_hp=max(0, actor.current_hp - ctx.counter_damage))
     if ctx.form_transform:
         actor = _form_transform(actor, bool(ctx.form_transform_heal))
-    actor_side = replace_pet(actor_side, actor_slot, actor)
-    if (hp_gain or energy_gain) and actor.ability_flags & int(AbilityFlag.SHARE_GAINS):
-        actor_side, rng = share_gains_on_side(actor_side, actor_slot, hp_gain, energy_gain, state.rng)
-        state = state._replace(rng=rng)
-    target_side = replace_pet(target_side, target_slot, target)
+    return actor, target
+
+
+def _apply_move_swap_and_mark_heal(
+    state: KernelState,
+    actor_side,
+    target_side,
+    actor_side_id: int,
+    actor_slot: int,
+    target_side_id: int,
+    target_slot: int,
+    ctx: StageCtx,
+) -> KernelState:
+    # ``swap_moves`` runs on the local sides before they re-enter state
+    # so a follow-up ``consume_enemy_marks_heal_bps`` reads the merged
+    # sides through ``side(state, ...)`` and sees the swap.
     if ctx.swap_moves:
         actor_moves = actor_side.moves[actor_slot]
         target_moves = target_side.moves[target_slot]
@@ -193,8 +273,16 @@ def apply_after_move(
     state = replace_side(replace_side(state, actor_side_id, actor_side), target_side_id, target_side)
     if ctx.consume_enemy_marks_heal_bps:
         state = _consume_enemy_marks_heal(state, actor_side_id, actor_slot, target_side_id, ctx.consume_enemy_marks_heal_bps)
-    target_side = side(state, target_side_id)
-    target = target_side.pets[target_slot]
+    return state
+
+
+def _apply_status_deltas(
+    target: PetState,
+    actor: PetState,
+    actor_side_id: int,
+    actor_slot: int,
+    ctx: StageCtx,
+) -> PetState:
     target = apply_status_effect(target, StatusType.BURN, StatusFlag.BURN, ctx.burn_stacks, actor_side_id, actor_slot)
     target = apply_status_effect(target, StatusType.POISON, StatusFlag.POISON, ctx.poison_stacks, actor_side_id, actor_slot)
     freeze_stacks = ctx.freeze_stacks
@@ -202,8 +290,16 @@ def apply_after_move(
         freeze_stacks += ctx.freeze_stacks
     target = apply_status_effect(target, StatusType.FREEZE, StatusFlag.FREEZE, freeze_stacks, actor_side_id, actor_slot)
     target = apply_status_effect(target, StatusType.LEECH, StatusFlag.LEECH, ctx.leech_stacks, actor_side_id, actor_slot)
-    target_side = replace_pet(target_side, target_slot, target)
-    state = replace_side(state, target_side_id, target_side)
+    return target
+
+
+def _apply_switch_deltas(
+    state: KernelState,
+    actor_side_id: int,
+    target_side_id: int,
+    target_slot: int,
+    ctx: StageCtx,
+) -> KernelState:
     if ctx.actor_counter_install_skill_id:
         actor_side = side(state, actor_side_id)
         actor_side = actor_side._replace(counter_skill_id=ctx.actor_counter_install_skill_id)

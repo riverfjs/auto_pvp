@@ -1,4 +1,4 @@
-"""Tests for pak-native effect code generation (three-state pipeline)."""
+"""Tests for pak-native effect code generation (four-state pipeline)."""
 
 import json
 from pathlib import Path
@@ -204,7 +204,7 @@ def test_build_ability_effect_rows(pak):
     assert gaps == []
 
 
-# ── three-state contract tests ───────────────────────────────────────────
+# ── four-state contract tests ────────────────────────────────────────────
 
 
 def test_compound_type1_returns_gap(pak):
