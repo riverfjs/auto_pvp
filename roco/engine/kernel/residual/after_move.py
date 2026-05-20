@@ -202,6 +202,10 @@ def apply_after_move(
     target = apply_status_effect(target, StatusType.LEECH, StatusFlag.LEECH, ctx.leech_stacks, actor_side_id, actor_slot)
     target_side = replace_pet(target_side, target_slot, target)
     state = replace_side(state, target_side_id, target_side)
+    if ctx.actor_counter_install_skill_id:
+        actor_side = side(state, actor_side_id)
+        actor_side = actor_side._replace(counter_skill_id=ctx.actor_counter_install_skill_id)
+        state = replace_side(state, actor_side_id, actor_side)
     if ctx.force_switch:
         state = _auto_switch(state, actor_side_id)
     if ctx.force_enemy_switch:

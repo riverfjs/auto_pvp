@@ -76,6 +76,13 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     # ``apply_after_move`` writes this many turns into the actor's own
     # cooldown slot for the skill being used.
     ("actor_self_cooldown_turns", 0),
+    # Set by ``op_install_counter`` (pak 1031xxx "应对！X" counter
+    # triggers); pak ``effect_param[0]`` is the 70xxxxx response
+    # skill_id.  ``apply_after_move`` writes it into the actor's
+    # ``SideState.counter_skill_id`` slot, and ``mechanics`` fires the
+    # looked-up counter skill on the next incoming hit then clears the
+    # slot (one-shot).
+    ("actor_counter_install_skill_id", 0),
     ("cleanse_self", 0),
     ("cleanse_enemy", 0),
     ("clear_self_buffs", 0),

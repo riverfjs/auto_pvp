@@ -58,6 +58,11 @@ class SideState(NamedTuple):
     pets: tuple[PetState, ...]
     moves: tuple[tuple[int, int, int, int], ...]
     bloodlines: tuple[int, ...]
+    # 70xxxxx "应对！X" counter response skill installed on the active
+    # pet by the pak 1031xxx counter-trigger family.  Consumed (and
+    # cleared) by ``mechanics`` on the next incoming hit.  Zero means
+    # no counter is armed.
+    counter_skill_id: int = 0
 
 
 class KernelState(NamedTuple):
@@ -204,7 +209,7 @@ def make_side(
         _bloodline_row(pet_id, bloodlines[idx] if bloodlines and idx < len(bloodlines) else None)
         for idx, pet_id in enumerate(pet_ids)
     )
-    return SideState(0, SIDE_LIVES, WILLPOWER_USES, LEADER_USES, bloodline_magic_id, 0, 0, 0, 0, 0, 0, 0, 0, pets, moves, bloodline_rows)
+    return SideState(0, SIDE_LIVES, WILLPOWER_USES, LEADER_USES, bloodline_magic_id, 0, 0, 0, 0, 0, 0, 0, 0, pets, moves, bloodline_rows, 0)
 
 
 def make_state(
@@ -249,6 +254,7 @@ def copy_state(state: KernelState) -> KernelState:
         tuple(PetState(*pet) for pet in state.side_a.pets),
         tuple(tuple(row) for row in state.side_a.moves),
         tuple(state.side_a.bloodlines),
+        state.side_a.counter_skill_id,
     )
     side_b = SideState(
         state.side_b.active,
@@ -267,6 +273,7 @@ def copy_state(state: KernelState) -> KernelState:
         tuple(PetState(*pet) for pet in state.side_b.pets),
         tuple(tuple(row) for row in state.side_b.moves),
         tuple(state.side_b.bloodlines),
+        state.side_b.counter_skill_id,
     )
     return KernelState(
         state.turn,

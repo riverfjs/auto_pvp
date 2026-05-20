@@ -49,6 +49,7 @@ from roco.engine.kernel.op_rows import (
     TIMING_CALC_DAMAGE,
     TIMING_TAKE_DAMAGE,
 )
+from roco.generated.counter_skill_table import COUNTER_SKILL_TABLE
 from roco.generated.handler_indices import H_BORROW_TEAM_SKILL, H_SKILL_MOD
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.residual import apply_after_move, end_turn, share_gains_on_side
@@ -335,6 +336,19 @@ def _execute(
         state = replace_side(state, target_side_id, target_side)
         if target.current_hp <= 0:
             state = faint_pet(state, target_side_id, target_slot, actor_side_id, actor_slot)
+        # Counter-trigger consume: if the defender's side has an armed
+        # "应对！X" counter (installed earlier by the pak 1031xxx family),
+        # fire it now against the attacker.  One-shot — clears after firing
+        # whether or not the attacker is still alive.
+        if dealt > 0 and target.current_hp > 0:
+            state, counter_dealt = _fire_counter_skill(
+                state, actor_side_id, actor_slot, target_side_id, target_slot, first_strike
+            )
+            if counter_dealt:
+                actor_side = side(state, actor_side_id)
+                actor = actor_side.pets[actor_slot]
+                target_side = side(state, target_side_id)
+                target = target_side.pets[target_slot]
     if skill_id > 0:
         actor_side = side(state, actor_side_id)
         actor = actor_side.pets[actor_slot]
@@ -360,6 +374,69 @@ def _execute(
     _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)
+    return state, dealt
+
+
+def _fire_counter_skill(
+    state: KernelState,
+    attacker_side_id: int,
+    attacker_slot: int,
+    defender_side_id: int,
+    defender_slot: int,
+    first_strike: bool,
+) -> tuple[KernelState, int]:
+    """Fire the defender's armed counter-trigger skill against the attacker.
+
+    Backs the pak 1031xxx "应对！X" family — ``op_install_counter`` stages
+    a 70xxxxx response skill_id into ``SideState.counter_skill_id`` (via
+    ``apply_after_move``).  When the defender then takes a hit, look up
+    the skill's combat stats in :data:`COUNTER_SKILL_TABLE` and run them
+    through the shared ``damage`` path so the counter respects type chart,
+    buffs, marks, etc.  One-shot: ``counter_skill_id`` is cleared whether
+    or not the lookup produced damage.
+    """
+    defender_side = side(state, defender_side_id)
+    counter_skill_id = defender_side.counter_skill_id
+    if counter_skill_id == 0:
+        return state, 0
+    defender_side = defender_side._replace(counter_skill_id=0)
+    state = replace_side(state, defender_side_id, defender_side)
+    stats = COUNTER_SKILL_TABLE.get(counter_skill_id)
+    if stats is None:
+        return state, 0
+    power, element, category, _dam_type, _priority = stats
+    if power <= 0 or category not in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
+        return state, 0
+    attacker_side = side(state, attacker_side_id)
+    attacker = attacker_side.pets[attacker_slot]
+    defender = defender_side.pets[defender_slot]
+    if attacker.fainted or defender.fainted:
+        return state, 0
+    counter_ctx = StageCtx()
+    counter_ctx.reset(defender_side_id, defender_slot, attacker_side_id, attacker_slot, counter_skill_id)
+    counter_ctx.skill_element = element
+    counter_ctx.skill_category = category
+    counter_ctx.power = power
+    counter_ctx.hit_count = 1
+    counter_skill = (counter_skill_id, element, category, 0, power, 0, 1)
+    dealt = damage(
+        defender,
+        attacker,
+        counter_skill,
+        counter_ctx,
+        state.weather,
+        defender_side.marks,
+        attacker_side.marks,
+        first_strike,
+    )
+    if dealt <= 0:
+        return state, 0
+    next_hp = max(0, attacker.current_hp - dealt)
+    attacker = attacker._replace(current_hp=next_hp)
+    attacker_side = replace_pet(attacker_side, attacker_slot, attacker)
+    state = replace_side(state, attacker_side_id, attacker_side)
+    if attacker.current_hp <= 0:
+        state = faint_pet(state, attacker_side_id, attacker_slot, defender_side_id, defender_slot)
     return state, dealt
 
 

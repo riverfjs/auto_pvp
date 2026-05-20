@@ -127,6 +127,7 @@ def main() -> None:
 
 def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:
     selected: dict[int, dict[str, Any]] = {}
+    counter_skill_ids = _counter_response_skill_ids(pak_tables)
 
     for move in data.moves:
         sid = _int(move.get("id"))
@@ -147,6 +148,18 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
         selected[_int(row.get("id"))] = row
         selected_names.add(name)
 
+    # Counter-response skills (70xxxxx) referenced as ``effect_param[0]`` of
+    # pak 1031xxx counter-trigger effects.  These never appear in moves.json
+    # but the kernel needs them in the canonical skills set so they show up
+    # in ``hot.SKILLS`` and ``COUNTER_SKILL_TABLE`` can resolve their stats.
+    for csid in counter_skill_ids:
+        if csid in selected:
+            continue
+        row = data.skill_conf.get(str(csid))
+        if row is None:
+            continue
+        selected[csid] = row
+
     records: list[dict] = []
     id_to_name: dict[int, str] = {}
     emitted_names: set[str] = set()
@@ -160,12 +173,43 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
         effect_rows, effect_gaps = generate_effect_rows(skill_row, pak_tables)
         record["effect_rows"] = effect_rows
         record["effect_gaps"] = effect_gaps
-        source = _source("skill", sid, row)
+        kind = "counter_skill" if sid in counter_skill_ids else "skill"
+        source = _source(kind, sid, row)
         record = with_canonical_hash(record, source)
         records.append(record)
         emitted_names.add(name)
         id_to_name[sid] = name
     return records, id_to_name
+
+
+def _counter_response_skill_ids(pak_tables: PakTables) -> set[int]:
+    """Collect every 70xxxxx skill referenced by a 1031xxx counter trigger.
+
+    The pak counter-trigger family (effect_id 1031041..1031117 etc.) stores
+    the 70xxxxx response skill_id in ``effect_param[0]``.  The kernel
+    consumes those skills by id and needs them in ``hot.SKILLS``, so they
+    must end up in ``skills.jsonl`` even though moves.json never
+    references them.  Returns an empty set when ``EFFECT_CONF`` is absent
+    (test fixtures only ship the tables they exercise).
+    """
+    try:
+        effect_conf = pak_tables.effect_conf
+    except FileNotFoundError:
+        return set()
+    out: set[int] = set()
+    for eid, rec in effect_conf.items():
+        if not (1031000 <= int(eid) <= 1031999):
+            continue
+        params = rec.get("effect_param") or rec.get("params") or []
+        if not params or not isinstance(params[0], dict):
+            continue
+        inner = params[0].get("params")
+        if not inner:
+            continue
+        csid = _int(inner[0])
+        if 7000000 <= csid < 8000000:
+            out.add(csid)
+    return out
 
 
 def build_abilities(data: PakData, desc_notes: dict[int, str], pak_tables: PakTables) -> tuple[list[dict], dict[int, str]]:

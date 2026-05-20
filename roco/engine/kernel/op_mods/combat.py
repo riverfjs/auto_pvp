@@ -13,6 +13,21 @@ def op_counter_attack(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.counter_damage += row[ROW_ARG0]
 
 
+def op_install_counter(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    """Install a pak counter-trigger response skill on the actor.
+
+    Backs the pak "应对！X" family (1031041..1031117 …): pak's
+    ``effect_param[0]`` is the 70xxxxx response skill_id, which this op
+    stashes in ``ctx.actor_counter_install_skill_id``.  ``apply_after_move``
+    folds it into ``SideState.counter_skill_id``, and ``mechanics`` fires
+    the looked-up counter skill on the next incoming hit
+    (``TIMING_CHECK_HIT``), then clears the slot.
+    """
+    skill_id = row[ROW_ARG0]
+    if skill_id > 0:
+        ctx.actor_counter_install_skill_id = skill_id
+
+
 def op_interrupt(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.interrupt = 1
 
