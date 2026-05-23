@@ -3,7 +3,7 @@
 Handler indices are managed by handler_registry.json (see gen_prefix_map.py).
 To add a new handler:
   1. Write an op_* function in the appropriate op_*.py module.
-  2. Run `uv run python -m roco.compiler.gen_prefix_map` to register it
+  2. Run `uv run python -m roco.compiler_v2.gen_prefix_map` to register it
      and regenerate handler_table.py / handler_indices.py / handler_order.py.
 """
 

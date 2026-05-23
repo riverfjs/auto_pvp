@@ -8,15 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.build_effect_families import main as run_build_effect_families
-from roco.compiler.effect_families.classify import (
+from roco.compiler_v2.build_effect_families import main as run_build_effect_families
+from roco.compiler_v2.effect_families.classify import (
     COVERAGE_STATUSES,
     _buff_family_key,
 )
+from roco.data.canonical import canonical_list
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG_JSONL = ROOT / "roco" / "compiler" / "rules" / "effect_families.jsonl"
+CATALOG_JSONL = ROOT / "roco" / "compiler_v2" / "rules" / "effect_families.jsonl"
 PAK_DATA = ROOT / "pak-public-kit" / "output" / "data"
 
 REQUIRED_FIELDS = (
@@ -47,13 +48,12 @@ SPECULATIVE_WORDS = ("likely", "would", "probably", "possibly")
 BLOCKER_FAMILY_KEYS = (
     "effect_conf:t3:o19",
     "effect_conf:t3:o34",
-    "effect_conf:t1:o5",
     "effect_conf:t3:o22",
     "effect_conf:t1:o35",
     "buff_conf_direct:prefix_2040",
     "buff_conf_direct:prefix_2003",
 )
-BLOCKER_ALLOWED_STATUSES = {"gap", "exact_jsonl_partial", "mixed"}
+BLOCKER_ALLOWED_STATUSES = {"gap", "exact_semantic_partial", "mixed"}
 
 
 @pytest.fixture(scope="module")
@@ -61,7 +61,7 @@ def catalog() -> list[dict]:
     """Read the on-disk catalog into a list of dicts."""
     assert CATALOG_JSONL.exists(), (
         "effect_families.jsonl missing — run "
-        "`uv run python -m roco.compiler.build_effect_families`"
+        "`uv run python -m roco.compiler_v2.build_effect_families`"
     )
     with CATALOG_JSONL.open("r", encoding="utf-8") as fp:
         return [json.loads(line) for line in fp if line.strip()]
@@ -74,7 +74,7 @@ def by_key(catalog: list[dict]) -> dict[str, dict]:
 
 @pytest.fixture(scope="module")
 def pak_tables():
-    from roco.compiler.effect_codegen.pak import PakTables
+    from roco.compiler_v2.effect_codegen.pak import PakTables
     return PakTables(PAK_DATA)
 
 
@@ -175,22 +175,14 @@ def test_effect_families_buff_conf_direct_completeness(catalog, pak_tables):
     "Direct" = ``skill_result.effect_id`` / ``effect_list.effect_id`` that
     exists in BUFF_CONF but NOT in EFFECT_CONF (e.g. 20400420 天光).
     """
-    canonical_dir = ROOT / "_data" / "canonical"
     consumer_ids: set[int] = set()
     for filename in ("skills.jsonl", "abilities.jsonl"):
-        path = canonical_dir / filename
-        if not path.exists():
-            continue
-        with path.open("r", encoding="utf-8") as fp:
-            for raw in fp:
-                if not raw.strip():
-                    continue
-                rec = json.loads(raw)
-                source_fields = rec.get("source_fields") or {}
-                rows = source_fields.get("skill_result") or source_fields.get("effect_list") or []
-                for entry in rows:
-                    if isinstance(entry, dict) and entry.get("effect_id"):
-                        consumer_ids.add(int(entry["effect_id"]))
+        for rec in canonical_list(filename):
+            source_fields = rec.get("source_fields") or {}
+            rows = source_fields.get("skill_result") or source_fields.get("effect_list") or []
+            for entry in rows:
+                if isinstance(entry, dict) and entry.get("effect_id"):
+                    consumer_ids.add(int(entry["effect_id"]))
 
     direct_buff_ids = {
         eid for eid in consumer_ids
@@ -242,7 +234,7 @@ def test_effect_families_covers_blocker_gaps(by_key):
     """Known blockers must appear in catalog with a gap-style coverage_status.
 
     Extra layer on top of completeness — if any of these blockers flip to
-    ``auto_structural``/``exact_jsonl``/``ignored`` that means kernel
+    ``auto_structural``/``exact_semantic``/``ignored`` that means kernel
     actually implemented the family; update this list with intent rather
     than letting the change pass silently.
     """

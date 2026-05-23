@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.effect_model import Timing
+from roco.compiler_v2.effect_model import Timing
 from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
-from roco.compiler.effect_codegen import (
+from roco.compiler_v2.effect_codegen import (
     PakTables,
     generate_effect_rows,
     build_ability_effect_rows,
-    H_DAMAGE, H_SELF_BUFF, H_POISON,
+    H_DAMAGE, H_DISPEL_MARKS_TO_BURN, H_HEAL_HP, H_SELF_BUFF, H_POISON,
 )
 
 
@@ -66,15 +66,14 @@ def pak(tmp_path):
 
 
 def test_pak_op_prefix_table_covers_major_families():
-    # PAK_PREFIX_NAMES is generated from BUFF_CONF + prefix_handlers.jsonl;
+    # PAK_PREFIX_NAMES is generated from BUFF_CONF + Python semantic bindings;
     # the legacy ``PakOp`` enum is retired.  Confirm the table still names
     # the most-used families and exports the synthetic EFFECT_CONF markers.
     assert PAK_PREFIX_NAMES[2001] == "STAT_MOD"
     assert PAK_PREFIX_NAMES[2023] == "POWER_MOD"
-    # Prefixes that were ``handler: H_NOOP`` entries (2003 IMMUNITY_LOCK,
-    # 2040 DETECTION, 2062 COOLDOWN) were removed in the H_NOOP cleanup —
-    # they no longer carry an alias and surface as ``PREFIX_<n>``.
-    assert PAK_PREFIX_NAMES[2003] == "PREFIX_2003"
+    # Unhandled prefixes now keep their pak/Lua enum identity instead of
+    # falling back to an opaque JSONL-era ``PREFIX_<n>`` label.
+    assert PAK_PREFIX_NAMES[2003] == "BFT_IMMUNE"
     assert EFF_DAMAGE == 10002
     assert EFF_STATE_CHANGE == 10003
 
@@ -275,11 +274,11 @@ def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
     ``prefix_<n>_unmapped`` — not ``buff_unclassified``.
 
     Locks in the fix for the regression where dropping
-    ``handler: H_NOOP`` rows from ``prefix_handlers.jsonl`` left zero
+    ``handler: H_NOOP`` rows in old prefix semantics left zero
     values in ``prefix_handler_map.json``; ``buff_<n>`` reason was
     misclassifying buffs as ``buff_unclassified`` instead.
     """
-    from roco.compiler.effect_codegen import classify
+    from roco.compiler_v2.effect_codegen import classify
 
     # Inject an extra buff whose base_id prefix (2999) is guaranteed
     # absent from the prefix map.  Use monkeypatch so we don't have to
@@ -344,103 +343,45 @@ def test_emit_outcome_invariant_handler_idx_positive(pak):
             assert row[0] > 0, f"effect_id {eid} produced tag_code={row[0]} (H_NOOP not allowed)"
 
 
-def test_jsonl_rejects_h_noop_handler(tmp_path, monkeypatch):
-    """exact_effects.jsonl loader must reject ``handler: H_NOOP`` rows."""
-    fake_jsonl = tmp_path / "exact_effects.jsonl"
-    fake_jsonl.write_text(
-        '{"effect_id": 9999001, "handler": "H_NOOP", "args": [0,0,0,0], '
-        '"evidence": "intentional"}\n',
-        encoding="utf-8",
-    )
-    from roco.compiler.effect_codegen import exact_decoders as ed
-    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
-    with pytest.raises(RuntimeError, match="handler: H_NOOP"):
-        ed._load_jsonl()
+def test_no_python_exact_effect_rules_table():
+    """Runtime exact effects are now generated/weather-only, not Python rows."""
+    from roco.compiler_v2.effect_codegen import exact_decoders as ed
+
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "semantics.py"
+
+    assert not hasattr(ed, "_load_python_rules")
+    assert not path.exists()
 
 
-def test_jsonl_ignored_kind_routes_to_ignored_list(tmp_path, monkeypatch, pak):
-    """JSONL row with ``kind: ignored`` produces an IgnoredOutcome.
+def test_former_exact_burn_mark_row_uses_family_decoder(pak):
+    """The 1042014 burn payload is derived from pak shape, not id semantics."""
+    from roco.compiler_v2.effect_codegen.family_axes import decode_family_axes
 
-    Verifies that ``generate_effect_rows`` returns the entry in the
-    ``ignored`` channel (not ``rows``, not ``gaps``).
-    """
-    fake_jsonl = tmp_path / "exact_effects.jsonl"
-    fake_jsonl.write_text(
-        '{"effect_id": 9991234, "kind": "ignored", '
-        '"reason": "visual_only_animation", '
-        '"evidence": "pak EFFECT_CONF.json: 9991234 editor_name=\'纯动画\'", '
-        '"pak_table": "EFFECT_CONF"}\n',
-        encoding="utf-8",
-    )
-    # Reload the override table from the fake JSONL path.
-    from roco.compiler.effect_codegen import exact_decoders as ed
-    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
-    fresh = ed._load_jsonl()
-    monkeypatch.setattr(ed, "EXACT_EFFECT_DECODERS", {**fresh, **ed._weather_outcomes()})
+    pak.effect_conf[1042014] = {
+        "id": 1042014,
+        "editor_name": "fixture-mark-to-burn",
+        "effect_order": 42,
+        "type": 1,
+        "effect_param": [
+            {"params": [0]},
+            {"params": [20011578]},
+            {"params": [20070020, 20070020, 20070020, 20070020, 20070020]},
+            {"params": [99]},
+            {"params": [0]},
+        ],
+    }
+    pak.buff_conf[20011578] = {
+        "id": 20011578,
+        "editor_name": "焚烧烙印标记",
+        "buff_base_ids": [2001081],
+    }
+    pak.buff_conf[20070020] = {
+        "id": 20070020,
+        "editor_name": "通用灼烧",
+        "buff_base_ids": [2007002],
+    }
 
-    skill_row = {"skill_result": [{
-        "effect_id": 9991234,
-        "cast_moment": 11,
-        "result_target_type": 1,
-        "success_rate": 10000,
-    }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
-    assert rows == []
-    assert gaps == []
-    assert len(ignored) == 1
-    assert ignored[0]["reason"] == "visual_only_animation"
-    assert ignored[0]["pak_table"] == "EFFECT_CONF"
-    assert ignored[0]["evidence"].startswith("pak EFFECT_CONF")
-
-
-def test_jsonl_ignored_buff_conf_uses_buff_primitive(tmp_path, monkeypatch, pak):
-    """``kind: ignored`` with ``pak_table: BUFF_CONF`` writes buff_id provenance.
-
-    20400420 天光 etc. are direct BUFF_CONF references (no EFFECT_CONF
-    record).  An ignored row must carry ``primitive=buff_<id>``,
-    ``buff_id=<id>``, ``effect_id=None`` so downstream tools (and the
-    ``ignored_effects`` table) know which pak table to look in.
-    """
-    fake_jsonl = tmp_path / "exact_effects.jsonl"
-    fake_jsonl.write_text(
-        '{"effect_id": 20400420, "kind": "ignored", '
-        '"reason": "visual_only_weather_morph", '
-        '"evidence": "pak BUFF_CONF 20400420; element morphs visually, no combat mutation", '
-        '"pak_table": "BUFF_CONF"}\n',
-        encoding="utf-8",
-    )
-    from roco.compiler.effect_codegen import exact_decoders as ed
-    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
-    loaded = ed._load_jsonl()
-    entry = loaded[20400420]
-    assert entry.primitive == "buff_20400420"
-    assert entry.buff_id == 20400420
-    assert entry.effect_id is None
-    assert entry.pak_table == "BUFF_CONF"
-
-
-def test_jsonl_ignored_rejects_handler_args(tmp_path, monkeypatch):
-    """``kind: ignored`` forbids ``handler`` / ``args`` — loader must reject."""
-    fake_jsonl = tmp_path / "exact_effects.jsonl"
-    fake_jsonl.write_text(
-        '{"effect_id": 9991234, "kind": "ignored", '
-        '"handler": "H_HEAL_HP", "reason": "x", "evidence": "y"}\n',
-        encoding="utf-8",
-    )
-    from roco.compiler.effect_codegen import exact_decoders as ed
-    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
-    with pytest.raises(RuntimeError, match="forbids ``handler``"):
-        ed._load_jsonl()
-
-
-def test_jsonl_ignored_requires_evidence(tmp_path, monkeypatch):
-    """``kind: ignored`` must carry both ``reason`` and ``evidence``."""
-    fake_jsonl = tmp_path / "exact_effects.jsonl"
-    fake_jsonl.write_text(
-        '{"effect_id": 9991234, "kind": "ignored", "reason": "x"}\n',
-        encoding="utf-8",
-    )
-    from roco.compiler.effect_codegen import exact_decoders as ed
-    monkeypatch.setattr(ed, "_RULES_PATH", fake_jsonl)
-    with pytest.raises(RuntimeError, match="requires both ``reason`` and ``evidence``"):
-        ed._load_jsonl()
+    entry = decode_family_axes(1042014, pak.effect_conf, pak.buff_conf)
+    assert entry is not None
+    assert entry.handler_idx == H_DISPEL_MARKS_TO_BURN
+    assert entry.p0 == 5

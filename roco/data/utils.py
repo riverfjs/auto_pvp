@@ -1,4 +1,4 @@
-"""Shared I/O and hashing utilities for canonical data files."""
+"""Shared I/O and hashing utilities for data files."""
 
 import json
 import hashlib
@@ -10,7 +10,6 @@ from typing import Iterable, Iterator
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "_data"
 RAW_DIR = DATA_DIR / "raw"
-CANONICAL_DIR = DATA_DIR / "canonical"
 RULES_DIR = DATA_DIR / "rules"
 DB_DIR = ROOT / "_db"
 
@@ -62,7 +61,7 @@ def canonical_hash(record: Mapping[str, object]) -> str:
 
 
 def with_canonical_hash(record: dict, source: Mapping[str, object] | None = None) -> dict:
-    """Attach source_hash and canonical_hash to a canonical JSONL record."""
+    """Attach source_hash and canonical_hash to a canonical record."""
     if source is not None:
         if source_hash := source.get("source_hash"):
             record["source_hash"] = source_hash

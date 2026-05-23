@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.effect_codegen.acknowledgements_loader import (
+from roco.compiler_v2.effect_codegen.acknowledgements_loader import (
     Acknowledgement,
     canonical_gap_key,
     canonical_gap_key_from_row,
@@ -28,7 +28,7 @@ from roco.data.validation import compute_gap_validation_errors
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REAL_RULES = ROOT / "roco" / "compiler" / "rules" / "effect_gap_acknowledgements.jsonl"
+REAL_RULES = ROOT / "roco" / "compiler_v2" / "rules" / "effect_gap_acknowledgements.jsonl"
 REAL_DB = ROOT / "_db" / "data.db"
 
 

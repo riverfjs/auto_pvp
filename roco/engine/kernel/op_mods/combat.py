@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from roco.engine.kernel.catalog import SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_meta import handles_base_name, handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_TARGET, TARGET_SELF
 
 
@@ -66,6 +67,12 @@ def op_counter_accumulate_transform(ctx: StageCtx, row: tuple[int, ...]) -> None
 
 # ── hit count adjustments ────────────────────────────────────────────────
 
+@handles_buff([
+    ("BFT_ASSIGN", "STUN_HEAL"),
+    ("BFT_MULTIPLE_NUM", "HIT_COUNT"),
+    ("BFT_NINETY_ONE", "DYNAMIC_HIT"),
+    ("BFT_O_FIFTEEN", "DRIVE"),
+])
 def op_hit_count_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_TARGET] == TARGET_SELF:
         ctx.hit_count += row[ROW_ARG0]
@@ -93,6 +100,7 @@ def op_on_skill_element_hit_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 # ── forced switches ──────────────────────────────────────────────────────
 
+@handles_buff([("BFT_PET_TRANSE", "FORCE_SWITCH")])
 def op_force_switch(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.force_switch = 1
 
@@ -101,6 +109,7 @@ def op_force_enemy_switch(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.force_enemy_switch = 1
 
 
+@handles_base_name([("电咩咩免疫", "ability 200166 星地善良: zero-energy auto self-switch.")])
 def op_auto_switch_on_zero_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.actor_energy <= 0:
         ctx.force_switch = 1

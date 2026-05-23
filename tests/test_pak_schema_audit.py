@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler import pak_schema_audit
-from roco.compiler.pak_schema_audit import (
+from roco.compiler_v2 import pak_schema_audit
+from roco.compiler_v2.pak_schema_audit import (
     AUDIT_MD,
     PAK_BIN,
     SCHEMA_TABLES,
@@ -137,25 +137,25 @@ def test_buffbase_families_count_total(buffbase_conf, buff_conf):
 
 def test_exact_rule_debt_h_install_counter_migrated_out():
     """Post-7B: ``H_INSTALL_COUNTER`` no longer appears in
-    ``exact_effects.jsonl`` — the whole family is covered by the
+    exact compiler semantic rules — the whole family is covered by the
     ``effect_order=31`` decoder in
-    :mod:`roco.compiler.effect_codegen.family_axes`.
+    :mod:`roco.compiler_v2.effect_codegen.family_axes`.
 
     Locks the migration: re-adding a row by hand for any ``ET_COUNTER``
     effect would fail this test, surfacing the regression at audit time.
     """
-    from roco.compiler.pak_schema_audit import _load_exact_rules
+    from roco.compiler_v2.pak_schema_audit import _load_exact_rules
     handlers = {r["handler"] for r in _load_exact_rules()}
     assert "H_INSTALL_COUNTER" not in handlers, (
-        "H_INSTALL_COUNTER row in exact_effects.jsonl — the counter "
+        "H_INSTALL_COUNTER row in exact compiler semantics — the counter "
         "family is now decoded by family_axes; add the rule to the "
-        "family decoder instead of exact_effects."
+        "family decoder instead of exact semantics."
     )
 
 
 def test_exact_rule_debt_cluster_size_at_least_threshold(effect_conf):
     """Every migration_candidate entry has cluster_size >= threshold (3)."""
-    from roco.compiler.pak_schema_audit import _load_exact_rules
+    from roco.compiler_v2.pak_schema_audit import _load_exact_rules
     exact_rules = _load_exact_rules()
     debt = exact_rule_debt(exact_rules, effect_conf, cluster_threshold=3)
     for r in debt:
@@ -166,7 +166,7 @@ def test_exact_rule_debt_cluster_size_at_least_threshold(effect_conf):
 
 
 def test_prefix_rule_debt_identity_universal(buffbase_conf):
-    """For every prefix rule, the dominant ``buffbase_order`` satisfies
+    """For every engine prefix rule, the dominant ``buffbase_order`` satisfies
     ``prefix - 2000 == buffbase_order``.
 
     Locks the structural identity that motivates the 7C migration: the
@@ -175,7 +175,7 @@ def test_prefix_rule_debt_identity_universal(buffbase_conf):
     rule covers something other than its natural pak axis — needs
     review before 7C.
     """
-    from roco.compiler.pak_schema_audit import _load_prefix_rules
+    from roco.compiler_v2.pak_schema_audit import _load_prefix_rules
     prefix_rules, _ = _load_prefix_rules()
     debt = prefix_rule_debt(prefix_rules, buffbase_conf)
     non_identity = [r for r in debt if not r["implied_identity"]]
@@ -186,21 +186,20 @@ def test_prefix_rule_debt_identity_universal(buffbase_conf):
 
 
 def test_prefix_rule_debt_only_mixed_remain(buffbase_conf):
-    """Post-7C: ``prefix_handlers.jsonl`` keeps only the 3 prefixes whose
-    buffbase_order distribution is *not* 100% concentrated; the 88 clean
-    prefixes have migrated to ``buffbase_order_handlers.jsonl``.
+    """Only the 3 prefixes whose buffbase_order distribution is *not*
+    100% concentrated remain on the engine prefix axis.
 
     Regression guard: any prefix rule whose dominant order reaches 100%
     concentration is migration debt and should be moved to the
     buffbase_order axis.
     """
-    from roco.compiler.pak_schema_audit import _load_prefix_rules
+    from roco.compiler_v2.pak_schema_audit import _load_prefix_rules
     prefix_rules, _ = _load_prefix_rules()
     debt = prefix_rule_debt(prefix_rules, buffbase_conf)
     clean = [r for r in debt if r["clean_rewrite"]]
     assert clean == [], (
-        f"prefix_handlers.jsonl has {len(clean)} 100%-clean prefix(es) — "
-        f"these should migrate to buffbase_order_handlers.jsonl: "
+        f"engine prefix axis has {len(clean)} 100%-clean prefix(es) — "
+        f"these should migrate to handles_buff declarations: "
         f"{[r['prefix'] for r in clean]}"
     )
     # The 3 known-mixed prefixes are the entire post-7C set.
@@ -226,7 +225,7 @@ def test_check_mode_clean():
     """``--check`` returns 0 when the on-disk audit matches a fresh build."""
     assert AUDIT_MD.exists(), (
         "_docs/pak_schema_audit.md missing — run "
-        "`uv run python -m roco.compiler.pak_schema_audit`"
+        "`uv run python -m roco.compiler_v2.pak_schema_audit`"
     )
     assert run_pak_schema_audit(["--check"]) == 0
 

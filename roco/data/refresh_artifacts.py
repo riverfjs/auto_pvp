@@ -3,24 +3,22 @@
 Chains the canonical steps in order, each as an isolated subprocess so a
 failure in one cannot corrupt the next:
 
-    1. roco.data.parse_pak           -> _data/canonical/*.jsonl
-    2. roco.compiler.gen_prefix_map  -> roco/generated/handler_*, pak_ops,
-                                        type_chart, weather, counter, etc.
-    3. roco.data.build_db            -> _db/data.db + roco/generated/catalog_hot.py
+    1. roco.compiler_v2.gen_prefix_map  -> roco/generated/static, battle globals,
+                                        skill damage adapters, handlers, etc.
+    2. roco.data.build_db            -> _db/data.db + roco/generated/catalog_hot.py
                                         + catalog_debug.py   (catalog is written here)
-    4. roco.compiler.build_effect_families
-                                     -> roco/compiler/rules/effect_families.jsonl
+    3. roco.compiler_v2.build_effect_families
+                                     -> roco/compiler_v2/rules/effect_families.jsonl
                                         + _docs/effect_family_audit.md
-    5. roco.compiler.build_effect_families --check
-                                     -> stability self-check on step 4
-    6. roco.compiler.pak_schema_audit
+    4. roco.compiler_v2.build_effect_families --check
+                                     -> stability self-check on step 3
+    5. roco.compiler_v2.pak_schema_audit
                                      -> _docs/pak_schema_audit.md (schema mining)
-    7. roco.compiler.pak_schema_audit --check
-                                     -> stability self-check on step 6
+    6. roco.compiler_v2.pak_schema_audit --check
+                                     -> stability self-check on step 5
 
-Three optional flags layer on top:
+Two optional flags layer on top:
 
-    --skip-parse-pak   skip step 1 when only rules/codegen changed
     --with-tests       run pytest after the pipeline
     --check            after the pipeline (and pytest if requested),
                        run `git status --porcelain` over a fixed set of
@@ -47,15 +45,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Deliberately excluded:
 #   - ``_db/data.db``           tracked-but-locally-modified by convention;
 #                               a clean refresh always re-writes it.
-#   - ``roco/compiler/rules/``  contains hand-edited jsonl files
-#                               (exact_effects, prefix_handlers,
-#                               ability_flags_from_effects, buff_immunity,
-#                               effect_gap_acknowledgements) — only the
-#                               generated ``effect_families.jsonl`` is in scope.
+#   - ``roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl`` remains a
+#                               hand-reviewed audit acknowledgement source.
+#                               ``effect_families.jsonl`` is generated and
+#                               checked below.
 CHECK_PATHS: tuple[str, ...] = (
-    "_data/canonical",
     "roco/generated",
-    "roco/compiler/rules/effect_families.jsonl",
+    "roco/compiler_v2/rules/effect_families.jsonl",
     "_docs/effect_family_audit.md",
     "_docs/pak_schema_audit.md",
 )
@@ -101,19 +97,17 @@ def _check_artifacts_clean() -> int:
 def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps: list[tuple[str, list[str]]] = []
-    if not args.skip_parse_pak:
-        steps.append(("parse_pak", [py, "-m", "roco.data.parse_pak"]))
-    steps.append(("gen_prefix_map", [py, "-m", "roco.compiler.gen_prefix_map"]))
+    steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
     steps.append(("build_db", [py, "-m", "roco.data.build_db"]))
-    steps.append(("build_effect_families", [py, "-m", "roco.compiler.build_effect_families"]))
+    steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((
         "build_effect_families --check",
-        [py, "-m", "roco.compiler.build_effect_families", "--check"],
+        [py, "-m", "roco.compiler_v2.build_effect_families", "--check"],
     ))
-    steps.append(("pak_schema_audit", [py, "-m", "roco.compiler.pak_schema_audit"]))
+    steps.append(("pak_schema_audit", [py, "-m", "roco.compiler_v2.pak_schema_audit"]))
     steps.append((
         "pak_schema_audit --check",
-        [py, "-m", "roco.compiler.pak_schema_audit", "--check"],
+        [py, "-m", "roco.compiler_v2.pak_schema_audit", "--check"],
     ))
     return steps
 
@@ -133,11 +127,6 @@ def main(argv: list[str] | None = None) -> int:
         "--with-tests",
         action="store_true",
         help="after the pipeline, run pytest",
-    )
-    parser.add_argument(
-        "--skip-parse-pak",
-        action="store_true",
-        help="skip parse_pak (use when rules/codegen changed but pak is unchanged)",
     )
     args = parser.parse_args(argv)
 

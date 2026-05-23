@@ -4,9 +4,20 @@ from __future__ import annotations
 
 from roco.common.constants import BPS
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_ARG3
 
 
+@handles_buff([
+    ("BFT_INC_DAM_BY_ATTACK_FIRST", "PRIORITY"),
+    ("BFT_INC_DAM_BY_SKILL", "POWER_MOD"),
+    ("BFT_BLOOD_TO_ENERGY", "EARTH_HEART"),
+    ("BFT_NOT_GET_HIT", "MOMENTUM"),
+    ("BFT_INC_DAM_BY_TARGET_HP_THRES", "FIRE_RAGE"),
+    ("BFT_CHANGE_GAIN_ENERGY_EFFECIENCY", "OVERLOAD"),
+    ("BFT_O_SEVEN", "COND_POWER"),
+    ("BFT_O_EIGHT", "FLAT_POWER"),
+])
 def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:
         ctx.power_bps = (ctx.power_bps * row[ROW_ARG0]) // BPS

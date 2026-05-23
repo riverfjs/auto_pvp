@@ -1,8 +1,10 @@
 """Tests for the pak-axis family decoder module.
 
-The ``effect_order=31`` counter family is the first axis to land here
-(Phase 7B), replacing 76 hand-written ``H_INSTALL_COUNTER`` rules in
-``exact_effects.jsonl``.  These tests pin the migration contract:
+The family-axis decoder replaces hand-written exact effect rows when pak's
+``effect_order/type/param`` shape is enough to derive the runtime handler.
+The ``effect_order=31`` counter family was the first axis to land here,
+replacing 76 hand-written ``H_INSTALL_COUNTER`` rules in
+the historical exact-effect table.  These tests pin the migration contract:
 
 * The decoder fires for every ``effect_order=31`` record in pak —
   not just the 76 previously-covered ids.
@@ -10,27 +12,44 @@ The ``effect_order=31`` counter family is the first axis to land here
   (``handler=H_INSTALL_COUNTER``, ``p0=response_skill_id``, timing
   override = 11).
 * The pre-migration ack file does not regress: counter effect_ids that
-  were *not* in ``exact_effects.jsonl`` previously surfaced as gaps
+  were *not* in the historical exact-effect table previously surfaced as gaps
   (type=2 emitted spurious H_DAMAGE rows or type=3 went to gap) — the
   new decoder covers them silently.
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
-from roco.compiler.effect_codegen import family_axes
-from roco.compiler.effect_codegen.family_axes import (
+from roco.compiler_v2.effect_codegen import family_axes
+from roco.compiler_v2.effect_codegen.family_axes import (
     COUNTER_INSTALL_TIMING,
+    ET_BUFF_CONVERT,
+    ET_COPY_BUFF,
     ET_COUNTER,
+    ET_PURIFY,
     decode_family_axes,
 )
-from roco.compiler.effect_codegen.outcomes import EmitOutcome
-from roco.compiler.effect_codegen.pak import PakTables
-from roco.generated.handler_indices import H_INSTALL_COUNTER
+from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
+from roco.compiler_v2.effect_codegen.pak import PakTables
+from roco.generated.handler_indices import (
+    H_EXCHANGE_HP_RATIO,
+    H_EXCHANGE_MOVES,
+    H_DISPEL_DEBUFFS,
+    H_DISPEL_MARKS,
+    H_DISPEL_MARKS_TO_BURN,
+    H_HEAL_ENERGY,
+    H_HEAL_HP,
+    H_HIT_COUNT_DELTA,
+    H_INSTALL_COUNTER,
+    H_LIFE_DRAIN,
+    H_MIRROR_ENEMY_BUFFS,
+    H_PRIORITY_NEXT_DELTA,
+    H_SET_SELF_COOLDOWN,
+    H_TRANSFER_MODS,
+)
 
 
 PAK_DATA_DIR = Path(__file__).resolve().parents[1] / "pak-public-kit" / "output" / "data"
@@ -50,13 +69,71 @@ def test_decode_family_axes_returns_none_for_unknown_effect(pak):
 
 
 def test_decode_family_axes_returns_none_for_non_counter_effect(pak):
-    """An ``effect_order != 31`` row falls through (caller hits structural)."""
-    non_counter = next(
+    """An unknown axis row falls through (caller hits structural)."""
+    unhandled = next(
         eid
         for eid, rec in pak.effect_conf.items()
-        if int(rec.get("effect_order", 0)) != ET_COUNTER
+        if int(rec.get("effect_order", 0)) not in {
+            ET_PURIFY,
+            5,
+            11,
+            19,
+            ET_COUNTER,
+            32,
+            37,
+            ET_BUFF_CONVERT,
+            44,
+            47,
+            ET_COPY_BUFF,
+            51,
+        }
     )
-    assert decode_family_axes(non_counter, pak.effect_conf, pak.buff_conf) is None
+    assert decode_family_axes(unhandled, pak.effect_conf, pak.buff_conf) is None
+
+
+@pytest.mark.parametrize("effect_id, handler, p0", [
+    (1005030, H_HEAL_HP, 3000),
+    (1011005, H_LIFE_DRAIN, 5000),
+    (1019004, H_HEAL_ENERGY, 4),
+    (1032008, H_HIT_COUNT_DELTA, 8),
+    (1037001, H_SET_SELF_COOLDOWN, 3),
+    (1051001, H_PRIORITY_NEXT_DELTA, 1),
+])
+def test_decode_common_scalar_effect_families(pak, effect_id, handler, p0):
+    outcome = decode_family_axes(effect_id, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, EmitOutcome)
+    assert outcome.handler_idx == handler
+    assert outcome.p0 == p0
+    assert (outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 1)
+
+
+@pytest.mark.parametrize("effect_id, handler", [
+    (1044001, H_EXCHANGE_HP_RATIO),
+    (1044002, H_TRANSFER_MODS),
+    (1047002, H_EXCHANGE_MOVES),
+])
+def test_decode_mode_based_exchange_families(pak, effect_id, handler):
+    outcome = decode_family_axes(effect_id, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, EmitOutcome)
+    assert outcome.handler_idx == handler
+    assert (outcome.p0, outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 0, 1)
+
+
+@pytest.mark.parametrize("effect_id, handler, p0", [
+    (1004002, H_DISPEL_DEBUFFS, 0),
+    (1004065, H_DISPEL_DEBUFFS, 0),
+    (1042008, H_DISPEL_MARKS, 0),
+    (1042014, H_DISPEL_MARKS_TO_BURN, 5),
+    (1043008, H_DISPEL_MARKS_TO_BURN, 5),
+    (1050012, H_MIRROR_ENEMY_BUFFS, 0),
+])
+def test_decode_composite_effect_families_from_pak_shape(pak, effect_id, handler, p0):
+    """Former exact-effect rows now resolve from effect_order + param shape."""
+    outcome = decode_family_axes(effect_id, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, EmitOutcome)
+    assert outcome.handler_idx == handler
+    assert outcome.p0 == p0
+    assert (outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 1)
 
 
 def test_decode_counter_emits_install_counter_with_timing_11(pak):
@@ -91,7 +168,7 @@ def test_decode_counter_emits_install_counter_with_timing_11(pak):
 
 
 def test_family_axes_covers_every_previous_exact_counter_id(pak):
-    """The 76 ids that the historical ``exact_effects.jsonl`` covered
+    """The ids that the historical exact-effect table covered
     via ``H_INSTALL_COUNTER`` must still resolve to the same emit row
     via the new family decoder — byte-for-byte same handler + p0.
 
@@ -123,31 +200,13 @@ def test_family_axes_covers_every_previous_exact_counter_id(pak):
         assert timing == 11
 
 
-# ── invariant: no H_INSTALL_COUNTER in exact_effects.jsonl ─────────
+# ── invariant: no H_INSTALL_COUNTER exact semantic row ─────────────
 
 
-def test_exact_effects_jsonl_no_install_counter():
-    """Post-migration: ``exact_effects.jsonl`` must not contain any
-    ``H_INSTALL_COUNTER`` row.  Anything in pak's counter family routes
-    through :func:`decode_family_axes`; re-adding a hand-written rule
-    would double-emit (or shadow) and is a bug.
-    """
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "roco" / "compiler" / "rules" / "exact_effects.jsonl"
-    )
-    with path.open("r", encoding="utf-8") as fp:
-        for line_no, raw in enumerate(fp, 1):
-            raw = raw.strip()
-            if not raw or raw.startswith("#"):
-                continue
-            rec = json.loads(raw)
-            assert rec.get("handler") != "H_INSTALL_COUNTER", (
-                f"exact_effects.jsonl line {line_no}: H_INSTALL_COUNTER "
-                f"row {rec.get('effect_id')} found — counter family is "
-                f"now decoded by family_axes; remove the row or extend "
-                f"the family decoder."
-            )
+def test_no_exact_effect_semantics_table():
+    """Post-migration: runtime effect rows must not use an exact id table."""
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "semantics.py"
+    assert not path.exists()
 
 
 # ── orchestrator integration ───────────────────────────────────────
@@ -161,7 +220,7 @@ def test_generate_effect_rows_emits_install_counter_for_o31(pak):
     Locks the timing_override behaviour preserved from the historical
     exact rules: cast_moment 6/7/12 still install at 11.
     """
-    from roco.compiler.effect_codegen import generate_effect_rows
+    from roco.compiler_v2.effect_codegen import generate_effect_rows
 
     # Pick an effect_order=31 id with a known response skill_id.
     eid = next(

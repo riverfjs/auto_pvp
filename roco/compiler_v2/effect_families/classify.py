@@ -1,0 +1,138 @@
+"""Coverage bucketing + family-key derivation.
+
+Routes a single pak ``source_id`` through the decoder stack and reports
+which coverage bucket it falls in, derives the per-family
+``coverage_status`` label from the bucket histogram, and maps a
+direct-BUFF_CONF reference to its family_key (reusing the gap-primitive's
+``base_ids[0] // 1000`` rule, not ``buff_id // 1000``).
+"""
+
+from __future__ import annotations
+
+from roco.compiler_v2.effect_codegen.classify import decode_buff_direct, decode_effect
+from roco.compiler_v2.effect_codegen.exact_decoders import decode_exact
+from roco.compiler_v2.effect_codegen.family_axes import decode_family_axes
+from roco.compiler_v2.effect_codegen.outcomes import (
+    AbilityFlagOutcome,
+    EmitOutcome,
+    GapOutcome,
+    IgnoredOutcome,
+)
+from roco.compiler_v2.effect_codegen.pak import PakTables
+
+
+COVERAGE_STATUSES = frozenset({
+    "auto_structural",
+    "exact_semantic",
+    "exact_semantic_partial",
+    "generated_weather",
+    "ignored",
+    "gap",
+    "ability_flag",
+    "ability_flag_partial",
+    "mixed",
+})
+
+
+def _classify_one_source_id(
+    sid: int,
+    *,
+    pak: PakTables,
+    weather_ids: set[int],
+    exact_emit_ids: set[int],
+    exact_ignored_ids: set[int],
+    ability_flag_ids: frozenset[int],
+) -> str:
+    """Run the actual decoder path and report which bucket ``sid`` falls in.
+
+    Order matters: weather / ignored / exact semantics / ability_flag win
+    before structural decode.  ``ability_flag_ids`` is consulted *before*
+    :func:`decode_effect` so the bucket is stable regardless of the
+    decode call's consumer-context (decode_effect's AbilityFlagOutcome
+    branch only fires when the rules file is present, which is also true
+    here, but the explicit check makes the family-audit semantics
+    deterministic).
+    """
+    if sid in weather_ids:
+        return "generated_weather"
+    if sid in exact_ignored_ids:
+        return "ignored"
+    if sid in exact_emit_ids:
+        return "exact_semantic"
+    if sid in ability_flag_ids:
+        return "ability_flag"
+    # Defensive: decode_exact may still return something (e.g. compound),
+    # though the two id sets above are derived from the same JSONL.
+    override = decode_exact(sid)
+    if override is not None:
+        if isinstance(override, IgnoredOutcome):
+            return "ignored"
+        return "exact_semantic"
+    if sid in pak.effect_conf:
+        # Pak-axis family decoders (effect_order family etc.) — pak-native
+        # so they win over the type-based structural fallback.  Bucket the
+        # result as ``auto_structural`` since the source is pak's own
+        # schema rather than a hand-curated rule.
+        family = decode_family_axes(sid, pak.effect_conf, pak.buff_conf)
+        if family is not None:
+            return "auto_structural"
+        outcomes = decode_effect(sid, pak.effect_conf, pak.buff_conf)
+    elif sid in pak.buff_conf:
+        outcomes = decode_buff_direct(sid, pak.buff_conf)
+    else:
+        return "gap"
+    # The earlier ``sid in ability_flag_ids`` short-circuit catches this in
+    # the normal path; this fallback guards against any future case where
+    # decode_effect emits the outcome but our ``ability_flag_ids`` set
+    # diverges from the loader's table (build-time misconfiguration).
+    if any(isinstance(o, AbilityFlagOutcome) for o in outcomes):
+        return "ability_flag"
+    has_emit = any(isinstance(o, EmitOutcome) for o in outcomes)
+    has_gap = any(isinstance(o, GapOutcome) for o in outcomes)
+    if has_emit and not has_gap:
+        return "auto_structural"
+    return "gap"
+
+
+def _derive_coverage_status(breakdown: dict[str, int]) -> str:
+    nonzero = {k: v for k, v in breakdown.items() if v > 0}
+    if not nonzero:
+        return "gap"
+    if len(nonzero) == 1:
+        only = next(iter(nonzero))
+        return {
+            "auto_structural_count": "auto_structural",
+            "exact_semantic_count": "exact_semantic",
+            "generated_weather_count": "generated_weather",
+            "ignored_count": "ignored",
+            "gap_count": "gap",
+            "ability_flag_count": "ability_flag",
+        }[only]
+    if set(nonzero) == {"exact_semantic_count", "gap_count"}:
+        return "exact_semantic_partial"
+    if set(nonzero) == {"ability_flag_count", "gap_count"}:
+        return "ability_flag_partial"
+    if "ability_flag_count" in nonzero and "exact_semantic_count" in nonzero:
+        # Belt-and-suspenders against the cross-check that already runs in
+        # build_families(): a family that's both runtime-row and
+        # ability-flag has incompatible semantics.  Surface as "mixed" so
+        # the audit explicitly flags it even if the cross-check were
+        # somehow disabled.
+        return "mixed"
+    return "mixed"
+
+
+def _buff_family_key(buff_id: int, buff_conf: dict[int, dict]) -> tuple[str, int | None]:
+    """Map a direct BUFF_CONF id to (family_key, base_id_prefix).
+
+    Reuses the gap-primitive logic from :func:`classify._buff_gap`: first
+    non-zero ``buff_base_id`` divided by 1000 — *not* ``buff_id // 1000``.
+    """
+    rec = buff_conf.get(buff_id)
+    if rec is None:
+        return f"buff_conf_direct:buff_{buff_id}", None
+    base_ids = [int(b) for b in (rec.get("buff_base_ids") or []) if b]
+    if not base_ids:
+        return "buff_conf_direct:buff_no_base_ids", None
+    prefix = base_ids[0] // 1000
+    return f"buff_conf_direct:prefix_{prefix}", prefix

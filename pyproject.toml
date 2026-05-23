@@ -18,9 +18,8 @@ packages = ["roco"]
 [project.scripts]
 roco-mc = "roco.sim.monte_carlo:main"
 roco-fetch-teams = "roco.data.fetch_teams:main"
-roco-parse-pak = "roco.data.parse_pak:main"
-roco-compile-kernel = "roco.compiler.artifact:main"
 roco-refresh-artifacts = "roco.data.refresh_artifacts:main"
+roco-compile-static = "roco.compiler_v2.gen_prefix_map:main"
 
 [dependency-groups]
 dev = [

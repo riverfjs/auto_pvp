@@ -5,7 +5,7 @@ import pytest
 from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
-from roco.compiler.scalar_damage import calc_attack_damage
+from roco.compiler_v2.scalar_damage import calc_attack_damage
 from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
@@ -24,7 +24,7 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.compiler.effect_codegen import H_DAMAGE
+from roco.compiler_v2.effect_codegen import H_DAMAGE
 from roco.engine.kernel.op_rows import TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
@@ -567,8 +567,8 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "sqlite3",
         "catalog_debug",
         "roco.data",
-        "roco.compiler.artifact",
-        "roco.compiler.classifiers",
+        "roco.compiler_v2.artifact",
+        "roco.compiler_v2.classifiers",
         "params.get",
         "record_event",
         "BattleEvent",

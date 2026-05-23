@@ -1,14 +1,14 @@
-"""Parse raw SMW team JSONL into canonical team JSONL.
+"""Parse raw SMW team JSONL into canonical team records.
 
-Output: _data/canonical/teams.jsonl
-
-Usage:
-    python scripts/parse_teams.py
+The build pipeline consumes these records in memory.  The CLI is an explicit
+debug export helper and does not participate in the normal artifact refresh.
 """
 
 import argparse
 import re
-from roco.data.utils import CANONICAL_DIR, RAW_DIR, iter_jsonl, with_canonical_hash, write_jsonl
+from pathlib import Path
+
+from roco.data.utils import RAW_DIR, iter_jsonl, with_canonical_hash, write_jsonl
 
 # Mapping: SMW printout key → English field name (used as flat key in raw data)
 SMW_TO_EN = {
@@ -79,61 +79,32 @@ def _parse_csv(val: str) -> list[str]:
     return [v.strip() for v in val.split(",") if v.strip()] if val else []
 
 
-def _canonical_key(row: dict) -> str:
-    return str(row.get("source_page_id") or row.get("id") or row.get("source_title", ""))
-
-
-def _existing_canonical(path) -> dict[str, dict]:
+def build_teams_from_raw(raw_path=None) -> list[dict]:
+    path = raw_path or (RAW_DIR / "teams_raw.jsonl")
     if not path.exists():
-        return {}
-    return {_canonical_key(row): row for row in iter_jsonl(path)}
-
-
-def _keep_existing(existing: dict[str, dict], row: dict, *, force: bool) -> dict | None:
-    previous = existing.get(str(row.get("page_id", "")))
-    if (
-        previous is not None
-        and not force
-        and previous.get("canonical_hash")
-        and previous.get("source_hash")
-        and previous.get("source_hash") == row.get("source_hash")
-        and previous.get("missing_from_index") == row.get("missing_from_index")
-    ):
-        return previous
-    return None
+        return []
+    teams: list[dict] = []
+    for raw_team in iter_jsonl(path):
+        team = parse_one(raw_team)
+        if team is not None:
+            teams.append(with_canonical_hash(team, raw_team))
+    return teams
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--raw-path", type=Path, default=RAW_DIR / "teams_raw.jsonl")
+    parser.add_argument("--out", type=Path, required=True, help="Debug JSONL export path.")
     args = parser.parse_args()
 
-    raw_path = RAW_DIR / "teams_raw.jsonl"
+    raw_path = args.raw_path
     if not raw_path.exists():
         print(f"Missing {raw_path}. Run fetch_teams.py first.")
         return
 
-    out_path = CANONICAL_DIR / "teams.jsonl"
-    existing = _existing_canonical(out_path)
-    teams: list[dict] = []
-    errors: list[str] = []
-
-    for raw_team in iter_jsonl(raw_path):
-        kept = _keep_existing(existing, raw_team, force=args.force)
-        if kept is not None:
-            teams.append(kept)
-            continue
-        page_id = str(raw_team.get("page_id", ""))
-        team = parse_one(raw_team)
-        if team is None:
-            errors.append(page_id)
-        else:
-            teams.append(with_canonical_hash(team, raw_team))
-
-    count = write_jsonl(teams, out_path)
-    print(f"Parsed {count} teams -> {out_path}")
-    if errors:
-        print(f"Skipped ({len(errors)}): {', '.join(errors[:5])}")
+    teams = build_teams_from_raw(raw_path)
+    count = write_jsonl(teams, args.out)
+    print(f"Parsed {count} teams -> {args.out}")
 
 
 if __name__ == "__main__":

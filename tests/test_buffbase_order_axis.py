@@ -1,18 +1,16 @@
 """Tests for the BUFFBASE_CONF.buffbase_order axis of buff handler dispatch.
 
 The buffbase_order axis is the pak-native primary lookup for direct
-BUFF_CONF references (introduced in Phase 7C, replacing 88 of 91
-``prefix_handlers.jsonl`` entries).  These tests gate the migration
-boundary:
+BUFF_CONF references.  The current compiler does not read JSONL seeds or
+Python order tables; it collects engine-owned ``op_meta`` declarations
+that reference stable ``Enum.BuffType`` symbols and resolves those
+symbols through generated Lua data.
 
-* Every row in ``rules/buffbase_order_handlers.jsonl`` resolves to a
-  known kernel handler and a unique ``buffbase_order``.
 * The codegen join with BUFFBASE_CONF produces a base_id → handler map
   that the runtime classifier picks up before the legacy prefix path.
-* The 3 mixed prefixes left in ``prefix_handlers.jsonl`` are not
+* The 3 mixed prefixes left on the engine prefix axis are not
   silently shadowed by an over-broad buffbase_order rule.
-* No clean (100%-concentrated) prefix remains in
-  ``prefix_handlers.jsonl`` — those are migration debt.
+* No compiler-owned ``buffbase_order -> handler`` table comes back.
 """
 
 from __future__ import annotations
@@ -22,19 +20,14 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.codegen import buffbase_orders
-from roco.compiler.codegen.buffbase_orders import (
-    BUFFBASE_ORDER_SEED_PATH,
-    _load_seed,
-    build_base_id_via_order_map,
-    seed_orders,
-)
-from roco.compiler.effect_codegen import classify as cls
+from roco.compiler_v2.effect_codegen import classify as cls
+from roco.compiler_v2.effect_codegen.pak import PakTables
+from roco.compiler_v2.build import build_static_bundle
+from roco.compiler_v2.handler_axes import collect_handler_axes, resolve_handler_axes
 from roco.generated import handler_indices as hi
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PREFIX_HANDLERS_PATH = REPO_ROOT / "roco" / "compiler" / "rules" / "prefix_handlers.jsonl"
 PREFIX_MAP_PATH = REPO_ROOT / "roco" / "generated" / "prefix_handler_map.json"
 BUFFBASE_CONF_PATH = (
     REPO_ROOT / "pak-public-kit" / "output" / "data" / "BinData" / "BUFFBASE_CONF.json"
@@ -48,67 +41,67 @@ def handler_indices() -> dict[str, int]:
 
 
 @pytest.fixture(scope="module")
+def resolved_axes(handler_indices):
+    return resolve_handler_axes(handler_indices, build_static_bundle().lua_enums)
+
+
+@pytest.fixture(scope="module")
 def buffbase_conf() -> dict[int, dict]:
     raw = json.loads(BUFFBASE_CONF_PATH.read_text(encoding="utf-8"))
     rows = raw.get("RocoDataRows", raw)
     return {int(k): v for k, v in rows.items()}
 
 
-# ── seed loader ───────────────────────────────────────────────────────────
+# ── handler-owned axis metadata ──────────────────────────────────────────
 
 
-def test_seed_loads_88_entries(handler_indices):
-    """Locks the migration's headline scope — 88 prefixes flipped axis."""
-    seed = _load_seed(handler_indices)
-    assert len(seed) == 88
+def test_engine_buff_type_axis_loads_82_entries(resolved_axes):
+    """Locks the current engine coverage scope without a compiler seed table."""
+    assert len(resolved_axes.buffbase_order) == 82
 
 
-def test_seed_orders_disjoint_from_mixed_prefixes(handler_indices):
+def test_engine_orders_disjoint_from_mixed_prefixes(resolved_axes):
     """The 3 mixed prefixes' dominant orders are NOT in the
-    buffbase_order seed; that's the whole reason they stayed at the
-    legacy prefix layer."""
-    seed = seed_orders(handler_indices)
+    buffbase_order axis; that's the whole reason they stay on the
+    prefix layer."""
+    seed = set(resolved_axes.buffbase_order)
     # prefix 2011 dominant order = 11; 2046 = 46; 2050 = 50.
     assert 11 not in seed
     assert 46 not in seed
     assert 50 not in seed
 
 
-def test_seed_handlers_all_resolve(handler_indices):
-    """Every handler name in the seed exists in ``handler_indices.py``."""
-    seed = _load_seed(handler_indices)
+def test_engine_axis_handlers_all_resolve(handler_indices, resolved_axes):
+    """Every handler declared on the engine axis exists in ``handler_indices.py``."""
     valid = set(handler_indices.values())
-    for order, handler_idx in seed.items():
+    for order, handler_idx in resolved_axes.buffbase_order.items():
         assert handler_idx in valid, (
             f"buffbase_order={order} resolves to handler_idx={handler_idx} "
             "which is not in handler_indices"
         )
 
 
-def test_seed_path_exists():
-    assert BUFFBASE_ORDER_SEED_PATH.exists(), (
-        "rules/buffbase_order_handlers.jsonl missing — required for the "
-        "7C dispatch axis"
-    )
+def test_compiler_v2_has_no_buffbase_order_table():
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "semantics.py"
+    assert not path.exists()
 
 
 # ── codegen join ──────────────────────────────────────────────────────────
 
 
-def test_build_base_id_via_order_map_size(handler_indices, buffbase_conf):
+def test_generated_base_id_via_order_map_size(resolved_axes, buffbase_conf):
     """Every BUFFBASE_CONF record whose ``buffbase_order`` is in the
     seed must appear in the resolved map.  Locks the join correctness:
     if the codegen ever drops base_ids silently, this test screams.
     """
-    seed = _load_seed(handler_indices)
     expected_count = sum(
         1
         for rec in buffbase_conf.values()
         if rec.get("buffbase_order") is not None
-        and int(rec["buffbase_order"]) in seed
+        and int(rec["buffbase_order"]) in resolved_axes.buffbase_order
     )
-    actual = build_base_id_via_order_map(handler_indices)
-    assert len(actual) == expected_count
+    data = json.loads(PREFIX_MAP_PATH.read_text(encoding="utf-8"))
+    assert len(data["base_id_via_order_map"]) == expected_count
 
 
 def test_generated_prefix_map_carries_via_order_block():
@@ -120,33 +113,26 @@ def test_generated_prefix_map_carries_via_order_block():
     assert len(data["base_id_via_order_map"]) > 0
 
 
-# ── prefix_handlers.jsonl post-7C invariants ─────────────────────────────
+# ── mixed-prefix axis invariants ─────────────────────────────────────────
 
 
-def test_prefix_handlers_jsonl_shrunk_to_mixed_only():
-    """After 7C, only the 3 mixed prefixes + the 8 hand-curated base_id
-    overrides remain.  Re-adding a clean prefix rule should fail this
-    test and force the contributor to put it in
-    ``buffbase_order_handlers.jsonl`` instead."""
-    prefixes_seen: set[int] = set()
-    base_ids_seen: set[int] = set()
-    with PREFIX_HANDLERS_PATH.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            raw = raw.strip()
-            if not raw or raw.startswith("#"):
-                continue
-            rec = json.loads(raw)
-            if "prefix" in rec:
-                prefixes_seen.add(int(rec["prefix"]))
-            elif "base_id" in rec:
-                base_ids_seen.add(int(rec["base_id"]))
-    assert prefixes_seen == {2011, 2046, 2050}, (
-        f"prefix_handlers.jsonl prefixes = {sorted(prefixes_seen)} (expected "
+def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
+    """Only the 3 mixed prefixes + pak-name base anchors remain outside
+    the buffbase_order axis.  Exact anchors are resolved by pak
+    editor_name so engine code does not own numeric ids."""
+    assert set(resolved_axes.prefix) == {2011, 2046, 2050}, (
+        f"engine prefix axis = {sorted(resolved_axes.prefix)} (expected "
         f"only the 3 mixed: 2011, 2046, 2050)"
     )
-    # base_id overrides are independent — assert count to catch
-    # accidental loss but allow legitimate growth.
-    assert len(base_ids_seen) >= 8
+    assert len(resolved_axes.base_id) == 6
+    raw_axes = collect_handler_axes()
+    assert set(raw_axes["prefix_type"]) == {
+        "BFT_DAMNUM_CHANGE",
+        "BFT_KILL_BUFF",
+        "BFT_ENTER_BATTLE",
+    }
+    assert "base_id" not in raw_axes
+    assert len(raw_axes["base_name"]) == 6
 
 
 # ── runtime classifier integration ────────────────────────────────────────
@@ -170,6 +156,20 @@ def test_runtime_classifier_routes_clean_prefix_via_via_order(buffbase_conf):
     # And the resolution path must be via_order_map, not prefix_map.
     assert target_bid in cls.BASE_ID_VIA_ORDER_MAP
     assert 2001 not in cls.PREFIX_HANDLER_MAP
+
+
+def test_runtime_classifier_routes_named_mark_buff_before_shared_base_id():
+    """Canonical mark BUFF_CONF rows win before generic base-id dispatch.
+
+    Poison mark shares base_id 2007001 with poison status, and moisture mark
+    shares 2032007 with normal skill-cost reduction.  The generated
+    BUFF_CONF.id map must keep those semantic identities separate.
+    """
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    assert cls.classify_buff_handler(20070011, pak.buff_conf) == hi.H_POISON_MARK
+    assert cls.classify_buff_handler(20320070, pak.buff_conf) == hi.H_MOISTURE_MARK
+    assert cls.classify_buff_handler(20320220, pak.buff_conf) == hi.H_PASSIVE_ENERGY_REDUCE
+    assert 2032007 not in cls.BASE_ID_HANDLER_MAP
 
 
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):

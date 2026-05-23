@@ -1,8 +1,8 @@
 """Validation + drift tests for the Phase 2A immunity framework spike.
 
-All reject tests use ``tmp_path`` + stub buff_conf so the real
-``rules/buff_immunity.jsonl`` is never modified.  The accept + drift
-tests read the real artifacts to catch real-world regressions.
+All reject tests use ``tmp_path`` + stub buff_conf fixture records.  The
+accept + drift tests read the real generated artifacts to catch
+real-world regressions.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler.codegen import buff_immunity_codegen as bic
-from roco.compiler.effect_codegen import buff_immunity_decoders as bid
+from roco.compiler_v2 import buff_immunity_decoders as bid
 from roco.generated import buff_immunity_table as generated
 
 
@@ -50,13 +49,13 @@ def test_immunity_specs_consistent():
         assert spec.keyword, f"empty keyword for {spec.tag}"
 
 
-# ── accept (real rules + real pak) ─────────────────────────────────────────
+# ── accept (real pak derivation) ───────────────────────────────────────────
 
 
 def test_loader_accepts_valid_rules():
-    """Real ``rules/buff_immunity.jsonl`` loads and matches the generated table.
+    """Real pak BUFF_CONF derivation matches the generated table.
 
-    This is the live happy path: rules + pak + generated stay in sync.
+    This is the live happy path: pak + generated stay in sync.
     """
     loaded = bid.load_buff_immunity_table()
     assert loaded == generated.BUFF_IMMUNITY_TABLE
@@ -182,18 +181,11 @@ def test_loader_rejects_empty_immunities_list(tmp_path):
 
 
 def test_generated_table_matches_loader(tmp_path):
-    """Re-render the generated module in memory and compare byte-for-byte.
-
-    If this fails, ``uv run python -m roco.compiler.gen_prefix_map`` was
-    not re-run after editing ``rules/buff_immunity.jsonl`` or
-    ``IMMUNITY_SPECS``.
-    """
+    """Generated table values must match the Python semantic loader."""
     fresh_table = bid.load_buff_immunity_table()
-    fresh_text = bic.render(fresh_table)
-    on_disk = bic.DEFAULT_OUTPUT_PATH.read_text(encoding="utf-8")
-    assert on_disk == fresh_text, (
+    assert generated.BUFF_IMMUNITY_TABLE == fresh_table, (
         "roco/generated/buff_immunity_table.py is out of date; "
-        "re-run `uv run python -m roco.compiler.gen_prefix_map`"
+        "re-run `uv run python -m roco.compiler_v2.gen_prefix_map`"
     )
 
 

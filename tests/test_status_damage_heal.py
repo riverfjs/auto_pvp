@@ -2,7 +2,7 @@
 
 仁心 (ability 200152) heals on enemy BURN damage; 耐活王 (ability 200240)
 heals on enemy POISON damage.  These are the four ack rows that
-``ability_flags_from_effects.jsonl`` covers; the runtime path through
+pak-derived ability flag semantics cover; the runtime path through
 ``tick_status`` already consumes ``HEAL_ON_BURN_DAMAGE`` /
 ``HEAL_ON_POISON_DAMAGE`` bits in
 ``roco/engine/kernel/residual/status_ticks.py``.

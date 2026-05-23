@@ -1,7 +1,7 @@
 """Unit tests for damage.py — stat computation & damage formulas."""
 
 import pytest
-from roco.compiler.scalar_damage import (
+from roco.compiler_v2.scalar_damage import (
     compute_stats,
     apply_iv_mod,
     apply_nature_mod,
@@ -17,7 +17,7 @@ from roco.compiler.scalar_damage import (
     clamp_stage,
     apply_buff_stages,
 )
-from roco.common.natures import NATURE_MOD
+from roco.common.natures import NATURE_MOD, NATURE_NAME_TO_ID, PLAYER_NATURE_IDS
 
 
 # ── Stat computation ───────────────────────────────────────────
@@ -55,10 +55,16 @@ def test_compute_stats_floor_rounding():
     assert stats["atk_phys"] == 86   # 79 * 1.1 = 86.9 → 86
 
 
-def test_compute_stats_neutral_nature():
-    stats = compute_stats(100, 80, 70, 90, 85, 60, nature="害羞")
+def test_compute_stats_unknown_nature():
+    stats = compute_stats(100, 80, 70, 90, 85, 60, nature="不存在")
     assert stats["atk_phys"] == 80
     assert stats["atk_mag"] == 70
+
+
+def test_compute_stats_pak_hp_nature():
+    stats = compute_stats(100, 80, 70, 90, 85, 60, nature="沉默")
+    assert stats["hp"] == 110
+    assert stats["atk_phys"] == 72
 
 
 def test_apply_iv_mod_hp_ignored():
@@ -73,13 +79,12 @@ def test_apply_iv_mod_hp_ignored():
 # ── Nature mapping integrity ───────────────────────────────────
 
 def test_all_natures_in_config():
-    """Verify every known nature exists in NATURE_MOD."""
-    known = ["固执", "开朗", "胆小", "保守", "沉默", "淘气", "稳重", "急躁",
-             "勇敢", "大胆", "悠闲", "慎重", "马虎", "天真", "冷静", "狂妄",
-             "沉着", "调皮", "孤僻", "温和", "温顺", "浮躁", "害羞", "认真",
-             "平和", "实干"]
-    for n in known:
-        assert n in NATURE_MOD, f"Missing nature: {n}"
+    """Verify pak player natures are generated, not the old hand table."""
+    assert len(PLAYER_NATURE_IDS) == 30
+    assert len(NATURE_MOD) == 30
+    assert NATURE_NAME_TO_ID["固执"] == 2
+    assert NATURE_MOD["逞强"] == ("atk_phys", "hp")
+    assert "保守" not in NATURE_MOD
 
 
 def test_nature_pairs_are_distinct():

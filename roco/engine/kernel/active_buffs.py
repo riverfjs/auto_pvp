@@ -15,11 +15,10 @@ The packed-int / fixed-lane shape mirrors ``PetState.cooldowns`` and
 contract still hold.  All bit-shift logic lives here; callers must
 never hand-edit lanes.
 
-Phase 5A ships only this data layer plus a turn-end ``tick`` that
-decrements each non-zero ``duration`` once per round.  Lane semantics
-beyond ``duration`` countdown (dispel kinds, refresh-on-reapply,
-immunity derivation) are explicitly out of scope; see
-``_docs/phase5_active_buff_lifecycle.md`` for the architectural notes.
+The current implementation ships this data layer plus a turn-end ``tick``
+that decrements each non-zero ``duration`` once per round.  Lane semantics
+beyond ``duration`` countdown (dispel kinds, refresh-on-reapply, immunity
+derivation) stay explicit kernel work, not generated pak static data.
 """
 
 from __future__ import annotations
@@ -264,7 +263,7 @@ def effective_immunity_flags(packed: int) -> int:
     """OR every non-empty lane's immunity contribution into a single flag word.
 
     The lookup table comes from :mod:`roco.generated.buff_immunity_table`,
-    which is itself driven by ``rules/buff_immunity.jsonl`` (Phase 2A).
+    which is derived from pak ``BUFF_CONF.desc`` immunity phrases.
     A ``buff_id`` absent from the table contributes nothing — silent zero
     is correct here because not every active buff is an immunity carrier.
 

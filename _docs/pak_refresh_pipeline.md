@@ -7,19 +7,18 @@ One driver — `roco-refresh-artifacts` (equivalently `python -m roco.data.refre
 | Trigger                                                            | Command                                                |
 |--------------------------------------------------------------------|--------------------------------------------------------|
 | `pak-public-kit/` updated (new pak dump)                           | `uv run roco-refresh-artifacts`                        |
-| Edited a rules JSONL or changed codegen logic; pak data unchanged  | `uv run roco-refresh-artifacts --skip-parse-pak`       |
+| Changed compiler_v2/effect compiler logic                          | `uv run roco-refresh-artifacts`                        |
 | CI / pre-commit cleanliness probe on a clean tree                  | `uv run roco-refresh-artifacts --check`                |
 | Same plus functional check                                         | `uv run roco-refresh-artifacts --check --with-tests`   |
 
 ## The steps (canonical order)
 
-1. **`roco.data.parse_pak`** — reads `pak-public-kit/output/data/BinData/*.json`, writes `_data/canonical/{skills,abilities,pets,marks}.jsonl`.
-2. **`roco.compiler.gen_prefix_map`** — writes handler / prefix / type-chart / weather / counter / buff-immunity tables under `roco/generated/`.
-3. **`roco.data.build_db`** — rebuilds `_db/data.db` from the canonical jsonl, then writes `roco/generated/catalog_hot.py` and `roco/generated/catalog_debug.py`. **The kernel catalog is written by `build_db`, not by `gen_prefix_map`** — common gotcha.
-4. **`roco.compiler.build_effect_families`** — writes `roco/compiler/rules/effect_families.jsonl` and `_docs/effect_family_audit.md`.
-5. **`roco.compiler.build_effect_families --check`** — stability self-check on step 4's output. Always runs; not toggled by the driver's `--check`.
-6. **`roco.compiler.pak_schema_audit`** — writes `_docs/pak_schema_audit.md`: read-only inventory of pak's structural axes (`EFFECT_CONF.effect_order`, `BUFFBASE_CONF.buffbase_order`) and a debt assessment of hand-written rules against those axes. Does not drive runtime behavior.
-7. **`roco.compiler.pak_schema_audit --check`** — stability self-check on step 6's output. Always runs; not toggled by the driver's `--check`.
+1. **`roco.compiler_v2.gen_prefix_map`** — writes pak/Lua static files, handler / prefix / type-chart / weather / counter / buff-immunity tables under `roco/generated/`.
+2. **`roco.data.build_db`** — rebuilds `_db/data.db` directly from pak-derived in-memory records, then writes `roco/generated/catalog_hot.py` and `roco/generated/catalog_debug.py`. **The kernel catalog is written by `build_db`, not by `gen_prefix_map`** — common gotcha.
+3. **`roco.compiler_v2.build_effect_families`** — writes `roco/compiler_v2/rules/effect_families.jsonl` and `_docs/effect_family_audit.md`.
+4. **`roco.compiler_v2.build_effect_families --check`** — stability self-check on step 3's output. Always runs; not toggled by the driver's `--check`.
+5. **`roco.compiler_v2.pak_schema_audit`** — writes `_docs/pak_schema_audit.md`: read-only inventory of pak's structural axes (`EFFECT_CONF.effect_order`, `BUFFBASE_CONF.buffbase_order`) and a debt assessment of hand-written rules against those axes. Does not drive runtime behavior.
+6. **`roco.compiler_v2.pak_schema_audit --check`** — stability self-check on step 5's output. Always runs; not toggled by the driver's `--check`.
 
 Steps are subprocess-isolated. The driver exits with the first step's non-zero return code; subsequent steps are skipped.
 
@@ -45,12 +44,12 @@ For an actual data change:
 
 ```bash
 uv run roco-refresh-artifacts                           # let it write new artifacts
-git status -- _data/canonical roco/generated \
-              roco/compiler/rules/effect_families.jsonl \
+git status -- roco/generated \
+              roco/compiler_v2/rules/effect_families.jsonl \
               _docs/effect_family_audit.md \
               _docs/pak_schema_audit.md                # see what moved
-git diff -- _data/canonical roco/generated \
-            roco/compiler/rules/effect_families.jsonl \
+git diff -- roco/generated \
+            roco/compiler_v2/rules/effect_families.jsonl \
             _docs/effect_family_audit.md \
             _docs/pak_schema_audit.md                  # eyeball the diff
 # inspect, decide, then stage and commit by hand
@@ -64,17 +63,16 @@ The paths the `--check` probe watches:
 
 | Path                                              | Written by step | Notes                                                                          |
 |---------------------------------------------------|-----------------|--------------------------------------------------------------------------------|
-| `_data/canonical/`                                | 1 (`parse_pak`) | `skills.jsonl`, `abilities.jsonl`, `pets.jsonl`, `marks.jsonl`. Moves whenever pak does. |
-| `roco/generated/`                                 | 2 + 3           | Step 2 writes handler/prefix/type-chart/weather/counter tables; step 3 (`build_db`) overwrites `catalog_hot.py` and `catalog_debug.py`. |
-| `roco/compiler/rules/effect_families.jsonl`       | 4               | Only this one file under `roco/compiler/rules/` is generated; everything else under that dir is hand-edited and **not** in the check scope. |
-| `_docs/effect_family_audit.md`                    | 4               | Human-readable family audit; regenerates whenever families.jsonl does.         |
-| `_docs/pak_schema_audit.md`                       | 6               | Schema mining report — `(type, effect_order)` and `buffbase_order` axes + hand-written-rule debt. Read-only; informs future family-decoder work but does not drive runtime. |
+| `roco/generated/`                                 | 1 + 2           | Step 1 writes static pak/Lua adapters and handler/prefix/type-chart/weather/counter tables; step 2 (`build_db`) overwrites `catalog_hot.py` and `catalog_debug.py`. |
+| `roco/compiler_v2/rules/effect_families.jsonl`       | 3               | Generated audit catalog. Remaining rule files are migration/audit inputs, not handler dispatch sources. |
+| `_docs/effect_family_audit.md`                    | 3               | Human-readable family audit; regenerates whenever families.jsonl does.         |
+| `_docs/pak_schema_audit.md`                       | 5               | Schema mining report — `(type, effect_order)` and `buffbase_order` axes + hand-written-rule debt. Read-only; informs future family-decoder work but does not drive runtime. |
 
 Outside the check scope:
 
 - `_db/data.db` — written by step 3. Tracked by git, but by convention developers do not commit the modifications between releases. A clean refresh always re-writes the bytes, so including it in the check would mean `--check` could never return 0 after a real run. Excluded.
 - `_audit/` — local-only, untracked.
-- `roco/compiler/rules/exact_effects.jsonl`, `prefix_handlers.jsonl`, `ability_flags_from_effects.jsonl`, `buff_immunity.jsonl`, `effect_gap_acknowledgements.jsonl` — hand-edited rule tables. They drive the codegen output but are never written by the pipeline itself.
+- `roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl` — remaining hand-edited migration/audit input. Handler dispatch, ability flags, and buff immunity are generated from pak/Lua facts plus engine `op_meta` declarations, not `exact_effects.jsonl`, `prefix_handlers.jsonl`, `buffbase_order_handlers.jsonl`, `ability_flags_from_effects.jsonl`, or `buff_immunity.jsonl`.
 
 ## What must not diff
 
@@ -82,9 +80,9 @@ A pipeline run (with no source changes) must leave all of these untouched:
 
 - `roco/engine/kernel/**`
 - `roco/common/**`
-- `roco/compiler/rules/*.jsonl` **except** `effect_families.jsonl`
+- `roco/compiler_v2/rules/*.jsonl` **except** `effect_families.jsonl`
 - `tests/**`
-- `pyproject.toml`, `README.md`, source code in `roco/compiler/effect_codegen/**` / `roco/compiler/codegen/**`
+- `pyproject.toml`, `README.md`, source code in `roco/compiler_v2/effect_codegen/**` / `roco/compiler_v2/**`
 
 If any of these moves after a refresh, something has gone wrong upstream — either a non-pak source slipped into a generator, or hand-edited content was clobbered. Investigate before continuing.
 
@@ -93,7 +91,6 @@ If any of these moves after a refresh, something has gone wrong upstream — eit
 | Flag                 | Effect                                                                                       |
 |----------------------|----------------------------------------------------------------------------------------------|
 | (none)               | Run all pipeline steps; exit 0 on success.                                                   |
-| `--skip-parse-pak`   | Skip step 1; useful when only rules/codegen changed and pak data is unchanged.               |
 | `--with-tests`       | After the pipeline, run `pytest` (subprocess-isolated like the other steps).                 |
 | `--check`            | After the pipeline (and pytest if requested), run `git status --porcelain` on the watched output paths and exit 1 if anything is modified, staged, or untracked. |
 

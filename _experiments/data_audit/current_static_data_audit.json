@@ -1,0 +1,2563 @@
+{
+  "scan_roots": [
+    "roco/engine",
+    "roco/common",
+    "roco/compiler_v2",
+    "roco/data"
+  ],
+  "summary": {
+    "canonical_adapter_debt": 11,
+    "compiler_emitter_internal": 47,
+    "compiler_model_or_source_cache": 101,
+    "data_pipeline_internal": 55,
+    "engine_local_constant": 4,
+    "engine_runtime_ctx_defaults": 1,
+    "enum_adapter": 1,
+    "module_export": 5
+  },
+  "generated_imports": [
+    {
+      "file": "roco/engine/facade/battle.py",
+      "line": 6,
+      "module": "roco.generated",
+      "names": [
+        "catalog_debug"
+      ]
+    },
+    {
+      "file": "roco/engine/facade/battle.py",
+      "line": 7,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/actions.py",
+      "line": 25,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/damage.py",
+      "line": 39,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 26,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 52,
+      "module": "roco.generated.counter_skill_table",
+      "names": [
+        "COUNTER_SKILL_TABLE"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 53,
+      "module": "roco.generated.handler_indices",
+      "names": [
+        "H_BORROW_TEAM_SKILL",
+        "H_SKILL_MOD"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/op_marks.py",
+      "line": 9,
+      "module": "roco.generated.mark_groups",
+      "names": [
+        "MARK_COVER_GROUPS"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/op_mods/damage.py",
+      "line": 10,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/ops.py",
+      "line": 23,
+      "module": "roco.generated.handler_table",
+      "names": [
+        "HANDLERS",
+        "HANDLER_COUNT"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/after_move.py",
+      "line": 32,
+      "module": "roco.generated.buff_immunity_table",
+      "names": [
+        "IMMUNITY_FORCE_SWITCH"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/after_move.py",
+      "line": 46,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/mark_ticks.py",
+      "line": 11,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/status_ticks.py",
+      "line": 22,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/status_ticks.py",
+      "line": 23,
+      "module": "roco.generated.buff_immunity_table",
+      "names": [
+        "STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/turn_end.py",
+      "line": 31,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/residual/weather_ticks.py",
+      "line": 20,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/state.py",
+      "line": 8,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/engine/kernel/switch.py",
+      "line": 9,
+      "module": "roco.generated",
+      "names": [
+        "catalog_hot"
+      ]
+    },
+    {
+      "file": "roco/common/constants.py",
+      "line": 10,
+      "module": "roco.generated.battle_globals",
+      "names": [
+        "BATTLE_GLOBAL_NUMS"
+      ]
+    },
+    {
+      "file": "roco/common/natures.py",
+      "line": 5,
+      "module": "roco.generated.natures",
+      "names": [
+        "IV_STAT_MAP",
+        "NATURE_EFFECTS_BY_ID",
+        "NATURE_EFFECTS_BY_NAME",
+        "NATURE_MOD",
+        "NATURE_MOD_BY_ID",
+        "NATURE_NAME_TO_ID",
+        "PLAYER_NATURE_IDS"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 14,
+      "module": "roco.generated.type_chart",
+      "names": [
+        "TYPE_CHART_BPS"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 46,
+      "module": "roco.generated.handler_indices",
+      "names": [
+        "*"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/classify.py",
+      "line": 38,
+      "module": "roco.generated.handler_indices",
+      "names": [
+        "H_DAMAGE"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/exact_decoders.py",
+      "line": 10,
+      "module": "roco.generated.weather_decoders",
+      "names": [
+        "WEATHER_EFFECT_DECODERS"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/family_axes.py",
+      "line": 25,
+      "module": "roco.generated.handler_indices",
+      "names": [
+        "H_BURN",
+        "H_DISPEL_DEBUFFS",
+        "H_DISPEL_MARKS",
+        "H_DISPEL_MARKS_TO_BURN",
+        "H_EXCHANGE_HP_RATIO",
+        "H_EXCHANGE_MOVES",
+        "H_HEAL_ENERGY",
+        "H_HEAL_HP",
+        "H_HIT_COUNT_DELTA",
+        "H_INSTALL_COUNTER",
+        "H_LIFE_DRAIN",
+        "H_MIRROR_ENEMY_BUFFS",
+        "H_PRIORITY_NEXT_DELTA",
+        "H_SET_SELF_COOLDOWN",
+        "H_SELF_BUFF",
+        "H_TRANSFER_MODS"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/family_axes.py",
+      "line": 43,
+      "module": "roco.generated.static.pak_axes",
+      "names": [
+        "BUFF_BASE_TO_ORDER"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/params.py",
+      "line": 12,
+      "module": "roco.generated",
+      "names": [
+        "handler_indices"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 30,
+      "module": "roco.generated.weather_decoders",
+      "names": [
+        "WEATHER_EFFECT_DECODERS"
+      ]
+    },
+    {
+      "file": "roco/compiler_v2/scalar_damage.py",
+      "line": 12,
+      "module": "roco.generated.type_chart",
+      "names": [
+        "TYPE_CHART_BPS"
+      ]
+    },
+    {
+      "file": "roco/data/migrate.py",
+      "line": 17,
+      "module": "roco.generated.pak_ops",
+      "names": [
+        "EFF_DAMAGE"
+      ]
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 23,
+      "module": "roco.generated.canonical_adapters",
+      "names": [
+        "CANONICAL_MARK_DEFS",
+        "MOVE_CATEGORY_TO_CN"
+      ]
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 25,
+      "module": "roco.generated.skill_dam_types",
+      "names": [
+        "SKILL_DAM_TYPE_TO_ELEMENT_NAME"
+      ]
+    }
+  ],
+  "assignments": [
+    {
+      "file": "roco/engine/facade/battle.py",
+      "line": 114,
+      "scope": "BattleEngine.get_valid_moves",
+      "name": "valid",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "engine_local_constant",
+      "action": "Must not contain pak id/effect id/order data."
+    },
+    {
+      "file": "roco/engine/kernel/ctx.py",
+      "line": 7,
+      "scope": "<module>",
+      "name": "_DEFAULTS",
+      "value_kind": "tuple",
+      "size": 95,
+      "classification": "engine_runtime_ctx_defaults",
+      "action": "Allowed runtime StageCtx default fields; not pak static data, id mapping, or order mapping."
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 149,
+      "scope": "_shuffle_four",
+      "name": "data",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "engine_local_constant",
+      "action": "Must not contain pak id/effect id/order data."
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 235,
+      "scope": "_execute",
+      "name": "skill",
+      "value_kind": "tuple",
+      "size": 7,
+      "classification": "engine_local_constant",
+      "action": "Must not contain pak id/effect id/order data."
+    },
+    {
+      "file": "roco/engine/kernel/mechanics.py",
+      "line": 429,
+      "scope": "_fire_counter_skill",
+      "name": "counter_skill",
+      "value_kind": "tuple",
+      "size": 7,
+      "classification": "engine_local_constant",
+      "action": "Must not contain pak id/effect id/order data."
+    },
+    {
+      "file": "roco/engine/kernel/residual/__init__.py",
+      "line": 34,
+      "scope": "<module>",
+      "name": "__all__",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "module_export",
+      "action": "Allowed module export list; not static battle data."
+    },
+    {
+      "file": "roco/engine/kernel/residual/_shared.py",
+      "line": 10,
+      "scope": "<module>",
+      "name": "__all__",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "module_export",
+      "action": "Allowed module export list; not static battle data."
+    },
+    {
+      "file": "roco/common/enums.py",
+      "line": 84,
+      "scope": "<module>",
+      "name": "ELEMENT_NAMES",
+      "value_kind": "tuple",
+      "size": 18,
+      "classification": "enum_adapter",
+      "action": "Allowed short-term; generated enum validation should cover drift."
+    },
+    {
+      "file": "roco/common/natures.py",
+      "line": 15,
+      "scope": "<module>",
+      "name": "__all__",
+      "value_kind": "list",
+      "size": 7,
+      "classification": "module_export",
+      "action": "Allowed module export list; not static battle data."
+    },
+    {
+      "file": "roco/compiler_v2/__init__.py",
+      "line": 10,
+      "scope": "<module>",
+      "name": "__all__",
+      "value_kind": "list",
+      "size": 3,
+      "classification": "module_export",
+      "action": "Allowed module export list; not static battle data."
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 102,
+      "scope": "_format_module",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 2,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 143,
+      "scope": "compile_artifacts",
+      "name": "skill_ids_by_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 178,
+      "scope": "compile_artifacts",
+      "name": "skill_effect_keyed",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 184,
+      "scope": "compile_artifacts",
+      "name": "ability_effect_keyed",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/artifact.py",
+      "line": 199,
+      "scope": "compile_artifacts",
+      "name": "skipped_effect_stats",
+      "value_kind": "tuple",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 72,
+      "scope": "<module>",
+      "name": "MARK_NOTE_BY_IDX",
+      "value_kind": "dict",
+      "size": 12,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 150,
+      "scope": "_module_funcs",
+      "name": "result",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 172,
+      "scope": "_save_registry",
+      "name": "payload",
+      "value_kind": "dict",
+      "size": 2,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 200,
+      "scope": "write_handler_artifacts",
+      "name": "index_map",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 201,
+      "scope": "write_handler_artifacts",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 2,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 209,
+      "scope": "write_handler_artifacts",
+      "name": "order_lines",
+      "value_kind": "list",
+      "size": 3,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 224,
+      "scope": "_write_handler_table",
+      "name": "func_to_module",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 237,
+      "scope": "_write_handler_table",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 283,
+      "scope": "write_prefix_handler_map",
+      "name": "base_id_via_order_map",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 301,
+      "scope": "write_prefix_handler_map",
+      "name": "base_ids_by_prefix",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 304,
+      "scope": "write_prefix_handler_map",
+      "name": "unmapped",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 314,
+      "scope": "write_prefix_handler_map",
+      "name": "result",
+      "value_kind": "dict",
+      "size": 5,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 347,
+      "scope": "_build_buff_id_handler_map",
+      "name": "mark_name_to_handler",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 354,
+      "scope": "_build_buff_id_handler_map",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 381,
+      "scope": "write_battle_globals",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 396,
+      "scope": "write_skill_dam_types",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 445,
+      "scope": "build_nature_tables",
+      "name": "nature_mod_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 446,
+      "scope": "build_nature_tables",
+      "name": "nature_effects_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 447,
+      "scope": "build_nature_tables",
+      "name": "player_nature_ids",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 448,
+      "scope": "build_nature_tables",
+      "name": "nature_name_to_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 449,
+      "scope": "build_nature_tables",
+      "name": "nature_mod",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 450,
+      "scope": "build_nature_tables",
+      "name": "nature_effects_by_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 467,
+      "scope": "build_nature_tables",
+      "name": "pair",
+      "value_kind": "tuple",
+      "size": 2,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 468,
+      "scope": "build_nature_tables",
+      "name": "effect",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 499,
+      "scope": "write_natures",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 536,
+      "scope": "build_canonical_adapters",
+      "name": "category_map",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 537,
+      "scope": "build_canonical_adapters",
+      "name": "conflicts",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 558,
+      "scope": "build_canonical_adapters",
+      "name": "desc_id_by_note",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 566,
+      "scope": "build_canonical_adapters",
+      "name": "mark_defs",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 583,
+      "scope": "write_canonical_adapters",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 606,
+      "scope": "write_pak_ops",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 7,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 630,
+      "scope": "write_type_chart",
+      "name": "pak_ids",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 649,
+      "scope": "write_type_chart",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 671,
+      "scope": "write_weather_decoders",
+      "name": "decoded",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 695,
+      "scope": "write_weather_decoders",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 5,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 742,
+      "scope": "write_counter_skill_table",
+      "name": "table",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 771,
+      "scope": "write_counter_skill_table",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 3,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 790,
+      "scope": "_normalize_slot",
+      "name": "inner",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 803,
+      "scope": "build_buffbase_tables",
+      "name": "params",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 804,
+      "scope": "build_buffbase_tables",
+      "name": "order",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 805,
+      "scope": "build_buffbase_tables",
+      "name": "trigger",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 817,
+      "scope": "write_buffbase_params",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 5,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 845,
+      "scope": "write_buff_immunity_table",
+      "name": "status_pairs",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 851,
+      "scope": "write_buff_immunity_table",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 898,
+      "scope": "write_mark_groups",
+      "name": "groups",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 921,
+      "scope": "write_mark_groups",
+      "name": "cover_groups",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 928,
+      "scope": "write_mark_groups",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 5,
+      "classification": "compiler_emitter_internal",
+      "action": "Allowed as emitter implementation, not a data source."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 32,
+      "scope": "<module>",
+      "name": "IMMUNITY_SPECS",
+      "value_kind": "tuple",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 117,
+      "scope": "load_buff_immunity_table",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 118,
+      "scope": "load_buff_immunity_table",
+      "name": "first_seen_line",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 189,
+      "scope": "_iter_rule_records",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 206,
+      "scope": "_iter_rule_records",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 25,
+      "scope": "<module>",
+      "name": "DEFAULT_ENUMS",
+      "value_kind": "tuple",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 54,
+      "scope": "build_static_bundle",
+      "name": "source_files",
+      "value_kind": "list",
+      "size": 10,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 86,
+      "scope": "build_static_bundle",
+      "name": "buff_base_to_order",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 92,
+      "scope": "build_static_bundle",
+      "name": "buff_id_to_base_ids",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 160,
+      "scope": "_battle_globals",
+      "name": "nums",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 161,
+      "scope": "_battle_globals",
+      "name": "lists",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 162,
+      "scope": "_battle_globals",
+      "name": "strings",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 194,
+      "scope": "_skill_dam_type_adapters",
+      "name": "type_name_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 210,
+      "scope": "_skill_dam_type_adapters",
+      "name": "to_element_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/build.py",
+      "line": 211,
+      "scope": "_skill_dam_type_adapters",
+      "name": "unmapped",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 60,
+      "scope": "<module>",
+      "name": "__all__",
+      "value_kind": "list",
+      "size": 3,
+      "classification": "module_export",
+      "action": "Allowed module export list; not static battle data."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 85,
+      "scope": "_emit_row",
+      "name": "p0",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 85,
+      "scope": "_emit_row",
+      "name": "p1",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 85,
+      "scope": "_emit_row",
+      "name": "p2",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 85,
+      "scope": "_emit_row",
+      "name": "p3",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 151,
+      "scope": "generate_effect_rows",
+      "name": "rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 152,
+      "scope": "generate_effect_rows",
+      "name": "ignored",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 153,
+      "scope": "generate_effect_rows",
+      "name": "gaps",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/__init__.py",
+      "line": 219,
+      "scope": "generate_effect_rows",
+      "name": "outcomes",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 25,
+      "scope": "<module>",
+      "name": "_EDITOR_NAME_TO_FLAG",
+      "value_kind": "tuple",
+      "size": 2,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 29,
+      "scope": "<module>",
+      "name": "_BUFF_EDITOR_NAME_TO_FLAG",
+      "value_kind": "tuple",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 93,
+      "scope": "load_ability_flags_from_effects",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 94,
+      "scope": "load_ability_flags_from_effects",
+      "name": "first_seen_line",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 220,
+      "scope": "_iter_rule_records",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 251,
+      "scope": "_iter_rule_records",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 45,
+      "scope": "<module>",
+      "name": "ALLOWED_STATUSES",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 52,
+      "scope": "<module>",
+      "name": "ALLOWED_GAP_SOURCE_TYPES",
+      "value_kind": "tuple",
+      "size": 2,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 54,
+      "scope": "<module>",
+      "name": "REQUIRED_GAP_MATCH_FIELDS",
+      "value_kind": "tuple",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 105,
+      "scope": "canonical_gap_key",
+      "name": "parts",
+      "value_kind": "list",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 179,
+      "scope": "load_acknowledgements",
+      "name": "acks",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 180,
+      "scope": "load_acknowledgements",
+      "name": "seen_keys",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 363,
+      "scope": "_validate_row",
+      "name": "expected_matches",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 383,
+      "scope": "_validate_row",
+      "name": "expected_matches",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/acknowledgements_loader.py",
+      "line": 571,
+      "scope": "_validate_evidence_against_pak",
+      "name": "matching",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/classify.py",
+      "line": 158,
+      "scope": "collect_buff_candidates",
+      "name": "seen",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/exact_decoders.py",
+      "line": 17,
+      "scope": "_weather_outcomes",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/exact_decoders.py",
+      "line": 25,
+      "scope": "<module>",
+      "name": "EXACT_EFFECT_DECODERS",
+      "value_kind": "dict",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/params.py",
+      "line": 22,
+      "scope": "<module>",
+      "name": "_MARK_HANDLER_NAMES",
+      "value_kind": "set",
+      "size": 13,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/consumers.py",
+      "line": 77,
+      "scope": "_build_team_used",
+      "name": "ability_by_pet_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 66,
+      "scope": "_build_family",
+      "name": "record_names",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 73,
+      "scope": "_build_family",
+      "name": "consumers",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 77,
+      "scope": "_build_family",
+      "name": "by_key",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 93,
+      "scope": "_build_family",
+      "name": "breakdown",
+      "value_kind": "dict",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 115,
+      "scope": "_build_family",
+      "name": "pak_evidence",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 200,
+      "scope": "build_families",
+      "name": "families",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/family_builder.py",
+      "line": 205,
+      "scope": "build_families",
+      "name": "key",
+      "value_kind": "tuple",
+      "size": 2,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/ignored.py",
+      "line": 15,
+      "scope": "<module>",
+      "name": "VISUAL_KEYWORDS",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/ignored.py",
+      "line": 42,
+      "scope": "_ignored_candidate",
+      "name": "hits",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/params.py",
+      "line": 43,
+      "scope": "_classify_slot_refs",
+      "name": "counts",
+      "value_kind": "dict",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/params.py",
+      "line": 85,
+      "scope": "_collect_param_shape",
+      "name": "slots",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/params.py",
+      "line": 88,
+      "scope": "_collect_param_shape",
+      "name": "unique",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/params.py",
+      "line": 98,
+      "scope": "_collect_param_shape",
+      "name": "observed_vectors",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/refs.py",
+      "line": 31,
+      "scope": "_sample_sorted",
+      "name": "seen",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/refs.py",
+      "line": 52,
+      "scope": "_cross_refs",
+      "name": "effect_refs",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/refs.py",
+      "line": 53,
+      "scope": "_cross_refs",
+      "name": "buff_refs",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/refs.py",
+      "line": 54,
+      "scope": "_cross_refs",
+      "name": "skill_refs",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/refs.py",
+      "line": 102,
+      "scope": "_desc_note_refs",
+      "name": "found",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/render.py",
+      "line": 49,
+      "scope": "_render_ack_sections",
+      "name": "section_titles",
+      "value_kind": "list",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/render.py",
+      "line": 55,
+      "scope": "_render_ack_sections",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/render.py",
+      "line": 103,
+      "scope": "render_markdown",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/render.py",
+      "line": 176,
+      "scope": "check_outputs",
+      "name": "drift",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/emit.py",
+      "line": 48,
+      "scope": "_render_lua_enums",
+      "name": "parts",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/emit.py",
+      "line": 57,
+      "scope": "_render_pak_axes",
+      "name": "parts",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/emit.py",
+      "line": 83,
+      "scope": "_render_manifest",
+      "name": "parts",
+      "value_kind": "list",
+      "size": 1,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/emit.py",
+      "line": 94,
+      "scope": "_const_name",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 23,
+      "scope": "<module>",
+      "name": "OP_MODULES",
+      "value_kind": "tuple",
+      "size": 8,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 34,
+      "scope": "<module>",
+      "name": "_DECORATOR_AXES",
+      "value_kind": "dict",
+      "size": 3,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 83,
+      "scope": "_parse_entry_list",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 209,
+      "scope": "_base_ids_by_editor_name",
+      "name": "by_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 236,
+      "scope": "resolve_handler_axes",
+      "name": "order_seed",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 237,
+      "scope": "resolve_handler_axes",
+      "name": "prefix_seed",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 238,
+      "scope": "resolve_handler_axes",
+      "name": "base_id_seed",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/handler_axes.py",
+      "line": 239,
+      "scope": "resolve_handler_axes",
+      "name": "prefix_aliases",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 50,
+      "scope": "<module>",
+      "name": "SCHEMA_TABLES",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 111,
+      "scope": "detect_schema_drift",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 151,
+      "scope": "_load_effect_families",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 207,
+      "scope": "_load_handler_axis_rules",
+      "name": "by_order",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 218,
+      "scope": "_load_handler_axis_rules",
+      "name": "by_prefix",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 229,
+      "scope": "_load_handler_axis_rules",
+      "name": "overrides",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 282,
+      "scope": "effect_conf_families",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 330,
+      "scope": "buffbase_families",
+      "name": "buffbase_order_rules",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 343,
+      "scope": "buffbase_families",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 364,
+      "scope": "buffbase_families",
+      "name": "covering",
+      "value_kind": "dict",
+      "size": 4,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 411,
+      "scope": "exact_rule_debt",
+      "name": "annotated",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 452,
+      "scope": "prefix_rule_debt",
+      "name": "out",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/pak_schema_audit.py",
+      "line": 502,
+      "scope": "render_markdown",
+      "name": "lines",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/records.py",
+      "line": 28,
+      "scope": "SkillData",
+      "name": "effects",
+      "value_kind": "tuple",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/records.py",
+      "line": 41,
+      "scope": "PetData",
+      "name": "skill_ids",
+      "value_kind": "tuple",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/scalar_damage.py",
+      "line": 29,
+      "scope": "_effectiveness_bps",
+      "name": "types",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/scalar_damage.py",
+      "line": 107,
+      "scope": "compute_stats",
+      "name": "stats",
+      "value_kind": "dict",
+      "size": 6,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/sources.py",
+      "line": 105,
+      "scope": "parse_lua_enums",
+      "name": "out",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/compiler_v2/sources.py",
+      "line": 210,
+      "scope": "_parse_lua_enum_body",
+      "name": "values",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "compiler_model_or_source_cache",
+      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 31,
+      "scope": "DataCatalog",
+      "name": "unsupported_effect_stats",
+      "value_kind": "tuple",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 51,
+      "scope": "_load_skill_effects",
+      "name": "by_skill",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 63,
+      "scope": "_load_ability_effects",
+      "name": "by_ability",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 78,
+      "scope": "compile_catalog",
+      "name": "skills_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 99,
+      "scope": "compile_catalog",
+      "name": "pets_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 110,
+      "scope": "compile_catalog",
+      "name": "stats",
+      "value_kind": "tuple",
+      "size": 6,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 125,
+      "scope": "compile_catalog",
+      "name": "pet_skill_ids",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 141,
+      "scope": "compile_catalog",
+      "name": "unsupported",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/catalog.py",
+      "line": 145,
+      "scope": "compile_catalog",
+      "name": "gap_rows",
+      "value_kind": "tuple",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/fetch_teams.py",
+      "line": 15,
+      "scope": "<module>",
+      "name": "PROPS",
+      "value_kind": "list",
+      "size": 7,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/fetch_teams.py",
+      "line": 45,
+      "scope": "_team_raw_record",
+      "name": "payload",
+      "value_kind": "dict",
+      "size": 3,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/fetch_teams.py",
+      "line": 62,
+      "scope": "fetch_teams",
+      "name": "params",
+      "value_kind": "dict",
+      "size": 3,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 103,
+      "scope": "<module>",
+      "name": "_CATEGORY_MAP",
+      "value_kind": "dict",
+      "size": 4,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 110,
+      "scope": "<module>",
+      "name": "_CATEGORY_NAMES",
+      "value_kind": "dict",
+      "size": 4,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 118,
+      "scope": "<module>",
+      "name": "_MARK_TAG_MAP",
+      "value_kind": "dict",
+      "size": 13,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 209,
+      "scope": "import_abilities",
+      "name": "effect_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 210,
+      "scope": "import_abilities",
+      "name": "gap_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 211,
+      "scope": "import_abilities",
+      "name": "ignored_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 212,
+      "scope": "import_abilities",
+      "name": "ability_effect_id_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 288,
+      "scope": "import_skills",
+      "name": "rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 309,
+      "scope": "import_skills",
+      "name": "effect_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 310,
+      "scope": "import_skills",
+      "name": "gap_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 311,
+      "scope": "import_skills",
+      "name": "ignored_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 362,
+      "scope": "import_pets",
+      "name": "rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 401,
+      "scope": "import_pets",
+      "name": "link_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 444,
+      "scope": "_leader_transform_rows",
+      "name": "rows_by_lineage",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 449,
+      "scope": "_leader_transform_rows",
+      "name": "result",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 481,
+      "scope": "_leader_transform_manual",
+      "name": "rules",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 493,
+      "scope": "import_marks",
+      "name": "mark_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 494,
+      "scope": "import_marks",
+      "name": "source_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 495,
+      "scope": "import_marks",
+      "name": "gap_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 576,
+      "scope": "import_teams",
+      "name": "team_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 577,
+      "scope": "import_teams",
+      "name": "pet_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/import_db.py",
+      "line": 578,
+      "scope": "import_teams",
+      "name": "skill_rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/migrate.py",
+      "line": 275,
+      "scope": "<module>",
+      "name": "DROP_ORDER",
+      "value_kind": "tuple",
+      "size": 22,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/migrate.py",
+      "line": 301,
+      "scope": "<module>",
+      "name": "ELEMENT_CODES",
+      "value_kind": "tuple",
+      "size": 18,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 87,
+      "scope": "build_skills",
+      "name": "selected",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 121,
+      "scope": "build_skills",
+      "name": "records",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 122,
+      "scope": "build_skills",
+      "name": "id_to_name",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 186,
+      "scope": "build_abilities",
+      "name": "records",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 187,
+      "scope": "build_abilities",
+      "name": "name_by_id",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 195,
+      "scope": "build_abilities",
+      "name": "record",
+      "value_kind": "dict",
+      "size": 7,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 220,
+      "scope": "build_pets",
+      "name": "rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 239,
+      "scope": "build_pets",
+      "name": "record",
+      "value_kind": "dict",
+      "size": 21,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 274,
+      "scope": "build_marks",
+      "name": "rows",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 279,
+      "scope": "build_marks",
+      "name": "record",
+      "value_kind": "dict",
+      "size": 11,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_pak.py",
+      "line": 382,
+      "scope": "_pet_skill_links",
+      "name": "links",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "canonical_adapter_debt",
+      "action": "Audit source; prefer shared generated adapters."
+    },
+    {
+      "file": "roco/data/parse_teams.py",
+      "line": 14,
+      "scope": "<module>",
+      "name": "SMW_TO_EN",
+      "value_kind": "dict",
+      "size": 7,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/parse_teams.py",
+      "line": 37,
+      "scope": "parse_one",
+      "name": "team",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/parse_teams.py",
+      "line": 48,
+      "scope": "parse_one",
+      "name": "pets",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/parse_teams.py",
+      "line": 55,
+      "scope": "parse_one",
+      "name": "pet",
+      "value_kind": "dict",
+      "size": 7,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/parse_teams.py",
+      "line": 86,
+      "scope": "build_teams_from_raw",
+      "name": "teams",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/refresh_artifacts.py",
+      "line": 52,
+      "scope": "<module>",
+      "name": "CHECK_PATHS",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/refresh_artifacts.py",
+      "line": 76,
+      "scope": "_git_status_porcelain",
+      "name": "cmd",
+      "value_kind": "list",
+      "size": 7,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/refresh_artifacts.py",
+      "line": 99,
+      "scope": "_build_steps",
+      "name": "steps",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/utils.py",
+      "line": 96,
+      "scope": "merge_by_key",
+      "name": "result",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 25,
+      "scope": "assert_no_kernel_noop_rows",
+      "name": "details",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 55,
+      "scope": "compute_gap_validation_errors",
+      "name": "gap_key_to_row",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 62,
+      "scope": "compute_gap_validation_errors",
+      "name": "ack_key_to_line",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 63,
+      "scope": "compute_gap_validation_errors",
+      "name": "ack_match_counts",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 64,
+      "scope": "compute_gap_validation_errors",
+      "name": "ack_expected",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 65,
+      "scope": "compute_gap_validation_errors",
+      "name": "ack_allow_stale",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 75,
+      "scope": "compute_gap_validation_errors",
+      "name": "errors",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 80,
+      "scope": "compute_gap_validation_errors",
+      "name": "sample",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 96,
+      "scope": "compute_gap_validation_errors",
+      "name": "truly_stale_lines",
+      "value_kind": "dict",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    },
+    {
+      "file": "roco/data/validation.py",
+      "line": 114,
+      "scope": "compute_gap_validation_errors",
+      "name": "mismatched",
+      "value_kind": "list",
+      "size": 0,
+      "classification": "data_pipeline_internal",
+      "action": "Allowed when it is transport/schema logic, not battle rules."
+    }
+  ],
+  "priority_debt": [],
+  "engine_assignments": [],
+  "parse_errors": []
+}

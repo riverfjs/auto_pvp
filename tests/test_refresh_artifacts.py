@@ -3,7 +3,7 @@
 These tests monkeypatch the driver's own ``_run_step`` and
 ``_git_status_porcelain`` callables so the orchestration logic can be
 verified without spawning real subprocesses or touching git.  The
-wrapped pipeline modules (parse_pak, gen_prefix_map, build_db,
+    wrapped pipeline modules (gen_prefix_map, build_db,
 build_effect_families) have their own dedicated tests and are not
 re-exercised here.
 """
@@ -50,7 +50,6 @@ def test_default_order(monkeypatch):
     monkeypatch.setattr(refresh, "_run_step", fake)
     assert refresh.main([]) == 0
     assert [label for label, _ in calls] == [
-        "parse_pak",
         "gen_prefix_map",
         "build_db",
         "build_effect_families",
@@ -64,16 +63,7 @@ def test_failure_halts(monkeypatch):
     fake, calls = _recorder({"gen_prefix_map": 7})
     monkeypatch.setattr(refresh, "_run_step", fake)
     assert refresh.main([]) == 7
-    assert [label for label, _ in calls] == ["parse_pak", "gen_prefix_map"]
-
-
-def test_skip_parse_pak(monkeypatch):
-    fake, calls = _recorder()
-    monkeypatch.setattr(refresh, "_run_step", fake)
-    assert refresh.main(["--skip-parse-pak"]) == 0
-    labels = [label for label, _ in calls]
-    assert "parse_pak" not in labels
-    assert labels[0] == "gen_prefix_map"
+    assert [label for label, _ in calls] == ["gen_prefix_map"]
 
 
 def test_with_tests_appends_pytest(monkeypatch):
@@ -103,7 +93,7 @@ def test_check_drift_returns_nonzero(monkeypatch):
     monkeypatch.setattr(refresh, "_run_step", fake)
 
     def drifted(paths: tuple[str, ...]) -> tuple[int, str]:
-        return 0, " M _data/canonical/abilities.jsonl\n"
+        return 0, " M roco/generated/catalog_hot.py\n"
 
     monkeypatch.setattr(refresh, "_git_status_porcelain", drifted)
     assert refresh.main(["--check"]) == 1
@@ -130,7 +120,6 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
     assert refresh.main(["--with-tests", "--check"]) == 0
     labels = [label for label, _ in calls]
     assert labels == [
-        "parse_pak",
         "gen_prefix_map",
         "build_db",
         "build_effect_families",
@@ -150,10 +139,10 @@ def test_check_paths_exclude_db_and_full_rules_dir():
     # The full rules directory must NOT be in scope — only the generated
     # effect_families.jsonl is.  This prevents the check from flagging
     # hand-edited rule files as "drift".
-    assert "roco/compiler/rules" not in refresh.CHECK_PATHS
-    assert "roco/compiler/rules/effect_families.jsonl" in refresh.CHECK_PATHS
+    assert "roco/compiler_v2/rules" not in refresh.CHECK_PATHS
+    assert "roco/compiler_v2/rules/effect_families.jsonl" in refresh.CHECK_PATHS
     # Sanity: the other expected output scopes are present.
-    assert "_data/canonical" in refresh.CHECK_PATHS
+    assert "_data/canonical" not in refresh.CHECK_PATHS
     assert "roco/generated" in refresh.CHECK_PATHS
     assert "_docs/effect_family_audit.md" in refresh.CHECK_PATHS
     assert "_docs/pak_schema_audit.md" in refresh.CHECK_PATHS

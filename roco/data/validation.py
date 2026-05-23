@@ -48,7 +48,7 @@ def compute_gap_validation_errors(
     over-match / allow_stale opt-in) with synthetic inputs, no real DB
     or rules file required.
     """
-    from roco.compiler.effect_codegen.acknowledgements_loader import (
+    from roco.compiler_v2.effect_codegen.acknowledgements_loader import (
         canonical_gap_key_from_row,
     )
 
@@ -86,7 +86,7 @@ def compute_gap_validation_errors(
             )
         errors.append(
             f"{len(unacked)} used effect_gaps row(s) have no acknowledgement; "
-            f"add a row to roco/compiler/rules/effect_gap_acknowledgements.jsonl "
+            f"add a row to roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl "
             f"or implement the gap first. Sample: " + "; ".join(sample)
         )
 
@@ -134,7 +134,7 @@ def compute_gap_validation_errors(
 def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
     """Reject used :class:`effect_gaps` rows that have not been acknowledged.
 
-    Phase 3 introduced ``roco/compiler/rules/effect_gap_acknowledgements.jsonl``
+    Phase 3 introduced ``roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl``
     as a parallel audit axis.  A used gap row passes this gate iff it has a
     matching acknowledgement (canonical key); the gate also rejects stale
     acks (acks that no longer match any used gap) and over-broad acks
@@ -142,7 +142,7 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
     ack table stays in lockstep with the gap reality and burn-down is forced
     instead of silently drifting.
     """
-    from roco.compiler.effect_codegen.acknowledgements_loader import load_acknowledgements
+    from roco.compiler_v2.effect_codegen.acknowledgements_loader import load_acknowledgements
 
     # A totally empty ``effect_gaps`` table means the caller is operating on
     # a synthetic / fixture DB that never ran the canonical import.  In

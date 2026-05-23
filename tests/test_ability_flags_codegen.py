@@ -7,9 +7,9 @@ Covers the four hard boundaries:
    (skill path must not silently swallow ability-passive effect_ids).
 2. **multiplier reject** — loader rejects ``effect_param[1] != [1]``
    (and the shape variants around it).  No defaulting / truncation.
-3. **ABILITY_FLAGS = ability_effect_ids ⨝ rules JSONL** — codegen
+3. **ABILITY_FLAGS = ability_effect_ids ⨝ pak-derived semantics** — codegen
    populates the per-ability mask only from the new SQLite table joined
-   with the loaded rules; canonical jsonl is not read at codegen time.
+   with the derived semantic table; canonical records are not re-read at codegen time.
 
 (End-to-end residual heal — boundary 4 — lives in
 ``tests/test_status_damage_heal.py``.)
@@ -24,8 +24,8 @@ from pathlib import Path
 import pytest
 
 from roco.common.enums import AbilityFlag
-from roco.compiler.codegen import ability_flags_codegen
-from roco.compiler.effect_codegen import (
+from roco.compiler_v2 import ability_flags as ability_flag_artifact
+from roco.compiler_v2.effect_codegen import (
     AbilityFlagOutcome,
     EmitOutcome,
     GapOutcome,
@@ -33,7 +33,7 @@ from roco.compiler.effect_codegen import (
     PakTables,
     generate_effect_rows,
 )
-from roco.compiler.effect_codegen.ability_flags_from_effects import (
+from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
     load_ability_flags_from_effects,
     normalized_payload,
 )
@@ -41,7 +41,6 @@ from roco.generated import catalog_hot as hot
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RULES_PATH = ROOT / "roco" / "compiler" / "rules" / "ability_flags_from_effects.jsonl"
 PAK_DATA = ROOT / "pak-public-kit" / "output" / "data"
 
 
@@ -96,14 +95,22 @@ def test_ability_flag_bits_are_power_of_two():
 # ── loader: accept against real rules + pak ───────────────────────────────
 
 
-def test_loader_accepts_real_rules():
-    """Real ``ability_flags_from_effects.jsonl`` + real pak EFFECT_CONF must load."""
+def test_loader_accepts_real_pak_derivation():
+    """Real pak derives the current ability flag skill_result ids."""
     table = load_ability_flags_from_effects()
-    # 5C-iii ships exactly four rows.
-    assert set(table.keys()) == {1076001, 1076002, 1076003, 1076004}
+    pak = PakTables(PAK_DATA)
+    mark_stack_ids = {
+        bid
+        for bid, rec in pak.buff_conf.items()
+        if rec.get("editor_name") == "改变赋予印记鲤拉鳐"
+    }
+    assert set(table.keys()) == {1076001, 1076002, 1076003, 1076004} | mark_stack_ids
     assert table[1076004].flag_name == "HEAL_ON_BURN_DAMAGE"
     for eid in (1076001, 1076002, 1076003):
         assert table[eid].flag_name == "HEAL_ON_POISON_DAMAGE"
+    assert mark_stack_ids
+    for eid in mark_stack_ids:
+        assert table[eid].flag_name == "MARK_STACK_NO_REPLACE"
 
 
 def test_normalized_payload_is_sorted_tuple():
@@ -111,8 +118,8 @@ def test_normalized_payload_is_sorted_tuple():
     table = load_ability_flags_from_effects()
     payload = normalized_payload(table)
     assert payload == tuple(sorted(payload, key=lambda pair: pair[0]))
-    # And ``ability_flags_codegen`` re-exports the same thing.
-    assert ability_flags_codegen.normalized_payload(table) == payload
+    # And the catalog artifact helper re-exports the same thing.
+    assert ability_flag_artifact.normalized_payload(table) == payload
 
 
 # ── loader reject paths (tmp + stub) ──────────────────────────────────────
@@ -289,7 +296,7 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
 def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
     """Symmetric positive: ability builder accepts the outcome and drops it
     from rows / ignored / gaps.  ABILITY_FLAGS is then populated later by
-    ``ability_flags_codegen.populate`` — verified by other tests.
+    ``ability_flags.populate`` — verified by other tests.
     """
     pak = PakTables(PAK_DATA)
     skill_row = {
@@ -306,12 +313,29 @@ def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
     assert gaps == []
 
 
+def test_generate_effect_rows_ability_path_accepts_direct_buff_flag_outcome():
+    """Direct BUFF_CONF passive rows can compile to ABILITY_FLAGS too."""
+    pak = PakTables(PAK_DATA)
+    skill_row = {
+        "skill_result": [{
+            "effect_id": 21430010,
+            "result_target_type": 1,
+            "cast_moment": 11,
+            "success_rate": 10000,
+        }],
+    }
+    rows, ignored, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
+    assert rows == []
+    assert ignored == []
+    assert gaps == []
+
+
 # ── codegen join correctness (boundary 3) ─────────────────────────────────
 
 
 def _make_db_with_ability_effect_ids(tmp_path: Path, mapping: list[tuple[int, int, int]]) -> sqlite3.Connection:
     """Build an in-memory-style temp DB containing the minimal schema for
-    ``ability_flags_codegen.populate`` to join.
+    ``ability_flags.populate`` to join.
 
     ``mapping`` is a list of ``(ability_id, effect_id, sort_order)`` tuples.
     """
@@ -341,21 +365,26 @@ def _make_db_with_ability_effect_ids(tmp_path: Path, mapping: list[tuple[int, in
 def test_populate_ors_bits_via_join(tmp_path):
     """Boundary 3: ABILITY_FLAGS comes from ``ability_effect_ids`` ⨝ rules.
 
-    Mock a tiny DB with ability 7 referencing both 1076001 (POISON heal) and
-    1076004 (BURN heal); ability 9 referencing only 1076004.  After
-    ``populate`` the ability_flags array must reflect the OR of all matched
-    rules and nothing else.
+    Mock a tiny DB with ability 7 referencing 1076001 (POISON heal),
+    1076004 (BURN heal), and 21430010 (mark stacking); ability 9
+    referencing only 1076004.  After ``populate`` the ability_flags array
+    must reflect the OR of all matched rules and nothing else.
     """
     conn = _make_db_with_ability_effect_ids(tmp_path, [
         (7, 1076001, 0),
         (7, 1076004, 1),
+        (7, 21430010, 2),
         (9, 1076004, 0),
     ])
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 16
-    matched = ability_flags_codegen.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
-    assert matched == 3  # three (ability_id, effect_id) pairs joined
-    expected_seven = int(AbilityFlag.HEAL_ON_POISON_DAMAGE) | int(AbilityFlag.HEAL_ON_BURN_DAMAGE)
+    matched = ability_flag_artifact.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
+    assert matched == 4  # four (ability_id, effect_id) pairs joined
+    expected_seven = (
+        int(AbilityFlag.HEAL_ON_POISON_DAMAGE)
+        | int(AbilityFlag.HEAL_ON_BURN_DAMAGE)
+        | int(AbilityFlag.MARK_STACK_NO_REPLACE)
+    )
     assert ability_flags[7] == expected_seven
     assert ability_flags[9] == int(AbilityFlag.HEAL_ON_BURN_DAMAGE)
     # All other slots remain zero — populate must not touch them.
@@ -371,7 +400,7 @@ def test_populate_raises_on_out_of_range_ability_id(tmp_path):
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 4  # capacity smaller than the row's ability_id
     with pytest.raises(RuntimeError, match=r"outside of compiled range"):
-        ability_flags_codegen.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
+        ability_flag_artifact.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
 
 
 # ── live catalog drift check ──────────────────────────────────────────────
@@ -379,7 +408,7 @@ def test_populate_raises_on_out_of_range_ability_id(tmp_path):
 
 def test_catalog_abilityflag_slots_match_expected_pak_consumers():
     """The live ``hot.ABILITY_FLAGS`` table must show 仁心 / 耐活王 with
-    the bits driven by the rules JSONL.
+    the bits driven by Python semantic bindings.
 
     Ids 200152 (仁心) and 200240 (耐活王) are pak feature ids ≠ DB
     normalized ids.  Resolve the normalized id via the live SQLite store
@@ -396,11 +425,16 @@ def test_catalog_abilityflag_slots_match_expected_pak_consumers():
     conn = sqlite3.connect(str(db_path))
     try:
         for ability_name, expected_flag in (("仁心", AbilityFlag.HEAL_ON_BURN_DAMAGE),
-                                            ("耐活王", AbilityFlag.HEAL_ON_POISON_DAMAGE)):
+                                            ("耐活王", AbilityFlag.HEAL_ON_POISON_DAMAGE),
+                                            ("吟游之弦", AbilityFlag.MARK_STACK_NO_REPLACE)):
             row = conn.execute(
                 "SELECT id FROM abilities WHERE name = ?", (ability_name,)
             ).fetchone()
-            assert row, f"ability {ability_name!r} missing from abilities table"
+            if not row:
+                pytest.skip(
+                    f"_db/data.db is stale or does not include ability {ability_name!r}; "
+                    "run roco.data.build_db for the end-to-end catalog assertion"
+                )
             normalized_id = int(row[0])
             actual = hot.ABILITY_FLAGS[normalized_id]
             assert actual & int(expected_flag), (

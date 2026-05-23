@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1
 
 
+@handles_buff([("BFT_O_TWO", "CUTE_SPEED")])
 def op_cute_gain(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.cute_self += row[ROW_ARG0]
 

@@ -1,4 +1,4 @@
-"""Generate canonical JSONL from extracted New Roco pak data.
+"""Build canonical records from extracted New Roco pak data.
 
 Default source:
   <project_root>/pak-public-kit/output/data
@@ -19,8 +19,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from roco.compiler.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
-from roco.data.utils import CANONICAL_DIR, content_hash, with_canonical_hash, write_jsonl
+from roco.compiler_v2.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
+from roco.generated.canonical_adapters import CANONICAL_MARK_DEFS, MOVE_CATEGORY_TO_CN
+from roco.data.utils import content_hash, with_canonical_hash, write_jsonl
+from roco.generated.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT_NAME
 
 
 DEFAULT_PAK_DATA_DIR = Path(
@@ -32,50 +34,6 @@ DEFAULT_PAK_DATA_DIR = Path(
 
 DESC_ID_RE = re.compile(r"<desc_id=(\d+)>(.*?)</>")
 TAG_RE = re.compile(r"<[^>]+>")
-
-SKILL_DAM_TYPE_TO_ELEMENT = {
-    2: "普通",
-    3: "草",
-    4: "火",
-    5: "水",
-    6: "光",
-    7: "地",
-    8: "地",
-    9: "冰",
-    10: "龙",
-    11: "电",
-    12: "毒",
-    13: "虫",
-    14: "武",
-    15: "翼",
-    16: "萌",
-    17: "幽",
-    18: "恶",
-    19: "机械",
-    20: "幻",
-}
-
-MOVE_CATEGORY_TO_CN = {
-    "Physical Attack": "物攻",
-    "Magic Attack": "魔攻",
-    "Status": "状态",
-    "Defense": "防御",
-}
-
-MARK_DEFS = (
-    (1022, "moisture", 0, "positive"),
-    (1031, "dragon", 1, "positive"),
-    (1030, "momentum", 2, "positive"),
-    (1027, "wind", 3, "positive"),
-    (1023, "charge", 4, "positive"),
-    (1021, "solar", 5, "positive"),
-    (1018, "attack", 6, "positive"),
-    (1032, "slow", 7, "negative"),
-    (1028, "spirit", 8, "negative"),
-    (1035, "meteor", 9, "negative"),
-    (1014, "poison", 10, "negative"),
-    (1019, "thorn", 11, "negative"),
-)
 
 
 class PakData:
@@ -107,7 +65,7 @@ class PakData:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pak-dir", type=Path, default=DEFAULT_PAK_DATA_DIR)
-    parser.add_argument("--out-dir", type=Path, default=CANONICAL_DIR)
+    parser.add_argument("--out-dir", type=Path, required=True, help="Debug JSONL export directory.")
     args = parser.parse_args()
 
     data = PakData(args.pak_dir)
@@ -314,7 +272,7 @@ def build_pets(
 
 def build_marks(data: PakData, desc_notes: dict[int, str]) -> list[dict]:
     rows: list[dict] = []
-    for desc_id, code, packed_index, polarity in MARK_DEFS:
+    for desc_id, code, packed_index, polarity in CANONICAL_MARK_DEFS:
         raw = data.desc_note_conf.get(str(desc_id), {})
         name = str(raw.get("note", "")).strip()
         effect_text = _clean_desc(raw.get("desc", desc_notes.get(desc_id, "")), desc_notes)
@@ -377,7 +335,7 @@ def _skill_element(row: dict[str, Any], move: dict[str, Any]) -> str:
         zh = (((move.get("move_type") or {}).get("localized") or {}).get("zh") or "").strip()
         if zh and zh != "首领":
             return zh
-    return SKILL_DAM_TYPE_TO_ELEMENT.get(_int(row.get("skill_dam_type")), "普通")
+    return SKILL_DAM_TYPE_TO_ELEMENT_NAME.get(_int(row.get("skill_dam_type")), "普通")
 
 
 def _skill_category(row: dict[str, Any], move: dict[str, Any]) -> str:

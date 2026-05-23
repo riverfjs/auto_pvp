@@ -1,24 +1,23 @@
 """Game-rule constants consumed by kernel, compiler, and data layers.
 
-Pak-derivable values are auto-generated to roco/generated/pak_rules.py
-and re-exported here for a single import surface. Everything else in this file is a game-design value (damage formula,
-status DOT rate, mark stack value, PVP format rule) not present in pak as a
-named constant and must be curated manually.
+Pak-derivable values are auto-generated to ``roco/generated/battle_globals.py``.
+This module selects the specific keys the engine needs and re-exports them
+beside hand-curated kernel policy.
 """
 
 from __future__ import annotations
 
-# Pak-derived constants (regenerate with: uv run python -m roco.compiler.gen_prefix_map)
-from roco.generated.pak_rules import (  # noqa: F401
-    DAMAGE_PERCENT_LIMIT,
-    PVP_LEVEL,
-    SKILL_DAMAGE_MAX,
-    TYPE_DOUBLE_RESIST_BPS,
-    TYPE_DOUBLE_WEAK_BPS,
-    TYPE_NEUTRAL_BPS,
-    TYPE_RESIST_BPS,
-    TYPE_WEAK_BPS,
-)
+from roco.generated.battle_globals import BATTLE_GLOBAL_NUMS
+
+# Pak-derived constants (regenerate with: uv run python -m roco.compiler_v2.gen_prefix_map).
+TYPE_NEUTRAL_BPS = BATTLE_GLOBAL_NUMS["restraint_percent"]
+TYPE_WEAK_BPS = BATTLE_GLOBAL_NUMS["double_restraint_percent"]
+TYPE_DOUBLE_WEAK_BPS = BATTLE_GLOBAL_NUMS["triple_restraint_percent"]
+TYPE_RESIST_BPS = BATTLE_GLOBAL_NUMS["restrained_percent"]
+TYPE_DOUBLE_RESIST_BPS = BATTLE_GLOBAL_NUMS["double_restrained_percent"]
+DAMAGE_PERCENT_LIMIT = BATTLE_GLOBAL_NUMS["damage_percent_limit"]
+SKILL_DAMAGE_MAX = BATTLE_GLOBAL_NUMS["skill_damage_max"]
+PVP_LEVEL = BATTLE_GLOBAL_NUMS["battle_pvp_level"]
 
 # ── Numeric convention ─────────────────────────────────────────────────────
 BPS = 10_000
@@ -47,14 +46,12 @@ STAB_BPS = 15_000
 MIN_DAMAGE = 1
 RAIN_WATER_BPS = 15_000
 # ``TYPE_DOUBLE_RESIST_BPS`` (both defender types resist) is now pulled
-# from pak's ``double_restrained_percent`` via :mod:`pak_rules` (= 7500 BPS,
+# from pak's ``double_restrained_percent`` via :mod:`battle_globals` (= 7500 BPS,
 # 0.75×).  The previous hand-coded 3333 (1/3×) is replaced; if the game
 # turns out to use a different composition rule a manual override would
 # go here with a justification, not silently in source.
 
-# ── Stat formula (nature / IV) ─────────────────────────────────────────────
-NATURE_BOOST = 0.10
-NATURE_REDUCE = 0.10
+# ── Stat formula (IV; nature proportions are pak-generated) ────────────────
 IV_BONUS = 0.10
 COUNTER_DAMAGE_BONUS = 1.3
 

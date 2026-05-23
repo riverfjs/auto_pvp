@@ -7,10 +7,11 @@ import pytest
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
 from roco.data.catalog import compile_catalog
-from roco.compiler.artifact import compile_artifacts
+from roco.compiler_v2.artifact import compile_artifacts
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, write_jsonl
+from roco.generated.canonical_adapters import CANONICAL_MARK_DEFS
 
 
 def _sample_data():
@@ -174,7 +175,7 @@ def test_parse_pak_generates_canonical_from_extracted_tables(tmp_path: Path, mon
     })
     _write_table(bindata / "DESC_NOTE_CONF.json", {
         str(desc_id): {"id": desc_id, "note": f"mark_{code}", "desc": f"{code} effect"}
-        for desc_id, code, _, _ in parse_pak.MARK_DEFS
+        for desc_id, code, _, _ in CANONICAL_MARK_DEFS
     })
     (pak / "moves.json").write_text(
         '[{"id":7020880,"name":"拍击","move_type":{"localized":{"zh":"普通"}},"move_category":"Magic Attack","energy_cost":1,"power":65,"description":"造成魔伤。"}]',
@@ -278,10 +279,10 @@ def test_old_classifier_pipeline_is_deleted():
     root = Path(__file__).resolve().parents[1]
     deleted = [
         "roco/data/effect_classifier.py",
-        "roco/compiler/classifiers",
-        "roco/compiler/effect_compile.py",
-        "roco/compiler/skill_tags.py",
-        "roco/compiler/effect_registry.py",
+        "roco/compiler_v2/classifiers",
+        "roco/compiler_v2/effect_compile.py",
+        "roco/compiler_v2/skill_tags.py",
+        "roco/compiler_v2/effect_registry.py",
     ]
     assert [p for p in deleted if (root / p).exists()] == []
 
@@ -439,7 +440,7 @@ def test_skill_effects_no_tag_code_zero_invariant(tmp_path: Path):
     """
     import sqlite3
     from roco.data.parse_pak import PakData, build_skills, build_abilities, _desc_notes, DEFAULT_PAK_DATA_DIR
-    from roco.compiler.effect_codegen import PakTables
+    from roco.compiler_v2.effect_codegen import PakTables
     from roco.data.import_db import import_abilities, import_skills
 
     if not (DEFAULT_PAK_DATA_DIR / "BinData" / "EFFECT_CONF.json").exists():
@@ -473,33 +474,13 @@ def _jsonl_records(path: Path):
             yield line_no, json.loads(raw)
 
 
-def test_exact_effects_jsonl_has_no_h_noop_rows():
-    """File-level grep guard: ``exact_effects.jsonl`` must contain zero H_NOOP rows.
-
-    The JSONL loader already rejects ``handler: H_NOOP`` at parse time
-    (``exact_decoders._load_jsonl``).  This test fires *before* loader
-    validation runs — catches editor/merge-conflict regressions where an
-    H_NOOP row sneaks back in.
-    """
-    path = Path(__file__).resolve().parents[1] / "roco" / "compiler" / "rules" / "exact_effects.jsonl"
-    offenders: list[tuple[int, int]] = []
-    for line_no, rec in _jsonl_records(path):
-        if rec.get("handler") == "H_NOOP":
-            offenders.append((line_no, int(rec.get("effect_id", 0))))
-    assert offenders == [], (
-        f"exact_effects.jsonl carries forbidden H_NOOP rows at "
-        f"{', '.join(f'L{ln}:effect_{eid}' for ln, eid in offenders)}"
-    )
+def test_exact_effects_jsonl_removed_from_pipeline():
+    """Exact effect rules now live in family decoders / generated tables."""
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "rules" / "exact_effects.jsonl"
+    assert not path.exists()
 
 
-def test_prefix_handlers_jsonl_has_no_h_noop_rows():
-    """File-level grep guard for ``prefix_handlers.jsonl``."""
-    path = Path(__file__).resolve().parents[1] / "roco" / "compiler" / "rules" / "prefix_handlers.jsonl"
-    offenders: list[int] = []
-    for line_no, rec in _jsonl_records(path):
-        if rec.get("handler") == "H_NOOP":
-            offenders.append(line_no)
-    assert offenders == [], (
-        f"prefix_handlers.jsonl carries forbidden H_NOOP rows at "
-        f"lines {offenders}"
-    )
+def test_prefix_handlers_jsonl_removed_from_pipeline():
+    """Prefix/base-id handler axes now live on engine op_meta decorators."""
+    path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "rules" / "prefix_handlers.jsonl"
+    assert not path.exists()

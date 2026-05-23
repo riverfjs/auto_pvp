@@ -3,21 +3,31 @@
 from __future__ import annotations
 
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_meta import handles_base_name, handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1
 
 
+@handles_base_name([("烧伤", "burn base")])
 def op_burn(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.burn_stacks += row[ROW_ARG0]
 
 
+@handles_base_name([("中毒", "poison base")])
+@handles_buff([
+    ("BFT_DAM", "STATUS_CONDITION"),
+    ("BFT_SIXTY_EIGHT", "POISON_FANG"),
+])
 def op_poison(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.poison_stacks += row[ROW_ARG0]
 
 
+@handles_buff([("BFT_FREEZE", "FREEZE_STATUS")])
 def op_freeze(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.freeze_stacks += row[ROW_ARG0]
 
 
+@handles_base_name([("寄生", "leech base")])
+@handles_buff([("BFT_ABSORB", "LEECH")])
 def op_leech(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.leech_stacks += row[ROW_ARG0]
 

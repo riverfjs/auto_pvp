@@ -13,7 +13,7 @@ import sqlite3
 from pathlib import Path
 
 from roco.data.utils import DB_DIR
-from roco.compiler.effect_model import Timing
+from roco.compiler_v2.effect_model import Timing
 from roco.generated.pak_ops import EFF_DAMAGE
 from roco.common.enums import ELEMENT_NAMES
 
