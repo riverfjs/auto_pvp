@@ -93,10 +93,9 @@ def test_generate_effect_rows_buff_ref(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_SELF_BUFF
-    assert ignored == []
     assert gaps == []
 
 
@@ -107,10 +106,9 @@ def test_generate_effect_rows_damage_ref(pak):
         "result_target_type": 2,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_DAMAGE
-    assert ignored == []
     assert gaps == []
 
 
@@ -121,10 +119,9 @@ def test_generate_effect_rows_state_change_records_gap(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     # type=3 state changes are not yet executable — must surface as audit gaps.
     assert rows == []
-    assert ignored == []
     assert len(gaps) == 1
     assert gaps[0]["reason"].startswith("effect_type_3")
     assert gaps[0]["params"]["effect_id"] == 1004001
@@ -137,18 +134,16 @@ def test_generate_effect_rows_timing_from_cast_moment(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows[0][1] == Timing.TURN_END
 
 
 def test_generate_effect_rows_empty_skill_result(pak):
-    rows, ignored, gaps = generate_effect_rows({"skill_result": []}, pak)
+    rows, gaps = generate_effect_rows({"skill_result": []}, pak)
     assert rows == []
-    assert ignored == []
     assert gaps == []
-    rows2, ignored2, gaps2 = generate_effect_rows({}, pak)
+    rows2, gaps2 = generate_effect_rows({}, pak)
     assert rows2 == []
-    assert ignored2 == []
     assert gaps2 == []
 
 
@@ -165,10 +160,9 @@ def test_generate_effect_rows_skips_blank_entry(pak):
         {"effect_id": 0, "cast_moment": 11, "result_target_type": 1,
          "success_rate": 10000},
     ]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) == 1
     assert rows[0][0] == H_POISON
-    assert ignored == []
     assert gaps == []
 
 
@@ -181,7 +175,7 @@ def test_generate_effect_rows_stack_priority(pak):
     when no buff_group_level is set.
     """
     # buff_group_level path
-    rows, _ignored, _gaps = generate_effect_rows({"skill_result": [{
+    rows, _gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20070010, "cast_moment": 11, "result_target_type": 2,
         "success_rate": 10000, "buff_group_level": 3,
     }]}, pak)
@@ -196,10 +190,9 @@ def test_build_ability_effect_rows(pak):
         "result_target_type": 2,
         "success_rate": 5000,
     }]}
-    rows, ignored, gaps = build_ability_effect_rows(ability_row, pak)
+    rows, gaps = build_ability_effect_rows(ability_row, pak)
     assert len(rows) >= 1
     assert rows[0][0] == H_POISON
-    assert ignored == []
     assert gaps == []
 
 
@@ -230,9 +223,8 @@ def test_compound_type1_returns_gap(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows == []
-    assert ignored == []
     assert len(gaps) == 1
     assert gaps[0]["reason"] == "effect_type_1_compound"
     assert gaps[0]["primitive"] == "effect_1099001"
@@ -261,9 +253,8 @@ def test_no_buff_type1_returns_gap(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows == []
-    assert ignored == []
     assert len(gaps) == 1
     assert gaps[0]["reason"] == "effect_type_1_no_buff"
     assert gaps[0]["primitive"] == "effect_1099002"
@@ -298,9 +289,8 @@ def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows == []
-    assert ignored == []
     assert len(gaps) == 1
     assert gaps[0]["reason"] == "prefix_2999_unmapped"
     assert gaps[0]["primitive"] == "prefix_2999"
@@ -314,9 +304,8 @@ def test_unknown_effect_id_becomes_gap(pak):
         "result_target_type": 1,
         "success_rate": 10000,
     }]}
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak)
+    rows, gaps = generate_effect_rows(skill_row, pak)
     assert rows == []
-    assert ignored == []
     assert len(gaps) == 1
     assert gaps[0]["reason"] == "effect_id_not_in_pak"
     assert gaps[0]["primitive"] == "effect_9999999"
@@ -338,7 +327,7 @@ def test_emit_outcome_invariant_handler_idx_positive(pak):
             "result_target_type": 1,
             "success_rate": 10000,
         }]}
-        rows, _ignored, _gaps = generate_effect_rows(skill_row, pak)
+        rows, _gaps = generate_effect_rows(skill_row, pak)
         for row in rows:
             assert row[0] > 0, f"effect_id {eid} produced tag_code={row[0]} (H_NOOP not allowed)"
 

@@ -327,7 +327,7 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
             "total_base_ids": len(all_base_ids),
             "total_prefixes": len(all_prefixes),
             "buff_ids_exact": len(buff_id_map),
-            "prefixes_in_legacy_map": len(prefix_map),
+            "mixed_prefix_count": len(prefix_map),
             "base_ids_via_order": len(base_id_via_order_map),
             "unmapped_prefixes": unmapped,
         },
@@ -382,6 +382,8 @@ def _build_buff_id_handler_map(
         if auto_switch_handler is not None
         else set()
     )
+    team_skill_hit_handler = handler_indices.get("H_HIT_COUNT_BY_TEAM_SKILL_COUNT")
+    anti_heal_handler = handler_indices.get("H_ANTI_HEAL")
 
     out: dict[int, int] = {}
     for buff_id, rec in buff_rows.items():
@@ -422,7 +424,56 @@ def _build_buff_id_handler_map(
                 auto_switch_handler,
                 "SKILL_CONF order-52 zero-energy condition chain",
             )
+
+        if team_skill_hit_handler is not None and _is_team_skill_hit_count_buff(rec, buffbase_rows):
+            _put_exact_buff_handler(
+                out,
+                buff_id,
+                team_skill_hit_handler,
+                "BUFFBASE_CONF order-3 team skill count hit modifier",
+            )
+
+        if anti_heal_handler is not None and _is_heal_reversal_buff(rec, buffbase_rows):
+            _put_exact_buff_handler(
+                out,
+                buff_id,
+                anti_heal_handler,
+                "BUFFBASE_CONF order-146 heal reversal trigger",
+            )
     return out
+
+
+def _is_team_skill_hit_count_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 3:
+        return False
+    slots = _base_param_slots(base)
+    return len(slots) >= 2 and slots[0] == (3,) and bool(slots[1])
+
+
+def _is_heal_reversal_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 146:
+        return False
+    slots = _base_param_slots(base)
+    return (
+        len(slots) >= 5
+        and slots[0] == (24,)
+        and slots[3] == (3, 20)
+        and slots[4] == (-1,)
+    )
 
 
 def _put_exact_buff_handler(

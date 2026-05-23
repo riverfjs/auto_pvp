@@ -1,5 +1,4 @@
 from pathlib import Path
-import sqlite3
 
 import pytest
 
@@ -34,9 +33,6 @@ from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count
 from roco.generated import handler_indices as hi
 from roco.common.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
 
-ROOT = Path(__file__).resolve().parents[1]
-
-
 def _pet_id(name: str) -> int:
     return debug.PET_IDS_BY_NAME[name]
 
@@ -45,22 +41,7 @@ def _skill_id(name: str) -> int:
     direct = debug.SKILL_IDS_BY_NAME.get(name)
     if direct is not None:
         return direct
-    db_path = ROOT / "_db" / "data.db"
-    if not db_path.exists():
-        raise KeyError(name)
-    conn = sqlite3.connect(str(db_path))
-    try:
-        row = conn.execute(
-            "SELECT id FROM skills "
-            "WHERE name = ? OR effect_text = ? OR flavor_text = ? "
-            "ORDER BY id LIMIT 1",
-            (name, name, name),
-        ).fetchone()
-    finally:
-        conn.close()
-    if row is None:
-        raise KeyError(name)
-    return int(row[0])
+    return debug.SKILL_IDS_BY_TEXT[name]
 
 
 def _skill_with_handler(
@@ -83,7 +64,7 @@ def _skill_with_handler(
 
 def test_hot_and_debug_catalog_artifacts_are_physically_split():
     assert hot.CATALOG_VERSION == debug.CATALOG_VERSION == 1
-    assert hot.SCHEMA_VERSION == debug.SCHEMA_VERSION == "kernel-v1"
+    assert hot.SCHEMA_VERSION == debug.SCHEMA_VERSION == "kernel-v2"
     assert hot.SOURCE_HASH == debug.SOURCE_HASH
     assert hasattr(hot, "PETS")
     assert hasattr(hot, "SKILL_EFFECT_ROWS")
@@ -103,18 +84,21 @@ def test_hot_catalog_excludes_kernel_unsupported_effect_rows():
 def test_catalog_validation_rejects_version_schema_and_empty_hash():
     class VersionMismatch:
         CATALOG_VERSION = 0
-        SCHEMA_VERSION = "kernel-v1"
+        SCHEMA_VERSION = "kernel-v2"
         SOURCE_HASH = "x"
+        SKILLS = ((0, 0, 0, 0, 0, 0, 1, 0),)
 
     class SchemaMismatch:
         CATALOG_VERSION = 1
         SCHEMA_VERSION = "old"
         SOURCE_HASH = "x"
+        SKILLS = ((0, 0, 0, 0, 0, 0, 1, 0),)
 
     class EmptyHash:
         CATALOG_VERSION = 1
-        SCHEMA_VERSION = "kernel-v1"
+        SCHEMA_VERSION = "kernel-v2"
         SOURCE_HASH = ""
+        SKILLS = ((0, 0, 0, 0, 0, 0, 1, 0),)
 
     with pytest.raises(RuntimeError, match="version"):
         validate_catalog(VersionMismatch)
@@ -228,7 +212,7 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     actor_row = hot.PETS[fire]
     target_row = hot.PETS[water]
     normal_element = 0
-    skill = (999, normal_element, SkillCategory.PHYSICAL.value, 0, 50, 0, 1)
+    skill = (999, normal_element, SkillCategory.PHYSICAL.value, 0, 50, 0, 1, 0)
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(

@@ -68,6 +68,7 @@ _DEFAULT_SKILL_CONF_PATH = (
 )
 
 ABILITY_SKILL_TYPE = 2
+EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST = 66
 EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE = 76
 BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = 143
 BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = 154
@@ -350,9 +351,16 @@ def _flag_from_effect_row(
 ) -> str | None:
     if int(rec.get("type") or 0) != 3:
         return None
-    if int(rec.get("effect_order") or 0) != EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE:
-        return None
+    order = int(rec.get("effect_order") or 0)
     params = rec.get("effect_param")
+    if order == EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST:
+        if params is None:
+            return "SHUFFLE_SKILLS_REDUCE_LAST"
+        if isinstance(params, list) and len(params) <= 1 and _slot_int_values(params, 0) in ((), (0,)):
+            return "SHUFFLE_SKILLS_REDUCE_LAST"
+        return None
+    if order != EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE:
+        return None
     if not isinstance(params, list) or len(params) != 2:
         return None
     if _slot_values(params, 1) != (1,):
@@ -479,6 +487,17 @@ def _slot_values(params: list, index: int) -> tuple[int, ...]:
         return tuple(v for v in (_maybe_int(item) for item in raw) if v > 0)
     value = _maybe_int(raw)
     return (value,) if value > 0 else ()
+
+
+def _slot_int_values(params: list, index: int) -> tuple[int, ...]:
+    if index >= len(params):
+        return ()
+    raw = params[index]
+    if isinstance(raw, dict):
+        raw = raw.get("params")
+    if isinstance(raw, list):
+        return tuple(_maybe_int(item) for item in raw)
+    return (_maybe_int(raw),)
 
 
 def _maybe_int(value) -> int:

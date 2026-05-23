@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from roco.generated.weather_decoders import WEATHER_EFFECT_DECODERS
 
-from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, IgnoredOutcome
+from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 
 
 def _weather_outcomes() -> dict[int, EmitOutcome | tuple[EmitOutcome, int]]:
@@ -22,13 +22,13 @@ def _weather_outcomes() -> dict[int, EmitOutcome | tuple[EmitOutcome, int]]:
     return out
 
 
-EXACT_EFFECT_DECODERS: dict[int, EmitOutcome | IgnoredOutcome | tuple[EmitOutcome, int]] = {
+EXACT_EFFECT_DECODERS: dict[int, EmitOutcome | tuple[EmitOutcome, int]] = {
     **_weather_outcomes(),
 }
 
 
 def decode_exact(
     effect_id: int,
-) -> EmitOutcome | IgnoredOutcome | tuple[EmitOutcome, int] | None:
+) -> EmitOutcome | tuple[EmitOutcome, int] | None:
     """Return the curated outcome for ``effect_id``, or ``None`` to fall through."""
     return EXACT_EFFECT_DECODERS.get(effect_id)

@@ -196,6 +196,54 @@ def _inc_skill_count(packed: int, elem: Element) -> int:
     return packed
 
 
+def _unpack_u8_count(packed: int, index: int) -> int:
+    if index < 0:
+        return 0
+    return (packed >> (index * 8)) & 0xFF
+
+
+def _inc_u8_count(packed: int, index: int) -> int:
+    if index < 0:
+        return packed
+    shift = index * 8
+    cur = (packed >> shift) & 0xFF
+    if cur < 0xFF:
+        return (packed & ~(0xFF << shift)) | ((cur + 1) << shift)
+    return packed
+
+
+def _add_element_nibble(packed: int, elem: Element, amount: int) -> int:
+    shift = elem.value * 4
+    cur = (packed >> shift) & 0xF
+    return (packed & ~(0xF << shift)) | (min(0xF, cur + max(0, int(amount))) << shift)
+
+
+def _unpack_element_u8(packed: int, elem: Element) -> int:
+    return (packed >> (elem.value * 8)) & 0xFF
+
+
+def _add_element_u8(packed: int, elem: Element, amount: int) -> int:
+    shift = elem.value * 8
+    cur = (packed >> shift) & 0xFF
+    return (packed & ~(0xFF << shift)) | (min(0xFF, cur + max(0, int(amount))) << shift)
+
+
+def _merge_element_nibbles(packed: int, delta: int) -> int:
+    for elem in Element:
+        amount = _unpack_skill_count(delta, elem)
+        if amount:
+            packed = _add_element_nibble(packed, elem, amount)
+    return packed
+
+
+def _merge_element_u8(packed: int, delta: int) -> int:
+    for elem in Element:
+        amount = _unpack_element_u8(delta, elem)
+        if amount:
+            packed = _add_element_u8(packed, elem, amount)
+    return packed
+
+
 def _pack_weather(wtype: WeatherType, turns: int) -> int:
     return (wtype.value & 0xF) | (turns & 0xF) << 4
 

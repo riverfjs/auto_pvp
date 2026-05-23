@@ -13,7 +13,6 @@ Helper functions live in sibling modules grouped by responsibility:
 * :mod:`.refs`     — cross-reference / desc-note extraction
                      (``_cross_refs``, ``_desc_note_refs``,
                      ``_sample_sorted``).
-* :mod:`.ignored`  — visual-only family detection (``_ignored_candidate``).
 * :mod:`.classify` — coverage bucketing per source id.
 * :mod:`.consumers`/ :mod:`.io` / :mod:`.validation` — preload helpers.
 """
@@ -35,7 +34,6 @@ from .classify import (
     _derive_coverage_status,
 )
 from .consumers import _build_consumer_index, _build_team_used
-from .ignored import _ignored_candidate
 from .io import _load_canonical, _load_desc_notes, _load_exact_rules
 from .params import _collect_param_shape, _vec_from_param_slot
 from .paths import PAK_DATA
@@ -59,7 +57,6 @@ def _build_family(
     team_used_abilities: set[str],
     weather_ids: set[int],
     exact_emit_ids: set[int],
-    exact_ignored_ids: set[int],
     ability_flag_ids: frozenset[int],
 ) -> dict:
     source_ids = sorted(source_ids)
@@ -94,7 +91,6 @@ def _build_family(
         "auto_structural_count": 0,
         "exact_semantic_count": 0,
         "generated_weather_count": 0,
-        "ignored_count": 0,
         "gap_count": 0,
         "ability_flag_count": 0,
     }
@@ -104,14 +100,10 @@ def _build_family(
             pak=pak,
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
-            exact_ignored_ids=exact_ignored_ids,
             ability_flag_ids=ability_flag_ids,
         )
         breakdown[bucket + "_count"] += 1
     coverage_status = _derive_coverage_status(breakdown)
-    ignored_candidate, ignored_reason, ignored_source_hits = _ignored_candidate(
-        source_ids, record_lookup,
-    )
     pak_evidence: list[str] = []
     if source_table == "EFFECT_CONF":
         if source_ids:
@@ -163,16 +155,13 @@ def _build_family(
         "coverage_status": coverage_status,
         "coverage_breakdown": breakdown,
         "pak_evidence": pak_evidence,
-        "ignored_candidate": ignored_candidate,
-        "ignored_candidate_reason": ignored_reason,
-        "ignored_candidate_source_ids": ignored_source_hits,
     }
 
 
 def build_families() -> list[dict]:
     pak = PakTables(PAK_DATA)
     desc_notes = _load_desc_notes()
-    exact_emit_ids, exact_ignored_ids = _load_exact_rules()
+    exact_emit_ids = _load_exact_rules()
     weather_ids = set(WEATHER_EFFECT_DECODERS.keys())
     ability_flag_rules = load_ability_flags_from_effects(
         effect_conf=pak.effect_conf,
@@ -193,7 +182,6 @@ def build_families() -> list[dict]:
         pak.buff_conf,
         consumer_index,
         exact_emit_ids,
-        exact_ignored_ids,
         weather_ids,
     )
 
@@ -220,7 +208,6 @@ def build_families() -> list[dict]:
             team_used_abilities=team_used_abilities,
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
-            exact_ignored_ids=exact_ignored_ids,
             ability_flag_ids=ability_flag_ids,
         ))
 
@@ -253,7 +240,6 @@ def build_families() -> list[dict]:
             team_used_abilities=team_used_abilities,
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
-            exact_ignored_ids=exact_ignored_ids,
             ability_flag_ids=ability_flag_ids,
         ))
 

@@ -80,6 +80,10 @@ def op_hit_count_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.enemy_hit_delta += row[ROW_ARG0]
 
 
+def op_hit_count_by_team_skill_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    ctx.hit_count += ctx.side_same_skill_count * row[ROW_ARG0]
+
+
 def op_first_strike_hit_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.first_strike:
         ctx.hit_count += row[ROW_ARG0]

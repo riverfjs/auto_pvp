@@ -10,10 +10,14 @@ from __future__ import annotations
 from typing import Any
 
 from roco.generated import handler_indices as _hi
+from roco.common.buffbase import pack_buff_delta_from_base_ids
+from roco.generated.buffbase_params import BUFFBASE_PARAMS
 
+H_ANTI_HEAL = _hi.H_ANTI_HEAL
 H_BURN = _hi.H_BURN
 H_ENEMY_DEBUFF = _hi.H_ENEMY_DEBUFF
 H_FREEZE = _hi.H_FREEZE
+H_HIT_COUNT_BY_TEAM_SKILL_COUNT = _hi.H_HIT_COUNT_BY_TEAM_SKILL_COUNT
 H_LEECH = _hi.H_LEECH
 H_POISON = _hi.H_POISON
 H_SELF_BUFF = _hi.H_SELF_BUFF
@@ -107,8 +111,17 @@ def pack_handler_params(
 
     if is_status_or_mark_handler(h):
         return (max(1, stack_count), 0, 0, 0)
+    if h == H_HIT_COUNT_BY_TEAM_SKILL_COUNT:
+        return (max(1, stack_count), 0, 0, 0)
+    if h == H_ANTI_HEAL:
+        multiplier = 2
+        if base_ids:
+            base_params = BUFFBASE_PARAMS.get(int(base_ids[0])) or ()
+            trigger = base_params[3] if len(base_params) > 3 else ()
+            if isinstance(trigger, tuple) and len(trigger) >= 2:
+                multiplier = max(1, int(trigger[1]) // 10)
+        return (multiplier, 0, 0, 0)
     if h in (H_SELF_BUFF, H_ENEMY_DEBUFF, H_SELF_DEBUFF):
-        p = (base_ids + [0, 0, 0, 0])[:4]
-        return (p[0], p[1], p[2], p[3])
+        return (pack_buff_delta_from_base_ids(tuple(int(v) for v in base_ids)), 0, 0, 0)
     p = (base_ids + [0, 0, 0, 0])[:4]
     return (p[0], p[1], p[2], p[3])

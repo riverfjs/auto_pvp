@@ -73,7 +73,7 @@ the runtime tuple is the 9-field row above.
 1. `roco.compiler_v2.gen_prefix_map`
    Generates static pak/Lua facts and handler dispatch artifacts under
    `roco/generated/`.
-2. `roco.data.build_db --allow-used-gaps`
+2. `roco.data.build_db`
    Rebuilds `_db/data.db` from pak-derived canonical records, then writes
    `catalog_hot.py` and `catalog_debug.py`.
 3. `roco.compiler_v2.build_effect_families`
@@ -125,8 +125,8 @@ audit data. Do not edit it by hand.
 
 ## SQLite
 
-`_db/data.db` is an intermediate build artifact and inspection surface. The
-engine does not read it at runtime.
+`_db/data.db` is a local intermediate build artifact and inspection surface,
+not a checked-in source file. The engine does not read it at runtime.
 
 Important tables:
 
@@ -134,7 +134,7 @@ Important tables:
 skills / abilities / pets              normalized pak-facing catalog rows
 skill_effects / ability_effects        compiled kernel effect rows
 ability_effect_ids                     original pak effect_id provenance for ability flags
-effect_gaps / ignored_effects          unsupported or intentionally ignored pak effects
+effect_gaps                            unsupported pak effects that block strict builds when used
 pet_skills / pet_transforms            pet loadouts and form transforms
 teams / team_pets / team_pet_skills    sample/team data
 elements / statuses / weathers / marks enum-like domain tables

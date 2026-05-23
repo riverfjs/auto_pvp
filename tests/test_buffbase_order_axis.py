@@ -7,7 +7,7 @@ that reference stable ``Enum.BuffType`` symbols and resolves those
 symbols through generated Lua data.
 
 * The codegen join with BUFFBASE_CONF produces a base_id → handler map
-  that the runtime classifier picks up before the legacy prefix path.
+  that the runtime classifier picks up before mixed-prefix dispatch.
 * The 3 mixed prefixes left on the engine prefix axis are not
   silently shadowed by an over-broad buffbase_order rule.
 * No compiler-owned ``buffbase_order -> handler`` table comes back.
@@ -120,7 +120,7 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
     """Only the 3 mixed prefixes remain outside the buffbase_order axis.
 
     Exact base anchors are now derived structurally from pak rows instead
-    of engine-owned ``@handles_base_name`` declarations.
+    of engine-owned display-name declarations.
     """
     assert set(resolved_axes.prefix) == {2011, 2046, 2050}, (
         f"engine prefix axis = {sorted(resolved_axes.prefix)} (expected "
@@ -134,7 +134,6 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
         "BFT_ENTER_BATTLE",
     }
     assert "base_id" not in raw_axes
-    assert raw_axes["base_name"] == {}
 
 
 # ── runtime classifier integration ────────────────────────────────────────
@@ -143,7 +142,7 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
 def test_runtime_classifier_routes_clean_prefix_via_via_order(buffbase_conf):
     """A buff_id whose ``buff_base_ids[0]`` is in a clean prefix range
     (e.g. 2001xxx → STAT_MOD/H_SELF_BUFF) must resolve through the
-    ``BASE_ID_VIA_ORDER_MAP``, not the legacy prefix map.  This is the
+    ``BASE_ID_VIA_ORDER_MAP``, not the mixed-prefix map.  This is the
     central post-migration contract.
     """
     # Find a stat-mod base_id (prefix 2001, order 1).
@@ -172,6 +171,12 @@ def test_runtime_classifier_routes_named_mark_buff_before_shared_base_id():
     assert cls.classify_buff_handler(20320070, pak.buff_conf) == hi.H_MOISTURE_MARK
     assert cls.classify_buff_handler(20320220, pak.buff_conf) == hi.H_PASSIVE_ENERGY_REDUCE
     assert 2032007 not in cls.BASE_ID_HANDLER_MAP
+
+
+def test_runtime_classifier_routes_heal_reversal_exact_buff():
+    """Order-146 heal reversal is an exact structural BUFF_CONF row, not a whole-prefix rule."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    assert cls.classify_buff_handler(21460330, pak.buff_conf) == hi.H_ANTI_HEAL
 
 
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):

@@ -117,4 +117,10 @@ HANDLER_ORDER: tuple[str, ...] = (
     'op_transfer_mods',
     'op_weather',
     'op_wind_mark',
+    'op_entry_self_buff_by_side_count',
+    'op_entry_self_buff_if_energy',
+    'op_hit_count_by_team_skill_count',
+    'op_entry_element_skill_mod_by_count',
+    'op_entry_self_buff_by_used_skill_count',
+    'op_entry_self_buff_by_source_count',
 )

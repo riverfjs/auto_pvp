@@ -28,6 +28,10 @@ from roco.engine.kernel.op_mods.buffs import (
     op_self_buff,
     op_self_debuff,
     op_team_synergy_bug_swarm_attack,
+    op_entry_self_buff_by_side_count,
+    op_entry_self_buff_if_energy,
+    op_entry_self_buff_by_used_skill_count,
+    op_entry_self_buff_by_source_count,
 )
 from roco.engine.kernel.op_mods.skill import (
     op_borrow_team_skill,
@@ -39,6 +43,7 @@ from roco.engine.kernel.op_mods.skill import (
     op_skill_mod,
     op_specific_skill_power_bonus,
     op_transfer_mods,
+    op_entry_element_skill_mod_by_count,
 )
 from roco.engine.kernel.op_mods.combat import (
     op_auto_switch_on_zero_energy,
@@ -60,6 +65,7 @@ from roco.engine.kernel.op_mods.combat import (
     op_priority_next_delta,
     op_set_self_cooldown,
     op_stat_scale_hits_per_hp_lost,
+    op_hit_count_by_team_skill_count,
 )
 from roco.engine.kernel.op_resources import (
     op_anti_heal,
@@ -256,6 +262,12 @@ HANDLERS: tuple = (
     op_transfer_mods,  # 113
     op_weather,  # 114
     op_wind_mark,  # 115
+    op_entry_self_buff_by_side_count,  # 116
+    op_entry_self_buff_if_energy,  # 117
+    op_hit_count_by_team_skill_count,  # 118
+    op_entry_element_skill_mod_by_count,  # 119
+    op_entry_self_buff_by_used_skill_count,  # 120
+    op_entry_self_buff_by_source_count,  # 121
 )
 
 HANDLER_COUNT = len(HANDLERS)

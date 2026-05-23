@@ -7,7 +7,6 @@ Module layout (sorted by responsibility, leaf → root):
 * :mod:`.consumers`       — reverse-consumer + team-used indexing.
 * :mod:`.params`          — ``effect_param`` shape decoding.
 * :mod:`.refs`            — cross-reference + desc-note extraction.
-* :mod:`.ignored`         — visual-only family detection.
 * :mod:`.classify`        — coverage bucketing + family-key derivation.
 * :mod:`.validation`      — pak + canonical cross-checks (no DB access).
 * :mod:`.family_builder`  — per-family record assembly and the top-level

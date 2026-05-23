@@ -144,33 +144,6 @@ def _insert_gaps(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
     return len(gap_rows)
 
 
-def _ignored_row(source_type: str, source_name: str, entry: dict) -> tuple:
-    return (
-        source_type,
-        source_name,
-        str(entry.get("primitive", "")),
-        entry.get("effect_id"),
-        entry.get("buff_id"),
-        int(entry.get("effect_order", 0)),
-        entry.get("timing_code"),
-        str(entry.get("reason", "")),
-        str(entry.get("evidence", "")),
-        str(entry.get("pak_table", "")),
-    )
-
-
-def _insert_ignored(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
-    ignored_rows = list(rows)
-    if ignored_rows:
-        conn.executemany(
-            "INSERT INTO ignored_effects "
-            "(source_type, source_name, primitive, effect_id, buff_id, effect_order, timing_code, reason, evidence, pak_table) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            ignored_rows,
-        )
-    return len(ignored_rows)
-
-
 def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> dict[str, int]:
     records = _records(abilities, "ability")
     rows = [
@@ -190,7 +163,6 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
     lookup = {name: aid for aid, name in conn.execute("SELECT id, name FROM abilities")}
     effect_rows: list[tuple] = []
     gap_rows: list[tuple] = []
-    ignored_rows: list[tuple] = []
     ability_effect_id_rows: list[tuple] = []
     for record in records:
         name = str(record.get("name", "")).strip()
@@ -240,8 +212,6 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
                 gap.get("params") or {},
                 str(gap.get("reason", "")),
             ))
-        for entry in record.get("ignored_effects", []) or []:
-            ignored_rows.append(_ignored_row("ability", name, entry))
     if effect_rows:
         conn.executemany(
             "INSERT INTO ability_effects (ability_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
@@ -256,12 +226,10 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
             ability_effect_id_rows,
         )
     inserted_gaps = _insert_gaps(conn, gap_rows)
-    inserted_ignored = _insert_ignored(conn, ignored_rows)
     print(f"  abilities: {len(lookup)} inserted")
     print(f"  ability_effects: {len(effect_rows)} inserted")
     print(f"  ability_effect_ids: {len(ability_effect_id_rows)} inserted")
     print(f"  ability effect_gaps: {inserted_gaps} inserted")
-    print(f"  ability ignored_effects: {inserted_ignored} inserted")
     return lookup
 
 
@@ -275,6 +243,7 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             _element_id(conn, str(record.get("element", "普通"))),
             category_code,
             category_name,
+            _required_int(record.get("skill_dam_type"), 0),
             _required_int(record.get("energy"), 0),
             _required_int(record.get("power"), 0),
             str(record.get("effect_text", "")),
@@ -283,14 +252,13 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             str(record.get("source_version", "")),
         ))
     conn.executemany(
-        "INSERT INTO skills (name, element_id, category_code, category_name, energy, power, effect_text, flavor_text, flags, source_version) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO skills (name, element_id, category_code, category_name, skill_dam_type, energy, power, effect_text, flavor_text, flags, source_version) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
     lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     effect_rows: list[tuple] = []
     gap_rows: list[tuple] = []
-    ignored_rows: list[tuple] = []
     for record in records:
         name = str(record["name"])
         owner_id = lookup[name]
@@ -317,8 +285,6 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
                 gap.get("params") or {},
                 str(gap.get("reason", "")),
             ))
-        for entry in record.get("ignored_effects", []) or []:
-            ignored_rows.append(_ignored_row("skill", name, entry))
     if effect_rows:
         conn.executemany(
             "INSERT INTO skill_effects (skill_id, timing_code, tag_code, flags, params_json, condition, sort_order) "
@@ -326,11 +292,9 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             effect_rows,
         )
     inserted_gaps = _insert_gaps(conn, gap_rows)
-    inserted_ignored = _insert_ignored(conn, ignored_rows)
     print(f"  skills: {len(lookup)} inserted")
     print(f"  skill_effects: {len(effect_rows)} inserted")
     print(f"  skill effect_gaps: {inserted_gaps} inserted")
-    print(f"  skill ignored_effects: {inserted_ignored} inserted")
     return lookup
 
 
@@ -530,8 +494,6 @@ def import_teams(
     teams: Iterable[Record],
     pet_lookup: dict[str, int],
     skill_lookup: dict[str, int],
-    *,
-    fail_used_gaps: bool = True,
 ) -> None:
     records = _records(teams, "team")
     team_rows: list[tuple] = []
@@ -592,14 +554,14 @@ def import_teams(
         skill_rows,
     )
     refresh_effect_gap_usage(conn)
-    # ``assert_no_kernel_noop_rows`` is unconditional — H_NOOP leakage into
-    # runtime tables is always a bug, regardless of --allow-used-gaps.
     from roco.data.validation import assert_no_kernel_noop_rows
     assert_no_kernel_noop_rows(conn)
-    if fail_used_gaps:
-        from roco.data.validation import assert_no_blocking_effect_gaps, assert_no_missing_leader_transforms
-        assert_no_missing_leader_transforms(conn)
-        assert_no_blocking_effect_gaps(conn)
+    from roco.data.validation import (
+        assert_no_blocking_effect_gaps,
+        assert_no_missing_leader_transforms,
+    )
+    assert_no_missing_leader_transforms(conn)
+    assert_no_blocking_effect_gaps(conn)
     print(f"  teams: {len(team_rows)} inserted")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
     print(f"  team_pet_skills: {len(skill_rows)} moves inserted")
@@ -677,7 +639,6 @@ def _require_pak_source(name: str, rows: list[dict]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DB_DIR / "data.db")
-    parser.add_argument("--allow-used-gaps", action="store_true")
     args = parser.parse_args()
 
     if not args.db.exists():
@@ -714,7 +675,6 @@ def main() -> None:
             teams,
             pet_lookup,
             skill_lookup,
-            fail_used_gaps=not args.allow_used_gaps,
         )
 
     conn.commit()

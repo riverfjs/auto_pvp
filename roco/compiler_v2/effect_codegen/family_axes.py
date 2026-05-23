@@ -29,10 +29,16 @@ from roco.generated.handler_indices import (
     H_DISPEL_MARKS_TO_BURN,
     H_EXCHANGE_HP_RATIO,
     H_EXCHANGE_MOVES,
+    H_ENTRY_BUFF_PER_SKILL_COUNT,
+    H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
     H_HEAL_ENERGY,
     H_HEAL_HP,
     H_HIT_COUNT_DELTA,
     H_INSTALL_COUNTER,
+    H_ENTRY_SELF_BUFF_BY_SIDE_COUNT,
+    H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT,
+    H_ENTRY_SELF_BUFF_IF_ENERGY,
+    H_ENTRY_SELF_BUFF_BY_USED_SKILL_COUNT,
     H_LIFE_DRAIN,
     H_MIRROR_ENEMY_BUFFS,
     H_PRIORITY_NEXT_DELTA,
@@ -40,6 +46,18 @@ from roco.generated.handler_indices import (
     H_SELF_BUFF,
     H_TRANSFER_MODS,
 )
+from roco.common.buffbase import pack_buff_delta_from_buff_ids
+from roco.common.entry_sources import (
+    ENTRY_SOURCE_COUNTER,
+    ENTRY_SOURCE_DEFENSE,
+    ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE,
+    ENTRY_SOURCE_ENEMY_SWITCH,
+    ENTRY_SOURCE_EQUIPPED_ELEMENT,
+    ENTRY_SOURCE_STATUS,
+    ENTRY_SOURCE_USED_ELEMENT,
+    entry_source_code,
+)
+from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 from roco.generated.static.pak_axes import BUFF_BASE_TO_ORDER
 
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
@@ -54,14 +72,19 @@ ET_PURIFY = 4
 ET_HEAL_HP = 5
 ET_LIFE_DRAIN = 11
 ET_HEAL_ENERGY = 19
+ET_BUFF_BY_PACK_PET_NUM = 22
 ET_COUNTER = 31  # SkillPerformAutoBattleUtils.lua:189 (`EffectConf.effect_order == ET_COUNTER`)
 ET_HIT_COUNT = 32
+ET_HERO = 34
 ET_SET_COOLDOWN = 37
 ET_BUFF_CONVERT = 42
 ET_EXCHANGE_RATIO_OR_STATE = 44
 ET_EXCHANGE_SKILLS = 47
 ET_COPY_BUFF = 50
 ET_PRIORITY_NEXT = 51
+ET_BUFF_BY_CHANGE_TIMES = 61
+ET_BUFF_BY_EQUIP_SKILL_NUM = 64
+ET_LIMIT_FIGHT_BY_HP = 77
 
 # Counter-trigger install must always run AFTER_MOVE so the kernel can
 # fold ``actor_counter_install_skill_id`` into ``SideState.counter_skill_id``
@@ -70,6 +93,12 @@ ET_PRIORITY_NEXT = 51
 # normalises the install window so the counter is always armed at the
 # correct stage regardless of how the calling skill schedules it.
 COUNTER_INSTALL_TIMING = 11
+SWITCH_IN_TIMING = 24
+COUNT_FAINTED_ALLY = -1
+MODE_POWER_BPS = 1
+MODE_POWER_FLAT = 2
+MODE_COST_REDUCE = 3
+MODE_POISON_STACKS = 4
 
 
 def decode_family_axes(
@@ -94,9 +123,13 @@ def decode_family_axes(
     if order == ET_LIFE_DRAIN and effect_type == 1:
         return _emit_from_param(rec, H_LIFE_DRAIN, 0)
     if order == ET_HEAL_ENERGY and effect_type == 3:
-        return _emit_from_param(rec, H_HEAL_ENERGY, 0)
+        return _decode_heal_energy(rec)
+    if order == ET_BUFF_BY_PACK_PET_NUM and effect_type == 3:
+        return _decode_buff_by_pack_pet_num(rec, buff_conf)
     if order == ET_COUNTER:
         return _decode_counter_install(rec)
+    if order == ET_HERO and effect_type == 3:
+        return _decode_hero_entry(rec, buff_conf)
     if order == ET_HIT_COUNT and effect_type == 1:
         return _decode_hit_count_delta(rec)
     if order == ET_SET_COOLDOWN and effect_type == 3:
@@ -111,6 +144,12 @@ def decode_family_axes(
         return _decode_copy_buff(rec)
     if order == ET_PRIORITY_NEXT and effect_type == 1:
         return _decode_priority_next(rec)
+    if order == ET_BUFF_BY_CHANGE_TIMES and effect_type == 3:
+        return _decode_entry_static_buff(rec, buff_conf)
+    if order == ET_BUFF_BY_EQUIP_SKILL_NUM and effect_type == 3:
+        return _decode_buff_by_equip_skill_num(rec, buff_conf)
+    if order == ET_LIMIT_FIGHT_BY_HP and effect_type == 3:
+        return _decode_entry_buff_if_energy(rec, buff_conf)
     return None
 
 
@@ -128,6 +167,21 @@ def _emit_from_param(rec: dict, handler_idx: int, slot: int) -> EmitOutcome | No
     if value == 0:
         return None
     return _emit(handler_idx, value)
+
+
+def _decode_heal_energy(rec: dict) -> EmitOutcome | None:
+    params_raw = _params(rec)
+    direct = safe_int(params_raw, 0)
+    if direct != 0:
+        return _emit(H_HEAL_ENERGY, direct)
+    base = safe_int(params_raw, 1)
+    ratio = safe_int(params_raw, 2)
+    if base <= 0 or ratio == 0:
+        return None
+    amount = base * ratio // 10000
+    if amount == 0:
+        return None
+    return _emit(H_HEAL_ENERGY, amount)
 
 
 def _decode_purify(rec: dict) -> EmitOutcome | None:
@@ -172,6 +226,222 @@ def _decode_counter_install(rec: dict) -> tuple[EmitOutcome, int] | None:
         stacks=1,
     )
     return outcome, COUNTER_INSTALL_TIMING
+
+
+def _decode_buff_by_pack_pet_num(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, int] | None:
+    params_raw = _params(rec)
+    buff_ids = extract_int_list(params_raw, 3)
+    packed = pack_buff_delta_from_buff_ids(buff_ids, buff_conf)
+    if packed == 0:
+        return None
+    fainted_mode = safe_int(params_raw, 1)
+    if fainted_mode == 2:
+        return _emit(H_ENTRY_SELF_BUFF_BY_SIDE_COUNT, COUNT_FAINTED_ALLY, packed), SWITCH_IN_TIMING
+    element = safe_int(params_raw, 0, -1)
+    if element >= 0:
+        return _emit(H_ENTRY_SELF_BUFF_BY_SIDE_COUNT, element, packed), SWITCH_IN_TIMING
+    return None
+
+
+def _decode_entry_static_buff(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, int] | None:
+    packed = pack_buff_delta_from_buff_ids(extract_int_list(_params(rec), 0), buff_conf)
+    if packed == 0:
+        return None
+    return _emit(H_SELF_BUFF, packed), SWITCH_IN_TIMING
+
+
+def _decode_entry_buff_if_energy(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, int] | None:
+    params_raw = _params(rec)
+    required = safe_int(params_raw, 1)
+    selector = safe_int(params_raw, 2)
+    if selector not in (1, 2):
+        return None
+    packed = pack_buff_delta_from_buff_ids(extract_int_list(params_raw, 3), buff_conf)
+    if packed == 0:
+        return None
+    return _emit(H_ENTRY_SELF_BUFF_IF_ENERGY, selector, required, packed), SWITCH_IN_TIMING
+
+
+def _decode_hero_entry(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, int] | None:
+    params_raw = _params(rec)
+    event_count_buff = _decode_hero_event_count_buff(params_raw, buff_conf)
+    if event_count_buff is not None:
+        return event_count_buff
+    if safe_int(params_raw, 3) != 1:
+        return None
+    skill_count_mod = _decode_entry_buff_per_used_skill_count(params_raw, buff_conf)
+    if skill_count_mod is not None:
+        return skill_count_mod
+    source = _hero_count_source(params_raw)
+    if source is not None:
+        element_mod = _decode_entry_element_mod(
+            _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
+            source,
+        )
+        if element_mod is not None:
+            return element_mod
+    packed = pack_buff_delta_from_buff_ids(extract_int_list(params_raw, 4), buff_conf)
+    if packed == 0:
+        return None
+    element = safe_int(params_raw, 0, -1)
+    if element > 0:
+        return _emit(H_ENTRY_SELF_BUFF_BY_USED_SKILL_COUNT, element, packed), SWITCH_IN_TIMING
+    return None
+
+
+def _decode_hero_event_count_buff(
+    params_raw: list,
+    buff_conf: dict[int, dict],
+) -> tuple[EmitOutcome, int] | None:
+    if safe_int(params_raw, 3) != 2:
+        return None
+    packed = pack_buff_delta_from_buff_ids(extract_int_list(params_raw, 4), buff_conf)
+    if packed == 0:
+        return None
+    skill_dam_type = safe_int(params_raw, 0)
+    if skill_dam_type > 0:
+        return _emit(
+            H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT,
+            entry_source_code(ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE, skill_dam_type),
+            packed,
+        ), SWITCH_IN_TIMING
+    if safe_int(params_raw, 7) == 3:
+        return _emit(
+            H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT,
+            entry_source_code(ENTRY_SOURCE_ENEMY_SWITCH),
+            packed,
+        ), SWITCH_IN_TIMING
+    return None
+
+
+def _decode_buff_by_equip_skill_num(
+    rec: dict,
+    buff_conf: dict[int, dict],
+) -> tuple[EmitOutcome, int] | None:
+    params_raw = _params(rec)
+    source_element = safe_int(params_raw, 0, -1)
+    if source_element <= 0:
+        return None
+    return _decode_entry_element_mod(
+        _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, source_element),
+    )
+
+
+def _decode_entry_buff_per_used_skill_count(
+    params_raw: list,
+    buff_conf: dict[int, dict],
+) -> tuple[EmitOutcome, int] | None:
+    element = safe_int(params_raw, 0, -1)
+    if element <= 0:
+        return None
+    base_ids = _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf)
+    if len(base_ids) != 1:
+        return None
+    base_id = base_ids[0]
+    order = BUFFBASE_ORDER.get(base_id)
+    base_params = BUFFBASE_PARAMS.get(base_id) or ()
+    if order == 32 and len(base_params) >= 4:
+        cost_delta = _param_int(base_params, 3)
+        if cost_delta < 0:
+            return _emit(H_ENTRY_BUFF_PER_SKILL_COUNT, element, 1, abs(cost_delta)), SWITCH_IN_TIMING
+    if order == 23 and len(base_params) >= 6:
+        affected = base_params[0]
+        mode = _param_int(base_params, 4)
+        amount = _param_int(base_params, 5)
+        if affected == 0 and mode == 2 and amount > 0:
+            return _emit(H_ENTRY_BUFF_PER_SKILL_COUNT, element, 2, amount), SWITCH_IN_TIMING
+    return None
+
+
+def _decode_entry_element_mod(
+    base_ids: list[int],
+    source_code: int,
+) -> tuple[EmitOutcome, int] | None:
+    parsed: list[tuple[int, int, int]] = []
+    for base_id in base_ids:
+        base_params = BUFFBASE_PARAMS.get(base_id) or ()
+        order = BUFFBASE_ORDER.get(base_id)
+        if order == 23 and len(base_params) >= 6:
+            mask = _element_mask(base_params[0])
+            mode = _param_int(base_params, 4)
+            amount = _param_int(base_params, 5)
+            if mask and mode in (MODE_POWER_BPS, MODE_POWER_FLAT) and amount > 0:
+                parsed.append((mask, amount, mode))
+        elif order == 32 and len(base_params) >= 4:
+            mask = _element_mask(base_params[0])
+            cost_delta = _param_int(base_params, 3)
+            if mask and cost_delta < 0:
+                parsed.append((mask, abs(cost_delta), MODE_COST_REDUCE))
+        elif order == 35 and len(base_params) >= 5:
+            mask = _element_mask(base_params[0])
+            if mask:
+                parsed.append((mask, 1, MODE_POISON_STACKS))
+    if not parsed:
+        return None
+    modes = {mode for _mask, _amount, mode in parsed}
+    amounts = {amount for _mask, amount, _mode in parsed}
+    if len(modes) != 1 or len(amounts) != 1:
+        return None
+    mask = 0
+    for item_mask, _amount, _mode in parsed:
+        mask |= item_mask
+    amount = parsed[0][1]
+    mode = parsed[0][2]
+    return _emit(H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT, source_code, mask, amount, mode), SWITCH_IN_TIMING
+
+
+def _hero_count_source(params_raw: list) -> int | None:
+    if safe_int(params_raw, 7) == 1:
+        return entry_source_code(ENTRY_SOURCE_COUNTER)
+    category = safe_int(params_raw, 2)
+    if category == 2:
+        return entry_source_code(ENTRY_SOURCE_STATUS)
+    if category == 3:
+        return entry_source_code(ENTRY_SOURCE_DEFENSE)
+    element = safe_int(params_raw, 0, -1)
+    if element > 0:
+        return entry_source_code(ENTRY_SOURCE_USED_ELEMENT, element)
+    return None
+
+
+def _element_mask(value: object) -> int:
+    values: tuple[object, ...]
+    if isinstance(value, tuple):
+        values = value
+    else:
+        values = (value,)
+    mask = 0
+    for raw in values:
+        try:
+            element = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if element > 0:
+            mask |= 1 << element
+    return mask
+
+
+def _base_ids_from_buff_ids(buff_ids: list[int], buff_conf: dict[int, dict]) -> list[int]:
+    out: list[int] = []
+    for buff_id in buff_ids:
+        rec = buff_conf.get(buff_id) or {}
+        for base_id in rec.get("buff_base_ids") or ():
+            if base_id:
+                out.append(int(base_id))
+    return out
+
+
+def _param_int(params: tuple, index: int, default: int = 0) -> int:
+    if index >= len(params):
+        return default
+    value = params[index]
+    if isinstance(value, tuple):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _decode_buff_convert(rec: dict, buff_conf: dict[int, dict]) -> EmitOutcome | None:

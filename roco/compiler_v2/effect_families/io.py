@@ -33,12 +33,12 @@ def _load_canonical(name: str) -> list[dict]:
     return canonical_list(name)
 
 
-def _load_exact_rules() -> tuple[set[int], set[int]]:
-    """Return (exact_emit_ids, exact_ignored_ids).
+def _load_exact_rules() -> set[int]:
+    """Return exact_emit_ids.
 
     Exact effect_id semantics have been migrated to pak family decoders;
-    the family catalog keeps this hook only so older coverage fields can
-    age out deterministically.
+    the family catalog keeps this hook only for generated exact emitters
+    such as weather rows.
     """
 
-    return set(), set()
+    return set()

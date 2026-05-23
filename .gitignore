@@ -5,5 +5,6 @@ __pycache__/
 .playwright-mcp/
 .claude/
 .codex/
+_db/data.db
 _db/data.db-shm
 _db/data.db-wal

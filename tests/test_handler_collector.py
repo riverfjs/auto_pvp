@@ -2,10 +2,7 @@
 
 The collector reads ``@handles_buff`` / ``@handles_prefix`` declarations
 on every ``op_*`` function across the kernel op modules and exposes them
-as flat dispatch tables.  ``@handles_base_name`` remains only as a
-retired compatibility shim; production engine modules must not declare
-base-name axes because current pak exports no reliable
-``BUFFBASE_CONF.editor_name`` data.
+as flat dispatch tables.
 """
 
 from __future__ import annotations
@@ -25,7 +22,7 @@ from roco.compiler_v2.handler_axes import (
 @pytest.fixture()
 def tmp_op_module(tmp_path: Path) -> Path:
     src = textwrap.dedent('''
-        from roco.engine.kernel.op_meta import handles_buff, handles_prefix, handles_base_name
+        from roco.engine.kernel.op_meta import handles_buff, handles_prefix
 
         @handles_buff([("BFT_ATTR_CHANGE", "STAT_MOD"), ("BFT_BAN", "LOCK_SWITCH")])
         def op_self_buff(ctx, row):
@@ -37,10 +34,6 @@ def tmp_op_module(tmp_path: Path) -> Path:
 
         @handles_prefix([("BFT_DAMNUM_CHANGE", "DAMAGE_REDUCE")])
         def op_damage_reduction(ctx, row):
-            pass
-
-        @handles_base_name([("寄生", "leech base")])
-        def op_leech(ctx, row):
             pass
 
         def op_nodecorator(ctx, row):
@@ -66,12 +59,6 @@ def test_scan_module_collects_buffbase_orders(tmp_op_module: Path):
 def test_scan_module_collects_prefix(tmp_op_module: Path):
     result = _scan_module(tmp_op_module, "fake_ops")
     assert result["prefix_type"] == {"BFT_DAMNUM_CHANGE": ("op_damage_reduction", "DAMAGE_REDUCE")}
-
-
-def test_scan_module_collects_base_names(tmp_op_module: Path):
-    result = _scan_module(tmp_op_module, "fake_ops")
-    assert result["base_name"] == {"寄生": ("op_leech", "leech base")}
-    assert "base_id" not in result
 
 
 def test_scan_module_skips_undecorated_ops(tmp_op_module: Path):
@@ -140,7 +127,6 @@ def test_collect_handler_axes_runs_on_real_op_mods():
     assert {axis: len(bucket) for axis, bucket in axes.items()} == {
         "buff_type": 82,
         "prefix_type": 3,
-        "base_name": 0,
     }
     assert "BFT_ATTR_CHANGE" in axes["buff_type"]
     assert "BFT_DAMNUM_CHANGE" in axes["prefix_type"]
@@ -152,7 +138,6 @@ def test_resolve_handler_axes_resolves_names_to_indices(monkeypatch):
     fake_axes = {
         "buff_type": {"BFT_ATTR_CHANGE": ("op_self_buff", "STAT_MOD")},
         "prefix_type": {},
-        "base_name": {},
     }
     monkeypatch.setattr(
         "roco.compiler_v2.handler_axes.collect_handler_axes",
@@ -173,7 +158,6 @@ def test_resolve_handler_axes_unknown_handler_raises(monkeypatch):
     fake_axes = {
         "buff_type": {"BFT_ATTR_CHANGE": ("op_nonexistent_handler", "X")},
         "prefix_type": {},
-        "base_name": {},
     }
     monkeypatch.setattr(
         "roco.compiler_v2.handler_axes.collect_handler_axes",

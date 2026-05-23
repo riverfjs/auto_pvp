@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW
-from roco.common.packing import MarkIdx, _set_mark, _unpack_mark
+from roco.common.packing import (
+    MarkIdx,
+    _add_to_positive_buff_lanes,
+    _inc_skill_count,
+    _merge_buff_delta,
+    _merge_element_nibbles,
+    _merge_element_u8,
+    _set_mark,
+    _unpack_mark,
+)
 from roco.common.constants import BPS, MAX_ENERGY, SPIRIT_ENTRY_ENERGY_LOSS, THORN_ENTRY_DAMAGE_BPS
-from roco.common.enums import AbilityFlag
+from roco.common.enums import AbilityFlag, Element
 from roco.generated import catalog_hot as hot
-from roco.engine.kernel.catalog import ELEMENT_BUG, PET_ABILITY, PET_PRIMARY, STAT_HP
+from roco.engine.kernel.catalog import ELEMENT_BUG, PET_ABILITY, PET_PRIMARY, PET_SECONDARY, SKILL_ELEMENT, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_rows import TIMING_ENEMY_SWITCH, TIMING_SWITCH_IN, TIMING_SWITCH_OUT
 from roco.engine.kernel.ops import run_skill_timing
@@ -43,7 +52,10 @@ def switch(state: KernelState, side_id: int, slot: int) -> KernelState:
     if outgoing.ability_flags & int(AbilityFlag.BARREL_ACTIVE):
         side_state = side_state._replace(barrel_pending=1)
     copy_mods = bool(outgoing.ability_flags & int(AbilityFlag.COPY_SWITCH_STATE))
-    side_state = side_state._replace(active=slot)
+    side_state = side_state._replace(
+        active=slot,
+        switch_count=min(255, side_state.switch_count + (1 if slot != outgoing_slot else 0)),
+    )
     side_state = apply_switch_out_ability(side_state, outgoing_slot, slot)
     if copy_mods:
         incoming = side_state.pets[slot]._replace(buff_stages=outgoing.buff_stages)
@@ -104,9 +116,31 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
     ctx = StageCtx()
     ctx.reset(0, slot, 0, slot, 0)
     ctx.actor_energy = pet.current_energy
+    if enemy_side is not None:
+        ctx.target_energy = enemy_side.pets[enemy_side.active].current_energy
     ctx.side_skill_counts = side_state.skill_counts
     ctx.side_counter_count = side_state.counter_count
     ctx.side_status_skill_count = side_state.status_skill_count
+    ctx.side_defense_skill_count = side_state.defense_skill_count
+    ctx.side_skill_dam_type_counts = side_state.skill_dam_type_counts
+    if enemy_side is not None:
+        ctx.enemy_skill_dam_type_counts = enemy_side.skill_dam_type_counts
+        ctx.enemy_switch_count = enemy_side.switch_count
+    equipped_counts = 0
+    for skill_id in side_state.moves[slot]:
+        if skill_id > 0:
+            equipped_counts = _inc_skill_count(equipped_counts, Element(hot.SKILLS[skill_id][SKILL_ELEMENT]))
+    ctx.side_equipped_skill_counts = equipped_counts
+    element_counts = 0
+    for idx, other in enumerate(side_state.pets):
+        if idx == slot or other.fainted:
+            continue
+        row = hot.PETS[other.pet_id]
+        element_counts = _inc_skill_count(element_counts, Element(row[PET_PRIMARY]))
+        if row[PET_SECONDARY] >= 0 and row[PET_SECONDARY] != row[PET_PRIMARY]:
+            element_counts = _inc_skill_count(element_counts, Element(row[PET_SECONDARY]))
+    ctx.side_element_counts = element_counts
+    ctx.side_fainted_count = sum(1 for idx, other in enumerate(side_state.pets) if idx != slot and other.fainted)
     ctx.side_bench_cute = sum(other.cute for idx, other in enumerate(side_state.pets) if idx != slot and not other.fainted)
     ctx.side_bug_count = sum(
         1 for idx, other in enumerate(side_state.pets)
@@ -121,8 +155,26 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
         pet = pet._replace(global_cost_delta=max(-15, min(15, pet.global_cost_delta + ctx.entry_cost_delta)))
     if ctx.entry_power_bonus:
         pet = pet._replace(global_power_bonus=max(-255, min(255, pet.global_power_bonus + ctx.entry_power_bonus)))
+    if ctx.entry_element_power_flat:
+        pet = pet._replace(element_power_flat=_merge_element_u8(pet.element_power_flat, ctx.entry_element_power_flat))
+    if ctx.entry_element_power_bps:
+        pet = pet._replace(element_power_bps=_merge_element_u8(pet.element_power_bps, ctx.entry_element_power_bps))
+    if ctx.entry_element_cost_reduce:
+        pet = pet._replace(element_cost_reduce=_merge_element_nibbles(pet.element_cost_reduce, ctx.entry_element_cost_reduce))
+    if ctx.entry_element_poison_stacks:
+        pet = pet._replace(
+            element_poison_stacks=_merge_element_nibbles(
+                pet.element_poison_stacks,
+                ctx.entry_element_poison_stacks,
+            )
+        )
     if ctx.mirror_enemy_buffs and enemy_side is not None:
         pet = pet._replace(buff_stages=enemy_side.pets[enemy_side.active].buff_stages)
+    if ctx.self_buff:
+        self_buff = ctx.self_buff
+        if pet.ability_flags & int(AbilityFlag.BUFF_EXTRA_LAYERS):
+            self_buff = _add_to_positive_buff_lanes(self_buff, 2000)
+        pet = pet._replace(buff_stages=_merge_buff_delta(pet.buff_stages, self_buff))
     if ctx.heal_energy:
         pet = pet._replace(current_energy=_energy_cap(pet, pet.current_energy + ctx.heal_energy))
     return replace_pet(side_state, slot, pet)

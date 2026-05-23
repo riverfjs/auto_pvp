@@ -9,7 +9,7 @@ Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 * ``type=1`` whose ``effect_param`` contains exactly one buff_id in
   BUFF_CONF is treated as "apply that buff"; the buff is then classified
   via :func:`classify_buff_handler` (exact ``buff_id`` → exact
-  ``buff_base_id`` → pak order → prefix family fallback).  Single-candidate
+  ``buff_base_id`` → pak order → mixed-prefix family).  Single-candidate
   effects are deterministic — pak
   literally wrote one buff to apply.
 * ``type=1`` with multiple buff_ids and any ``type=3`` row require
@@ -88,7 +88,7 @@ def _load_handler_maps() -> tuple[dict[int, int], dict[int, int], dict[int, int]
     buffs that reuse generic base rows.  ``base_id_map`` is generated from
     engine-owned semantic anchors resolved through pak names, ``via_order``
     is the pak-axis pre-join of ``BUFFBASE_CONF.buffbase_order`` → handler,
-    and ``prefix_map`` is the remaining mixed-family fallback.
+    and ``prefix_map`` is the remaining mixed-prefix family map.
     """
     if not _MAP_PATH.exists():
         return {}, {}, {}, {}

@@ -14,7 +14,7 @@ def main() -> None:
     print(
         "prefix_handler_map.json: "
         f"{prefix_stats['base_ids_via_order']} base_ids via buffbase_order + "
-        f"{prefix_stats['prefixes_in_legacy_map']} mixed prefixes "
+        f"{prefix_stats['mixed_prefix_count']} mixed prefixes "
         f"({len(prefix_stats['unmapped_prefixes'])} unmapped of "
         f"{prefix_stats['total_prefixes']} seen)"
     )

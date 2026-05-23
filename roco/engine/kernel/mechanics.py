@@ -5,7 +5,15 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
-from roco.common.packing import DevotionIdx, _cooldown_at, _inc_skill_count, _unpack_devotion
+from roco.common.packing import (
+    DevotionIdx,
+    _cooldown_at,
+    _inc_skill_count,
+    _inc_u8_count,
+    _unpack_devotion,
+    _unpack_element_u8,
+    _unpack_skill_count,
+)
 from roco.common.constants import (
     BPS,
     HP_FOR_ENERGY_PCT_BPS,
@@ -33,6 +41,7 @@ from roco.engine.kernel.catalog import (
     SKILL_FLAG_AGILITY,
     SKILL_FLAG_DEVOTION,
     SKILL_FLAGS,
+    SKILL_DAM_TYPE,
     SKILL_HIT_COUNT,
     SKILL_POWER,
     STAT_HP,
@@ -232,7 +241,7 @@ def _execute(
         if bloodline < 0 or bloodline >= hot.ELEMENT_COUNT:
             return state, 0
         skill_id = 0
-        skill = (0, bloodline, SkillCategory.MAGICAL.value, 0, WILLPOWER_POWER, 0, 1)
+        skill = (0, bloodline, SkillCategory.MAGICAL.value, 0, WILLPOWER_POWER, 0, 1, 0)
         actor_side = actor_side._replace(willpower_uses=actor_side.willpower_uses - 1)
         state = replace_side(state, actor_side_id, actor_side)
     elif choice.action_code != ACTION_MOVE:
@@ -260,6 +269,7 @@ def _execute(
     if weather_type(state.weather) == WeatherType.SANDSTORM.value and skill[SKILL_ELEMENT] == ELEMENT_GROUND:
         cost //= 2
     cost += actor.global_cost_delta
+    cost -= _unpack_skill_count(actor.element_cost_reduce, Element(skill[SKILL_ELEMENT]))
     cost += cost_mod_amount(actor_side.cost_mods, choice.data if choice.action_code == ACTION_MOVE else -1, skill[SKILL_CATEGORY])
     dealt = 0
     ctx.reset(actor_side_id, actor_slot, target_side_id, target_slot, skill_id)
@@ -278,16 +288,29 @@ def _execute(
     ctx.actor_counter_count = actor.counter_success_count
     ctx.actor_hp_lost_quarters = max(0, actor_row[STAT_HP] - actor.current_hp) * 4 // max(1, actor_row[STAT_HP])
     ctx.side_skill_counts = actor_side.skill_counts
+    ctx.side_same_skill_count = sum(
+        1
+        for moves in actor_side.moves
+        for side_skill_id in moves
+        if side_skill_id == skill_id
+    )
     ctx.side_counter_count = actor_side.counter_count
     ctx.side_status_skill_count = actor_side.status_skill_count
+    ctx.side_defense_skill_count = actor_side.defense_skill_count
+    ctx.side_skill_dam_type_counts = actor_side.skill_dam_type_counts
     ctx.target_primary = target_row[PET_PRIMARY]
     ctx.target_secondary = target_row[PET_SECONDARY]
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
     ctx.target_skill_energy = _target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
-    ctx.power = skill[SKILL_POWER] + actor.global_power_bonus
+    ctx.power = (
+        skill[SKILL_POWER]
+        + actor.global_power_bonus
+        + _unpack_element_u8(actor.element_power_flat, Element(skill[SKILL_ELEMENT]))
+    )
     ctx.hit_count = max(1, skill[SKILL_HIT_COUNT] + actor.hit_delta)
+    ctx.power_bps += _unpack_element_u8(actor.element_power_bps, Element(skill[SKILL_ELEMENT])) * 100
     ctx.counter_category = 2 if target_category in (SkillCategory.DEFENSE.value, SkillCategory.STATUS.value) else 1
     ctx.counter_success = 1 if choice.action_code == ACTION_MAGIC and ctx.counter_category == 2 else 0
     ctx.first_strike = 1 if first_strike else 0
@@ -361,7 +384,16 @@ def _execute(
         for _ in range(uses):
             skill_counts = _inc_skill_count(skill_counts, Element(skill[SKILL_ELEMENT]))
         status_count = actor_side.status_skill_count + (uses if skill[SKILL_CATEGORY] == SkillCategory.STATUS.value else 0)
-        actor_side = actor_side._replace(skill_counts=skill_counts, status_skill_count=min(255, status_count))
+        defense_count = actor_side.defense_skill_count + (uses if skill[SKILL_CATEGORY] == SkillCategory.DEFENSE.value else 0)
+        skill_dam_type_counts = actor_side.skill_dam_type_counts
+        for _ in range(uses):
+            skill_dam_type_counts = _inc_u8_count(skill_dam_type_counts, skill[SKILL_DAM_TYPE])
+        actor_side = actor_side._replace(
+            skill_counts=skill_counts,
+            status_skill_count=min(255, status_count),
+            defense_skill_count=min(255, defense_count),
+            skill_dam_type_counts=skill_dam_type_counts,
+        )
         state = replace_side(state, actor_side_id, actor_side)
     if ctx.counter_success:
         actor_side = side(state, actor_side_id)
@@ -380,6 +412,7 @@ def _execute(
     ctx.actor_energy = actor.current_energy
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_AFTER_MOVE, ctx)
     _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
+    ctx.poison_stacks += _unpack_skill_count(actor.element_poison_stacks, Element(skill[SKILL_ELEMENT]))
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)
     return state, dealt
@@ -426,7 +459,7 @@ def _fire_counter_skill(
     counter_ctx.skill_category = category
     counter_ctx.power = power
     counter_ctx.hit_count = 1
-    counter_skill = (counter_skill_id, element, category, 0, power, 0, 1)
+    counter_skill = (counter_skill_id, element, category, 0, power, 0, 1, 0)
     dealt = damage(
         defender,
         attacker,
@@ -503,5 +536,3 @@ def _borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> 
             fallback = candidate
             count += 1
     return fallback
-
-

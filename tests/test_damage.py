@@ -67,8 +67,8 @@ def test_compute_stats_pak_hp_nature():
     assert stats["atk_phys"] == 72
 
 
-def test_apply_iv_mod_hp_ignored():
-    """HP IV is ignored — only non-HP stats get IV bonus."""
+def test_apply_iv_mod_keeps_hp_unchanged():
+    """HP IV leaves HP unchanged; only non-HP stats get IV bonus."""
     stats = apply_iv_mod({"hp": 200, "atk_phys": 80, "atk_mag": 70,
                           "def_phys": 90, "def_mag": 85, "speed": 60},
                          ["生命", "物攻"])

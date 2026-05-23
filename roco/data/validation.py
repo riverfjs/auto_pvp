@@ -33,122 +33,14 @@ def assert_no_kernel_noop_rows(conn: sqlite3.Connection) -> None:
     )
 
 
-def compute_gap_validation_errors(
-    used_gap_rows: list[dict],
-    acks: list,  # list[Acknowledgement]
-) -> list[str]:
-    """Pure error-list builder for the three-way ack/gap validation.
-
-    Inputs are already-materialised: ``used_gap_rows`` is what the caller
-    fetched from ``effect_gaps WHERE used_count > 0`` (each row is a dict
-    of the seven gap columns), and ``acks`` is the loader output.
-
-    Splitting the SQL + ack-loading away from the matching logic lets
-    tests drive every failure branch (unack / stale / under-match /
-    over-match / allow_stale opt-in) with synthetic inputs, no real DB
-    or rules file required.
-    """
-    from roco.compiler_v2.effect_codegen.acknowledgements_loader import (
-        canonical_gap_key_from_row,
-    )
-
-    gap_key_to_row: dict[str, dict] = {}
-    for row in used_gap_rows:
-        key = canonical_gap_key_from_row(row)
-        gap_key_to_row[key] = row
-    gap_keys = set(gap_key_to_row)
-
-    ack_keys: set[str] = set()
-    ack_key_to_line: dict[str, int] = {}
-    ack_match_counts: dict[int, int] = {}
-    ack_expected: dict[int, int] = {}
-    ack_allow_stale: dict[int, bool] = {}
-    for ack in acks:
-        keys = ack.expected_canonical_keys
-        ack_expected[ack.line_no] = len(keys)
-        ack_allow_stale[ack.line_no] = ack.allow_stale
-        ack_match_counts[ack.line_no] = sum(1 for k in keys if k in gap_keys)
-        for key in keys:
-            ack_keys.add(key)
-            ack_key_to_line.setdefault(key, ack.line_no)
-
-    errors: list[str] = []
-
-    # Direction A: unack'd used gap
-    unacked = sorted(gap_keys - ack_keys)
-    if unacked:
-        sample = []
-        for key in unacked[:20]:
-            row = gap_key_to_row[key]
-            sample.append(
-                f"{row['source_type']}:{row['source_name']} primitive={row['primitive']} "
-                f"timing={row['timing_code']} reason={row['reason']} used={row['used_count']}"
-            )
-        errors.append(
-            f"{len(unacked)} used effect_gaps row(s) have no acknowledgement; "
-            f"add a row to roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl "
-            f"or implement the gap first. Sample: " + "; ".join(sample)
-        )
-
-    # Direction B: stale ack
-    stale = sorted(ack_keys - gap_keys)
-    if stale:
-        truly_stale_lines: dict[int, list[str]] = {}
-        for key in stale:
-            line_no = ack_key_to_line[key]
-            if ack_allow_stale.get(line_no):
-                continue
-            truly_stale_lines.setdefault(line_no, []).append(key)
-        if truly_stale_lines:
-            sample = [
-                f"line {line} (keys {keys[:3]})"
-                for line, keys in list(truly_stale_lines.items())[:20]
-            ]
-            errors.append(
-                f"{len(truly_stale_lines)} acknowledgement row(s) no longer match any "
-                f"used effect_gaps row; remove the stale entries (or implement them) so "
-                f"burn-down progress is reflected. Sample: " + "; ".join(sample)
-            )
-
-    # Direction C: over-/under-match
-    mismatched: list[str] = []
-    for line_no, expected in ack_expected.items():
-        actual = ack_match_counts.get(line_no, 0)
-        if ack_allow_stale.get(line_no) and actual == 0:
-            continue
-        if actual != expected:
-            mismatched.append(
-                f"line {line_no}: expected {expected} match(es), got {actual}"
-            )
-    if mismatched:
-        errors.append(
-            f"{len(mismatched)} acknowledgement row(s) have a match count that "
-            f"differs from their declared expectation; refine gap_match or "
-            f"declare allow_multi_match with the full expected_matches list. "
-            "Sample: " + "; ".join(mismatched[:20])
-        )
-
-    return errors
-
-
 def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
-    """Reject used :class:`effect_gaps` rows that have not been acknowledged.
+    """Reject every used :class:`effect_gaps` row.
 
-    Phase 3 introduced ``roco/compiler_v2/rules/effect_gap_acknowledgements.jsonl``
-    as a parallel audit axis.  A used gap row passes this gate iff it has a
-    matching acknowledgement (canonical key); the gate also rejects stale
-    acks (acks that no longer match any used gap) and over-broad acks
-    (acks whose match count differs from the declared expectation), so the
-    ack table stays in lockstep with the gap reality and burn-down is forced
-    instead of silently drifting.
+    Used gaps mean a team/pet/ability currently reachable by the runtime
+    references pak semantics the kernel did not compile.  There is no
+    acknowledgement layer anymore: implement the pak-defined logic or keep
+    the build failing.
     """
-    from roco.compiler_v2.effect_codegen.acknowledgements_loader import load_acknowledgements
-
-    # A totally empty ``effect_gaps`` table means the caller is operating on
-    # a synthetic / fixture DB that never ran the canonical import.  In
-    # that environment the real acknowledgements file is unrelated to the
-    # DB state, so skip the gate entirely instead of erroring on stale
-    # acks the test never set up.
     total_gap_rows = conn.execute("SELECT COUNT(*) FROM effect_gaps").fetchone()[0]
     if total_gap_rows == 0:
         return
@@ -173,9 +65,19 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
         for row in rows
     ]
 
-    errors = compute_gap_validation_errors(used_gap_rows, load_acknowledgements())
-    if errors:
-        raise RuntimeError("; ".join(errors))
+    if not used_gap_rows:
+        return
+    sample = []
+    for row in used_gap_rows[:20]:
+        sample.append(
+            f"{row['source_type']}:{row['source_name']} primitive={row['primitive']} "
+            f"timing={row['timing_code']} reason={row['reason']} used={row['used_count']}"
+        )
+    raise RuntimeError(
+        f"{len(used_gap_rows)} used effect_gaps row(s) block build; "
+        "implement the pak-defined logic instead of acknowledging or "
+        "silently dropping them. Sample: " + "; ".join(sample)
+    )
 
 
 def assert_no_missing_leader_transforms(conn: sqlite3.Connection) -> None:

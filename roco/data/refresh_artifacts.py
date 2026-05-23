@@ -93,7 +93,7 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps: list[tuple[str, list[str]]] = []
     steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
-    steps.append(("build_db", [py, "-m", "roco.data.build_db", "--allow-used-gaps"]))
+    steps.append(("build_db", [py, "-m", "roco.data.build_db"]))
     steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((
         "build_effect_families --check",

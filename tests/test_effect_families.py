@@ -38,9 +38,6 @@ REQUIRED_FIELDS = (
     "coverage_status",
     "coverage_breakdown",
     "pak_evidence",
-    "ignored_candidate",
-    "ignored_candidate_reason",
-    "ignored_candidate_source_ids",
 )
 
 SPECULATIVE_WORDS = ("likely", "would", "probably", "possibly")
@@ -199,42 +196,11 @@ def test_effect_families_buff_conf_direct_completeness(catalog, pak_tables):
     assert not extra, f"catalog has BUFF_CONF_DIRECT families not used by canonical: {sorted(extra)}"
 
 
-def test_ignored_candidate_only_when_all_sources_visual(catalog):
-    """``ignored_candidate=true`` must require **every** source_id to hit a
-    visual-only keyword.  Single-keyword hits inside a mixed family land
-    in ``ignored_candidate_source_ids`` instead.
-
-    Locks in the fix for the regression where a single ``月牙雪熊飘字用``
-    row marked the whole ``buff_conf_direct:prefix_2040`` family as
-    ignored despite hosting real blockers (天光 / 月光合奏 / 击鼓传花).
-    """
-    visual_keywords = ("动效", "飘字", "动画", "特效")
-    for f in catalog:
-        per_id_hits = f.get("ignored_candidate_source_ids") or []
-        if f["ignored_candidate"]:
-            assert per_id_hits, (
-                f"{f['family_key']}: ignored_candidate=true but no per-id hits"
-            )
-            assert len(per_id_hits) == f["count"], (
-                f"{f['family_key']}: ignored_candidate=true but only "
-                f"{len(per_id_hits)}/{f['count']} source ids carry visual "
-                f"keywords"
-            )
-        # Conversely, per-id hits without family flag means there are real
-        # non-visual source ids in the family — sanity check none of the
-        # editor_names from per-id hits leak into the family-level flag.
-        for hit in per_id_hits:
-            assert any(kw in hit["editor_name"] for kw in visual_keywords), (
-                f"{f['family_key']}: per-id hit {hit} editor_name lacks "
-                "visual keyword"
-            )
-
-
 def test_effect_families_covers_blocker_gaps(by_key):
     """Known blockers must appear in catalog with a gap-style coverage_status.
 
     Extra layer on top of completeness — if any of these blockers flip to
-    ``auto_structural``/``exact_semantic``/``ignored`` that means kernel
+    ``auto_structural``/``exact_semantic`` that means kernel
     actually implemented the family; update this list with intent rather
     than letting the change pass silently.
     """

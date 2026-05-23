@@ -29,7 +29,6 @@ from roco.compiler_v2.effect_codegen import (
     AbilityFlagOutcome,
     EmitOutcome,
     GapOutcome,
-    IgnoredOutcome,
     PakTables,
     generate_effect_rows,
 )
@@ -98,7 +97,8 @@ def test_ability_flag_bits_are_power_of_two():
 def test_loader_accepts_real_pak_derivation():
     """Real pak derives the current ability flag skill_result ids."""
     table = load_ability_flags_from_effects()
-    assert set(table.keys()) == {21430010, 21540010, 21540040}
+    assert set(table.keys()) == {1066001, 21430010, 21540010, 21540040}
+    assert table[1066001].flag_name == "SHUFFLE_SKILLS_REDUCE_LAST"
     assert table[21540010].flag_name == "HEAL_ON_POISON_DAMAGE"
     assert table[21540040].flag_name == "HEAL_ON_BURN_DAMAGE"
     assert table[21430010].flag_name == "MARK_STACK_NO_REPLACE"
@@ -267,7 +267,7 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
     real direct ``BUFF_CONF`` ability-flag rule) and call ``generate_effect_rows`` with the
     default ``allow_ability_flags=False`` (skill-builder semantics).
     The function must raise — the alternative (silent skip / covered /
-    ignored) would let a future pak change wire passive heal-on-damage
+    skipped) would let a future pak change wire passive heal-on-damage
     semantics into a per-cast skill row, which the runtime would not
     interpret correctly.
     """
@@ -286,7 +286,7 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
 
 def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
     """Symmetric positive: ability builder accepts the outcome and drops it
-    from rows / ignored / gaps.  ABILITY_FLAGS is then populated later by
+    from rows / gaps.  ABILITY_FLAGS is then populated later by
     ``ability_flags.populate`` — verified by other tests.
     """
     pak = PakTables(PAK_DATA)
@@ -298,9 +298,8 @@ def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
             "success_rate": 10000,
         }],
     }
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
     assert rows == []
-    assert ignored == []
     assert gaps == []
 
 
@@ -315,9 +314,8 @@ def test_generate_effect_rows_ability_path_accepts_direct_buff_flag_outcome():
             "success_rate": 10000,
         }],
     }
-    rows, ignored, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
     assert rows == []
-    assert ignored == []
     assert gaps == []
 
 

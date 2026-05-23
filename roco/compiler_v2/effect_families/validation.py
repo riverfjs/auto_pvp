@@ -11,7 +11,6 @@ def _validate_ability_flag_rules(
     buff_conf: dict[int, dict],
     consumer_index: dict[int, list[dict]],
     exact_emit_ids: set[int],
-    exact_ignored_ids: set[int],
     weather_ids: set[int],
 ) -> None:
     """Pak + canonical static cross-check for the ability-flag table.
@@ -40,7 +39,7 @@ def _validate_ability_flag_rules(
                 f"missing from EFFECT_CONF.json and BUFF_CONF.json "
                 f"(loader override?)"
             )
-        if effect_id in exact_emit_ids or effect_id in exact_ignored_ids:
+        if effect_id in exact_emit_ids:
             raise RuntimeError(
                 f"effect_id {effect_id} appears in "
                 f"ability flag semantics AND exact compiler semantics; "

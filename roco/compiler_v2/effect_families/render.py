@@ -9,11 +9,7 @@ Public surface used by the CLI entry point:
 
 * :func:`render_jsonl`
 * :func:`render_markdown`
-* :func:`build_ack_payload`
 * :func:`check_outputs`
-
-``_render_ack_sections`` stays private — it is only called from
-``render_markdown``.
 """
 
 from __future__ import annotations
@@ -22,11 +18,6 @@ import sys
 from collections import defaultdict
 import json
 
-from roco.compiler_v2.effect_codegen.acknowledgements_loader import (
-    Acknowledgement,
-    load_acknowledgements,
-)
-
 from .paths import CATALOG_JSONL, CATALOG_MD
 
 
@@ -34,72 +25,7 @@ def render_jsonl(families: list[dict]) -> str:
     return "\n".join(json.dumps(f, ensure_ascii=False, sort_keys=True) for f in families) + "\n"
 
 
-def _render_ack_sections(acks: list[Acknowledgement]) -> list[str]:
-    """Render the four acknowledgement status sections.
-
-    Each section lists every ack row with the gap rows it claims to cover
-    (the ``matched gap rows`` list).  Acks themselves are validated by the
-    loader; the rendered list is read-only documentation so reviewers can
-    spot over-broad coverage at a glance.
-    """
-    by_status: dict[str, list[Acknowledgement]] = defaultdict(list)
-    for ack in acks:
-        by_status[ack.status].append(ack)
-
-    section_titles = [
-        ("evidence_available_deferred", "## Acknowledgements — evidence_available_deferred"),
-        ("evidence_available_weak", "## Acknowledgements — evidence_available_weak"),
-        ("evidence_missing", "## Acknowledgements — evidence_missing"),
-        ("confirmed_ignored", "## Acknowledgements — confirmed_ignored"),
-    ]
-    out: list[str] = []
-    out.append(f"## Acknowledgement totals\n")
-    for status, _title in section_titles:
-        out.append(f"- `{status}`: {len(by_status.get(status, []))}")
-    out.append("")
-    for status, title in section_titles:
-        rows = by_status.get(status, [])
-        out.append(title)
-        out.append("")
-        if not rows:
-            out.append("_(none)_")
-            out.append("")
-            continue
-        for ack in sorted(rows, key=lambda a: a.line_no):
-            gm = ack.gap_match
-            audit = ack.audit or {}
-            family_key = audit.get("family_key", "")
-            out.append(
-                f"- **line {ack.line_no}** family=`{family_key}` "
-                f"source={gm.get('source_type')}:{gm.get('source_name')} "
-                f"primitive=`{gm.get('primitive')}` "
-                f"timing={gm.get('timing_code')} reason=`{gm.get('reason')}`"
-            )
-            if ack.evidence:
-                kws = ack.evidence.get("anchor_keywords", []) or []
-                kw_str = ", ".join(kws) if kws else "(none)"
-                desc = str(ack.evidence.get("desc_quote", ""))[:80]
-                out.append(
-                    f"    - evidence: {ack.evidence.get('source_table')}[{ack.evidence.get('source_id')}]"
-                    f" anchors=[{kw_str}] desc={desc!r}"
-                )
-            if ack.weak_reason:
-                out.append(f"    - weak_reason: {ack.weak_reason}")
-            if ack.probe_summary:
-                out.append(f"    - probe_summary: {ack.probe_summary}")
-            if ack.ignored_reason:
-                out.append(f"    - ignored_reason: {ack.ignored_reason}")
-            matches = ack.expected_canonical_keys
-            out.append(f"    - matched gap rows ({len(matches)}):")
-            for key in matches:
-                out.append(f"        - `{key}`")
-            if ack.note:
-                out.append(f"    - note: {ack.note}")
-        out.append("")
-    return out
-
-
-def render_markdown(families: list[dict], acks: list[Acknowledgement] | None = None) -> str:
+def render_markdown(families: list[dict]) -> str:
     lines: list[str] = []
     lines.append("# Effect Family Audit\n")
     lines.append(
@@ -115,8 +41,6 @@ def render_markdown(families: list[dict], acks: list[Acknowledgement] | None = N
         lines.append(f"- `{status}`: {by_status[status]}")
     lines.append("")
 
-    if acks is not None:
-        lines.extend(_render_ack_sections(acks))
     for f in families:
         lines.append(f"## `{f['family_key']}` — {f['source_table']}")
         lines.append("")
@@ -142,28 +66,8 @@ def render_markdown(families: list[dict], acks: list[Acknowledgement] | None = N
             lines.append("- pak_evidence:")
             for e in f["pak_evidence"]:
                 lines.append(f"    - {e}")
-        if f["ignored_candidate"]:
-            lines.append(f"- **ignored_candidate (whole family)**: {f['ignored_candidate_reason']}")
-        if f.get("ignored_candidate_source_ids"):
-            lines.append("- ignored_candidate_source_ids:")
-            for hit in f["ignored_candidate_source_ids"]:
-                lines.append(
-                    f"    - `{hit['source_id']}` {hit['editor_name']} "
-                    f"(keyword `{hit['keyword']}`)"
-                )
         lines.append("")
     return "\n".join(lines)
-
-
-def build_ack_payload(families: list[dict]) -> list[Acknowledgement]:
-    """Load + strictly validate acknowledgements against the family catalog.
-
-    Family keys from the freshly-built ``families`` list are passed to the
-    loader so a typo in ``audit.family_key`` is caught here, not at the
-    `effect_gaps` cross-check phase.
-    """
-    known_family_keys = {f["family_key"] for f in families}
-    return load_acknowledgements(known_family_keys=known_family_keys)
 
 
 def check_outputs(new_jsonl: str, new_md: str) -> int:

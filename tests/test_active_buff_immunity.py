@@ -13,8 +13,7 @@ honour the flags:
 By design these tests do **not** exercise any code that *applies*
 20030010 / 20030011 to a pet — Phase 5B-mini ships zero buff-application
 runtime.  The buffs reach ``active_buffs`` only because the tests pack
-them into the ledger by hand.  No acknowledgement rows are deleted by
-this phase.
+them into the ledger by hand.  No gap rows are affected by this phase.
 """
 
 from __future__ import annotations

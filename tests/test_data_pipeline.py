@@ -98,7 +98,7 @@ def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
     debug_text = debug_path.read_text(encoding="utf-8")
 
     assert "CATALOG_VERSION = 1" in hot_text
-    assert "SCHEMA_VERSION = 'kernel-v1'" in hot_text
+    assert "SCHEMA_VERSION = 'kernel-v2'" in hot_text
     assert "SOURCE_HASH = ''" not in hot_text
     assert "PETS =" in hot_text
     assert "SKILL_EFFECT_ROWS =" in hot_text
@@ -106,6 +106,7 @@ def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
     assert "PET_NAMES" not in hot_text
     assert "PET_NAMES =" in debug_text
     assert "PET_IDS_BY_NAME =" in debug_text
+    assert "SKILL_IDS_BY_TEXT =" in debug_text
 
 
 def test_import_rejects_legacy_structured_elements(tmp_path: Path):
@@ -399,7 +400,7 @@ def test_used_gap_fails_strict_validation(tmp_path: Path):
         "VALUES (?, ?, ?, ?, ?, ?)",
         ("ability", "某ability", "effect_9999", "{}", "effect_type_3_state_change", 5),
     )
-    with pytest.raises(RuntimeError, match=r"used effect_gaps row\(s\) have no acknowledgement"):
+    with pytest.raises(RuntimeError, match=r"used effect_gaps row\(s\) block build"):
         assert_no_blocking_effect_gaps(conn)
     conn.close()
 

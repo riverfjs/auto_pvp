@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 EXPECTED_CATALOG_VERSION = 1
-EXPECTED_SCHEMA_VERSION = "kernel-v1"
+EXPECTED_SCHEMA_VERSION = "kernel-v2"
 STAT_HP = 1
 STAT_ATK_PHYS = 2
 STAT_ATK_MAG = 3
@@ -19,6 +19,7 @@ SKILL_ENERGY = 3
 SKILL_POWER = 4
 SKILL_FLAGS = 5
 SKILL_HIT_COUNT = 6
+SKILL_DAM_TYPE = 7
 SKILL_FLAG_AGILITY = 4194304
 SKILL_FLAG_DEVOTION = 16777216
 SKILL_FLAG_CHARGE = 2048
@@ -41,6 +42,9 @@ def validate_catalog(catalog) -> None:
         raise RuntimeError("kernel catalog schema mismatch")
     if not catalog.SOURCE_HASH:
         raise RuntimeError("kernel catalog source hash is empty")
+    for skill in catalog.SKILLS:
+        if len(skill) <= SKILL_DAM_TYPE:
+            raise RuntimeError("kernel catalog skill row schema mismatch")
 
 
 def load_hot_catalog():

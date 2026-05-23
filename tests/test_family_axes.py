@@ -40,6 +40,7 @@ from roco.generated.handler_indices import (
     H_DISPEL_DEBUFFS,
     H_DISPEL_MARKS,
     H_DISPEL_MARKS_TO_BURN,
+    H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT,
     H_HEAL_ENERGY,
     H_HEAL_HP,
     H_HIT_COUNT_DELTA,
@@ -95,6 +96,7 @@ def test_decode_family_axes_returns_none_for_non_counter_effect(pak):
     (1005030, H_HEAL_HP, 3000),
     (1011005, H_LIFE_DRAIN, 5000),
     (1019004, H_HEAL_ENERGY, 4),
+    (1019028, H_HEAL_ENERGY, 2),
     (1032008, H_HIT_COUNT_DELTA, 8),
     (1037001, H_SET_SELF_COOLDOWN, 3),
     (1051001, H_PRIORITY_NEXT_DELTA, 1),
@@ -105,6 +107,19 @@ def test_decode_common_scalar_effect_families(pak, effect_id, handler, p0):
     assert outcome.handler_idx == handler
     assert outcome.p0 == p0
     assert (outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 1)
+
+
+@pytest.mark.parametrize("effect_id", [1034019, 1034020])
+def test_decode_hero_event_count_buff_families(pak, effect_id):
+    outcome = decode_family_axes(effect_id, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, tuple)
+    emit, timing = outcome
+    assert isinstance(emit, EmitOutcome)
+    assert emit.handler_idx == H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT
+    assert emit.p0 > 0
+    assert emit.p1 > 0
+    assert (emit.p2, emit.p3, emit.stacks) == (0, 0, 1)
+    assert timing == 24
 
 
 @pytest.mark.parametrize("effect_id, handler", [
@@ -239,8 +254,7 @@ def test_generate_effect_rows_emits_install_counter_for_o31(pak):
             }
         ]
     }
-    rows, ignored, gaps = generate_effect_rows(skill, pak)
-    assert ignored == []
+    rows, gaps = generate_effect_rows(skill, pak)
     assert gaps == []
     assert len(rows) == 1
     handler, timing, target, rate, p0, p1, p2, p3 = rows[0]

@@ -16,7 +16,6 @@ from roco.compiler_v2.effect_codegen.outcomes import (
     AbilityFlagOutcome,
     EmitOutcome,
     GapOutcome,
-    IgnoredOutcome,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
 
@@ -26,7 +25,6 @@ COVERAGE_STATUSES = frozenset({
     "exact_semantic",
     "exact_semantic_partial",
     "generated_weather",
-    "ignored",
     "gap",
     "ability_flag",
     "ability_flag_partial",
@@ -40,12 +38,11 @@ def _classify_one_source_id(
     pak: PakTables,
     weather_ids: set[int],
     exact_emit_ids: set[int],
-    exact_ignored_ids: set[int],
     ability_flag_ids: frozenset[int],
 ) -> str:
     """Run the actual decoder path and report which bucket ``sid`` falls in.
 
-    Order matters: weather / ignored / exact semantics / ability_flag win
+    Order matters: weather / exact semantics / ability_flag win
     before structural decode.  ``ability_flag_ids`` is consulted *before*
     :func:`decode_effect` so the bucket is stable regardless of the
     decode call's consumer-context (decode_effect's AbilityFlagOutcome
@@ -55,8 +52,6 @@ def _classify_one_source_id(
     """
     if sid in weather_ids:
         return "generated_weather"
-    if sid in exact_ignored_ids:
-        return "ignored"
     if sid in exact_emit_ids:
         return "exact_semantic"
     if sid in ability_flag_ids:
@@ -65,8 +60,6 @@ def _classify_one_source_id(
     # though the two id sets above are derived from the same JSONL.
     override = decode_exact(sid)
     if override is not None:
-        if isinstance(override, IgnoredOutcome):
-            return "ignored"
         return "exact_semantic"
     if sid in pak.effect_conf:
         # Pak-axis family decoders (effect_order family etc.) — pak-native
@@ -104,7 +97,6 @@ def _derive_coverage_status(breakdown: dict[str, int]) -> str:
             "auto_structural_count": "auto_structural",
             "exact_semantic_count": "exact_semantic",
             "generated_weather_count": "generated_weather",
-            "ignored_count": "ignored",
             "gap_count": "gap",
             "ability_flag_count": "ability_flag",
         }[only]

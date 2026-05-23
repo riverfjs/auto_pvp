@@ -14,7 +14,7 @@ from roco.compiler_v2 import ability_flags as ability_flag_artifact
 from roco.generated.type_chart import TYPE_CHART_BPS as _PAK_TYPE_CHART_BPS
 
 CATALOG_VERSION = 1
-SCHEMA_VERSION = "kernel-v1"
+SCHEMA_VERSION = "kernel-v2"
 HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
 DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
 
@@ -33,7 +33,15 @@ def _source_payload(conn: sqlite3.Connection) -> dict[str, Any]:
         "elements": [tuple(row) for row in _rows(conn, "SELECT id, code, name FROM elements ORDER BY id")],
         "pets": [tuple(row) for row in _rows(conn, "SELECT id, name, lineage_key, form_type, element_primary_id, element_secondary_id, ability_id, hp, atk_phys, atk_mag, def_phys, def_mag, speed FROM pets ORDER BY id")],
         "pet_transforms": [tuple(row) for row in _rows(conn, "SELECT source_pet_id, leader_pet_id, reason FROM pet_transforms ORDER BY source_pet_id")],
-        "skills": [tuple(row) for row in _rows(conn, "SELECT id, name, element_id, category_code, energy, power, flags FROM skills ORDER BY id")],
+        "skills": [
+            tuple(row)
+            for row in _rows(
+                conn,
+                "SELECT id, name, element_id, category_code, skill_dam_type, "
+                "energy, power, flags, effect_text, flavor_text "
+                "FROM skills ORDER BY id",
+            )
+        ],
         "pet_skills": [tuple(row) for row in _rows(conn, "SELECT pet_id, skill_id, sort_order FROM pet_skills WHERE skill_id IS NOT NULL ORDER BY pet_id, sort_order, id")],
         "skill_effects": [tuple(row) for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id")],
         "ability_effects": [tuple(row) for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id")],
@@ -58,10 +66,9 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
     the retired hand-curated type-chart module
     is retained only for the display/test layer.
 
-    The ``element_names`` argument is accepted for shape compatibility
-    with the surrounding artifact builder, and we assert it matches the
-    pak-derived row count so a drift between ``elements`` and the
-    generated chart will fail loudly rather than silently truncate.
+    The ``element_names`` argument is used only to assert the generated
+    type chart still matches the pak-derived element table, so drift fails
+    loudly rather than silently truncating rows.
     """
     if len(element_names) != len(_PAK_TYPE_CHART_BPS):
         raise RuntimeError(
@@ -138,10 +145,11 @@ def compile_artifacts(
             )
             pet_names[row["id"]] = row["name"]
 
-        skills: list[tuple[int, int, int, int, int, int, int]] = [(0, 0, 0, 0, 0, 0, 1)] * (max_skill_id + 1)
+        skills: list[tuple[int, int, int, int, int, int, int, int]] = [(0, 0, 0, 0, 0, 0, 1, 0)] * (max_skill_id + 1)
         skill_names: list[str] = [""] * (max_skill_id + 1)
         skill_ids_by_name: dict[str, int] = {}
-        for row in _rows(conn, "SELECT id, name, element_id, category_code, energy, power, flags FROM skills ORDER BY id"):
+        skill_ids_by_text: dict[str, int] = {}
+        for row in _rows(conn, "SELECT id, name, element_id, category_code, skill_dam_type, energy, power, flags, effect_text, flavor_text FROM skills ORDER BY id"):
             skills[row["id"]] = (
                 row["id"],
                 row["element_id"],
@@ -150,9 +158,13 @@ def compile_artifacts(
                 row["power"],
                 row["flags"],
                 1,
+                row["skill_dam_type"],
             )
             skill_names[row["id"]] = row["name"]
             skill_ids_by_name[row["name"]] = row["id"]
+            for text_key in (row["effect_text"] or "", row["flavor_text"] or ""):
+                if text_key and text_key not in skill_ids_by_text:
+                    skill_ids_by_text[text_key] = row["id"]
 
         pet_skills: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (max_pet_id + 1)
         skill_accum: list[list[int]] = [[] for _ in range(max_pet_id + 1)]
@@ -225,6 +237,7 @@ def compile_artifacts(
             SKILL_NAMES=tuple(skill_names),
             PET_IDS_BY_NAME={name: idx for idx, name in enumerate(pet_names) if name},
             SKILL_IDS_BY_NAME={name: idx for idx, name in enumerate(skill_names) if name},
+            SKILL_IDS_BY_TEXT=skill_ids_by_text,
             LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
             FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
             BLOODLINE_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodlines ORDER BY id")},

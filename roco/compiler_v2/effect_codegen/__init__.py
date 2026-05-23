@@ -2,15 +2,14 @@
 
 Public surface: :class:`PakTables`, :func:`generate_effect_rows`,
 :func:`build_ability_effect_rows`.  Each ``skill_result`` entry resolves
-to exactly one :class:`EmitOutcome`, :class:`IgnoredOutcome`,
-:class:`GapOutcome`, or :class:`AbilityFlagOutcome` — never the H_NOOP
+to exactly one :class:`EmitOutcome`, :class:`GapOutcome`, or
+:class:`AbilityFlagOutcome` — never the H_NOOP
 sentinel.  ``H_NOOP`` itself only exists at the kernel dispatch layer
 (``ops.py``) as the "skip this row" index.
 
-Four-state outcome routing:
+Outcome routing:
 
 * :class:`EmitOutcome` → effect_rows (runtime kernel row).
-* :class:`IgnoredOutcome` → ``ignored_effects`` table.
 * :class:`GapOutcome` → ``effect_gaps`` table (blocks strict ``build_db``).
 * :class:`AbilityFlagOutcome` → dropped here; later compiled into the
   catalog ``ABILITY_FLAGS`` tuple by
@@ -23,7 +22,7 @@ Four-state outcome routing:
 
 Internal layout:
 
-* :mod:`.outcomes` — four-state dataclasses
+* :mod:`.outcomes` — row/gap/ability-flag dataclasses
 * :mod:`.pak` — lazy pak table loaders
 * :mod:`.params` — pak ``effect_param`` extraction + handler-param packing
 * :mod:`.classify` — buff_id → handler index; structural + gap outcomes;
@@ -52,7 +51,6 @@ from roco.compiler_v2.effect_codegen.outcomes import (
     AbilityFlagOutcome,
     EmitOutcome,
     GapOutcome,
-    IgnoredOutcome,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.effect_codegen.params import is_status_or_mark_handler
@@ -112,8 +110,8 @@ def generate_effect_rows(
     pak_data: PakTables,
     *,
     allow_ability_flags: bool = False,
-) -> tuple[list[tuple[int, ...]], list[dict], list[dict]]:
-    """Decode a ``skill_result`` list into (rows, ignored, gaps).
+) -> tuple[list[tuple[int, ...]], list[dict]]:
+    """Decode a ``skill_result`` list into (rows, gaps).
 
     Parameters
     ----------
@@ -122,10 +120,10 @@ def generate_effect_rows(
     allow_ability_flags : bool, default False
         Whether to accept :class:`AbilityFlagOutcome` results from the
         decoder.  Skill builders **must not** set this — ability-passive
-        bits silently applied to a per-cast skill row would corrupt the
+        bits applied to a per-cast skill row would corrupt the
         runtime contract.  Ability builders set this to True via
         :func:`build_ability_effect_rows`; the outcome is then dropped
-        from rows / ignored / gaps and the bit is set later by
+        from rows / gaps and the bit is set later by
         :mod:`roco.compiler_v2.ability_flags`.
 
     Returns
@@ -133,10 +131,6 @@ def generate_effect_rows(
     rows : list[tuple]
         Each tuple is ``(handler_idx, timing, target, rate, p0, p1, p2, p3)``.
         ``handler_idx`` is always > 0 (H_NOOP is forbidden at this layer).
-    ignored : list[dict]
-        Effects with pak/Lua evidence of no combat semantics (animation
-        hooks, visual-only buffs).  Routed to the ``ignored_effects``
-        table, not the runtime row table.
     gaps : list[dict]
         Unsupported / unrecognised effects.  Used + non-zero ``used_count``
         rows block strict ``build_db``.
@@ -149,7 +143,6 @@ def generate_effect_rows(
         effect_id leaked into a non-ability decoding path.
     """
     rows: list[tuple[int, ...]] = []
-    ignored: list[dict] = []
     gaps: list[dict] = []
 
     for order, entry in enumerate(skill_row.get("skill_result") or []):
@@ -188,14 +181,10 @@ def generate_effect_rows(
             ))
             continue
 
-        # Hand-curated exact decoders (compound type=1 payloads, type=3
-        # state changes, weather setters, ignored visual-only effects)
+        # Hand-curated exact decoders (currently generated weather setters)
         # take precedence over the structural decoder.
         override = decode_exact(effect_id)
         if override is not None:
-            if isinstance(override, IgnoredOutcome):
-                ignored.append(_ignored_dict(override, cast_moment, order))
-                continue
             if isinstance(override, tuple):
                 outcome, timing_override = override
                 timing = timing_override or cast_moment
@@ -246,19 +235,17 @@ def generate_effect_rows(
                     )
                 # The bit is set later by compiler_v2.ability_flags via the
                 # ability_effect_ids × pak-derived ability flag join.
-                # Intentionally drop from rows / ignored / gaps — this is
-                # the fourth outcome type's whole point.
                 continue
-            else:  # IgnoredOutcome — structural decoder doesn't emit these
-                ignored.append(_ignored_dict(outcome, cast_moment, order))
+            else:
+                raise RuntimeError(f"unknown effect decoder outcome: {outcome!r}")
 
-    return rows, ignored, gaps
+    return rows, gaps
 
 
 def build_ability_effect_rows(
     ability_row: dict,
     pak_data: PakTables,
-) -> tuple[list[tuple[int, ...]], list[dict], list[dict]]:
+) -> tuple[list[tuple[int, ...]], list[dict]]:
     """Decode an ability's effect rows; tolerates the ``effect_list`` alias.
 
     Unlike a skill builder, this path accepts :class:`AbilityFlagOutcome`
@@ -292,18 +279,4 @@ def _gap_dict(
         "effect_order": effect_order,
         "reason": gap.reason,
         "params": params,
-    }
-
-
-def _ignored_dict(ignored: IgnoredOutcome, timing_code: int, effect_order: int) -> dict:
-    """Serialise an :class:`IgnoredOutcome` into the ``ignored_effects`` row dict."""
-    return {
-        "primitive": ignored.primitive,
-        "effect_id": ignored.effect_id,
-        "buff_id": ignored.buff_id,
-        "effect_order": effect_order,
-        "timing_code": timing_code,
-        "reason": ignored.reason,
-        "evidence": ignored.evidence,
-        "pak_table": ignored.pak_table,
     }

@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 from roco.common.constants import BPS
+from roco.common.enums import Element
+from roco.common.packing import _add_element_nibble, _add_element_u8
+from roco.engine.kernel.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_ARG3
+
+ENTRY_MOD_POWER_BPS = 1
+ENTRY_MOD_POWER_FLAT = 2
+ENTRY_MOD_COST_REDUCE = 3
+ENTRY_MOD_POISON_STACKS = 4
 
 
 @handles_buff([
@@ -26,7 +34,7 @@ def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_skill_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    if ctx.skill_slot < 0 or not (row[ROW_ARG0] & (1 << ctx.skill_slot)):
+    if not slot_mask_matches(ctx, row[ROW_ARG0]):
         return
     ctx.power += row[ROW_ARG2]
     ctx.hit_count += row[ROW_ARG3]
@@ -53,6 +61,41 @@ def op_carry_skill_power_bonus(ctx: StageCtx, row: tuple[int, ...]) -> None:
     )
     if applies:
         ctx.power_bps = ctx.power_bps * row[ROW_ARG2] // BPS
+
+
+def op_entry_element_skill_mod_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    count = entry_source_count(ctx, row[ROW_ARG0])
+    if count <= 0:
+        return
+    amount = row[ROW_ARG2] * count
+    mode = row[ROW_ARG3]
+    for element in Element:
+        if not (row[ROW_ARG1] & (1 << element.value)):
+            continue
+        if mode == ENTRY_MOD_POWER_BPS:
+            ctx.entry_element_power_bps = _add_element_u8(
+                ctx.entry_element_power_bps,
+                element,
+                amount // 100,
+            )
+        elif mode == ENTRY_MOD_POWER_FLAT:
+            ctx.entry_element_power_flat = _add_element_u8(
+                ctx.entry_element_power_flat,
+                element,
+                amount,
+            )
+        elif mode == ENTRY_MOD_COST_REDUCE:
+            ctx.entry_element_cost_reduce = _add_element_nibble(
+                ctx.entry_element_cost_reduce,
+                element,
+                amount,
+            )
+        elif mode == ENTRY_MOD_POISON_STACKS:
+            ctx.entry_element_poison_stacks = _add_element_nibble(
+                ctx.entry_element_poison_stacks,
+                element,
+                amount,
+            )
 
 
 def op_transfer_mods(ctx: StageCtx, row: tuple[int, ...]) -> None:

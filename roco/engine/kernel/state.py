@@ -44,6 +44,10 @@ class PetState(NamedTuple):
     # empty, so existing code paths that never touch the ledger are
     # behaviour-neutral.
     active_buffs: int = 0
+    element_power_flat: int = 0
+    element_power_bps: int = 0
+    element_cost_reduce: int = 0
+    element_poison_stacks: int = 0
 
 
 class SideState(NamedTuple):
@@ -58,6 +62,9 @@ class SideState(NamedTuple):
     barrel_pending: int
     skill_counts: int
     status_skill_count: int
+    defense_skill_count: int
+    skill_dam_type_counts: int
+    switch_count: int
     counter_count: int
     cost_mods: int
     pets: tuple[PetState, ...]
@@ -188,6 +195,10 @@ def _pet_state(pet_id: int) -> PetState:
         leech_source_slot=-1,
         fainted=0,
         active_buffs=0,
+        element_power_flat=0,
+        element_power_bps=0,
+        element_cost_reduce=0,
+        element_poison_stacks=0,
     )
 
 
@@ -215,7 +226,28 @@ def make_side(
         _bloodline_row(pet_id, bloodlines[idx] if bloodlines and idx < len(bloodlines) else None)
         for idx, pet_id in enumerate(pet_ids)
     )
-    return SideState(0, SIDE_LIVES, WILLPOWER_USES, LEADER_USES, bloodline_magic_id, 0, 0, 0, 0, 0, 0, 0, 0, pets, moves, bloodline_rows, 0)
+    return SideState(
+        0,
+        SIDE_LIVES,
+        WILLPOWER_USES,
+        LEADER_USES,
+        bloodline_magic_id,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        pets,
+        moves,
+        bloodline_rows,
+        0,
+    )
 
 
 def make_state(
@@ -255,6 +287,9 @@ def copy_state(state: KernelState) -> KernelState:
         state.side_a.barrel_pending,
         state.side_a.skill_counts,
         state.side_a.status_skill_count,
+        state.side_a.defense_skill_count,
+        state.side_a.skill_dam_type_counts,
+        state.side_a.switch_count,
         state.side_a.counter_count,
         state.side_a.cost_mods,
         tuple(PetState(*pet) for pet in state.side_a.pets),
@@ -274,6 +309,9 @@ def copy_state(state: KernelState) -> KernelState:
         state.side_b.barrel_pending,
         state.side_b.skill_counts,
         state.side_b.status_skill_count,
+        state.side_b.defense_skill_count,
+        state.side_b.skill_dam_type_counts,
+        state.side_b.switch_count,
         state.side_b.counter_count,
         state.side_b.cost_mods,
         tuple(PetState(*pet) for pet in state.side_b.pets),

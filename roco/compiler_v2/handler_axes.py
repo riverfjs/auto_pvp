@@ -29,7 +29,6 @@ OP_MODULES: tuple[str, ...] = (
 _DECORATOR_AXES: dict[str, tuple[str, type]] = {
     "handles_buff": ("buff_type", str),
     "handles_prefix": ("prefix_type", str),
-    "handles_base_name": ("base_name", str),
 }
 
 
@@ -193,10 +192,6 @@ def _put_unique(mapping: dict[int, int], key: int, value: int, context: str) -> 
     mapping[key] = value
 
 
-def _load_buffbase_rows() -> dict[int, dict]:
-    raise RuntimeError("BUFFBASE_CONF.editor_name resolution is retired")
-
-
 def resolve_handler_axes(
     handler_indices: dict[str, int],
     lua_enums: dict[str, dict[str, int]],
@@ -216,11 +211,6 @@ def resolve_handler_axes(
         raise RuntimeError("Lua static bundle is missing Enum.BuffType")
 
     raw = collect_handler_axes(op_modules)
-    if raw.get("base_name"):
-        raise RuntimeError(
-            "@handles_base_name is retired; derive exact handlers from pak "
-            "structures in compiler_v2 instead"
-        )
     order_seed: dict[int, int] = {}
     prefix_seed: dict[int, int] = {}
     base_id_seed: dict[int, int] = {}
