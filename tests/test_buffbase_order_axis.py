@@ -21,6 +21,8 @@ from pathlib import Path
 import pytest
 
 from roco.compiler_v2.effect_codegen import classify as cls
+from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
+from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import pack_handler_params
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
@@ -56,9 +58,17 @@ def buffbase_conf() -> dict[int, dict]:
 # ── handler-owned axis metadata ──────────────────────────────────────────
 
 
-def test_engine_buff_type_axis_loads_82_entries(resolved_axes):
+def test_engine_buff_type_axis_loads_78_entries(resolved_axes):
     """Locks the current engine coverage scope without a compiler seed table."""
-    assert len(resolved_axes.buffbase_order) == 82
+    assert len(resolved_axes.buffbase_order) == 78
+
+
+def test_hit_count_related_orders_are_not_broad_axes(resolved_axes):
+    """These orders contain unsupported sub-shapes, so they must be exact or gap."""
+    assert 17 not in resolved_axes.buffbase_order
+    assert 45 not in resolved_axes.buffbase_order
+    assert 91 not in resolved_axes.buffbase_order
+    assert 115 not in resolved_axes.buffbase_order
 
 
 def test_engine_orders_disjoint_from_mixed_prefixes(resolved_axes):
@@ -186,6 +196,30 @@ def test_runtime_classifier_routes_cute_bench_cost_reduce_exact_buff():
     handler = cls.classify_buff_handler(20400130, pak.buff_conf)
     assert handler == hi.H_CUTE_BENCH_COST_REDUCE
     assert pack_handler_params(handler, 20400130, pak.buff_conf) == (1, 0, 0, 0)
+
+
+def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
+    """Order-45 hit-count rows are exact structural rows, not a whole-order rule."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    plus = cls.classify_buff_handler(20450050, pak.buff_conf)
+    minus = cls.classify_buff_handler(20450090, pak.buff_conf)
+    assert plus == hi.H_HIT_COUNT_DELTA
+    assert minus == hi.H_HIT_COUNT_DELTA
+    assert pack_handler_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
+    assert pack_handler_params(minus, 20450090, pak.buff_conf) == (-1, 0, 0, 0)
+
+    assert cls.classify_buff_handler(20450020, pak.buff_conf) == 0
+    assert cls.classify_buff_handler(20450030, pak.buff_conf) == 0
+    assert cls.classify_buff_handler(21150010, pak.buff_conf) == 0
+
+    drive_outcome = decode_buff_direct(21150010, pak.buff_conf)[0]
+    assert isinstance(drive_outcome, GapOutcome)
+    assert drive_outcome.primitive == "prefix_2115"
+
+    hit_outcome = decode_buff_direct(20450050, pak.buff_conf)[0]
+    assert isinstance(hit_outcome, EmitOutcome)
+    assert hit_outcome.p0 == 1
 
 
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):

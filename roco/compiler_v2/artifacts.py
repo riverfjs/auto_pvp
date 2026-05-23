@@ -383,6 +383,7 @@ def _build_buff_id_handler_map(
         else set()
     )
     team_skill_hit_handler = handler_indices.get("H_HIT_COUNT_BY_TEAM_SKILL_COUNT")
+    hit_count_delta_handler = handler_indices.get("H_HIT_COUNT_DELTA")
     anti_heal_handler = handler_indices.get("H_ANTI_HEAL")
     cute_bench_cost_handler = handler_indices.get("H_CUTE_BENCH_COST_REDUCE")
 
@@ -434,6 +435,14 @@ def _build_buff_id_handler_map(
                 "BUFFBASE_CONF order-3 team skill count hit modifier",
             )
 
+        if hit_count_delta_handler is not None and _is_flat_hit_count_delta_buff(rec, buffbase_rows):
+            _put_exact_buff_handler(
+                out,
+                buff_id,
+                hit_count_delta_handler,
+                "BUFFBASE_CONF order-45 flat hit-count delta",
+            )
+
         if anti_heal_handler is not None and _is_heal_reversal_buff(rec, buffbase_rows):
             _put_exact_buff_handler(
                 out,
@@ -467,6 +476,25 @@ def _is_team_skill_hit_count_buff(
         return False
     slots = _base_param_slots(base)
     return len(slots) >= 2 and slots[0] == (3,) and bool(slots[1])
+
+
+def _is_flat_hit_count_delta_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 45:
+        return False
+    slots = _base_param_slots(base)
+    if len(slots) < 3:
+        return False
+    delta = _slot_scalar(slots, 0)
+    skill_id = _slot_scalar(slots, 1)
+    mode = _slot_scalar(slots, 2)
+    return delta is not None and delta != 0 and skill_id == 0 and mode == 0
 
 
 def _is_heal_reversal_buff(

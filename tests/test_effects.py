@@ -11,7 +11,7 @@ from roco.compiler_v2.effect_codegen import (
     PakTables,
     generate_effect_rows,
     build_ability_effect_rows,
-    H_DAMAGE, H_DISPEL_MARKS_TO_BURN, H_HEAL_HP, H_SELF_BUFF, H_POISON,
+    H_DAMAGE, H_DISPEL_MARKS_TO_BURN, H_HEAL_HP, H_HIT_COUNT_DELTA, H_SELF_BUFF, H_POISON,
 )
 
 
@@ -60,6 +60,14 @@ def pak(tmp_path):
             "type": 3,
             "add_max": 15,
             "desc": "中毒",
+        },
+        "20450050": {
+            "id": 20450050,
+            "editor_name": "连击",
+            "buff_base_ids": [2045005],
+            "type": 1,
+            "add_max": 99,
+            "desc": "连击次数+1",
         },
     })
     return PakTables(tmp_path)
@@ -181,6 +189,16 @@ def test_generate_effect_rows_stack_priority(pak):
     }]}, pak)
     assert rows[0][0] == H_POISON
     assert rows[0][4] == 3  # p0 = buff_group_level
+
+
+def test_generate_effect_rows_hit_count_uses_buff_group_level(pak):
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20450050, "cast_moment": 11, "result_target_type": 1,
+        "success_rate": 10000, "buff_group_level": 3,
+    }]}, pak)
+    assert gaps == []
+    assert rows[0][0] == H_HIT_COUNT_DELTA
+    assert rows[0][4] == 3
 
 
 def test_build_ability_effect_rows(pak):

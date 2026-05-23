@@ -89,6 +89,8 @@ def _emit_row(
         stacks = 1
     if is_status_or_mark_handler(outcome.handler_idx) and stacks > 1:
         p0 = stacks
+    elif outcome.handler_idx == H_HIT_COUNT_DELTA and stacks > 1:
+        p0 *= stacks
     assert outcome.handler_idx > 0, (
         "EmitOutcome must carry a non-zero handler_idx; "
         f"got {outcome.handler_idx}"

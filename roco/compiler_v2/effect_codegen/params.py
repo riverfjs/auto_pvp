@@ -18,6 +18,7 @@ H_BURN = _hi.H_BURN
 H_CUTE_BENCH_COST_REDUCE = _hi.H_CUTE_BENCH_COST_REDUCE
 H_ENEMY_DEBUFF = _hi.H_ENEMY_DEBUFF
 H_FREEZE = _hi.H_FREEZE
+H_HIT_COUNT_DELTA = _hi.H_HIT_COUNT_DELTA
 H_HIT_COUNT_BY_TEAM_SKILL_COUNT = _hi.H_HIT_COUNT_BY_TEAM_SKILL_COUNT
 H_LEECH = _hi.H_LEECH
 H_POISON = _hi.H_POISON
@@ -114,6 +115,11 @@ def pack_handler_params(
         return (max(1, stack_count), 0, 0, 0)
     if h == H_HIT_COUNT_BY_TEAM_SKILL_COUNT:
         return (max(1, stack_count), 0, 0, 0)
+    if h == H_HIT_COUNT_DELTA:
+        delta = _flat_hit_count_delta_amount(base_ids)
+        if delta == 0:
+            raise RuntimeError(f"cannot derive flat hit-count delta from buff {buff_id}")
+        return (delta, 0, 0, 0)
     if h == H_ANTI_HEAL:
         multiplier = 2
         if base_ids:
@@ -146,6 +152,23 @@ def _as_int_tuple(value: Any) -> tuple[int, ...]:
 def _single_int(value: Any) -> int | None:
     values = _as_int_tuple(value)
     return values[0] if len(values) == 1 else None
+
+
+def _flat_hit_count_delta_amount(base_ids: list[int]) -> int:
+    if len(base_ids) != 1:
+        return 0
+    base_id = int(base_ids[0])
+    if BUFFBASE_ORDER.get(base_id) != 45:
+        return 0
+    base_params = BUFFBASE_PARAMS.get(base_id) or ()
+    if len(base_params) < 3:
+        return 0
+    delta = _single_int(base_params[0])
+    skill_id = _single_int(base_params[1])
+    mode = _single_int(base_params[2])
+    if delta is None or delta == 0 or skill_id != 0 or mode != 0:
+        return 0
+    return delta
 
 
 def _cute_bench_cost_reduce_amount(base_ids: list[int], buff_conf: dict[int, dict]) -> int:

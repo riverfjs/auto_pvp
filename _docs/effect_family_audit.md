@@ -7,10 +7,10 @@ Total families: **186**
 ## Coverage status
 
 - `ability_flag`: 4
-- `auto_structural`: 94
-- `gap`: 69
+- `auto_structural`: 90
+- `gap`: 71
 - `generated_weather`: 1
-- `mixed`: 18
+- `mixed`: 20
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
@@ -180,10 +180,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2017` — BUFF_CONF_DIRECT
 
-- count: **50** | coverage: `auto_structural` | used_consumer_count: 24
+- count: **50** | coverage: `mixed` | used_consumer_count: 24
 - editor_names: GM, 光合印记, 恢复能量, 治疗印记, 能量衰退
 - example_source_ids: [20170010, 20170011, 20170012, 20170090, 20170130]
-- coverage_breakdown: {'auto_structural_count': 50, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 48, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7130110` 毒线针 — S3壳栗丝鼠B
     - `7030300` 不算逃跑。 — 光合作用
@@ -425,10 +425,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2045` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `auto_structural` | used_consumer_count: 4
+- count: **6** | coverage: `mixed` | used_consumer_count: 4
 - editor_names: 暴风眼, 连击
 - example_source_ids: [20450020, 20450030, 20450031, 20450050, 20450090]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 4, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7080350` 造成物伤，物防比敌方越高，本次技能威力越高。 — 地系部族会把敌人和秘密一同用沙土掩埋。
     - `7030271` 自己获得<desc_id=3005>连击数</>+2，<desc_id=1017>应对防御</>：额外造成<desc_id=1011>打断</>，且敌方下回合获得眩晕。 — 应对！芳香诱引
@@ -847,10 +847,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2091` — BUFF_CONF_DIRECT
 
-- count: **3** | coverage: `auto_structural` | used_consumer_count: 2
+- count: **3** | coverage: `gap` | used_consumer_count: 2
 - editor_names: 侵蚀
 - example_source_ids: [20910010, 20910020, 20910030]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190260` S3夜游魔B — 凝望
 - sample_ability_consumers:
@@ -1102,9 +1102,9 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2115` — BUFF_CONF_DIRECT
 
-- count: **1** | coverage: `auto_structural` | used_consumer_count: 2
+- count: **1** | coverage: `gap` | used_consumer_count: 2
 - example_source_ids: [21150010]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070030` 造成物伤，本技能位于1号位时威力+60，<desc_id=1033>传动</>1。 — “我要存在，即使以最不优雅的姿态，也要拥有站在这个舞台上的权力。”——第437任盖布族族长
     - `7070170` 造成物伤，本技能位于1号或3号位时能耗-2，<desc_id=1033>传动</>1。 — 主轴
@@ -1527,7 +1527,7 @@ Total families: **186**
 - count: **92** | coverage: `mixed` | used_consumer_count: 0
 - editor_names: 不朽, 戏耍, 拉拉队长
 - example_source_ids: [1004002, 1004005, 1004006, 1004046, 1004065]
-- coverage_breakdown: {'auto_structural_count': 78, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 14, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 72, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 20, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050510` 升华 — S3友爱星飞B
     - `7180200` 应对！灾厄 — 对自己造成物伤，<desc_id=1015>应对状态</>：改为对敌方造成物伤，且本次技能威力+120。

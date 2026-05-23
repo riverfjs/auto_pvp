@@ -67,12 +67,6 @@ def op_counter_accumulate_transform(ctx: StageCtx, row: tuple[int, ...]) -> None
 
 # ── hit count adjustments ────────────────────────────────────────────────
 
-@handles_buff([
-    ("BFT_ASSIGN", "STUN_HEAL"),
-    ("BFT_MULTIPLE_NUM", "HIT_COUNT"),
-    ("BFT_NINETY_ONE", "DYNAMIC_HIT"),
-    ("BFT_O_FIFTEEN", "DRIVE"),
-])
 def op_hit_count_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_TARGET] == TARGET_SELF:
         ctx.hit_count += row[ROW_ARG0]
