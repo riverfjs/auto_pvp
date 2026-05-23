@@ -11,10 +11,11 @@ from typing import Any
 
 from roco.generated import handler_indices as _hi
 from roco.common.buffbase import pack_buff_delta_from_base_ids
-from roco.generated.buffbase_params import BUFFBASE_PARAMS
+from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 H_ANTI_HEAL = _hi.H_ANTI_HEAL
 H_BURN = _hi.H_BURN
+H_CUTE_BENCH_COST_REDUCE = _hi.H_CUTE_BENCH_COST_REDUCE
 H_ENEMY_DEBUFF = _hi.H_ENEMY_DEBUFF
 H_FREEZE = _hi.H_FREEZE
 H_HIT_COUNT_BY_TEAM_SKILL_COUNT = _hi.H_HIT_COUNT_BY_TEAM_SKILL_COUNT
@@ -121,7 +122,54 @@ def pack_handler_params(
             if isinstance(trigger, tuple) and len(trigger) >= 2:
                 multiplier = max(1, int(trigger[1]) // 10)
         return (multiplier, 0, 0, 0)
+    if h == H_CUTE_BENCH_COST_REDUCE:
+        amount = _cute_bench_cost_reduce_amount(base_ids, buff_conf)
+        if amount <= 0:
+            raise RuntimeError(f"cannot derive cute bench cost reduction from buff {buff_id}")
+        return (amount, 0, 0, 0)
     if h in (H_SELF_BUFF, H_ENEMY_DEBUFF, H_SELF_DEBUFF):
         return (pack_buff_delta_from_base_ids(tuple(int(v) for v in base_ids)), 0, 0, 0)
     p = (base_ids + [0, 0, 0, 0])[:4]
     return (p[0], p[1], p[2], p[3])
+
+
+def _as_int_tuple(value: Any) -> tuple[int, ...]:
+    if isinstance(value, tuple):
+        return tuple(int(v) for v in value)
+    if isinstance(value, list):
+        return tuple(int(v) for v in value)
+    if value is None:
+        return ()
+    return (int(value),)
+
+
+def _single_int(value: Any) -> int | None:
+    values = _as_int_tuple(value)
+    return values[0] if len(values) == 1 else None
+
+
+def _cute_bench_cost_reduce_amount(base_ids: list[int], buff_conf: dict[int, dict]) -> int:
+    for raw_base_id in base_ids:
+        base_id = int(raw_base_id)
+        if BUFFBASE_ORDER.get(base_id) != 40:
+            continue
+        base_params = BUFFBASE_PARAMS.get(base_id) or ()
+        if len(base_params) < 3:
+            continue
+        target_buff_id = _single_int(base_params[2])
+        if target_buff_id is None:
+            continue
+        target = buff_conf.get(target_buff_id) or {}
+        target_base_ids = [int(v) for v in target.get("buff_base_ids") or () if v]
+        if len(target_base_ids) != 1:
+            continue
+        target_base_id = target_base_ids[0]
+        if BUFFBASE_ORDER.get(target_base_id) != 32:
+            continue
+        target_params = BUFFBASE_PARAMS.get(target_base_id) or ()
+        if len(target_params) < 4 or _as_int_tuple(target_params[0]) != (0,):
+            continue
+        cost_delta = _single_int(target_params[3])
+        if cost_delta is not None and cost_delta < 0:
+            return abs(cost_delta)
+    return 0

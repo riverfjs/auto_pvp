@@ -109,6 +109,14 @@ def test_decode_common_scalar_effect_families(pak, effect_id, handler, p0):
     assert (outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 1)
 
 
+def test_decode_zero_change_energy_is_explicit_energy_row(pak):
+    """ET_CHANGE_ENERGY [0,0,0] is a declared zero delta, not a gap."""
+    outcome = decode_family_axes(1019047, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, EmitOutcome)
+    assert outcome.handler_idx == H_HEAL_ENERGY
+    assert (outcome.p0, outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 0, 1)
+
+
 @pytest.mark.parametrize("effect_id", [1034019, 1034020])
 def test_decode_hero_event_count_buff_families(pak, effect_id):
     outcome = decode_family_axes(effect_id, pak.effect_conf, pak.buff_conf)

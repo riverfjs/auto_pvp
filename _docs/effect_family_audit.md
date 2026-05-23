@@ -8,9 +8,9 @@ Total families: **186**
 
 - `ability_flag`: 4
 - `auto_structural`: 94
-- `gap`: 70
+- `gap`: 69
 - `generated_weather`: 1
-- `mixed`: 17
+- `mixed`: 18
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
@@ -392,10 +392,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2040` — BUFF_CONF_DIRECT
 
-- count: **13** | coverage: `gap` | used_consumer_count: 3
+- count: **13** | coverage: `mixed` | used_consumer_count: 3
 - editor_names: 海象冰屋
 - example_source_ids: [20400110, 20400130, 20400210, 20400340, 20400350]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 13, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 12, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7080430` 不动如山 — 减伤90%，<desc_id=1016>应对攻击</>：自己获得物攻+50%。
     - `7160270` 自己获得<desc_id=1006>萌化</>：全技能能耗永久-3。 — 反弹
@@ -1863,7 +1863,7 @@ Total families: **186**
 - count: **52** | coverage: `mixed` | used_consumer_count: 10
 - editor_names: 得寸进尺, 快充, 惊吓, 打雪仗, 搜刮, 撞倒, 毒蘑菇, 深度睡眠, 灵魂灼伤, 石天平
 - example_source_ids: [1019001, 1019002, 1019003, 1019004, 1019005]
-- coverage_breakdown: {'auto_structural_count': 49, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 50, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050160` 潜水遁逃 — <desc_id=1003>脱离</>。
     - `7170101` 萌发 — S3克莱因龙B

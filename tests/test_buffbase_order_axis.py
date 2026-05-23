@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from roco.compiler_v2.effect_codegen import classify as cls
+from roco.compiler_v2.effect_codegen.params import pack_handler_params
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.handler_axes import collect_handler_axes, resolve_handler_axes
@@ -179,9 +180,17 @@ def test_runtime_classifier_routes_heal_reversal_exact_buff():
     assert cls.classify_buff_handler(21460330, pak.buff_conf) == hi.H_ANTI_HEAL
 
 
+def test_runtime_classifier_routes_cute_bench_cost_reduce_exact_buff():
+    """Order-40 cute-stack trigger maps only the proved all-skill cost reducer."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    handler = cls.classify_buff_handler(20400130, pak.buff_conf)
+    assert handler == hi.H_CUTE_BENCH_COST_REDUCE
+    assert pack_handler_params(handler, 20400130, pak.buff_conf) == (1, 0, 0, 0)
+
+
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
     """Dominant base_ids in mixed prefixes (e.g. 2011's order=11 group)
-    have NO buffbase_order entry — they fall through to the legacy
+    have NO buffbase_order entry — they fall through to the mixed
     prefix layer and resolve via PREFIX_HANDLER_MAP[2011]."""
     # Find a 2011 base_id with order==11 (the dominant order, which is
     # NOT in the seed because 2011 is the mixed prefix).

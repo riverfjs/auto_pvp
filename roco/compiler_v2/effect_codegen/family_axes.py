@@ -176,6 +176,12 @@ def _decode_heal_energy(rec: dict) -> EmitOutcome | None:
         return _emit(H_HEAL_ENERGY, direct)
     base = safe_int(params_raw, 1)
     ratio = safe_int(params_raw, 2)
+    if base == 0 and ratio == 0 and len(params_raw) >= 3:
+        # Pak carries ET_CHANGE_ENERGY rows with an explicit zero delta
+        # (notably counter-response variants).  Compile the declared
+        # zero through the same resource op so strict mode sees decoded
+        # semantics instead of an unsupported gap.
+        return _emit(H_HEAL_ENERGY, 0)
     if base <= 0 or ratio == 0:
         return None
     amount = base * ratio // 10000

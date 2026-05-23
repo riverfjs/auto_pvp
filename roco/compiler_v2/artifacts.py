@@ -384,6 +384,7 @@ def _build_buff_id_handler_map(
     )
     team_skill_hit_handler = handler_indices.get("H_HIT_COUNT_BY_TEAM_SKILL_COUNT")
     anti_heal_handler = handler_indices.get("H_ANTI_HEAL")
+    cute_bench_cost_handler = handler_indices.get("H_CUTE_BENCH_COST_REDUCE")
 
     out: dict[int, int] = {}
     for buff_id, rec in buff_rows.items():
@@ -440,6 +441,17 @@ def _build_buff_id_handler_map(
                 anti_heal_handler,
                 "BUFFBASE_CONF order-146 heal reversal trigger",
             )
+
+        if (
+            cute_bench_cost_handler is not None
+            and _is_cute_bench_cost_reduce_buff(rec, buff_rows, buffbase_rows)
+        ):
+            _put_exact_buff_handler(
+                out,
+                buff_id,
+                cute_bench_cost_handler,
+                "BUFFBASE_CONF order-40 cute-stack trigger to all-skill cost reduction",
+            )
     return out
 
 
@@ -474,6 +486,54 @@ def _is_heal_reversal_buff(
         and slots[3] == (3, 20)
         and slots[4] == (-1,)
     )
+
+
+def _is_cute_bench_cost_reduce_buff(
+    rec: dict,
+    buff_rows: dict[int | str, dict],
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 40:
+        return False
+    slots = _base_param_slots(base)
+    if len(slots) < 3 or slots[1] != (1,) or len(slots[2]) != 1:
+        return False
+    if not slots[0] or not all(_is_cute_stack_buff(buff_id, buff_rows) for buff_id in slots[0]):
+        return False
+    return _all_skill_cost_reduce_amount(slots[2][0], buff_rows, buffbase_rows) == 1
+
+
+def _is_cute_stack_buff(buff_id: int, buff_rows: dict[int | str, dict]) -> bool:
+    rec = buff_rows.get(buff_id)
+    if rec is None:
+        return False
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    return len(base_ids) == 1 and base_ids[0] // 1000 == 2102
+
+
+def _all_skill_cost_reduce_amount(
+    buff_id: int,
+    buff_rows: dict[int | str, dict],
+    buffbase_rows: dict[int | str, dict],
+) -> int:
+    rec = buff_rows.get(buff_id)
+    if rec is None:
+        return 0
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return 0
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 32:
+        return 0
+    slots = _base_param_slots(base)
+    if len(slots) < 4 or slots[0] != (0,) or len(slots[3]) != 1:
+        return 0
+    delta = slots[3][0]
+    return abs(delta) if delta < 0 else 0
 
 
 def _put_exact_buff_handler(
