@@ -77,6 +77,7 @@ def test_ability_flag_names_in_enum():
     """The heal-on-status names must exist on :class:`AbilityFlag`."""
     assert AbilityFlag.HEAL_ON_BURN_DAMAGE.value > 0
     assert AbilityFlag.HEAL_ON_POISON_DAMAGE.value > 0
+    assert AbilityFlag.FREEZE_COUNTS_AS_METEOR.value > 0
 
 
 def test_ability_flag_bits_are_power_of_two():
@@ -97,11 +98,19 @@ def test_ability_flag_bits_are_power_of_two():
 def test_loader_accepts_real_pak_derivation():
     """Real pak derives the current ability flag skill_result ids."""
     table = load_ability_flags_from_effects()
-    assert set(table.keys()) == {1066001, 21430010, 21540010, 21540040}
+    assert set(table.keys()) == {1066001, 20400410, 21430010, 21540010, 21540040}
     assert table[1066001].flag_name == "SHUFFLE_SKILLS_REDUCE_LAST"
+    assert table[20400410].flag_name == "FREEZE_COUNTS_AS_METEOR"
     assert table[21540010].flag_name == "HEAL_ON_POISON_DAMAGE"
     assert table[21540040].flag_name == "HEAL_ON_BURN_DAMAGE"
     assert table[21430010].flag_name == "MARK_STACK_NO_REPLACE"
+
+
+def test_loader_routes_only_structural_freeze_meteor_order40_buff():
+    """月牙雪糕's order-40 virtual-layer chain is an ability flag; 嫉妒 is not."""
+    table = load_ability_flags_from_effects()
+    assert table[20400410].flag_name == "FREEZE_COUNTS_AS_METEOR"
+    assert 20400210 not in table
 
 
 def test_normalized_payload_is_sorted_tuple():
@@ -309,6 +318,22 @@ def test_generate_effect_rows_ability_path_accepts_direct_buff_flag_outcome():
     skill_row = {
         "skill_result": [{
             "effect_id": 21430010,
+            "result_target_type": 1,
+            "cast_moment": 11,
+            "success_rate": 10000,
+        }],
+    }
+    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
+    assert rows == []
+    assert gaps == []
+
+
+def test_generate_effect_rows_ability_path_accepts_freeze_meteor_flag_outcome():
+    """The 月牙雪糕 direct BUFF_CONF row compiles into ABILITY_FLAGS."""
+    pak = PakTables(PAK_DATA)
+    skill_row = {
+        "skill_result": [{
+            "effect_id": 20400410,
             "result_target_type": 1,
             "cast_moment": 11,
             "success_rate": 10000,

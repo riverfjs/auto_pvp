@@ -395,7 +395,7 @@ Total families: **186**
 - count: **13** | coverage: `mixed` | used_consumer_count: 3
 - editor_names: 海象冰屋
 - example_source_ids: [20400110, 20400130, 20400210, 20400340, 20400350]
-- coverage_breakdown: {'auto_structural_count': 1, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 12, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 1, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 11, 'ability_flag_count': 1}
 - sample_skill_consumers:
     - `7080430` 不动如山 — 减伤90%，<desc_id=1016>应对攻击</>：自己获得物攻+50%。
     - `7160270` 自己获得<desc_id=1006>萌化</>：全技能能耗永久-3。 — 反弹

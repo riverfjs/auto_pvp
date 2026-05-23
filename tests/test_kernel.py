@@ -438,6 +438,29 @@ def test_kernel_marks_affect_speed_cost_damage_and_entry():
     assert switched.current_energy == STARTING_ENERGY - 1
 
 
+def test_kernel_freeze_counts_as_extra_meteor_damage_flag():
+    fire = _pet_id("火花")
+    water = _pet_id("水蓝蓝")
+    impact = _skill_id("猛烈撞击")
+
+    frozen_state = make_state((fire,), (water,), team_a_moves=((impact,),), team_b_moves=((0,),))
+    frozen_target = set_status_count(frozen_state.side_b.pets[0], StatusType.FREEZE, 3)
+    frozen_state = frozen_state._replace(side_b=replace_pet(frozen_state.side_b, 0, frozen_target))
+    base = update(frozen_state, move_choice(0), move_choice(0))
+
+    flagged_state = make_state((fire,), (water,), team_a_moves=((impact,),), team_b_moves=((0,),))
+    flagged_actor = flagged_state.side_a.pets[0]._replace(ability_flags=int(AbilityFlag.FREEZE_COUNTS_AS_METEOR))
+    flagged_target = set_status_count(flagged_state.side_b.pets[0], StatusType.FREEZE, 3)
+    flagged_state = flagged_state._replace(
+        side_a=replace_pet(flagged_state.side_a, 0, flagged_actor),
+        side_b=replace_pet(flagged_state.side_b, 0, flagged_target),
+    )
+    flagged = update(flagged_state, move_choice(0), move_choice(0))
+
+    assert flagged.damage_a == base.damage_a + 90
+    assert _unpack_mark(flagged.state.side_b.marks, MarkIdx.METEOR) == 0
+
+
 def test_kernel_mark_turn_end_poison_and_solar_ticks():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")

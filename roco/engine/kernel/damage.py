@@ -9,6 +9,7 @@ from roco.common.packing import (
     BUFF_DEF_PHYS,
     MarkIdx,
     _unpack_mark,
+    _unpack_status,
     stat_ratio_bps,
 )
 from roco.common.constants import (
@@ -35,7 +36,7 @@ from roco.common.constants import (
     TYPE_DOUBLE_WEAK_BPS,
     TYPE_NEUTRAL_BPS,
 )
-from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, WeatherType
+from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_FIRE,
@@ -111,7 +112,7 @@ def damage(
     ) // (defense * (BPS ** 7))
     total = max(MIN_DAMAGE, total)
     if skill[SKILL_ELEMENT] != ELEMENT_ILLUSION:
-        total += _unpack_mark(target_marks, MarkIdx.METEOR) * METEOR_POWER
+        total += _meteor_damage_stacks(actor, target, target_marks) * METEOR_POWER
     total += ctx.flat_damage
     return max(0, (total * ctx.damage_bps) // BPS)
 
@@ -120,6 +121,13 @@ def _hit_count(actor: PetState, target: PetState, ctx: StageCtx) -> int:
     if (actor.ability_flags | target.ability_flags) & int(AbilityFlag.FIXED_HIT_COUNT_ALL):
         return 2
     return max(1, ctx.hit_count)
+
+
+def _meteor_damage_stacks(actor: PetState, target: PetState, target_marks: int) -> int:
+    stacks = _unpack_mark(target_marks, MarkIdx.METEOR)
+    if actor.ability_flags & int(AbilityFlag.FREEZE_COUNTS_AS_METEOR):
+        stacks += _unpack_status(target.status_counts, StatusType.FREEZE)
+    return stacks
 
 
 def weather_damage_bps(skill_element: int, weather: int) -> int:

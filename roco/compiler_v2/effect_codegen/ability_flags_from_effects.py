@@ -72,11 +72,15 @@ EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST = 66
 EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE = 76
 BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = 143
 BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = 154
+BUFFBASE_ORDER_ATTR_CHANGE = 1
+BUFFBASE_ORDER_CHECK_BUFF_LAYER = 40
 
 DESC_POISON = 1001
 DESC_BURN = 1002
+DESC_FREEZE = 1004
 DESC_LEECH = 1008
 DESC_POISON_MARK = 1014
+DESC_METEOR_MARK = 1035
 
 
 def _load_rows(path: Path) -> dict[int, dict]:
@@ -150,8 +154,8 @@ def load_ability_flags_from_effects(
         skill_rows = skill_conf if skill_conf is not None else (
             _load_skill_conf() if default_tables else None
         )
-        ability_refs = _ability_skill_result_refs(skill_rows) if skill_rows is not None else None
-        return _derive_ability_flags(conf, buff_rows, base_rows, desc_rows, ability_refs)
+        ability_consumers = _ability_skill_result_consumers(skill_rows) if skill_rows is not None else None
+        return _derive_ability_flags(conf, buff_rows, base_rows, desc_rows, ability_consumers)
 
     out: dict[int, AbilityFlagOutcome] = {}
     first_seen_line: dict[int, int] = {}
@@ -300,30 +304,36 @@ def _derive_ability_flags(
     buff_conf: dict[int, dict],
     buffbase_conf: dict[int, dict],
     desc_note_conf: dict[int, dict],
-    ability_refs: set[int] | None,
+    ability_consumers: dict[int, tuple[dict, ...]] | None,
 ) -> dict[int, AbilityFlagOutcome]:
     out: dict[int, AbilityFlagOutcome] = {}
     desc_notes = _desc_notes(desc_note_conf)
 
     for effect_id, rec in sorted(effect_conf.items()):
-        if ability_refs is not None and effect_id not in ability_refs:
+        if ability_consumers is not None and effect_id not in ability_consumers:
             continue
         flag = _flag_from_effect_row(rec, buff_conf, desc_notes)
         if flag is not None:
             _put_flag(out, effect_id, flag, "EFFECT_CONF")
 
     for buff_id, rec in sorted(buff_conf.items()):
-        if ability_refs is not None and buff_id not in ability_refs:
+        if ability_consumers is not None and buff_id not in ability_consumers:
             continue
-        flag = _flag_from_buff_row(rec, buff_conf, buffbase_conf, desc_notes)
+        flag = _flag_from_buff_row(
+            rec,
+            buff_conf,
+            buffbase_conf,
+            desc_notes,
+            ability_consumers.get(buff_id, ()) if ability_consumers is not None else (),
+        )
         if flag is not None:
             _put_flag(out, buff_id, flag, "BUFF_CONF")
 
     return out
 
 
-def _ability_skill_result_refs(skill_conf: dict[int, dict]) -> set[int]:
-    refs: set[int] = set()
+def _ability_skill_result_consumers(skill_conf: dict[int, dict]) -> dict[int, tuple[dict, ...]]:
+    refs: dict[int, list[dict]] = {}
     for rec in skill_conf.values():
         if int(rec.get("type") or 0) != ABILITY_SKILL_TYPE:
             continue
@@ -332,8 +342,8 @@ def _ability_skill_result_refs(skill_conf: dict[int, dict]) -> set[int]:
                 continue
             effect_id = _maybe_int(entry.get("effect_id"))
             if effect_id > 0:
-                refs.add(effect_id)
-    return refs
+                refs.setdefault(effect_id, []).append(rec)
+    return {effect_id: tuple(rows) for effect_id, rows in refs.items()}
 
 
 def _desc_notes(desc_note_conf: dict[int, dict]) -> dict[int, str]:
@@ -373,6 +383,7 @@ def _flag_from_buff_row(
     buff_conf: dict[int, dict],
     buffbase_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    ability_rows: tuple[dict, ...] = (),
 ) -> str | None:
     if int(rec.get("type") or 0) != 3:
         return None
@@ -404,7 +415,91 @@ def _flag_from_buff_row(
     ):
         return "MARK_STACK_NO_REPLACE"
 
+    if _is_freeze_counts_as_meteor(rec, buff_conf, buffbase_conf, desc_notes, ability_rows):
+        return "FREEZE_COUNTS_AS_METEOR"
+
     return None
+
+
+def _is_freeze_counts_as_meteor(
+    rec: dict,
+    buff_conf: dict[int, dict],
+    buffbase_conf: dict[int, dict],
+    desc_notes: dict[int, str],
+    ability_rows: tuple[dict, ...],
+) -> bool:
+    """Detect the pak order-40 virtual counter behind 月牙雪糕.
+
+    The numeric structure supplies the mechanics shape: a passive
+    ``BFT_CHECK_BUFF_LAYER`` row watches a zero-value virtual layer and
+    emits another zero-value virtual layer while an attack is being
+    resolved.  The raw pak ability description supplies the only explicit
+    domain labels for that virtual layer pair: freeze and meteor mark.
+    Both sides are required so this cannot classify unrelated prefix_2040
+    buffs such as 嫉妒.
+    """
+    if not _ability_desc_mentions_freeze_meteor(desc_notes, ability_rows):
+        return False
+    base_ids = tuple(_maybe_int(v) for v in rec.get("buff_base_ids") or ())
+    base_ids = tuple(v for v in base_ids if v > 0)
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_conf.get(base_ids[0])
+    if not isinstance(base, dict) or int(base.get("buffbase_order") or 0) != BUFFBASE_ORDER_CHECK_BUFF_LAYER:
+        return False
+    params = base.get("buffbase_param")
+    if not isinstance(params, list):
+        return False
+    source_refs = _slot_values(params, 0)
+    target_refs = _slot_values(params, 2)
+    return (
+        len(source_refs) == 1
+        and _slot_values(params, 1) == (1,)
+        and len(target_refs) == 1
+        and _slot_int_values(params, 3) == (0,)
+        and _slot_int_values(params, 4) == (4,)
+        and _is_zero_attr_virtual_buff(source_refs[0], buff_conf, buffbase_conf)
+        and _is_zero_attr_virtual_buff(target_refs[0], buff_conf, buffbase_conf)
+    )
+
+
+def _ability_desc_mentions_freeze_meteor(
+    desc_notes: dict[int, str],
+    ability_rows: tuple[dict, ...],
+) -> bool:
+    freeze = desc_notes.get(DESC_FREEZE, "冻结")
+    meteor = desc_notes.get(DESC_METEOR_MARK, "星陨印记")
+    for row in ability_rows:
+        desc = str(row.get("desc") or "")
+        if freeze and freeze not in desc:
+            continue
+        if f"<desc_id={DESC_METEOR_MARK}>" in desc or (meteor and meteor in desc):
+            return True
+    return False
+
+
+def _is_zero_attr_virtual_buff(
+    buff_id: int,
+    buff_conf: dict[int, dict],
+    buffbase_conf: dict[int, dict],
+) -> bool:
+    rec = buff_conf.get(buff_id)
+    if not isinstance(rec, dict) or int(rec.get("type") or 0) != 3:
+        return False
+    base_ids = tuple(_maybe_int(v) for v in rec.get("buff_base_ids") or ())
+    base_ids = tuple(v for v in base_ids if v > 0)
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_conf.get(base_ids[0])
+    if not isinstance(base, dict) or int(base.get("buffbase_order") or 0) != BUFFBASE_ORDER_ATTR_CHANGE:
+        return False
+    params = base.get("buffbase_param")
+    return (
+        isinstance(params, list)
+        and _slot_values(params, 0) == (29,)
+        and _slot_int_values(params, 1) == (0,)
+        and _slot_int_values(params, 2) == (0,)
+    )
 
 
 def _flag_for_status_refs(

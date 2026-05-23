@@ -39,6 +39,7 @@ class AbilityFlag(IntFlag):
     BUFF_EXTRA_LAYERS = auto()
     HEAL_HP_PER_ENERGY_GAIN = auto()
     BURST_EXTEND = auto()
+    FREEZE_COUNTS_AS_METEOR = auto()
 
 
 class StatusFlag(IntFlag):
