@@ -1,96 +1,244 @@
 # Auto PVP
 
-PVP 计算引擎。所有战斗状态编译为整数 catalog，运行时零字符串、零字典查找、零动态分发。
+PVP fixed-kernel simulator. Runtime battle code imports integer-only static
+catalogs; it does not read pak files, Lua, JSON, JSONL, SQLite, or dynamic rule
+registries.
 
-## 数据管线
+## Update Path
 
-```
-pak BinData
-  + Lua Enum.lua
-  → compiler_v2: Python static artifacts + handler_idx rows
-  → build_db:   SQLite
-  → artifact:   catalog_hot.py   (纯整数元组，kernel 唯一数据源)
-  → kernel:     HANDLERS[handler_idx](ctx, row)
-```
+Use this sequence when the pak dump changes:
 
-全链路同一元组格式 `(handler_idx, timing, target, rate, p0-p3)`，无中间翻译层。
-
-## Kernel
-
-入口 `mechanics.update(state, c1, c2) → KernelResult`。`KernelState` 是不可变 NamedTuple，每回合产出新状态。
-
-热路径阶段：priority → execute → damage → after_move → end_turn → check_winner。效果通过 `run_skill_timing` 按 timing 筛选 effect_rows，索引 HANDLERS 数组分发到 op 函数。
-
-handler 按职责分文件：
-
-- `op_mods` — 伤害、增益、削弱、修饰
-- `op_resources` — 能量、生命
-- `op_marks` — 印记
-- `op_status` — 状态异常
-- `op_cute` — 萌化
-
-## 效果编译
-
-效果分类完全基于数字结构，不匹配中文文本。
-
-1. **handler 注册**：`op_*` 函数写在 kernel 的 `op_*.py` 中，`gen_prefix_map` 通过 `compiler_v2` 自动发现并分配稳定索引（append-only），持久化至 `handler_registry.json`。
-2. **pak/Lua 静态化**：`compiler_v2` 读取 pak BinData 与 `Data/Config/Enum.lua`，生成 `roco/generated/static/*`、`battle_globals.py`、`skill_dam_types.py`、`pak_ops.py`、`type_chart.py` 等静态 Python 产物。
-3. **人工语义绑定**：少量 pak 无法机器推导的 handler 绑定留在 Python decoder / engine `op_meta`，不再放进 `rules/*.jsonl` 作为 compiler 约束层。
-4. **零翻译透传**：codegen 输出元组 → SQLite → catalog_hot，所有环节使用同一二进制格式。
-
-添加新 handler：在 `op_*.py` 写函数，运行 `uv run python -m roco.compiler_v2.gen_prefix_map`。
-
-## 构建
-
-```
-uv run roco-refresh-artifacts                    # 静态产物 + SQLite + catalog + audits
-uv run pytest tests/ -v                          # 验证
+```bash
+tools/update_pak_public_kit_sparse.sh
+uv run roco-refresh-artifacts
+uv run pytest -q
 ```
 
-需要只刷新静态文件时运行：
+`pak-public-kit` is a sparse partial submodule. The update script fetches only:
 
+```text
+pak-public-kit/output/data
+pak-public-kit/output/scripts
 ```
+
+`output/assets` is intentionally not checked out.
+
+## Data Flow
+
+```text
+pak-public-kit/output/data
++ pak-public-kit/output/scripts/lua/Data/Config/Enum.lua
+    |
+    v
+compiler_v2
+    - static pak/Lua facts
+    - structural effect decoders
+    - engine op_meta handler axes
+    |
+    v
+roco/generated/*
+    |
+    v
+roco.data.build_db
+    - pak canonical records
+    - compiled skill/ability effect rows
+    |
+    v
+_db/data.db
+    |
+    v
+roco/generated/catalog_hot.py
+roco/generated/catalog_debug.py
+    |
+    v
+engine/kernel
+    - hot.PETS / hot.SKILLS
+    - hot.SKILL_EFFECT_ROWS / RANGES
+    - HANDLERS[handler_idx](ctx, row)
+```
+
+The effect row layout is fixed end to end:
+
+```text
+(handler_idx, timing, target, flags, cond, p0, p1, p2, p3)
+```
+
+Older text sometimes called this `(handler_idx, timing, target, rate, p0-p3)`;
+the runtime tuple is the 9-field row above.
+
+## Refresh Pipeline
+
+`uv run roco-refresh-artifacts` runs these steps in order:
+
+1. `roco.compiler_v2.gen_prefix_map`
+   Generates static pak/Lua facts and handler dispatch artifacts under
+   `roco/generated/`.
+2. `roco.data.build_db --allow-used-gaps`
+   Rebuilds `_db/data.db` from pak-derived canonical records, then writes
+   `catalog_hot.py` and `catalog_debug.py`.
+3. `roco.compiler_v2.build_effect_families`
+   Writes generated audit output:
+   `roco/generated/audit/effect_families.jsonl` and
+   `_docs/effect_family_audit.md`.
+4. `roco.compiler_v2.build_effect_families --check`
+   Verifies the audit output is deterministic.
+5. `roco.compiler_v2.pak_schema_audit`
+   Writes `_docs/pak_schema_audit.md`.
+6. `roco.compiler_v2.pak_schema_audit --check`
+   Verifies the schema audit is deterministic.
+
+`uv run roco-refresh-artifacts --check` is for clean-tree/CI verification. Do
+not use `--check` immediately after a real pak update; a real update is expected
+to produce a diff.
+
+## Generated Artifacts
+
+Runtime and data generated files live in `roco/generated/`:
+
+```text
+catalog_hot.py              kernel runtime catalog
+catalog_debug.py            names and debug lookup tables
+handler_table.py            handler_idx -> op_* function table
+handler_indices.py          H_* constants
+handler_order.py            append-only handler order
+handler_registry.json       persisted handler registry
+prefix_handler_map.json     BUFF_CONF / BUFFBASE_CONF handler maps
+buffbase_params.py          BUFFBASE_CONF params
+pak_ops.py                  pak op/prefix metadata
+battle_globals.py           BATTLE_GLOBAL_CONFIG constants
+skill_dam_types.py          SkillDamType -> element adapter
+type_chart.py               pak type effectiveness table
+weather_decoders.py         generated weather effect decoders
+counter_skill_table.py      counter response skill lookup
+buff_immunity_table.py      immunity flags derived from pak text/structure
+mark_groups.py              mark cover groups
+natures.py                  nature stat modifiers
+canonical_adapters.py       pak -> canonical adapters
+static/lua_enums.py         Lua enum snapshot
+static/pak_axes.py          pak numeric axes joined to enum names
+static/manifest.py          source hashes
+audit/effect_families.jsonl generated machine-readable audit
+```
+
+`roco/generated/audit/effect_families.jsonl` is not a rule file. It is generated
+audit data. Do not edit it by hand.
+
+## SQLite
+
+`_db/data.db` is an intermediate build artifact and inspection surface. The
+engine does not read it at runtime.
+
+Important tables:
+
+```text
+skills / abilities / pets              normalized pak-facing catalog rows
+skill_effects / ability_effects        compiled kernel effect rows
+ability_effect_ids                     original pak effect_id provenance for ability flags
+effect_gaps / ignored_effects          unsupported or intentionally ignored pak effects
+pet_skills / pet_transforms            pet loadouts and form transforms
+teams / team_pets / team_pet_skills    sample/team data
+elements / statuses / weathers / marks enum-like domain tables
+bloodlines / bloodline_magics          bloodline metadata
+```
+
+`catalog_hot.py` is compiled from this DB. It keeps only the integer arrays the
+kernel needs.
+
+## Engine Runtime
+
+The hot path is in `roco/engine/kernel`.
+
+`mechanics.update(state, c1, c2)` executes:
+
+```text
+start_turn -> order -> execute -> damage -> after_move -> end_turn -> check_winner
+```
+
+The engine imports:
+
+```python
+from roco.generated import catalog_hot as hot
+from roco.generated.handler_table import HANDLERS
+```
+
+At runtime:
+
+```text
+skill_id
+  -> hot.SKILL_EFFECT_RANGES[skill_id]
+  -> hot.SKILL_EFFECT_ROWS[start:end]
+  -> run_skill_timing(...)
+  -> HANDLERS[handler_idx](ctx, row)
+```
+
+Engine files contain concrete battle logic only. They should not maintain
+pak id, effect id, buff id, buffbase order, prefix, or JSONL dispatch tables.
+
+## Compiler Rules
+
+Compiler v2 uses pak structure first:
+
+```text
+EFFECT_CONF.effect_order
+BUFFBASE_CONF.buffbase_order
+BUFF_CONF.buff_base_ids
+SKILL_CONF.skill_result
+Lua Enum names for numeric-axis labels
+```
+
+Allowed compiler logic:
+
+- source readers and emitters
+- structural decoders based on pak axes and parameter shape
+- small explicit policy adapters when pak does not encode runtime behavior
+- engine-owned `op_meta` declarations resolved through generated Lua enum data
+
+Forbidden long-term pattern:
+
+- hand-maintained `effect_id -> handler`
+- hand-maintained `buff_id -> handler`
+- hand-maintained `buffbase_order -> handler`
+- JSONL files acting as runtime dispatch rules
+- engine importing pak/Lua/JSON/SQLite
+
+## Directory Map
+
+```text
+pak-public-kit/              sparse submodule: output/data + output/scripts only
+tools/                       maintenance scripts, including sparse pak update
+roco/generated/              generated runtime/data artifacts
+roco/generated/audit/        generated machine-readable audits
+roco/compiler_v2/            pak/Lua readers, emitters, structural decoders
+roco/compiler_v2/rules/      hand-maintained migration inputs only, not dispatch source
+roco/data/                   pak canonicalization, DB import, catalog compilation
+roco/engine/kernel/          fixed integer battle kernel
+roco/engine/facade/          user-facing name/id boundary
+_db/data.db                  generated SQLite build artifact
+_docs/effect_family_audit.md generated human-readable effect coverage audit
+_docs/pak_schema_audit.md    generated pak schema/axis audit
+_docs/damage-formula.md      hand-written damage formula note
+```
+
+## Development Commands
+
+```bash
+uv run roco-refresh-artifacts
+uv run pytest -q
+```
+
+Only regenerate the static pak/Lua layer:
+
+```bash
 uv run python -m roco.compiler_v2.gen_prefix_map
 ```
 
-`pak-public-kit` 是 partial sparse submodule，只需要 `output/data` 和 `output/scripts`：
+Add a new runtime handler:
 
-```
-tools/update_pak_public_kit_sparse.sh
-```
-
-## 目录
-
-```
-roco/
-├── generated/         # 全部自动生成产物 (build artifacts)
-│   ├── handler_indices.py        # H_* 常量 (从 ops.py HANDLERS 派生)
-│   ├── handler_order.py          # HANDLER_ORDER tuple
-│   ├── handler_registry.json     # append-only handler 注册表
-│   ├── prefix_handler_map.json   # buff prefix → handler 索引
-│   ├── battle_globals.py         # 完整 BATTLE_GLOBAL_CONFIG 静态表
-│   ├── skill_dam_types.py        # SkillDamType → Element 静态 adapter
-│   ├── static/                   # pak + Lua enum 静态快照
-│   ├── catalog_hot.py            # SQLite → kernel 热路径整数 catalog
-│   └── catalog_debug.py          # 名字反查 catalog (facade/调试用)
-├── common/            # 跨层共享: 枚举、常量、natures、bit packing
-├── engine/
-│   ├── common/        # Choice, RNG, kernel-local helpers
-│   ├── kernel/        # 热路径: mechanics, damage, state, ops, switch, residual
-│   └── facade/        # BattleEngine (名字↔ID 边界转换)
-├── compiler_v2/       # 唯一 compiler 层: pak/Lua → static files / effect rows / audits
-│   ├── effect_codegen/      # pak effect rows → handler_idx / audit outcome
-│   ├── effect_families/     # pak family census + coverage audit
-│   ├── rules/               # audit inputs/outputs, not runtime dispatch rules
-│   ├── artifact.py          # SQLite → catalog_hot.py
-│   └── gen_prefix_map.py    # static artifact entrypoint
-└── data/
-    ├── canonical.py   # pak/raw teams → in-memory canonical records
-    ├── parse_pak.py   # pak canonical record builders; CLI export is debug-only
-    ├── import_db.py   # record import helpers
-    └── build_db.py    # 完整构建入口
-```
+1. Write an `op_*` function under `roco/engine/kernel`.
+2. Add `op_meta` declarations only when the handler owns a pak axis.
+3. Run `uv run roco-refresh-artifacts`.
+4. Add or update focused tests.
 
 ## Reference
 
-fixed kernel 设计参考 [pkmn/engine](https://github.com/pkmn/engine)。
+The fixed-kernel shape is inspired by [pkmn/engine](https://github.com/pkmn/engine).

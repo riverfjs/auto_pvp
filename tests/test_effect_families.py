@@ -17,7 +17,7 @@ from roco.data.canonical import canonical_list
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG_JSONL = ROOT / "roco" / "compiler_v2" / "rules" / "effect_families.jsonl"
+CATALOG_JSONL = ROOT / "roco" / "generated" / "audit" / "effect_families.jsonl"
 PAK_DATA = ROOT / "pak-public-kit" / "output" / "data"
 
 REQUIRED_FIELDS = (

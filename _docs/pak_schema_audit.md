@@ -17,7 +17,7 @@ Comparison of Lua schema fields (parsed from `*_CONF.lua` loaders) vs JSON recor
 
 ## 2. EFFECT_CONF families
 
-Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/compiler_v2/rules/effect_families.jsonl` (this audit does not recompute coverage).
+Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/generated/audit/effect_families.jsonl` (this audit does not recompute coverage).
 
 | family_key | type | order | count | param slots | consumers (skill/ability) | coverage | editor_name samples |
 |---|---:|---:|---:|---|---:|---|---|

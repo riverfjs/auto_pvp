@@ -136,11 +136,11 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
 def test_check_paths_exclude_db_and_full_rules_dir():
     assert "_db/data.db" not in refresh.CHECK_PATHS
     assert "_db" not in refresh.CHECK_PATHS
-    # The full rules directory must NOT be in scope — only the generated
-    # effect_families.jsonl is.  This prevents the check from flagging
-    # hand-edited rule files as "drift".
+    # The full rules directory must NOT be in scope. Generated audits live
+    # under roco/generated, so hand-edited rule files are not reported as
+    # artifact drift by this probe.
     assert "roco/compiler_v2/rules" not in refresh.CHECK_PATHS
-    assert "roco/compiler_v2/rules/effect_families.jsonl" in refresh.CHECK_PATHS
+    assert "roco/compiler_v2/rules/effect_families.jsonl" not in refresh.CHECK_PATHS
     # Sanity: the other expected output scopes are present.
     assert "_data/canonical" not in refresh.CHECK_PATHS
     assert "roco/generated" in refresh.CHECK_PATHS

@@ -37,13 +37,13 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.canonical import canonical_list
+from roco.compiler_v2.effect_families.paths import CATALOG_JSONL as EFFECT_FAMILIES_JSONL
 
 # Repo root: roco/compiler_v2/pak_schema_audit.py -> parents[2]
 ROOT = Path(__file__).resolve().parents[2]
 PAK_BIN = ROOT / "pak-public-kit" / "output" / "data" / "BinData"
 PAK_LUA = ROOT / "pak-public-kit" / "output" / "scripts" / "lua" / "Data" / "tinyio_Config"
 RULES_DIR = ROOT / "roco" / "compiler_v2" / "rules"
-EFFECT_FAMILIES_JSONL = RULES_DIR / "effect_families.jsonl"
 AUDIT_MD = ROOT / "_docs" / "pak_schema_audit.md"
 
 # (logical_name, lua_filename, json_filename) — the pak tables we mine.
@@ -542,7 +542,7 @@ def render_markdown(
     lines.append("")
     lines.append(
         f"Total `(type, effect_order)` families: **{len(effect_families)}**. "
-        "`coverage` is sourced from `roco/compiler_v2/rules/effect_families.jsonl` "
+        "`coverage` is sourced from `roco/generated/audit/effect_families.jsonl` "
         "(this audit does not recompute coverage)."
     )
     lines.append("")

@@ -8,7 +8,7 @@ failure in one cannot corrupt the next:
     2. roco.data.build_db            -> _db/data.db + roco/generated/catalog_hot.py
                                         + catalog_debug.py   (catalog is written here)
     3. roco.compiler_v2.build_effect_families
-                                     -> roco/compiler_v2/rules/effect_families.jsonl
+                                     -> roco/generated/audit/effect_families.jsonl
                                         + _docs/effect_family_audit.md
     4. roco.compiler_v2.build_effect_families --check
                                      -> stability self-check on step 3
@@ -27,7 +27,7 @@ Two optional flags layer on top:
                        a real pak refresh, run without --check and
                        review the diff manually before committing.
 
-See ``_docs/pak_refresh_pipeline.md`` for the full per-path diff contract.
+See ``README.md`` for the full pak -> generated -> DB -> engine data flow.
 """
 
 from __future__ import annotations
@@ -47,7 +47,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 #                               a clean refresh always re-writes it.
 CHECK_PATHS: tuple[str, ...] = (
     "roco/generated",
-    "roco/compiler_v2/rules/effect_families.jsonl",
     "_docs/effect_family_audit.md",
     "_docs/pak_schema_audit.md",
 )

@@ -2,7 +2,7 @@
 
 Produces two artifacts:
 
-* ``roco/compiler_v2/rules/effect_families.jsonl`` — one JSON line per family
+* ``roco/generated/audit/effect_families.jsonl`` — one JSON line per family
   (``(pak_type, pak_effect_order)`` for EFFECT_CONF references; buff-prefix
   bucket for direct BUFF_CONF references in skill_result).
 * ``_docs/effect_family_audit.md`` — same content rendered for human review.
