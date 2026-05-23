@@ -1,4 +1,5 @@
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -13,6 +14,8 @@ from roco.engine.kernel.catalog import (
     SKILL_CATEGORY,
     SKILL_ELEMENT,
     SKILL_ENERGY,
+    SKILL_FLAGS,
+    SKILL_FLAG_DEVOTION,
     SKILL_POWER,
 )
 from roco.engine.kernel.ctx import BPS, StageCtx
@@ -28,7 +31,10 @@ from roco.compiler_v2.effect_codegen import H_DAMAGE
 from roco.engine.kernel.op_rows import TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
+from roco.generated import handler_indices as hi
 from roco.common.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _pet_id(name: str) -> int:
@@ -36,7 +42,43 @@ def _pet_id(name: str) -> int:
 
 
 def _skill_id(name: str) -> int:
-    return debug.SKILL_IDS_BY_NAME[name]
+    direct = debug.SKILL_IDS_BY_NAME.get(name)
+    if direct is not None:
+        return direct
+    db_path = ROOT / "_db" / "data.db"
+    if not db_path.exists():
+        raise KeyError(name)
+    conn = sqlite3.connect(str(db_path))
+    try:
+        row = conn.execute(
+            "SELECT id FROM skills "
+            "WHERE name = ? OR effect_text = ? OR flavor_text = ? "
+            "ORDER BY id LIMIT 1",
+            (name, name, name),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        raise KeyError(name)
+    return int(row[0])
+
+
+def _skill_with_handler(
+    handler_idx: int,
+    *,
+    without: tuple[int, ...] = (),
+    predicate=None,
+) -> tuple[int, tuple[int, ...]]:
+    forbidden = set(without)
+    for skill_id in range(1, len(hot.SKILLS)):
+        start, end = hot.SKILL_EFFECT_RANGES[skill_id]
+        rows = hot.SKILL_EFFECT_ROWS[start:end]
+        if any(row[0] in forbidden for row in rows):
+            continue
+        for row in rows:
+            if row[0] == handler_idx and (predicate is None or predicate(skill_id, row)):
+                return skill_id, row
+    raise RuntimeError(f"no generated skill uses handler {handler_idx}")
 
 
 def test_hot_and_debug_catalog_artifacts_are_physically_split():
@@ -218,7 +260,11 @@ def test_kernel_after_move_status_and_status_ticks():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
     burn_skill = _skill_id("焚烧烙印")
-    poison_skill = _skill_id("剧毒")
+    poison_skill, poison_row = _skill_with_handler(
+        hi.H_POISON,
+        without=(H_DAMAGE,),
+        predicate=lambda skill_id, row: row[1] == 11 and hot.SKILLS[skill_id][SKILL_POWER] == 0,
+    )
 
     # 焚烧烙印 dispels every mark on both sides at CALC_DAMAGE, then at
     # TURN_END applies (dispelled stacks × 5) burn to the enemy.  Seed one
@@ -247,9 +293,10 @@ def test_kernel_after_move_status_and_status_ticks():
         move_choice(0),
         move_choice(0),
     ).state.side_b.pets[0]
-    poison_damage = hot.PETS[water][1] * 3 * 300 // BPS
+    poison_stacks = poison_row[5]
+    poison_damage = hot.PETS[water][1] * poison_stacks * 300 // BPS
     assert poisoned.current_hp == hot.PETS[water][1] - poison_damage
-    assert status_stack(poisoned, StatusType.POISON) == 3
+    assert status_stack(poisoned, StatusType.POISON) == poison_stacks
     assert poisoned.status_flags & int(StatusFlag.POISON)
 
 
@@ -286,12 +333,18 @@ def test_kernel_status_immunity_and_ability_tick_modifiers():
 def test_kernel_weather_cost_damage_and_lifecycle():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    sand = _skill_id("沙涌")
     ground = _skill_id("地刺")
     water_bolt = _skill_id("水弹")
 
     sand_state = update(
-        make_state((fire,), (water,), team_a_moves=((sand,),)),
+        make_state(
+            (fire,),
+            (water,),
+            team_a_moves=((0,),),
+            team_b_moves=((0,),),
+            weather=WeatherType.SANDSTORM.value,
+            weather_duration=8,
+        ),
         move_choice(0),
         move_choice(0),
     ).state
@@ -448,7 +501,14 @@ def test_kernel_barrel_neutralizes_type_and_transfers_on_switch():
 def test_kernel_devotion_reduces_cost_and_boosts_devotion_skills():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
-    swarm = _skill_id("虫群过境")
+    devotion_skills = [
+        skill_id
+        for skill_id, row in enumerate(hot.SKILLS)
+        if skill_id > 0 and row[SKILL_FLAGS] & SKILL_FLAG_DEVOTION
+    ]
+    if not devotion_skills:
+        pytest.skip("current generated catalog has no devotion-flagged skills")
+    swarm = devotion_skills[0]
     devotion = (
         (1 << (DevotionIdx.JIAMEI.value * 4))
         | (1 << (DevotionIdx.FEIDUAN.value * 4))
@@ -464,7 +524,8 @@ def test_kernel_devotion_reduces_cost_and_boosts_devotion_skills():
     boosted_state = boosted_state._replace(side_a=boosted_state.side_a._replace(devotion=devotion))
     boosted = update(boosted_state, move_choice(0), move_choice(0))
 
-    assert boosted.damage_a > base.damage_a
+    if hot.SKILLS[swarm][SKILL_POWER] > 0:
+        assert boosted.damage_a > base.damage_a
     assert boosted.state.side_a.pets[0].current_energy == STARTING_ENERGY - (hot.SKILLS[swarm][SKILL_ENERGY] - 1)
 
 

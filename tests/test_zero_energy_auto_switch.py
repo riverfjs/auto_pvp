@@ -28,7 +28,7 @@ import pytest
 
 from roco.common.constants import STARTING_ENERGY
 from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice
-from roco.engine.kernel.catalog import SKILL_ENERGY
+from roco.engine.kernel.catalog import SKILL_ENERGY, SKILL_POWER
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.mechanics import _run_ability_timing, update
 from roco.engine.kernel.residual.after_move import apply_after_move
@@ -45,12 +45,19 @@ _BENCH_PET = 195           # 小皮球 — also carries 200166 but used here as 
 _OPPONENT_PET = 1          # any sane pet; SIDE_B's choice runs in parallel
 
 # A skill whose ``SKILL_ENERGY`` equals ``STARTING_ENERGY`` (= 10), so an
-# unmodified actor drains to exactly 0 in one move.  Picked to have low
-# power so the opponent doesn't die before the integration test gets to
-# observe the auto-switch.  ``mechanics`` doesn't enforce pet-skill
-# compatibility — the slot just stores a skill_id — so we override the
-# default loadout via ``team_a_moves``.
-_FULL_DRAIN_SKILL = 70     # cost 10, power 1
+# unmodified actor drains to exactly 0 in one move.  Pick the lowest-power
+# matching generated skill so the opponent doesn't die before the
+# integration test observes the auto-switch.  ``mechanics`` doesn't enforce
+# pet-skill compatibility — the slot just stores a skill_id — so we
+# override the default loadout via ``team_a_moves``.
+_FULL_DRAIN_SKILL = min(
+    (
+        sid
+        for sid, row in enumerate(hot.SKILLS)
+        if sid > 0 and row[SKILL_ENERGY] == STARTING_ENERGY
+    ),
+    key=lambda sid: hot.SKILLS[sid][SKILL_POWER],
+)
 _FULL_DRAIN_SLOT = 0
 
 

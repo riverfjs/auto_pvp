@@ -7,12 +7,13 @@
   ],
   "summary": {
     "canonical_adapter_debt": 11,
-    "compiler_emitter_internal": 47,
-    "compiler_model_or_source_cache": 101,
-    "data_pipeline_internal": 55,
+    "compiler_emitter_internal": 46,
+    "compiler_model_or_source_cache": 96,
+    "data_pipeline_internal": 53,
     "engine_local_constant": 4,
     "engine_runtime_ctx_defaults": 1,
     "enum_adapter": 1,
+    "manual_semantic_binding": 6,
     "module_export": 5
   },
   "generated_imports": [
@@ -463,8 +464,8 @@
       "name": "MARK_NOTE_BY_IDX",
       "value_kind": "dict",
       "size": 12,
-      "classification": "compiler_emitter_internal",
-      "action": "Allowed as emitter implementation, not a data source."
+      "classification": "manual_semantic_binding",
+      "action": "Manual MarkIdx -> DESC_NOTE note adapter used to build canonical mark defs."
     },
     {
       "file": "roco/compiler_v2/artifacts.py",
@@ -933,8 +934,8 @@
       "name": "IMMUNITY_SPECS",
       "value_kind": "tuple",
       "size": 6,
-      "classification": "compiler_model_or_source_cache",
-      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+      "classification": "manual_semantic_binding",
+      "action": "Manual immunity keyword/bit policy; pak desc is scanned but the semantic categories are hand-owned."
     },
     {
       "file": "roco/compiler_v2/buff_immunity_decoders.py",
@@ -1173,8 +1174,8 @@
       "name": "_EDITOR_NAME_TO_FLAG",
       "value_kind": "tuple",
       "size": 2,
-      "classification": "compiler_model_or_source_cache",
-      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+      "classification": "manual_semantic_binding",
+      "action": "Manual EFFECT_CONF.editor_name -> AbilityFlag semantic binding."
     },
     {
       "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
@@ -1183,8 +1184,8 @@
       "name": "_BUFF_EDITOR_NAME_TO_FLAG",
       "value_kind": "tuple",
       "size": 1,
-      "classification": "compiler_model_or_source_cache",
-      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+      "classification": "manual_semantic_binding",
+      "action": "Manual BUFF_CONF.editor_name -> AbilityFlag semantic binding."
     },
     {
       "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
@@ -1353,8 +1354,8 @@
       "name": "_MARK_HANDLER_NAMES",
       "value_kind": "set",
       "size": 13,
-      "classification": "compiler_model_or_source_cache",
-      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+      "classification": "manual_semantic_binding",
+      "action": "Manual handler-name family used to identify mark handlers after append-only registry reordering."
     },
     {
       "file": "roco/compiler_v2/effect_families/consumers.py",
@@ -1443,8 +1444,8 @@
       "name": "VISUAL_KEYWORDS",
       "value_kind": "tuple",
       "size": 4,
-      "classification": "compiler_model_or_source_cache",
-      "action": "Allowed when it describes compiler internals or parsed source snapshots."
+      "classification": "manual_semantic_binding",
+      "action": "Manual audit heuristic for visual/no-combat candidate language."
     },
     {
       "file": "roco/compiler_v2/effect_families/ignored.py",
@@ -2038,17 +2039,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 118,
-      "scope": "<module>",
-      "name": "_MARK_TAG_MAP",
-      "value_kind": "dict",
-      "size": 13,
-      "classification": "data_pipeline_internal",
-      "action": "Allowed when it is transport/schema logic, not battle rules."
-    },
-    {
-      "file": "roco/data/import_db.py",
-      "line": 209,
+      "line": 191,
       "scope": "import_abilities",
       "name": "effect_rows",
       "value_kind": "list",
@@ -2058,7 +2049,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 210,
+      "line": 192,
       "scope": "import_abilities",
       "name": "gap_rows",
       "value_kind": "list",
@@ -2068,7 +2059,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 211,
+      "line": 193,
       "scope": "import_abilities",
       "name": "ignored_rows",
       "value_kind": "list",
@@ -2078,7 +2069,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 212,
+      "line": 194,
       "scope": "import_abilities",
       "name": "ability_effect_id_rows",
       "value_kind": "list",
@@ -2088,7 +2079,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 288,
+      "line": 270,
       "scope": "import_skills",
       "name": "rows",
       "value_kind": "list",
@@ -2098,7 +2089,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 309,
+      "line": 291,
       "scope": "import_skills",
       "name": "effect_rows",
       "value_kind": "list",
@@ -2108,7 +2099,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 310,
+      "line": 292,
       "scope": "import_skills",
       "name": "gap_rows",
       "value_kind": "list",
@@ -2118,7 +2109,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 311,
+      "line": 293,
       "scope": "import_skills",
       "name": "ignored_rows",
       "value_kind": "list",
@@ -2128,7 +2119,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 362,
+      "line": 344,
       "scope": "import_pets",
       "name": "rows",
       "value_kind": "list",
@@ -2138,7 +2129,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 401,
+      "line": 383,
       "scope": "import_pets",
       "name": "link_rows",
       "value_kind": "list",
@@ -2148,7 +2139,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 444,
+      "line": 426,
       "scope": "_leader_transform_rows",
       "name": "rows_by_lineage",
       "value_kind": "dict",
@@ -2158,7 +2149,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 449,
+      "line": 431,
       "scope": "_leader_transform_rows",
       "name": "result",
       "value_kind": "dict",
@@ -2168,7 +2159,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 481,
+      "line": 463,
       "scope": "_leader_transform_manual",
       "name": "rules",
       "value_kind": "dict",
@@ -2178,7 +2169,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 493,
+      "line": 474,
       "scope": "import_marks",
       "name": "mark_rows",
       "value_kind": "list",
@@ -2188,7 +2179,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 494,
+      "line": 475,
       "scope": "import_marks",
       "name": "source_rows",
       "value_kind": "list",
@@ -2198,17 +2189,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 495,
-      "scope": "import_marks",
-      "name": "gap_rows",
-      "value_kind": "list",
-      "size": 0,
-      "classification": "data_pipeline_internal",
-      "action": "Allowed when it is transport/schema logic, not battle rules."
-    },
-    {
-      "file": "roco/data/import_db.py",
-      "line": 576,
+      "line": 537,
       "scope": "import_teams",
       "name": "team_rows",
       "value_kind": "list",
@@ -2218,7 +2199,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 577,
+      "line": 538,
       "scope": "import_teams",
       "name": "pet_rows",
       "value_kind": "list",
@@ -2228,7 +2209,7 @@
     },
     {
       "file": "roco/data/import_db.py",
-      "line": 578,
+      "line": 539,
       "scope": "import_teams",
       "name": "skill_rows",
       "value_kind": "list",
@@ -2559,5 +2540,67 @@
   ],
   "priority_debt": [],
   "engine_assignments": [],
+  "manual_semantic_bindings": [
+    {
+      "file": "roco/compiler_v2/artifacts.py",
+      "line": 72,
+      "scope": "<module>",
+      "name": "MARK_NOTE_BY_IDX",
+      "value_kind": "dict",
+      "size": 12,
+      "classification": "manual_semantic_binding",
+      "action": "Manual MarkIdx -> DESC_NOTE note adapter used to build canonical mark defs."
+    },
+    {
+      "file": "roco/compiler_v2/buff_immunity_decoders.py",
+      "line": 32,
+      "scope": "<module>",
+      "name": "IMMUNITY_SPECS",
+      "value_kind": "tuple",
+      "size": 6,
+      "classification": "manual_semantic_binding",
+      "action": "Manual immunity keyword/bit policy; pak desc is scanned but the semantic categories are hand-owned."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 25,
+      "scope": "<module>",
+      "name": "_EDITOR_NAME_TO_FLAG",
+      "value_kind": "tuple",
+      "size": 2,
+      "classification": "manual_semantic_binding",
+      "action": "Manual EFFECT_CONF.editor_name -> AbilityFlag semantic binding."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
+      "line": 29,
+      "scope": "<module>",
+      "name": "_BUFF_EDITOR_NAME_TO_FLAG",
+      "value_kind": "tuple",
+      "size": 1,
+      "classification": "manual_semantic_binding",
+      "action": "Manual BUFF_CONF.editor_name -> AbilityFlag semantic binding."
+    },
+    {
+      "file": "roco/compiler_v2/effect_codegen/params.py",
+      "line": 22,
+      "scope": "<module>",
+      "name": "_MARK_HANDLER_NAMES",
+      "value_kind": "set",
+      "size": 13,
+      "classification": "manual_semantic_binding",
+      "action": "Manual handler-name family used to identify mark handlers after append-only registry reordering."
+    },
+    {
+      "file": "roco/compiler_v2/effect_families/ignored.py",
+      "line": 15,
+      "scope": "<module>",
+      "name": "VISUAL_KEYWORDS",
+      "value_kind": "tuple",
+      "size": 4,
+      "classification": "manual_semantic_binding",
+      "action": "Manual audit heuristic for visual/no-combat candidate language."
+    }
+  ],
   "parse_errors": []
 }

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from roco.common.packing import MarkIdx, _set_mark, _unpack_mark
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_base_name, handles_buff
+from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_TARGET, TARGET_ALLY, TARGET_SELF, TARGET_TEAM
 from roco.generated.mark_groups import MARK_COVER_GROUPS
 
@@ -46,7 +46,6 @@ def op_momentum_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.MOMENTUM)
 
 
-@handles_base_name([("风起", "wind mark")])
 def op_wind_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.WIND)
 
@@ -71,7 +70,6 @@ def op_spirit_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.SPIRIT)
 
 
-@handles_base_name([("星陨", "meteor mark")])
 @handles_buff([("BFT_NINETY_FOUR", "MARK_METEOR")])
 def op_meteor_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.METEOR)

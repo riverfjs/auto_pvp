@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from roco.engine.kernel.catalog import SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_base_name, handles_buff
+from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_TARGET, TARGET_SELF
 
 
@@ -109,7 +109,6 @@ def op_force_enemy_switch(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.force_enemy_switch = 1
 
 
-@handles_base_name([("电咩咩免疫", "ability 200166 星地善良: zero-energy auto self-switch.")])
 def op_auto_switch_on_zero_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.actor_energy <= 0:
         ctx.force_switch = 1

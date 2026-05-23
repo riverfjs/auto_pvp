@@ -30,12 +30,7 @@ import sys
 
 from roco.compiler_v2.effect_families.family_builder import build_families
 from roco.compiler_v2.effect_families.paths import CATALOG_JSONL, CATALOG_MD
-from roco.compiler_v2.effect_families.render import (
-    build_ack_payload,
-    check_outputs,
-    render_jsonl,
-    render_markdown,
-)
+from roco.compiler_v2.effect_families.render import check_outputs, render_jsonl, render_markdown
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,21 +39,14 @@ def main(argv: list[str] | None = None) -> int:
         "--check",
         action="store_true",
         help="exit 1 if on-disk catalog differs from a fresh build "
-        "or acknowledgements fail loader/schema validation",
+        "after rebuilding from pak data",
     )
     args = parser.parse_args(argv)
 
     families = build_families()
     new_jsonl = render_jsonl(families)
 
-    # Acknowledgements are validated unconditionally — any schema error or
-    # direct-reference mismatch surfaces before either write or --check.
-    try:
-        acks = build_ack_payload(families)
-    except RuntimeError as exc:
-        sys.stderr.write(f"acknowledgements failed validation: {exc}\n")
-        return 1
-    new_md = render_markdown(families, acks)
+    new_md = render_markdown(families)
 
     if args.check:
         return check_outputs(new_jsonl, new_md)
@@ -68,7 +56,6 @@ def main(argv: list[str] | None = None) -> int:
     CATALOG_MD.write_text(new_md, encoding="utf-8")
     print(f"effect_families.jsonl: {len(families)} families -> {CATALOG_JSONL}")
     print(f"effect_family_audit.md -> {CATALOG_MD}")
-    print(f"acknowledgements: {len(acks)} rows validated")
     return 0
 
 

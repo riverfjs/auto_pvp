@@ -117,14 +117,16 @@ def test_generated_prefix_map_carries_via_order_block():
 
 
 def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
-    """Only the 3 mixed prefixes + pak-name base anchors remain outside
-    the buffbase_order axis.  Exact anchors are resolved by pak
-    editor_name so engine code does not own numeric ids."""
+    """Only the 3 mixed prefixes remain outside the buffbase_order axis.
+
+    Exact base anchors are now derived structurally from pak rows instead
+    of engine-owned ``@handles_base_name`` declarations.
+    """
     assert set(resolved_axes.prefix) == {2011, 2046, 2050}, (
         f"engine prefix axis = {sorted(resolved_axes.prefix)} (expected "
         f"only the 3 mixed: 2011, 2046, 2050)"
     )
-    assert len(resolved_axes.base_id) == 6
+    assert resolved_axes.base_id == {}
     raw_axes = collect_handler_axes()
     assert set(raw_axes["prefix_type"]) == {
         "BFT_DAMNUM_CHANGE",
@@ -132,7 +134,7 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
         "BFT_ENTER_BATTLE",
     }
     assert "base_id" not in raw_axes
-    assert len(raw_axes["base_name"]) == 6
+    assert raw_axes["base_name"] == {}
 
 
 # ── runtime classifier integration ────────────────────────────────────────

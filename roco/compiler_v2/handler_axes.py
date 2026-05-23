@@ -7,15 +7,10 @@ feature".  Engine modules express that with identity decorators from
 AST so generation has no import side effects.
 """
 
-from __future__ import annotations
-
 import ast
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-
-from roco.compiler_v2.sources import DEFAULT_PAK_DATA_DIR
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -199,19 +194,7 @@ def _put_unique(mapping: dict[int, int], key: int, value: int, context: str) -> 
 
 
 def _load_buffbase_rows() -> dict[int, dict]:
-    path = DEFAULT_PAK_DATA_DIR / "BinData" / "BUFFBASE_CONF.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    rows = data.get("RocoDataRows", data)
-    return {int(k): v for k, v in rows.items()}
-
-
-def _base_ids_by_editor_name(buffbase_rows: dict[int, dict]) -> dict[str, tuple[int, ...]]:
-    by_name: dict[str, list[int]] = {}
-    for base_id, rec in buffbase_rows.items():
-        name = str(rec.get("editor_name") or "").strip()
-        if name:
-            by_name.setdefault(name, []).append(base_id)
-    return {name: tuple(sorted(ids)) for name, ids in by_name.items()}
+    raise RuntimeError("BUFFBASE_CONF.editor_name resolution is retired")
 
 
 def resolve_handler_axes(
@@ -223,9 +206,9 @@ def resolve_handler_axes(
     """Resolve engine declarations through generated Lua enum data.
 
     ``handles_buff`` and ``handles_prefix`` use ``Enum.BuffType`` symbols
-    rather than numeric ids, and ``handles_base_name`` uses
-    ``BUFFBASE_CONF.editor_name``.  Lua/pak updates are handled by
-    regenerating static data.
+    rather than numeric ids.  Exact outliers are generated from pak
+    structures in :mod:`roco.compiler_v2.artifacts`, not from engine-owned
+    pak names.
     """
 
     buff_type_enum = lua_enums.get("BuffType")
@@ -233,11 +216,16 @@ def resolve_handler_axes(
         raise RuntimeError("Lua static bundle is missing Enum.BuffType")
 
     raw = collect_handler_axes(op_modules)
+    if raw.get("base_name"):
+        raise RuntimeError(
+            "@handles_base_name is retired; derive exact handlers from pak "
+            "structures in compiler_v2 instead"
+        )
     order_seed: dict[int, int] = {}
     prefix_seed: dict[int, int] = {}
     base_id_seed: dict[int, int] = {}
     prefix_aliases: dict[int, str] = {}
-    base_ids_by_name = _base_ids_by_editor_name(buffbase_rows or _load_buffbase_rows())
+    _ = buffbase_rows
 
     for symbol, (handler_name, alias) in raw["buff_type"].items():
         order = _buff_type_value(buff_type_enum, symbol)
@@ -250,20 +238,6 @@ def resolve_handler_axes(
         handler_idx = _resolve_handler(handler_indices, "prefix_type", symbol, handler_name)
         _put_unique(prefix_seed, prefix, handler_idx, f"prefix_type={symbol!r}")
         prefix_aliases[prefix] = alias
-
-    for editor_name, (handler_name, _note) in raw.get("base_name", {}).items():
-        if not isinstance(editor_name, str):
-            raise RuntimeError(f"base_name axis key must be str, got {editor_name!r}")
-        base_ids = base_ids_by_name.get(editor_name)
-        if not base_ids:
-            raise RuntimeError(f"BUFFBASE_CONF has no editor_name={editor_name!r}")
-        if len(base_ids) > 1:
-            raise RuntimeError(
-                f"BUFFBASE_CONF editor_name={editor_name!r} is ambiguous: {list(base_ids)}; "
-                f"use a generated BUFF_CONF.id semantic map instead of anchoring raw base ids"
-            )
-        handler_idx = _resolve_handler(handler_indices, "base_name", editor_name, handler_name)
-        _put_unique(base_id_seed, base_ids[0], handler_idx, f"base_name={editor_name!r}")
 
     return ResolvedHandlerAxes(
         buffbase_order=dict(sorted(order_seed.items())),

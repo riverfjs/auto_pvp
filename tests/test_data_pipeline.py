@@ -343,7 +343,7 @@ def test_core_pet_naming_guard():
     assert offenders == []
 
 
-def test_marks_import_only_audits_source_skills(tmp_path: Path):
+def test_marks_import_records_source_skills_without_manual_tag_map(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
     skills, abilities, pets = _sample_data()
     ability_lookup = import_abilities(conn, abilities)
@@ -363,15 +363,14 @@ def test_marks_import_only_audits_source_skills(tmp_path: Path):
         "source_skills": [{"skill": "火花", "description": "自己获得1层湿润印记。"}],
     }])
 
-    tag_rows = conn.execute(
-        "SELECT COUNT(*) FROM skill_effects WHERE tag_code = ?",
-        (2143,),
+    sources = conn.execute(
+        "SELECT COUNT(*) FROM mark_sources WHERE skill_name = '火花'"
     ).fetchone()[0]
     gaps = conn.execute(
-        "SELECT COUNT(*) FROM effect_gaps WHERE source_name = '火花' AND primitive = '2143'"
+        "SELECT COUNT(*) FROM effect_gaps WHERE source_name = '火花'"
     ).fetchone()[0]
-    assert tag_rows == 0
-    assert gaps == 1
+    assert sources == 1
+    assert gaps == 0
     conn.close()
 
 

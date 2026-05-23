@@ -67,14 +67,17 @@ def test_schema_drift_covers_all_tables():
         assert "json_only" in d
 
 
-def test_schema_drift_buffbase_is_clean():
-    """BUFFBASE_CONF schema mirror matches JSON exactly — used as a
-    regression guard so we notice if pak adds a new column to that
-    table without the Lua schema regenerating."""
+def test_schema_drift_buffbase_reports_editor_name_lua_only():
+    """Current pak Lua still declares ``editor_name`` for BUFFBASE_CONF,
+    but the JSON export no longer carries it.
+
+    This is exactly why compiler_v2 must not resolve handlers through
+    BUFFBASE_CONF.editor_name.
+    """
     drift = detect_schema_drift()
     by_table = {d["table"]: d for d in drift}
     bb = by_table["BUFFBASE_CONF"]
-    assert bb["lua_only"] == []
+    assert bb["lua_only"] == ["editor_name"]
     assert bb["json_only"] == []
 
 

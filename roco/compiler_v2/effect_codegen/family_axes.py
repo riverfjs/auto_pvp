@@ -270,7 +270,23 @@ def _is_internal_mark_sentinel(buff_id: int, buff_conf: dict[int, dict]) -> bool
     if rec is None:
         return False
     name = str(rec.get("editor_name") or rec.get("name") or "")
-    return "标记" in name and _buff_handler_family(buff_id, buff_conf) == H_SELF_BUFF
+    if "标记" in name and _buff_handler_family(buff_id, buff_conf) == H_SELF_BUFF:
+        return True
+    if name:
+        return False
+    if int(rec.get("type", 0) or 0) != 3 or int(rec.get("add_max", 0) or 0) != 99:
+        return False
+    if _buff_handler_family(buff_id, buff_conf) != H_SELF_BUFF:
+        return False
+    for reduce_rule in rec.get("buff_group_reduce") or []:
+        if not isinstance(reduce_rule, dict):
+            continue
+        if int(reduce_rule.get("reduce_type") or 0) != 13:
+            continue
+        params = reduce_rule.get("reduce_param") or []
+        if len(params) >= 2 and int(params[1] or 0) == 99:
+            return True
+    return False
 
 
 def _buff_handler_family(buff_id: int, buff_conf: dict[int, dict]) -> int:

@@ -29,6 +29,27 @@ SCAN_ROOTS = (
 
 KNOWN_DECISIONS: dict[str, tuple[str, str]] = {}
 
+MANUAL_SEMANTIC_BINDINGS: dict[str, str] = {
+    "roco/compiler_v2/artifacts.py:<module>:MARK_NOTE_BY_IDX": (
+        "Manual MarkIdx -> DESC_NOTE note adapter used to build canonical mark defs."
+    ),
+    "roco/compiler_v2/buff_immunity_decoders.py:<module>:IMMUNITY_SPECS": (
+        "Manual immunity keyword/bit policy; pak desc is scanned but the semantic categories are hand-owned."
+    ),
+    "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py:<module>:_EDITOR_NAME_TO_FLAG": (
+        "Manual EFFECT_CONF.editor_name -> AbilityFlag semantic binding."
+    ),
+    "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py:<module>:_BUFF_EDITOR_NAME_TO_FLAG": (
+        "Manual BUFF_CONF.editor_name -> AbilityFlag semantic binding."
+    ),
+    "roco/compiler_v2/effect_codegen/params.py:<module>:_MARK_HANDLER_NAMES": (
+        "Manual handler-name family used to identify mark handlers after append-only registry reordering."
+    ),
+    "roco/compiler_v2/effect_families/ignored.py:<module>:VISUAL_KEYWORDS": (
+        "Manual audit heuristic for visual/no-combat candidate language."
+    ),
+}
+
 
 @dataclass(frozen=True)
 class Assignment:
@@ -164,6 +185,9 @@ def generated_imports(path: Path, tree: ast.Module) -> list[GeneratedImport]:
 def classify_assignment(file_rel: str, name: str, scope: str) -> tuple[str, str]:
     if name == "__all__":
         return "module_export", "Allowed module export list; not static battle data."
+    manual_key = f"{file_rel}:{scope}:{name}"
+    if manual_key in MANUAL_SEMANTIC_BINDINGS:
+        return "manual_semantic_binding", MANUAL_SEMANTIC_BINDINGS[manual_key]
     scoped_key = f"{file_rel}:{scope}:{name}"
     if scoped_key in KNOWN_DECISIONS:
         return KNOWN_DECISIONS[scoped_key]
@@ -233,6 +257,10 @@ def is_engine_static_data(item: Assignment) -> bool:
     return item.value_kind == "dict" and bool(item.size)
 
 
+def is_manual_semantic_binding(item: Assignment) -> bool:
+    return item.classification == "manual_semantic_binding"
+
+
 def build_report() -> dict[str, Any]:
     assignments: list[Assignment] = []
     imports: list[GeneratedImport] = []
@@ -248,6 +276,9 @@ def build_report() -> dict[str, Any]:
     class_counts = Counter(item.classification for item in assignments)
     debt = [item for item in assignments if is_priority_debt(item)]
     engine_assignments = [item for item in assignments if is_engine_static_data(item)]
+    manual_semantic_bindings = [
+        item for item in assignments if is_manual_semantic_binding(item)
+    ]
     return {
         "scan_roots": list(SCAN_ROOTS),
         "summary": dict(sorted(class_counts.items())),
@@ -255,6 +286,7 @@ def build_report() -> dict[str, Any]:
         "assignments": [asdict(item) for item in assignments],
         "priority_debt": [asdict(item) for item in debt],
         "engine_assignments": [asdict(item) for item in engine_assignments],
+        "manual_semantic_bindings": [asdict(item) for item in manual_semantic_bindings],
         "parse_errors": parse_errors,
     }
 
@@ -296,6 +328,18 @@ def render_markdown(report: dict[str, Any]) -> str:
         )
         for item in report["engine_assignments"]
     ]
+    manual_rows = [
+        (
+            item["file"],
+            item["line"],
+            item["scope"],
+            item["name"],
+            item["value_kind"],
+            item["size"],
+            item["action"],
+        )
+        for item in report["manual_semantic_bindings"]
+    ]
     import_rows = [
         (item["file"], item["line"], item["module"], ", ".join(item["names"]))
         for item in report["generated_imports"]
@@ -319,6 +363,12 @@ def render_markdown(report: dict[str, Any]) -> str:
         "These are not automatically bugs, but they are the first gate for handwritten battle data in engine.",
         "",
         md_table(("file", "line", "scope", "name", "kind", "size", "class"), engine_rows),
+        "",
+        "## Manual semantic bindings",
+        "",
+        "These are not generated data and should stay small, tested, and explicit.",
+        "",
+        md_table(("file", "line", "scope", "name", "kind", "size", "action"), manual_rows),
         "",
         "## Generated imports",
         "",
@@ -348,6 +398,7 @@ def main() -> None:
     print(f"wrote {args.out_json}")
     print(f"priority_debt={len(report['priority_debt'])}")
     print(f"engine_assignments={len(report['engine_assignments'])}")
+    print(f"manual_semantic_bindings={len(report['manual_semantic_bindings'])}")
 
 
 if __name__ == "__main__":

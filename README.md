@@ -53,6 +53,12 @@ uv run pytest tests/ -v                          # 验证
 uv run python -m roco.compiler_v2.gen_prefix_map
 ```
 
+`pak-public-kit` 是 partial sparse submodule，只需要 `output/data` 和 `output/scripts`：
+
+```
+tools/update_pak_public_kit_sparse.sh
+```
+
 ## 目录
 
 ```

@@ -1,12 +1,11 @@
 """Tests for the AST-based handler-axis decorator collector.
 
-The collector reads ``@handles_buff`` / ``@handles_prefix`` /
-``@handles_base_name`` decorators on every ``op_*`` function across the
-kernel op modules and exposes them as flat dispatch tables.  These
-tests gate the collector independently from any handler that's
-actually decorated — they exercise it on tiny synthetic source files
-and then assert the real engine declarations resolve through Lua enum
-data.
+The collector reads ``@handles_buff`` / ``@handles_prefix`` declarations
+on every ``op_*`` function across the kernel op modules and exposes them
+as flat dispatch tables.  ``@handles_base_name`` remains only as a
+retired compatibility shim; production engine modules must not declare
+base-name axes because current pak exports no reliable
+``BUFFBASE_CONF.editor_name`` data.
 """
 
 from __future__ import annotations
@@ -141,7 +140,7 @@ def test_collect_handler_axes_runs_on_real_op_mods():
     assert {axis: len(bucket) for axis, bucket in axes.items()} == {
         "buff_type": 82,
         "prefix_type": 3,
-        "base_name": 6,
+        "base_name": 0,
     }
     assert "BFT_ATTR_CHANGE" in axes["buff_type"]
     assert "BFT_DAMNUM_CHANGE" in axes["prefix_type"]

@@ -98,19 +98,10 @@ def test_ability_flag_bits_are_power_of_two():
 def test_loader_accepts_real_pak_derivation():
     """Real pak derives the current ability flag skill_result ids."""
     table = load_ability_flags_from_effects()
-    pak = PakTables(PAK_DATA)
-    mark_stack_ids = {
-        bid
-        for bid, rec in pak.buff_conf.items()
-        if rec.get("editor_name") == "改变赋予印记鲤拉鳐"
-    }
-    assert set(table.keys()) == {1076001, 1076002, 1076003, 1076004} | mark_stack_ids
-    assert table[1076004].flag_name == "HEAL_ON_BURN_DAMAGE"
-    for eid in (1076001, 1076002, 1076003):
-        assert table[eid].flag_name == "HEAL_ON_POISON_DAMAGE"
-    assert mark_stack_ids
-    for eid in mark_stack_ids:
-        assert table[eid].flag_name == "MARK_STACK_NO_REPLACE"
+    assert set(table.keys()) == {21430010, 21540010, 21540040}
+    assert table[21540010].flag_name == "HEAL_ON_POISON_DAMAGE"
+    assert table[21540040].flag_name == "HEAL_ON_BURN_DAMAGE"
+    assert table[21430010].flag_name == "MARK_STACK_NO_REPLACE"
 
 
 def test_normalized_payload_is_sorted_tuple():
@@ -272,8 +263,8 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
     """Boundary 1: a skill that references an ability-flag effect_id must
     not be silently absorbed.
 
-    Construct a skill_result entry referencing effect_id ``1076001`` (a
-    real ability-flag rule) and call ``generate_effect_rows`` with the
+    Construct a skill_result entry referencing effect_id ``21540010`` (a
+    real direct ``BUFF_CONF`` ability-flag rule) and call ``generate_effect_rows`` with the
     default ``allow_ability_flags=False`` (skill-builder semantics).
     The function must raise — the alternative (silent skip / covered /
     ignored) would let a future pak change wire passive heal-on-damage
@@ -283,7 +274,7 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
     pak = PakTables(PAK_DATA)
     skill_row = {
         "skill_result": [{
-            "effect_id": 1076001,
+            "effect_id": 21540010,
             "result_target_type": 1,
             "cast_moment": 11,
             "success_rate": 10000,
@@ -301,7 +292,7 @@ def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
     pak = PakTables(PAK_DATA)
     skill_row = {
         "skill_result": [{
-            "effect_id": 1076001,
+            "effect_id": 21540010,
             "result_target_type": 1,
             "cast_moment": 11,
             "success_rate": 10000,
@@ -365,16 +356,16 @@ def _make_db_with_ability_effect_ids(tmp_path: Path, mapping: list[tuple[int, in
 def test_populate_ors_bits_via_join(tmp_path):
     """Boundary 3: ABILITY_FLAGS comes from ``ability_effect_ids`` ⨝ rules.
 
-    Mock a tiny DB with ability 7 referencing 1076001 (POISON heal),
-    1076004 (BURN heal), and 21430010 (mark stacking); ability 9
-    referencing only 1076004.  After ``populate`` the ability_flags array
+    Mock a tiny DB with ability 7 referencing 21540010 (POISON heal),
+    21540040 (BURN heal), and 21430010 (mark stacking); ability 9
+    referencing only 21540040.  After ``populate`` the ability_flags array
     must reflect the OR of all matched rules and nothing else.
     """
     conn = _make_db_with_ability_effect_ids(tmp_path, [
-        (7, 1076001, 0),
-        (7, 1076004, 1),
+        (7, 21540010, 0),
+        (7, 21540040, 1),
         (7, 21430010, 2),
-        (9, 1076004, 0),
+        (9, 21540040, 0),
     ])
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 16
@@ -396,7 +387,7 @@ def test_populate_ors_bits_via_join(tmp_path):
 
 def test_populate_raises_on_out_of_range_ability_id(tmp_path):
     """A row whose ability_id exceeds the compiled range should fail loud."""
-    conn = _make_db_with_ability_effect_ids(tmp_path, [(50, 1076001, 0)])
+    conn = _make_db_with_ability_effect_ids(tmp_path, [(50, 21540010, 0)])
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 4  # capacity smaller than the row's ability_id
     with pytest.raises(RuntimeError, match=r"outside of compiled range"):

@@ -274,6 +274,7 @@ def _handler_idx(handler_indices: dict[str, int], handler_name: str) -> int:
 def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBundle) -> dict:
     buffbase_rows = _load_json_table(PAK_BIN / "BUFFBASE_CONF.json")
     buff_rows = _load_json_table(PAK_BIN / "BUFF_CONF.json")
+    skill_rows = _load_json_table(PAK_BIN / "SKILL_CONF.json")
 
     axes = resolve_handler_axes(handler_indices, bundle.lua_enums)
     order_seed = axes.buffbase_order
@@ -309,7 +310,13 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
             continue
         unmapped.append(pfx)
 
-    buff_id_map = _build_buff_id_handler_map(handler_indices, bundle, buff_rows)
+    buff_id_map = _build_buff_id_handler_map(
+        handler_indices,
+        bundle,
+        buff_rows,
+        buffbase_rows,
+        skill_rows,
+    )
 
     result = {
         "buff_id_map": {str(k): v for k, v in sorted(buff_id_map.items())},
@@ -333,17 +340,26 @@ def _build_buff_id_handler_map(
     handler_indices: dict[str, int],
     bundle: StaticBundle,
     buff_rows: dict[int | str, dict],
+    buffbase_rows: dict[int | str, dict],
+    skill_rows: dict[int | str, dict],
 ) -> dict[int, int]:
-    """Derive exact BUFF_CONF.id handlers from pak-visible mark identity.
+    """Derive exact BUFF_CONF.id handlers from pak structures.
 
     Some mark buffs reuse generic BUFFBASE rows (for example poison or
     skill-cost rows).  A base_id-only dispatch would therefore compile the
     mark as the generic status/cost primitive.  The pak record itself carries
     the stable mark name, so this generated exact layer is keyed by
     ``BUFF_CONF.id`` and wins before base_id/order dispatch.
+
+    The same exact layer handles status rows whose semantic is carried by
+    ``BUFF_CONF.type/name/add_des``, plus structural outliers such as
+    星地善良 where ``SKILL_CONF.skill_result`` chains an order-52 condition
+    buff to an order-3 guard buff.  Those joins are compiler-owned static
+    extraction; the engine does not carry pak names or ids.
     """
 
     bgs_area = bundle.lua_enums.get("BuffGroupSign", {}).get("BGS_AREA")
+    desc_notes = _desc_notes_by_id()
     mark_name_to_handler: dict[str, int] = {}
     for mark_idx, note in MARK_NOTE_BY_IDX.items():
         const = f"H_{mark_idx.name}_MARK"
@@ -351,25 +367,164 @@ def _build_buff_id_handler_map(
         if handler is not None:
             mark_name_to_handler[note] = handler
 
+    status_name_to_handler = {
+        desc_notes[note_id]: handler_indices[const]
+        for note_id, const in (
+            (1001, "H_POISON"),
+            (1002, "H_BURN"),
+            (1008, "H_LEECH"),
+        )
+        if note_id in desc_notes and const in handler_indices
+    }
+    auto_switch_handler = handler_indices.get("H_AUTO_SWITCH_ON_ZERO_ENERGY")
+    auto_switch_buff_ids = (
+        _derive_zero_energy_auto_switch_buff_ids(skill_rows, buff_rows, buffbase_rows)
+        if auto_switch_handler is not None
+        else set()
+    )
+
     out: dict[int, int] = {}
     for buff_id, rec in buff_rows.items():
         if not isinstance(buff_id, int):
             continue
         name = str(rec.get("name") or "").strip()
         handler = mark_name_to_handler.get(name)
-        if handler is None:
+        if handler is not None:
+            groups = {
+                int(sign)
+                for sign in rec.get("buff_groupsigns") or []
+                if _maybe_int(sign) is not None
+            }
+            # Some pak rows omit BGS_AREA despite carrying the canonical mark
+            # name.  The name is the semantic anchor; BGS_AREA only verifies the
+            # common cover-group shape when present.
+            if bgs_area is not None and groups and bgs_area not in groups:
+                continue
+            _put_exact_buff_handler(out, buff_id, handler, f"mark name={name!r}")
             continue
-        groups = {
-            int(sign)
-            for sign in rec.get("buff_groupsigns") or []
-            if _maybe_int(sign) is not None
+
+        labels = {
+            str(rec.get(field) or "").strip()
+            for field in ("name", "add_des")
+            if str(rec.get(field) or "").strip()
         }
-        # Some pak rows omit BGS_AREA despite carrying the canonical mark
-        # name.  The name is the semantic anchor; BGS_AREA only verifies the
-        # common cover-group shape when present.
-        if bgs_area is not None and groups and bgs_area not in groups:
+        if int(rec.get("type") or 0) == 2:
+            for label in sorted(labels):
+                handler = status_name_to_handler.get(label)
+                if handler is not None:
+                    _put_exact_buff_handler(out, buff_id, handler, f"status label={label!r}")
+                    break
+
+        if buff_id in auto_switch_buff_ids:
+            _put_exact_buff_handler(
+                out,
+                buff_id,
+                auto_switch_handler,
+                "SKILL_CONF order-52 zero-energy condition chain",
+            )
+    return out
+
+
+def _put_exact_buff_handler(
+    out: dict[int, int],
+    buff_id: int,
+    handler: int,
+    context: str,
+) -> None:
+    existing = out.get(buff_id)
+    if existing is not None and existing != handler:
+        raise RuntimeError(
+            f"BUFF_CONF[{buff_id}] exact handler conflict: {existing} vs {handler} ({context})"
+        )
+    out[buff_id] = handler
+
+
+def _desc_notes_by_id() -> dict[int, str]:
+    rows = _load_json_table(PAK_BIN / "DESC_NOTE_CONF.json")
+    return {
+        note_id: str(rec.get("note") or "").strip()
+        for note_id, rec in rows.items()
+        if isinstance(note_id, int) and str(rec.get("note") or "").strip()
+    }
+
+
+def _base_param_slots(rec: dict) -> tuple[tuple[int, ...], ...]:
+    slots: list[tuple[int, ...]] = []
+    for raw in rec.get("buffbase_param") or rec.get("params") or []:
+        if isinstance(raw, dict):
+            inner = raw.get("params") or []
+        elif isinstance(raw, list):
+            inner = raw
+        else:
+            inner = [raw]
+        values: list[int] = []
+        for value in inner:
+            maybe = _maybe_int(value)
+            if maybe is not None:
+                values.append(maybe)
+        slots.append(tuple(values))
+    return tuple(slots)
+
+
+def _slot_scalar(slots: tuple[tuple[int, ...], ...], index: int) -> int | None:
+    if index >= len(slots) or len(slots[index]) != 1:
+        return None
+    return slots[index][0]
+
+
+def _iter_buff_base_slots(
+    buff_id: int,
+    buff_rows: dict[int | str, dict],
+    buffbase_rows: dict[int | str, dict],
+) -> list[tuple[int, int, tuple[tuple[int, ...], ...]]]:
+    out: list[tuple[int, int, tuple[tuple[int, ...], ...]]] = []
+    rec = buff_rows.get(buff_id) or {}
+    for raw_base_id in rec.get("buff_base_ids") or []:
+        base_id = _maybe_int(raw_base_id)
+        if base_id is None:
             continue
-        out[buff_id] = handler
+        base = buffbase_rows.get(base_id) or {}
+        order = _maybe_int(base.get("buffbase_order")) or 0
+        out.append((base_id, order, _base_param_slots(base)))
+    return out
+
+
+def _derive_zero_energy_auto_switch_buff_ids(
+    skill_rows: dict[int | str, dict],
+    buff_rows: dict[int | str, dict],
+    buffbase_rows: dict[int | str, dict],
+) -> set[int]:
+    """Find order-3 guard buffs paired with an order-52 zero-energy condition."""
+
+    out: set[int] = set()
+    for skill in skill_rows.values():
+        direct_buff_ids: list[int] = []
+        for entry in skill.get("skill_result") or []:
+            if not isinstance(entry, dict):
+                continue
+            effect_id = _maybe_int(entry.get("effect_id"))
+            if effect_id is not None and effect_id in buff_rows:
+                direct_buff_ids.append(effect_id)
+        if not direct_buff_ids:
+            continue
+        direct_buff_ids = list(dict.fromkeys(direct_buff_ids))
+
+        condition_targets: set[int] = set()
+        for buff_id in direct_buff_ids:
+            for _base_id, order, slots in _iter_buff_base_slots(buff_id, buff_rows, buffbase_rows):
+                target = _slot_scalar(slots, 2)
+                if order == 52 and _slot_scalar(slots, 0) == 0 and target in buff_rows:
+                    condition_targets.add(target)
+        if not condition_targets:
+            continue
+
+        for buff_id in direct_buff_ids:
+            for _base_id, order, slots in _iter_buff_base_slots(buff_id, buff_rows, buffbase_rows):
+                if order != 3:
+                    continue
+                refs = {value for slot in slots for value in slot}
+                if refs & condition_targets:
+                    out.add(buff_id)
     return out
 
 

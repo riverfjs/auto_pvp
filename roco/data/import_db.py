@@ -114,24 +114,6 @@ _CATEGORY_NAMES = {
     SkillCategory.STATUS: "状态",
 }
 
-# Mark source audit only runs when generated mark records declare source_skills.
-_MARK_TAG_MAP: dict[str, int] = {
-    "poison": 2007,    # STATUS_CONDITION family
-    "moisture": 2143,  # MARK_CHANGE family
-    "dragon": 2143,
-    "wind": 2143,
-    "charge": 2143,
-    "solar": 2143,
-    "attack": 2143,
-    "slow": 2143,
-    "sluggish": 2143,
-    "spirit": 2143,
-    "meteor": 2094,    # MARK_METEOR family
-    "thorn": 2143,
-    "momentum": 2143,
-}
-
-
 def _gap_row(
     source_type: str,
     source_name: str,
@@ -489,10 +471,8 @@ def _leader_transform_manual() -> dict[str, str]:
 
 def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
     records = _records(marks, "mark")
-    skill_lookup = {name: sid for sid, name in conn.execute("SELECT id, name FROM skills")}
     mark_rows: list[tuple] = []
     source_rows: list[tuple] = []
-    gap_rows: list[tuple] = []
     for record in records:
         code = str(record.get("code", "")).strip()
         name = str(record.get("name", "")).strip()
@@ -529,39 +509,20 @@ def import_marks(conn: sqlite3.Connection, marks: Iterable[Record]) -> None:
     mark_lookup = {code: mid for mid, code in conn.execute("SELECT id, code FROM marks")}
     for record in records:
         code = str(record.get("code", "")).strip()
-        tag = _MARK_TAG_MAP.get(code)
         for source in record.get("source_skills", ()) or ():
             skill_name = str(source.get("skill", "")).strip()
-            sid = skill_lookup.get(skill_name)
             source_rows.append((
                 mark_lookup[code],
                 skill_name,
                 str(source.get("description", "")),
             ))
-            if not sid or tag is None:
-                continue
-            exists = conn.execute(
-                "SELECT 1 FROM skill_effects WHERE skill_id = ? AND tag_code = ? LIMIT 1",
-                (sid, tag),
-            ).fetchone()
-            if exists is None:
-                gap_rows.append(_gap_row(
-                    "skill",
-                    skill_name,
-                    str(tag),
-                    None,
-                    {"mark": code, "description": source.get("description", "")},
-                    "mark_source_missing_effect",
-                ))
     if source_rows:
         conn.executemany(
             "INSERT OR IGNORE INTO mark_sources (mark_id, skill_name, description) VALUES (?, ?, ?)",
             source_rows,
         )
-    inserted_gaps = _insert_gaps(conn, gap_rows)
     print(f"  marks: {len(mark_rows)} upserted")
     print(f"  mark_sources: {len(source_rows)} inserted")
-    print(f"  mark audit effect_gaps: {inserted_gaps} inserted")
 
 
 def import_teams(

@@ -299,9 +299,16 @@ SKILL_FLAG_DEVOTION = 0x01000000  # 16777216 — marks a devotion-linked skill
 def _skill_flags(row: dict[str, Any]) -> int:
     """Derive skill flags from pak data fields."""
     flags = 0
-    # Devotion skills: use_type contains '连击技' (combo skill)
+    # Older pak rows used use_type='连击技'.  Current rows keep the same
+    # mechanic in structured description text via desc_id=1009.
     use_type = row.get("use_type") or []
     if isinstance(use_type, list) and "连击技" in use_type:
+        flags |= SKILL_FLAG_DEVOTION
+    text = "\n".join(
+        str(row.get(field) or "")
+        for field in ("name", "desc", "flavor_text")
+    )
+    if "本技能会受<desc_id=1009>奉献</>影响" in text:
         flags |= SKILL_FLAG_DEVOTION
     return flags
 

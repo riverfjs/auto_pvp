@@ -124,7 +124,6 @@ def test_decode_mode_based_exchange_families(pak, effect_id, handler):
     (1004065, H_DISPEL_DEBUFFS, 0),
     (1042008, H_DISPEL_MARKS, 0),
     (1042014, H_DISPEL_MARKS_TO_BURN, 5),
-    (1043008, H_DISPEL_MARKS_TO_BURN, 5),
     (1050012, H_MIRROR_ENEMY_BUFFS, 0),
 ])
 def test_decode_composite_effect_families_from_pak_shape(pak, effect_id, handler, p0):

@@ -10,244 +10,256 @@ Comparison of Lua schema fields (parsed from `*_CONF.lua` loaders) vs JSON recor
 
 | table | shared | lua-only | json-only |
 |---|---:|---|---|
-| `EFFECT_CONF` | 9 | effect_res, immune_effect_group, special_add, trigger_des, trigger_icon | — |
-| `BUFFBASE_CONF` | 8 | — | — |
-| `BUFF_CONF` | 19 | add_max_handle, buff_can_react, buff_groupsign, clean_group_id, is_area, is_hide, is_special, mutex, overlay, res_id_2, special_add | MAX_EFFECTIVE, buff_groupsigns, buff_trigger_priority, corner_markers, field_buff, type_id |
-| `SKILL_CONF` | 20 | client_target_type, combine_passive_id, cost_value, critical_hit_para, dam_add, field_belong, field_energy_reduse, field_layer, field_skill, field_type, is_special_skill, repeat_attack_time_high, repeat_attack_time_low, repeat_attack_time_prob, skill_energy_gain, skill_impact_type, spe_skill_type, target_field, target_field_layer, teammate_res_id, ultimate_energy_gain, unused_round | Skill_Type, can_changed, common_type, common_type_number, damage_rule, delete_resonance_sk_black_list, delete_resonance_sk_black_list_layer, delete_resonance_sk_black_list_target, describe_type, is_showlens, monitor_data_version, resonance_sk_black_list, resonance_sk_black_list_feature, skill_feature, skill_time, special_aoe, target_blood_limit, use_type, worldbuff_res_id |
+| `EFFECT_CONF` | 8 | editor_name, effect_res, immune_effect_group, special_add, trigger_des, trigger_icon | — |
+| `BUFFBASE_CONF` | 7 | editor_name | — |
+| `BUFF_CONF` | 18 | add_max_handle, buff_can_react, buff_groupsign, clean_group_id, editor_name, is_area, is_hide, is_special, mutex, overlay, res_id_2, special_add | MAX_EFFECTIVE, buff_groupsigns, buff_trigger_priority, corner_markers, field_buff, type_id |
+| `SKILL_CONF` | 20 | client_target_type, combine_passive_id, cost_value, critical_hit_para, dam_add, field_belong, field_energy_reduse, field_layer, field_skill, field_type, is_special_skill, repeat_attack_time_high, repeat_attack_time_low, repeat_attack_time_prob, skill_energy_gain, skill_impact_type, spe_skill_type, target_field, target_field_layer, teammate_res_id, ultimate_energy_gain, unused_round | Skill_Type, can_changed, damage_rule, delete_resonance_sk_black_list, delete_resonance_sk_black_list_layer, delete_resonance_sk_black_list_target, describe_type, is_showlens, resonance_sk_black_list, resonance_sk_black_list_feature, skill_feature, skill_time, special_aoe, target_blood_limit, worldbuff_res_id |
 
 ## 2. EFFECT_CONF families
 
-Total `(type, effect_order)` families: **92**. `coverage` is sourced from `roco/compiler_v2/rules/effect_families.jsonl` (this audit does not recompute coverage).
+Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/compiler_v2/rules/effect_families.jsonl` (this audit does not recompute coverage).
 
 | family_key | type | order | count | param slots | consumers (skill/ability) | coverage | editor_name samples |
 |---|---:|---:|---:|---|---:|---|---|
-| `effect_conf:t1:o4` | 1 | 4 | 82 | 5:82 | 2/5 | `mixed` | P3剧情--驱散骨龙复活, npc挑战类恶魔狼规则-驱散, 净化伊里斯的噩梦1, … (+5) |
-| `effect_conf:t1:o5` | 1 | 5 | 27 | 5:27 | 18/0 | `auto_structural` | 恢复1%生命, 恢复1%生命（上限100）, 恢复10%生命, … (+5) |
-| `effect_conf:t1:o9` | 1 | 9 | 1 | 2:1 | 0/0 | `gap` | 改变技能 |
+| `effect_conf:t1:o4` | 1 | 4 | 92 | 5:92 | 3/8 | `mixed` | 不朽, 戏耍, 拉拉队长 |
+| `effect_conf:t1:o5` | 1 | 5 | 29 | 6:29 | 17/0 | `auto_structural` | 适者生存, 饱腹感 |
+| `effect_conf:t1:o9` | 1 | 9 | 1 | 2:1 | 0/0 | `gap` |  |
 | `effect_conf:t1:o10` | 1 | 10 | 2 | 1:2 | 0/0 | `gap` | 养分回收, 春花兔 |
-| `effect_conf:t1:o11` | 1 | 11 | 10 | 2:10 | 9/0 | `auto_structural` | 丛林奇袭汲取生命, 吸血30%, 恶魔叮1, … (+5) |
-| `effect_conf:t1:o15` | 1 | 15 | 1 | 0:1 | 1/0 | `gap` | 逃跑 |
-| `effect_conf:t1:o22` | 1 | 22 | 3 | 5:3 | 0/1 | `auto_structural` | 争雄-筛选雄性, 灵魂号角-筛选死亡角色, 蜂群集结 |
-| `effect_conf:t1:o23` | 1 | 23 | 4 | 9:4 | 0/0 | `auto_structural` | 草系友善-队伍中存在草系精灵, 虫系友善-队伍中存在虫系, 青草抱枕-筛选草系, … (+1) |
-| `effect_conf:t1:o27` | 1 | 27 | 5 | 2:5 | 1/0 | `gap` | 临时-替换石壁, 光系替换技能, 替换首领技能 |
-| `effect_conf:t1:o31` | 1 | 31 | 38 | 6:1, 8:37 | 20/0 | `auto_structural` | 丛林奇袭, 偷袭, 反制, … (+5) |
-| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 52/0 | `mixed` | 糖果海浪, 虫鸣, 连击10, … (+5) |
-| `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 3/0 | `gap` | 释放两侧技能, 释放其他迅捷技能, 释放所有普通系技能 |
-| `effect_conf:t1:o34` | 1 | 34 | 10 | 8:10 | 0/2 | `mixed` | 与力, 焰胆-领主技能, 状态接力, … (+5) |
-| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 5/0 | `gap` | 伊里斯-释放特定技能, 再次释放敌人本回合释放技能, 小石头-释放特定技能, … (+5) |
-| `effect_conf:t1:o36` | 1 | 36 | 4 | 2:4 | 2/0 | `gap` | 变身-首领水灵, 变身-首领火神, 变身-首领魔力猫, … (+1) |
-| `effect_conf:t1:o42` | 1 | 42 | 15 | 5:15 | 4/2 | `mixed` | ?, debuff转换buff, dot转化为回血, … (+5) |
-| `effect_conf:t1:o50` | 1 | 50 | 14 | 7:14 | 3/1 | `mixed` | 偷敌方一个随机效果, 复制敌方增益, 复制给目标buff, … (+5) |
-| `effect_conf:t1:o51` | 1 | 51 | 3 | 3:3 | 7/0 | `auto_structural` | 迅捷, 锤头鹳迅捷, 高脚鹳迅捷 |
-| `effect_conf:t1:o52` | 1 | 52 | 9 | 4:9 | 5/0 | `mixed` | 冻结翻倍, 增益翻倍, 扩散侵蚀, … (+4) |
-| `effect_conf:t1:o53` | 1 | 53 | 16 | 3:16 | 6/0 | `mixed` | 冻结换星陨, 刻蚀, 吞噬秒杀效果, … (+5) |
-| `effect_conf:t1:o55` | 1 | 55 | 5 | 5:5 | 0/0 | `gap` | 光芒祝福, 激化核心, 齿轮扭矩 |
-| `effect_conf:t1:o58` | 1 | 58 | 6 | 7:6 | 0/0 | `mixed` | 若携带被格斗系克制的技能超过2则获得光羽, 龙吼, 龙噬特权, … (+3) |
-| `effect_conf:t1:o59` | 1 | 59 | 1 | 2:1 | 0/0 | `gap` | 若出手时速度为全场最慢则释放“撞击” |
-| `effect_conf:t2:o1` | 2 | 1 | 18 | 7:18 | 5/1 | `auto_structural` | 10%最大生命值伤害, 150威力, 20%最大生命值伤害, … (+5) |
-| `effect_conf:t2:o3` | 2 | 3 | 2 | 3:2 | 14/0 | `auto_structural` | 应对打断, 通用打断 |
-| `effect_conf:t2:o4` | 2 | 4 | 64 | 5:64 | 13/23 | `auto_structural` | 倾泻专用, 助燃, 复原光线, … (+5) |
-| `effect_conf:t2:o6` | 2 | 6 | 3 | 1:3 | 0/0 | `auto_structural` | 换宠技能通用, 通用强制换宠 |
-| `effect_conf:t2:o7` | 2 | 7 | 1 | 0:1 | 0/0 | `auto_structural` | 通用技能替换 |
-| `effect_conf:t2:o18` | 2 | 18 | 12 | 1:12 | 1/1 | `auto_structural` | 偷10能量, 偷1能量, 偷2能量, … (+5) |
-| `effect_conf:t2:o31` | 2 | 31 | 103 | 8:103 | 81/0 | `auto_structural` | 7040380, 7190400, 下坠, … (+5) |
-| `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 2/0 | `auto_structural` | 检测冰系标记，获得攻防速强化, 检测机械系标记，获得攻防速强化, 检测水系标记，强化速度, … (+5) |
-| `effect_conf:t2:o55` | 2 | 55 | 1 | 5:1 | 0/0 | `auto_structural` | 随机使携带的两个普通系技能能量加1 |
-| `effect_conf:t3:o1` | 3 | 1 | 5 | 7:5 | 4/0 | `gap` | 灾厄, 自伤10％, 自伤20％, … (+2) |
-| `effect_conf:t3:o3` | 3 | 3 | 2 | 3:2 | 0/0 | `gap` | 优化eff3打断并施加中毒, 通用打断2 |
-| `effect_conf:t3:o4` | 3 | 4 | 3 | 5:3 | 0/0 | `gap` | 移除1个debuff, 移除再生, 移除黑雾 |
-| `effect_conf:t3:o8` | 3 | 8 | 2 | 0:2 | 1/0 | `gap` | 无视属性抵抗, 绒绒 |
-| `effect_conf:t3:o11` | 3 | 11 | 1 | 2:1 | 0/0 | `gap` | 突然袭击（汲取生命） |
-| `effect_conf:t3:o13` | 3 | 13 | 1 | 1:1 | 0/0 | `gap` | 随机释放敌人技能 |
-| `effect_conf:t3:o14` | 3 | 14 | 1 | 1:1 | 0/0 | `gap` | 打雷-斩杀效果 |
-| `effect_conf:t3:o16` | 3 | 16 | 19 | 10:19 | 2/1 | `gap` | 呆璐璐, 将噬爪缩：受到伤害后，获得一个随机效果：回复10%最大生命值，物防魔防+20%，恢复4能量, 族群守护：随机获得10次奉献, … (+5) |
-| `effect_conf:t3:o17` | 3 | 17 | 1 | 3:1 | 0/0 | `gap` | 移除自身随机1种非印记的负面效果 |
-| `effect_conf:t3:o19` | 3 | 19 | 51 | 3:51 | 64/1 | `mixed` | 伊贝儿, 优化eff19获得能耗总和之差的绝对值的能量, 半朽蜜果灵, … (+5) |
-| `effect_conf:t3:o22` | 3 | 22 | 12 | 5:12 | 0/6 | `gap` | Npc挑战类恶魔狼规则友军死亡的精灵越多，强化越多，每只增加20%全属性, 优化eff22每有一只受伤精灵施加一层中毒, 怯场, … (+5) |
-| `effect_conf:t3:o23` | 3 | 23 | 49 | 9:49 | 0/0 | `gap` | 冰系友善, 地源, 地系友善, … (+5) |
-| `effect_conf:t3:o25` | 3 | 25 | 7 | 1:7 | 4/0 | `gap` | 测试--赋予冰光环, 测试--赋予毒光环, 测试--赋予水光环, … (+3) |
-| `effect_conf:t3:o28` | 3 | 28 | 5 | 2:5 | 4/0 | `generated_weather` | 晴天, 暴风雪, 求雨, … (+2) |
-| `effect_conf:t3:o29` | 3 | 29 | 1 | 0:1 | 1/0 | `gap` | 测试--重置天气 |
-| `effect_conf:t3:o30` | 3 | 30 | 1 | 1:1 | 1/0 | `gap` | 测试--重置火和冰地表 |
-| `effect_conf:t3:o31` | 3 | 31 | 62 | 8:62 | 36/0 | `auto_structural` | 偷袭, 光4, 冥想, … (+5) |
-| `effect_conf:t3:o34` | 3 | 34 | 14 | 8:14 | 0/10 | `gap` | 200085, 200153, 200172, … (+5) |
-| `effect_conf:t3:o36` | 3 | 36 | 1 | 2:1 | 0/0 | `gap` | 毛毛 |
-| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 97/0 | `mixed` | 优化eff37释放的技能进入cd, 防御类技能公共冷却1, 防御类技能公共冷却2 |
-| `effect_conf:t3:o38` | 3 | 38 | 19 | 4:19 | 0/0 | `gap` | 主角-黑魔法（新）, 威力爆发, 威力爆发--NPC, … (+5) |
-| `effect_conf:t3:o39` | 3 | 39 | 2 | 2:1, 4:1 | 0/0 | `gap` | 共鸣魔法:改变宠物技能列表, 血脉强化 |
-| `effect_conf:t3:o40` | 3 | 40 | 1 | 1:1 | 0/0 | `gap` | 共鸣魔法:改变宠物(换宠) |
-| `effect_conf:t3:o41` | 3 | 41 | 1 | 2:1 | 0/0 | `gap` | 首领化 |
-| `effect_conf:t3:o42` | 3 | 42 | 1 | 4:1 | 0/0 | `gap` | 优化eff42将敌人的随机两层buff转换为中毒 |
-| `effect_conf:t3:o43` | 3 | 43 | 7 | 5:7 | 2/0 | `gap` | 撕咬, 生命值高于百分之50的获得一层毒，低于的获得光羽, 血量高于25%时，获得4连击，低于25，获得6连击, … (+4) |
-| `effect_conf:t3:o44` | 3 | 44 | 2 | 1:2 | 2/0 | `auto_structural` | 交换状态, 交换生命比例 |
-| `effect_conf:t3:o45` | 3 | 45 | 1 | 2:1 | 0/0 | `gap` | 平均双方能量值 |
-| `effect_conf:t3:o46` | 3 | 46 | 5 | 3:5 | 0/0 | `gap` | 副属性变化为抵抗系别, 技能变为上个技能系别, 技能变为格斗系技能, … (+2) |
-| `effect_conf:t3:o47` | 3 | 47 | 2 | 1:2 | 1/0 | `mixed` | 交换双方技能, 交换本回合释放的技能 |
-| `effect_conf:t3:o49` | 3 | 49 | 7 | 3:3, 6:4 | 0/0 | `gap` | 光影, 取念, 复写, … (+4) |
-| `effect_conf:t3:o53` | 3 | 53 | 1 | 3:1 | 0/0 | `gap` | 生日蛋糕 |
-| `effect_conf:t3:o56` | 3 | 56 | 2 | 2:2 | 0/0 | `gap` | 生日蛋糕, 随机分配场上所有毒的层数给全场 |
-| `effect_conf:t3:o57` | 3 | 57 | 2 | 1:2 | 1/0 | `gap` | 交换齿轮, 此技能两侧的技能位置对调 |
-| `effect_conf:t3:o58` | 3 | 58 | 1 | 7:1 | 0/0 | `gap` | 优化eff58增加技能威力 |
-| `effect_conf:t3:o59` | 3 | 59 | 3 | 2:3 | 2/0 | `gap` | 反击拳, 扇风, 疾风刺 |
-| `effect_conf:t3:o60` | 3 | 60 | 1 | 6:1 | 0/0 | `gap` | 新增eff60获得本次战斗中的中毒数 |
-| `effect_conf:t3:o61` | 3 | 61 | 4 | 2:4 | 0/2 | `gap` | 奔波鼠, 新增eff61每更换一次施加一次中毒印记, 每次进入战斗，物理和魔法攻击增加20%, … (+1) |
-| `effect_conf:t3:o62` | 3 | 62 | 2 | 0:1, 1:1 | 0/0 | `gap` | 当背包中有其他存活精灵时，无法被替换上场, 新增eff62无法更换 |
-| `effect_conf:t3:o63` | 3 | 63 | 3 | 1:3 | 0/0 | `gap` | 新增eff63让能量变为5, 能量上限为20，但无法回复能量, 能量变成0 |
-| `effect_conf:t3:o64` | 3 | 64 | 50 | 6:50 | 0/4 | `gap` | 入场时，技能栏中每有1个系别的技能，全属性提升10%, 呼呼猪, 技能栏中每有1个系别的技能，威力提高10, … (+5) |
-| `effect_conf:t3:o65` | 3 | 65 | 3 | 4:1, 5:2 | 0/0 | `gap` | 剧毒狼蛛, 新增eff65复活死去的精灵, 骨龙 |
-| `effect_conf:t3:o66` | 3 | 66 | 2 | 0:1, 1:1 | 0/1 | `gap` | 新增eff66打乱技能顺序, 盲拧 |
-| `effect_conf:t3:o67` | 3 | 67 | 1 | 1:1 | 1/0 | `gap` | 逃跑（共鸣魔法） |
-| `effect_conf:t3:o69` | 3 | 69 | 6 | 3:6 | 0/0 | `gap` | 新增eff69星陨推条, 星陨推条, 星陨推条减半 |
-| `effect_conf:t3:o70` | 3 | 70 | 1 | 20:1 | 0/1 | `gap` | 咕噜球 |
-| `effect_conf:t3:o71` | 3 | 71 | 1 | 1:1 | 1/0 | `gap` | 增加传说精灵技能次数限制 |
-| `effect_conf:t3:o72` | 3 | 72 | 1 | 0:1 | 0/0 | `gap` | 不听话 |
-| `effect_conf:t3:o73` | 3 | 73 | 1 | 1:1 | 0/0 | `gap` | 预警 |
-| `effect_conf:t3:o74` | 3 | 74 | 1 | 1:1 | 0/0 | `gap` | 交换两侧技能基础能耗 |
-| `effect_conf:t3:o75` | 3 | 75 | 1 | 0:1 | 0/1 | `gap` | 继承亡灵 |
-| `effect_conf:t3:o76` | 3 | 76 | 4 | 2:4 | 0/4 | `ability_flag` | 中毒变寄生, 灼烧变寄生 |
-| `effect_conf:t3:o77` | 3 | 77 | 2 | 4:2 | 0/2 | `gap` | 敌方1魔力出场时全属性提高, 自身1魔力出场时全属性提高 |
-| `effect_conf:t3:o79` | 3 | 79 | 3 | 2:3 | 1/0 | `gap` | 能耗不改变, 能耗变化效果翻倍, 能耗降低效果翻倍 |
-| `effect_conf:t3:o81` | 3 | 81 | 4 | 1:4 | 1/0 | `gap` | 给予场下恢复效果动效, 给予场下精灵萌化, 通用复活, … (+1) |
-| `effect_conf:t3:o83` | 3 | 83 | 1 | 0:1 | 1/0 | `gap` | 镶嵌 |
-| `effect_conf:t3:o84` | 3 | 84 | 2 | 1:2 | 3/0 | `gap` | 蓄力时可放, 蓄力时可放不打断蓄力 |
-| `effect_conf:t3:o85` | 3 | 85 | 20 | 3:20 | 0/0 | `gap` | 光, 冰, 土, … (+5) |
-| `effect_conf:t3:o86` | 3 | 86 | 2 | 1:2 | 0/2 | `gap` | 伊利斯, 跳过空技能 |
-| `effect_conf:t3:o89` | 3 | 89 | 4 | 1:4 | 3/1 | `gap` | 失去绩点--B1最终战, 获得绩点--B1最终战（技能1）, 获得绩点--B1最终战（技能2）, … (+1) |
+| `effect_conf:t1:o11` | 1 | 11 | 10 | 2:10 | 5/0 | `auto_structural` | 渴求 |
+| `effect_conf:t1:o15` | 1 | 15 | 1 | 0:1 | 1/0 | `gap` |  |
+| `effect_conf:t1:o22` | 1 | 22 | 3 | 5:3 | 0/1 | `auto_structural` | 蜂鸣 |
+| `effect_conf:t1:o23` | 1 | 23 | 4 | 9:4 | 0/0 | `auto_structural` |  |
+| `effect_conf:t1:o27` | 1 | 27 | 5 | 2:5 | 3/0 | `gap` |  |
+| `effect_conf:t1:o31` | 1 | 31 | 40 | 6:1, 8:39 | 21/0 | `auto_structural` |  |
+| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 49/0 | `mixed` |  |
+| `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 2/0 | `gap` |  |
+| `effect_conf:t1:o34` | 1 | 34 | 10 | 8:10 | 0/2 | `mixed` | 焰胆, 状态接力, 聚能, … (+1) |
+| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 13/0 | `gap` |  |
+| `effect_conf:t1:o36` | 1 | 36 | 4 | 2:4 | 6/0 | `gap` |  |
+| `effect_conf:t1:o42` | 1 | 42 | 17 | 5:17 | 6/2 | `mixed` | 蚀刻 |
+| `effect_conf:t1:o50` | 1 | 50 | 14 | 7:14 | 3/0 | `mixed` | 嫁祸, 贪吃 |
+| `effect_conf:t1:o51` | 1 | 51 | 3 | 3:3 | 7/0 | `auto_structural` |  |
+| `effect_conf:t1:o52` | 1 | 52 | 9 | 4:9 | 5/0 | `mixed` | 扩散侵蚀 |
+| `effect_conf:t1:o53` | 1 | 53 | 17 | 3:17 | 9/0 | `mixed` | 扩散侵蚀 |
+| `effect_conf:t1:o55` | 1 | 55 | 5 | 5:5 | 0/0 | `gap` |  |
+| `effect_conf:t1:o58` | 1 | 58 | 6 | 7:6 | 0/0 | `mixed` | 洄游 |
+| `effect_conf:t1:o59` | 1 | 59 | 1 | 2:1 | 0/0 | `gap` |  |
+| `effect_conf:t2:o1` | 2 | 1 | 18 | 7:18 | 4/1 | `auto_structural` |  |
+| `effect_conf:t2:o3` | 2 | 3 | 2 | 3:2 | 15/0 | `auto_structural` |  |
+| `effect_conf:t2:o4` | 2 | 4 | 65 | 5:65 | 11/23 | `auto_structural` |  |
+| `effect_conf:t2:o6` | 2 | 6 | 3 | 1:3 | 0/0 | `auto_structural` |  |
+| `effect_conf:t2:o7` | 2 | 7 | 1 | 0:1 | 0/0 | `auto_structural` |  |
+| `effect_conf:t2:o18` | 2 | 18 | 12 | 1:12 | 1/1 | `auto_structural` |  |
+| `effect_conf:t2:o31` | 2 | 31 | 106 | 8:106 | 69/0 | `auto_structural` |  |
+| `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 1/0 | `auto_structural` |  |
+| `effect_conf:t2:o55` | 2 | 55 | 1 | 5:1 | 0/0 | `auto_structural` |  |
+| `effect_conf:t3:o1` | 3 | 1 | 5 | 7:5 | 4/0 | `gap` |  |
+| `effect_conf:t3:o3` | 3 | 3 | 2 | 3:2 | 0/0 | `gap` |  |
+| `effect_conf:t3:o4` | 3 | 4 | 3 | 5:3 | 0/0 | `gap` | 洁癖 |
+| `effect_conf:t3:o8` | 3 | 8 | 2 | 0:2 | 1/0 | `gap` | 垂怜 |
+| `effect_conf:t3:o11` | 3 | 11 | 1 | 2:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o13` | 3 | 13 | 1 | 1:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o14` | 3 | 14 | 1 | 1:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o16` | 3 | 16 | 20 | 10:20 | 2/1 | `gap` | 振奋虫心 |
+| `effect_conf:t3:o17` | 3 | 17 | 1 | 3:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o19` | 3 | 19 | 52 | 3:52 | 61/1 | `mixed` | 得寸进尺, 快充, 惊吓, … (+5) |
+| `effect_conf:t3:o22` | 3 | 22 | 12 | 5:12 | 0/5 | `gap` | 仁心, 虫群突袭, 虫群鼓舞 |
+| `effect_conf:t3:o23` | 3 | 23 | 49 | 9:49 | 0/0 | `gap` | 嫉妒 |
+| `effect_conf:t3:o25` | 3 | 25 | 7 | 1:7 | 4/0 | `gap` |  |
+| `effect_conf:t3:o28` | 3 | 28 | 5 | 2:5 | 3/0 | `generated_weather` |  |
+| `effect_conf:t3:o29` | 3 | 29 | 1 | 0:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o30` | 3 | 30 | 1 | 1:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o31` | 3 | 31 | 64 | 8:64 | 34/0 | `auto_structural` |  |
+| `effect_conf:t3:o34` | 3 | 34 | 14 | 8:14 | 0/10 | `gap` | 低风阻队形, 渗透, 蒸汽膨胀, … (+1) |
+| `effect_conf:t3:o36` | 3 | 36 | 1 | 2:1 | 0/0 | `gap` | 化茧 |
+| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 89/0 | `mixed` |  |
+| `effect_conf:t3:o38` | 3 | 38 | 20 | 7:20 | 6/0 | `gap` |  |
+| `effect_conf:t3:o39` | 3 | 39 | 2 | 2:1, 4:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o40` | 3 | 40 | 1 | 1:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o41` | 3 | 41 | 1 | 2:1 | 5/0 | `gap` |  |
+| `effect_conf:t3:o42` | 3 | 42 | 1 | 4:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o43` | 3 | 43 | 8 | 5:8 | 2/0 | `gap` |  |
+| `effect_conf:t3:o44` | 3 | 44 | 2 | 1:2 | 3/0 | `auto_structural` |  |
+| `effect_conf:t3:o45` | 3 | 45 | 1 | 2:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o46` | 3 | 46 | 5 | 3:5 | 0/0 | `gap` |  |
+| `effect_conf:t3:o47` | 3 | 47 | 2 | 1:2 | 1/0 | `mixed` |  |
+| `effect_conf:t3:o49` | 3 | 49 | 7 | 3:3, 6:4 | 0/0 | `gap` |  |
+| `effect_conf:t3:o53` | 3 | 53 | 1 | 3:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o56` | 3 | 56 | 2 | 2:2 | 0/0 | `gap` |  |
+| `effect_conf:t3:o57` | 3 | 57 | 2 | 1:2 | 1/0 | `gap` |  |
+| `effect_conf:t3:o58` | 3 | 58 | 1 | 7:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o59` | 3 | 59 | 3 | 2:3 | 2/0 | `gap` |  |
+| `effect_conf:t3:o60` | 3 | 60 | 1 | 6:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o61` | 3 | 61 | 4 | 2:4 | 0/2 | `gap` | 奔波命, 超级电池 |
+| `effect_conf:t3:o62` | 3 | 62 | 2 | 0:1, 1:1 | 0/0 | `gap` | 怯场 |
+| `effect_conf:t3:o63` | 3 | 63 | 3 | 1:3 | 0/0 | `gap` | 非再生能源 |
+| `effect_conf:t3:o64` | 3 | 64 | 50 | 6:50 | 0/4 | `gap` | 暴食, 最好的伙伴, 溶解扩散, … (+1) |
+| `effect_conf:t3:o65` | 3 | 65 | 3 | 4:1, 5:2 | 0/0 | `gap` | 高蛋白纤维 |
+| `effect_conf:t3:o66` | 3 | 66 | 2 | 0:1, 1:1 | 0/1 | `gap` |  |
+| `effect_conf:t3:o67` | 3 | 67 | 1 | 1:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o69` | 3 | 69 | 6 | 3:6 | 0/0 | `gap` |  |
+| `effect_conf:t3:o70` | 3 | 70 | 1 | 20:1 | 0/1 | `gap` |  |
+| `effect_conf:t3:o71` | 3 | 71 | 1 | 1:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o72` | 3 | 72 | 1 | 0:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o73` | 3 | 73 | 1 | 1:1 | 0/0 | `gap` |  |
+| `effect_conf:t3:o74` | 3 | 74 | 2 | 2:2 | 1/0 | `gap` |  |
+| `effect_conf:t3:o75` | 3 | 75 | 1 | 0:1 | 0/1 | `gap` |  |
+| `effect_conf:t3:o76` | 3 | 76 | 4 | 2:4 | 0/0 | `ability_flag` | 仁心, 耐活王 |
+| `effect_conf:t3:o77` | 3 | 77 | 2 | 4:2 | 0/2 | `gap` | 图书守卫者, 构装契约者 |
+| `effect_conf:t3:o79` | 3 | 79 | 3 | 2:3 | 0/0 | `gap` |  |
+| `effect_conf:t3:o81` | 3 | 81 | 4 | 1:4 | 1/0 | `gap` |  |
+| `effect_conf:t3:o83` | 3 | 83 | 1 | 0:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o84` | 3 | 84 | 2 | 1:2 | 3/0 | `gap` |  |
+| `effect_conf:t3:o85` | 3 | 85 | 20 | 3:20 | 0/0 | `gap` |  |
+| `effect_conf:t3:o86` | 3 | 86 | 2 | 1:2 | 0/0 | `gap` |  |
+| `effect_conf:t3:o87` | 3 | 87 | 1 | 0:1 | 1/0 | `gap` |  |
+| `effect_conf:t3:o88` | 3 | 88 | 2 | 2:2 | 2/0 | `gap` |  |
+| `effect_conf:t3:o89` | 3 | 89 | 4 | 1:4 | 3/1 | `gap` |  |
+| `effect_conf:t3:o90` | 3 | 90 | 1 | 2:1 | 0/0 | `gap` |  |
 
 ## 3. BUFFBASE_CONF families
 
-Total `buffbase_order` families: **128**.  `buffbase_order rule` is the engine-owned `handles_buff` axis resolved through `Enum.BuffType`; `prefix rule` is the mixed-prefix axis kept only for the 3 prefixes whose buffbase_order distribution is not 100% concentrated.
+Total `buffbase_order` families: **137**.  `buffbase_order rule` is the engine-owned `handles_buff` axis resolved through `Enum.BuffType`; `prefix rule` is the mixed-prefix axis kept only for the 3 prefixes whose buffbase_order distribution is not 100% concentrated.
 
 | order | count | param slots | trigger_types | buffbase_order rule | prefix rule (legacy) | refs | editor_name samples |
 |---:|---:|---|---|---|---|---:|---|
-| **1** | 156 | 3:156 | 23:1 | `H_SELF_BUFF` (STAT_MOD) | `2011`→`H_DAMAGE_REDUCTION` (8/156) | 246 | 与力物攻, 与力物防, 争雄--物攻等级提升10% |
-| **3** | 40 | 2:40 | — | — | — | 46 | s2赛季天赋--免疫绝处逢生, 免疫B1最终战双人老师, 免疫debuff |
-| **4** | 3 | 1:3 | — | `H_SELF_BUFF` (LOCK_SWITCH) | — | 14 | 扎根--禁止换宠, 盘石, 眩晕 |
-| **5** | 2 | 5:2 | 7:2 | `H_LEECH` (LEECH) | — | 1 | CE寄生, 寄生 |
-| **6** | 9 | 4:9 | — | `H_SELF_BUFF` (BOSS_STUN) | — | 16 | 只能使用被应对技能, 封印, 封禁聚能 |
-| **7** | 8 | 4:1, 8:7 | 7:6 | `H_POISON` (STATUS_CONDITION) | `2011`→`H_DAMAGE_REDUCTION` (1/8) | 9 | 中毒, 剧情--幻王, 对自己造成100%伤害 |
-| **9** | 1 | 2:1 | — | — | — | 1 | 测试9 |
-| **10** | 9 | 5:9 | 7:1 | `H_SELF_BUFF` (NEXT_PET) | — | 10 | 下个精灵加攻击，免疫灼烧, 下个精灵加防御，免疫冻结, 下个精灵变箱子 |
-| **11** | 98 | 11:1, 12:97 | — | — | `2011`→`H_DAMAGE_REDUCTION` (98/98) | 105 | 100减伤, 50减伤, 60减伤 |
-| **13** | 3 | 3:3 | — | — | — | 2 | 主属性变为无系, 副属性变为抵抗系别, 副属性变为无系 |
-| **15** | 8 | 9:8 | — | `H_SELF_BUFF` (DOUBLE_ACTION) | — | 10 | 但释放技能可以释放2次, 入场时可以行动两次, 脉冲电场 |
-| **16** | 2 | 8:2 | — | — | — | 0 | 反击 |
-| **17** | 274 | 4:274 | 7:128, 50:4 | `H_HIT_COUNT_DELTA` (STUN_HEAL) | — | 273 | B1最终战--回合结束扣绩点, B1最终战--回合结束获得强化（双人老师）, npc挑战-类恶魔狼规则 |
-| **19** | 46 | 8:2, 9:44 | — | `H_SELF_BUFF` (ON_HIT_REACTION) | — | 41 | 7001019, 7190400, pvpce降双攻 |
-| **21** | 10 | 7:10 | 12:4 | `H_POWER_DYNAMIC` (PRIORITY) | — | 12 | 先手攻击时，伤害提升2%, 先手攻击时，伤害提升50%, 先手攻击时，伤害降低2% |
-| **22** | 2 | 2:2 | — | `H_HEAL_HP` (NUTRITION) | — | 2 | 营养均衡, 过度愈合 |
-| **23** | 112 | 12:112 | 7:1, 12:52 | `H_POWER_DYNAMIC` (POWER_MOD) | — | 119 | 专注力, 伤害威力增加10, 伤害威力增加15 |
-| **24** | 5 | 7:5 | — | `H_POWER_DYNAMIC` (EARTH_HEART) | — | 5 | 仅技能血必代偿, 仅技能血能代偿, 大地之心 |
-| **25** | 8 | 5:8 | 12:8 | `H_SELF_BUFF` (ELEMENT_VULN) | — | 3 | 克制撒钉印记, 克制攻击印记, 克制湿润印记 |
-| **27** | 4 | 3:4 | — | `H_POWER_DYNAMIC` (MOMENTUM) | — | 4 | 刺激愈合, 多多, 火刺眼蜥蜴 |
-| **28** | 1 | 6:1 | — | `H_SELF_BUFF` (TEST_28) | — | 1 | 测试28 |
-| **29** | 6 | 4:6 | 12:6 | `H_POWER_DYNAMIC` (FIRE_RAGE) | — | 3 | 火怒-满血加伤, 生命值大于50%增伤20%, 生命值大于50%增伤30% |
-| **30** | 2 | 6:1, 11:1 | 12:2 | — | — | 1 | 全力一击--耗能增幅, 幽灵爆发--耗能增幅 |
-| **31** | 2 | 8:2 | 12:2 | — | — | 1 | 喋血-增加伤害, 舍身爆破--耗血提威力 |
-| **32** | 89 | 7:89 | — | `H_PASSIVE_ENERGY_REDUCE` (COST_MOD) | — | 71 | 共鸣魔法--激活能量, 其他技能-1能耗, 冰冻光线 |
-| **33** | 2 | 1:2 | — | `H_SELF_BUFF` (ENTRY_AMBUSH) | — | 4 | 特殊附加状态提升捕捉率20, 精神紧张——降低阈值 |
-| **34** | 7 | 3:7 | — | `H_POWER_DYNAMIC` (OVERLOAD) | — | 7 | 反向两倍回血, 无法回能, 无法回血 |
-| **35** | 81 | 7:81 | 7:3, 12:35 | `H_SELF_BUFF` (ELEMENT_TRIGGER) | — | 80 | 临时--磷光, 交换每回合释放的技能, 使用冰系技能后，地系技能威力提升% |
-| **37** | 18 | 9:18 | — | `H_PASSIVE_ENERGY_REDUCE` (EFFICIENCY) | — | 16 | 加个雪球, 加速时空, 加速时空新 |
-| **38** | 17 | 6:17 | — | `H_DAMAGE_REDUCTION` (SURVIVAL) | — | 18 | s2赛季天赋-首次受到致命伤害时，复活并回复25%HP，并在获得后驱散不可获得, 主线被动复活, 剧情--受到致死伤害，吹飞所有队友 |
-| **39** | 1 | 5:1 | — | `H_SELF_BUFF` (DUCK) | — | 1 | 草头鸭 |
-| **40** | 48 | 5:48 | — | — | — | 38 | 4层dot标记转化为回血, 养分汲取：检测目标身上的空标记层数，每有1层回复5%生命, 冰钻 |
-| **41** | 9 | 4:9 | — | `H_SELF_BUFF` (HP_CONDITIONAL) | — | 8 | 养分汲取：生命值低于50%时偷取敌方所有能量, 族群守护：生命值首次低于30%时，随机获得10次奉献效果, 生命低于50%时，获得50%物理攻击强化 |
-| **42** | 14 | 4:14 | — | `H_DAMAGE_REDUCTION` (NON_SE_REDUCE) | — | 17 | s2赛季天赋---无视敌人的系别抵抗, 不会触发敌人的系别抵抗, 克制伤害+1% |
-| **43** | 7 | 7:7 | — | `H_SELF_BUFF` (QUICK_START) | — | 8 | 先手攻击时，吸血30%--s2赛季天赋, 先手攻击时，额外吸血100%, 剧情-翼魔法-先手攻击随机获得buff |
-| **45** | 16 | 4:16 | 12:11 | `H_HIT_COUNT_DELTA` (HIT_COUNT) | — | 22 | 乘胜追击, 孢子爆散连击数+1, 忽幽狸2 |
-| **46** | 23 | 6:23 | — | — | `2046`→`H_SELF_BUFF` (23/23) | 23 | 击杀回1能量, 击杀回2%血, 击杀回血回能 |
-| **48** | 15 | 7:15 | 7:1 | `H_FORCE_SWITCH` (FORCE_SWITCH) | `2050`→`H_SELF_BUFF` (2/15) | 38 | 偷懒, 回环闪电-释放技能后下场, 应对蜕壳 |
-| **49** | 34 | 5:34 | — | `H_SELF_BUFF` (TURN_END_TRANSFORM) | — | 30 | B1最终战--驱散骨头龙复活, npc挑战-入场获得类恶魔狼效果, 入场中毒 |
-| **50** | 10 | 4:10 | 7:10 | — | `2050`→`H_SELF_BUFF` (10/10) | 16 | 进战附加状态--埋地, 进战附加状态--尾随, 进战附加状态--幻化 |
-| **51** | 6 | 8:6 | 12:1 | `H_SELF_BUFF` (DREAM) | — | 7 | 冷冷梦筛选, 剧情被动--敌人释放共鸣魔法破防, 小幽灵脸 |
-| **52** | 16 | 6:16 | 7:2 | `H_HEAL_ENERGY` (ENERGY_GAIN) | — | 16 | 能量为0时，换上小皮球, 能量为0时，换上粉星星, 能量为0时，脱离 |
-| **53** | 14 | 6:14 | — | `H_HEAL_HP` (HEAL_MOD) | — | 11 | 0能耗技能威力提升30%, 3能耗的技能威力提升10%, 3能耗的技能强化攻防 |
-| **54** | 3 | 5:3 | — | `H_LIFE_DRAIN` (DRAIN) | — | 5 | 吸血, 吸血百分之100, 吸血百分之50 |
-| **55** | 4 | 5:2, 7:2 | — | — | — | 4 | 一般系技能，额外获得地系, 技能赋予幻, 抹除系别 |
-| **56** | 94 | 6:94 | 7:2 | `H_SELF_BUFF` (SKILL_COPY) | — | 72 | 伊里斯的噩梦1, 伊里斯的噩梦2, 伊里斯的噩梦3 |
-| **57** | 1 | 1:1 | — | — | — | 2 | 雷电充能 |
-| **58** | 1 | 4:1 | — | `H_FREEZE` (FREEZE_STATUS) | — | 1 | 冻结 |
-| **60** | 1 | 2:1 | — | — | — | 1 | 规则--被应对时获得20%防御降低 |
-| **62** | 5 | 2:5 | — | — | — | 6 | 减CD, 敌人CD+1, 敌人CD+2 |
-| **63** | 20 | 11:20 | — | `H_SELF_BUFF` (CHAR_SPECIFIC_A) | — | 19 | 仪式巨像, 仪式巨像首领, 冰钻 |
-| **64** | 94 | 8:94 | — | `H_SELF_BUFF` (CONDITIONAL_TRIGGER) | — | 93 | 一字斩, 不移, 两侧技能威力+10 |
-| **65** | 1 | 0:1 | — | — | — | 1 | 耀光 |
-| **66** | 3 | 4:3 | — | — | — | 3 | 回合结束阶段如果损失生命，恢复1能量, 团体战硬化皮肤效果：回合结束阶段收到的伤害降低90%, 首领战硬化皮肤效果：回合结束阶段受到的伤害降低50% |
-| **67** | 29 | 4:29 | — | `H_SELF_BUFF` (COUNTER_REWARD) | — | 27 | 剧情规则--应对成功攻击+10%, 受身, 应对成功下回合先制+1 |
-| **68** | 16 | 6:16 | — | `H_POISON` (POISON_FANG) | — | 16 | 准备期间，防御提高, 准备都能吸血, 可立鸡 |
-| **69** | 1 | 5:1 | — | — | — | 1 | 释放的状态类技能，目标变为全场精灵 |
-| **70** | 2 | 3:2 | — | — | — | 2 | 回合结束时，如果场上的友方精灵能量为0，则会将友方精灵替换 |
-| **71** | 3 | 2:3 | — | `H_HEAL_HP` (DARK_HEAL) | — | 3 | 绿洲猛犸象, 霹雳宝宝, 黑魔法——背包内生效 |
-| **72** | 61 | 4:61 | — | `H_SELF_BUFF` (OTTER) | — | 61 | 冰钻1, 冰钻10, 冰钻11 |
-| **73** | 24 | 3:24 | — | `H_SELF_BUFF` (TEAM_ON_DEATH) | — | 23 | 冰钻, 死亡时来源加双攻, 死亡时给敌方加攻防 |
-| **74** | 1 | 5:1 | — | — | — | 1 | 能量恢复倍率为0 |
-| **75** | 5 | 2:5 | — | `H_SELF_BUFF` (DOUBLE_TRIGGER) | — | 4 | 中毒触发两次, 所有回合开始和结束时的效果不会触发, 所有回合开始和结束时的效果会被触发2次 |
-| **76** | 4 | 6:4 | — | `H_SELF_BUFF` (SLEEPWALK) | — | 4 | 垂怜, 梦游, 深蓝鲸 |
-| **77** | 19 | 10:19 | 50:4 | `H_SELF_BUFF` (SLOT_PRIORITY) | — | 18 | 1位置的技能，能耗降低1, 2位置的技能，能耗降低2, 3位置的技能，能耗降低3 |
-| **78** | 2 | 1:2 | — | — | — | 2 | 多西, 小独角兽 |
-| **79** | 1 | 1:1 | — | `H_SELF_BUFF` (LANTERN) | — | 2 | 自身的能耗增加的效果变成能耗降低；能耗降低的效果变成能耗增加 |
-| **80** | 1 | 1:1 | 7:1 | `H_SELF_BUFF` (CYCLOPS) | — | 1 | 回合结束，交换双方本回合使用的技能能耗 |
-| **83** | 2 | 6:2 | — | `H_SELF_BUFF` (MIRROR_PRIORITY) | — | 1 | 和己方的同名的技能获得迅捷 |
-| **84** | 6 | 7:6 | — | `H_SELF_BUFF` (FEYNMAN) | — | 4 | 正面效果和负面效果，都会让双方获得, 费曼 |
-| **85** | 1 | 17:1 | — | — | — | 1 | 反转先手效果 |
-| **86** | 8 | 6:1, 7:7 | — | `H_SELF_BUFF` (CHAR_SPECIFIC_B) | — | 6 | 收到驱散时给来源奉献, 物防提升时加物攻, 绿翼鸟 |
-| **87** | 1 | 2:1 | — | `H_HEAL_ENERGY` (ENERGY_HEAL) | — | 1 | 回能量回血 |
-| **88** | 2 | 3:2 | — | `H_SELF_BUFF` (CHARGE) | — | 2 | 蓄力 |
-| **89** | 9 | 13:1, 25:8 | — | `H_SELF_BUFF` (REFRACT) | — | 9 | 光系技能, 天通地明, 技能栏每个系别会给本技能不同效果 |
-| **90** | 2 | 5:2 | — | — | — | 2 | 中毒buff变为印记, 转化为星陨 |
-| **91** | 12 | 4:1, 5:11 | — | `H_HIT_COUNT_DELTA` (DYNAMIC_HIT) | — | 10 | 动态修正连击, 可烤汪, 敌人每有一层中毒，对他的攻击连击数+1 |
-| **92** | 16 | 2:16 | — | `H_SELF_BUFF` (FREEZE_LOCK) | — | 16 | 友军免疫粉星星离场, 奉献1, 奉献2 |
-| **93** | 14 | 13:14 | — | `H_SELF_BUFF` (ENTRY_FIRST_TURN) | — | 15 | 入场首回合，技能可以释放2次。, 入场首回合，技能威力提高40, 入场首轮物攻加100 |
-| **94** | 2 | 1:1, 4:1 | — | `H_METEOR_MARK` (MARK_METEOR) | — | 3 | 新增buff94, 星陨 |
-| **95** | 2 | 3:2 | — | — | — | 2 | 凡鹰, 新增buff95 |
-| **96** | 2 | 4:2 | — | — | — | 3 | 噩梦护盾--伪噩梦, 噩梦护盾--真噩梦 |
-| **97** | 1 | 3:1 | — | — | — | 1 | 改变idle |
-| **98** | 18 | 2:18 | — | — | — | 19 | 光, 冰, 地 |
-| **99** | 2 | 1:2 | — | — | — | 2 | 变箱子, 变随机精灵 |
-| **100** | 10 | 8:10 | — | `H_HEAL_ENERGY` (ELEMENT_ENERGY) | — | 6 | 应对攻击技能，物防+20%, 应对状态技能，速度+20%, 应对防御技能，物攻+20% |
-| **101** | 1 | 3:1 | — | `H_SELF_BUFF` (EXTEND_ENTRY) | — | 1 | 延长入场效果一回合 |
-| **102** | 10 | 5:10 | — | `H_CUTE_GAIN` (CUTE_SPEED) | — | 10 | 剧情--B1最终战变身幻王, 变身棋绮后白子, 变身棋绮后黑子 |
-| **103** | 2 | 5:2 | — | `H_SELF_BUFF` (DIFF_SKILL_COST) | — | 2 | 上回合一样的技能加威力, 上回合不一样的技能减能耗 |
-| **104** | 1 | 1:1 | — | `H_SELF_BUFF` (MAGIC_KILLER) | — | 3 | 魔力杀手 |
-| **105** | 2 | 8:2 | — | `H_SELF_BUFF` (SKILL_CHECK) | — | 2 | 检测已经学习技能 |
-| **106** | 2 | 2:2 | — | `H_SELF_BUFF` (POSITION_COST) | — | 2 | 改变位置时威力+20, 改变位置时能耗-1 |
-| **107** | 10 | 2:10 | — | `H_POWER_DYNAMIC` (COND_POWER) | — | 10 | 若敌方本回合入场则威力+50, 若敌方本回合入场则威力+60, 若敌方本回合入场则威力翻倍 |
-| **108** | 23 | 4:23 | — | `H_POWER_DYNAMIC` (FLAT_POWER) | — | 35 | 仅技能先制+1, 仅技能先制-1, 仅技能威力+10 |
-| **109** | 1 | 1:1 | — | `H_HEAL_HP` (OVERFLOW_HEAL) | — | 1 | 溢出恢复给场下精灵 |
-| **110** | 1 | 1:1 | — | `H_SELF_BUFF` (MARK_NO_DECAY) | — | 3 | 星陨不清零 |
-| **111** | 2 | 3:2 | — | `H_SELF_BUFF` (BURN_REVERSE) | — | 2 | 灼烧反向衰减, 灼烧变中毒 |
-| **112** | 1 | 1:1 | — | `H_SELF_BUFF` (COVER) | — | 1 | 掩护 |
-| **113** | 1 | 3:1 | — | — | — | 1 | 5回合后复活 |
-| **114** | 1 | 1:1 | — | `H_SELF_BUFF` (CAP_RAISE) | — | 3 | 提高上限 |
-| **115** | 1 | 0:1 | — | `H_HIT_COUNT_DELTA` (DRIVE) | — | 1 | 传动 |
-| **116** | 1 | 0:1 | — | — | — | 1 | 全传动 |
-| **117** | 14 | 2:14 | — | `H_SELF_BUFF` (SLOT_MOD) | — | 11 | 1号位置威力+10, 1号位置威力+30, 1号位置威力+60 |
-| **118** | 1 | 1:1 | — | `H_SELF_BUFF` (RETURN) | — | 1 | 归位 |
-| **119** | 2 | 2:2 | — | `H_SELF_BUFF` (FIRST_USE_POWER) | — | 2 | 1号位技能首次释放时威力+, 4号位技能首次释放时能耗- |
-| **120** | 1 | 1:1 | — | `H_SELF_BUFF` (SIDE_COST) | — | 1 | 两侧技能能耗-1 |
-| **121** | 7 | 5:2, 6:5 | — | `H_SELF_BUFF` (TEST) | — | 6 | 养分汲取：每失去1点能量，获得1层空标记, 失去能量时给敌方一个检测蜜果灵标记效果, 测试121 |
-| **122** | 2 | 3:2 | — | — | — | 2 | 伤害固定化(23~29), 伤害固定化(34~36) |
-| **123** | 1 | 2:1 | — | — | — | 1 | 根据名字长度强化伤害 |
-| **124** | 1 | 1:1 | — | — | — | 1 | 噩梦护盾专用保留噩梦效果 |
-| **125** | 1 | 5:1 | — | — | — | 1 | 临时回复5点能量 |
-| **126** | 2 | 5:2 | — | — | — | 2 | 临时净化共鸣魔法指引, 临时净化失去名字 |
-| **127** | 1 | 1:1 | — | — | — | 2 | 测试-亲密挺住 |
-| **128** | 1 | 1:1 | — | — | — | 1 | 测试-亲密暴击 |
-| **129** | 1 | 0:1 | — | — | — | 1 | 剧情--展示共鸣魔法 |
-| **130** | 3 | 1:3 | — | `H_SELF_BUFF` (ALERT) | — | 3 | 预警, 预警狐獴, 预警首领 |
-| **131** | 1 | 3:1 | — | — | — | 1 | 慈悲为怀 |
-| **132** | 3 | 7:3 | — | `H_SELF_BUFF` (BORROW) | — | 3 | 借用, 取念, 复写 |
-| **133** | 2 | 2:2 | — | — | — | 1 | 上岸蛙 |
-| **134** | 1 | 3:1 | — | — | — | 1 | 分段血量 |
-| **135** | 1 | 2:1 | — | — | — | 1 | 连击加灼烧 |
-| **136** | 2 | 1:2 | — | `H_SELF_BUFF` (CUTE_NO_CAP) | — | 2 | 无限萌化, 萌化不降低种族资质 |
-| **138** | 5 | 3:5 | — | — | — | 5 | 小光1淳朴, 小光2淳朴, 水星龙弦技能1_效果1 |
-| **139** | 1 | 2:1 | — | — | — | 1 | 纯净 |
-| **140** | 1 | 0:1 | — | — | — | 1 | 剧情--捕捉魔法 |
-| **141** | 1 | 3:1 | — | — | — | 1 | 能耗变化效率翻倍 |
-| **142** | 7 | 1:7 | — | `H_SELF_BUFF` (CUTE_CHAIN) | — | 7 | 撒娇, 检测能否继续萌化, 甜心续航 |
-| **143** | 12 | 7:12 | — | — | — | 12 | 改变赋予印记鲤拉鳐 |
+| **1** | 160 | 3:160 | 23:1 | `H_SELF_BUFF` (STAT_MOD) | `2011`→`H_DAMAGE_REDUCTION` (8/160) | 298 |  |
+| **3** | 47 | 2:47 | — | — | — | 54 |  |
+| **4** | 3 | 1:3 | — | `H_SELF_BUFF` (LOCK_SWITCH) | — | 15 |  |
+| **5** | 2 | 5:2 | 7:2 | `H_LEECH` (LEECH) | — | 1 |  |
+| **6** | 10 | 4:10 | — | `H_SELF_BUFF` (BOSS_STUN) | — | 17 |  |
+| **7** | 8 | 4:1, 8:7 | 7:6 | `H_POISON` (STATUS_CONDITION) | `2011`→`H_DAMAGE_REDUCTION` (1/8) | 9 |  |
+| **9** | 1 | 2:1 | — | — | — | 1 |  |
+| **10** | 10 | 7:10 | 7:1 | `H_SELF_BUFF` (NEXT_PET) | — | 12 |  |
+| **11** | 101 | 11:1, 12:100 | — | — | `2011`→`H_DAMAGE_REDUCTION` (101/101) | 108 |  |
+| **13** | 3 | 3:3 | — | — | — | 2 |  |
+| **15** | 8 | 9:8 | — | `H_SELF_BUFF` (DOUBLE_ACTION) | — | 10 |  |
+| **16** | 2 | 8:2 | — | — | — | 0 |  |
+| **17** | 304 | 4:304 | 7:131, 50:4, 60:2 | `H_HIT_COUNT_DELTA` (STUN_HEAL) | — | 302 |  |
+| **19** | 49 | 8:2, 9:47 | — | `H_SELF_BUFF` (ON_HIT_REACTION) | — | 44 |  |
+| **21** | 10 | 7:10 | 12:4 | `H_POWER_DYNAMIC` (PRIORITY) | — | 12 |  |
+| **22** | 2 | 2:2 | — | `H_HEAL_HP` (NUTRITION) | — | 2 |  |
+| **23** | 116 | 12:116 | 7:1, 12:55 | `H_POWER_DYNAMIC` (POWER_MOD) | — | 122 |  |
+| **24** | 5 | 7:5 | — | `H_POWER_DYNAMIC` (EARTH_HEART) | — | 6 |  |
+| **25** | 10 | 5:10 | 12:10 | `H_SELF_BUFF` (ELEMENT_VULN) | — | 5 |  |
+| **27** | 4 | 3:4 | — | `H_POWER_DYNAMIC` (MOMENTUM) | — | 4 |  |
+| **28** | 1 | 6:1 | — | `H_SELF_BUFF` (TEST_28) | — | 1 |  |
+| **29** | 6 | 4:6 | 12:6 | `H_POWER_DYNAMIC` (FIRE_RAGE) | — | 3 |  |
+| **30** | 2 | 6:1, 11:1 | 12:2 | — | — | 1 |  |
+| **31** | 2 | 8:2 | 12:2 | — | — | 1 |  |
+| **32** | 92 | 7:92 | — | `H_PASSIVE_ENERGY_REDUCE` (COST_MOD) | — | 74 |  |
+| **33** | 2 | 1:2 | — | `H_SELF_BUFF` (ENTRY_AMBUSH) | — | 4 |  |
+| **34** | 9 | 3:9 | — | `H_POWER_DYNAMIC` (OVERLOAD) | — | 9 |  |
+| **35** | 88 | 7:88 | 7:3, 12:42 | `H_SELF_BUFF` (ELEMENT_TRIGGER) | — | 89 |  |
+| **37** | 22 | 9:22 | — | `H_PASSIVE_ENERGY_REDUCE` (EFFICIENCY) | — | 19 |  |
+| **38** | 18 | 6:18 | — | `H_DAMAGE_REDUCTION` (SURVIVAL) | — | 19 |  |
+| **39** | 1 | 5:1 | — | `H_SELF_BUFF` (DUCK) | — | 1 |  |
+| **40** | 75 | 6:75 | — | — | — | 45 |  |
+| **41** | 9 | 4:9 | — | `H_SELF_BUFF` (HP_CONDITIONAL) | — | 9 |  |
+| **42** | 15 | 4:15 | — | `H_DAMAGE_REDUCTION` (NON_SE_REDUCE) | — | 18 |  |
+| **43** | 9 | 7:9 | — | `H_SELF_BUFF` (QUICK_START) | — | 10 |  |
+| **45** | 16 | 4:16 | 12:11 | `H_HIT_COUNT_DELTA` (HIT_COUNT) | — | 22 |  |
+| **46** | 23 | 6:23 | — | — | `2046`→`H_SELF_BUFF` (23/23) | 23 |  |
+| **48** | 15 | 7:15 | 7:1 | `H_FORCE_SWITCH` (FORCE_SWITCH) | `2050`→`H_SELF_BUFF` (2/15) | 38 |  |
+| **49** | 36 | 5:36 | — | `H_SELF_BUFF` (TURN_END_TRANSFORM) | — | 32 |  |
+| **50** | 10 | 4:10 | 7:10 | — | `2050`→`H_SELF_BUFF` (10/10) | 16 |  |
+| **51** | 6 | 8:6 | 12:1 | `H_SELF_BUFF` (DREAM) | — | 7 |  |
+| **52** | 17 | 6:17 | 7:3 | `H_HEAL_ENERGY` (ENERGY_GAIN) | — | 17 |  |
+| **53** | 15 | 6:15 | — | `H_HEAL_HP` (HEAL_MOD) | — | 13 |  |
+| **54** | 3 | 5:3 | — | `H_LIFE_DRAIN` (DRAIN) | — | 7 |  |
+| **55** | 5 | 5:2, 7:3 | — | — | — | 5 |  |
+| **56** | 94 | 6:94 | 7:2 | `H_SELF_BUFF` (SKILL_COPY) | — | 72 |  |
+| **57** | 1 | 1:1 | — | — | — | 2 |  |
+| **58** | 1 | 4:1 | — | `H_FREEZE` (FREEZE_STATUS) | — | 1 |  |
+| **60** | 1 | 2:1 | — | — | — | 1 |  |
+| **62** | 5 | 2:5 | — | — | — | 6 |  |
+| **63** | 21 | 11:21 | — | `H_SELF_BUFF` (CHAR_SPECIFIC_A) | — | 20 |  |
+| **64** | 141 | 8:141 | — | `H_SELF_BUFF` (CONDITIONAL_TRIGGER) | — | 130 |  |
+| **65** | 1 | 0:1 | — | — | — | 1 |  |
+| **66** | 3 | 4:3 | — | — | — | 3 |  |
+| **67** | 30 | 4:30 | — | `H_SELF_BUFF` (COUNTER_REWARD) | — | 28 |  |
+| **68** | 16 | 6:16 | — | `H_POISON` (POISON_FANG) | — | 16 |  |
+| **69** | 1 | 5:1 | — | — | — | 1 |  |
+| **70** | 2 | 3:2 | — | — | — | 2 |  |
+| **71** | 3 | 2:3 | — | `H_HEAL_HP` (DARK_HEAL) | — | 3 |  |
+| **72** | 61 | 4:61 | — | `H_SELF_BUFF` (OTTER) | — | 61 |  |
+| **73** | 24 | 3:24 | — | `H_SELF_BUFF` (TEAM_ON_DEATH) | — | 23 |  |
+| **74** | 1 | 5:1 | — | — | — | 1 |  |
+| **75** | 5 | 2:5 | — | `H_SELF_BUFF` (DOUBLE_TRIGGER) | — | 5 |  |
+| **76** | 5 | 6:5 | — | `H_SELF_BUFF` (SLEEPWALK) | — | 5 |  |
+| **77** | 19 | 10:19 | 50:4 | `H_SELF_BUFF` (SLOT_PRIORITY) | — | 18 |  |
+| **78** | 2 | 1:2 | — | — | — | 2 |  |
+| **79** | 1 | 1:1 | — | `H_SELF_BUFF` (LANTERN) | — | 2 |  |
+| **80** | 1 | 1:1 | 7:1 | `H_SELF_BUFF` (CYCLOPS) | — | 1 |  |
+| **83** | 2 | 6:2 | — | `H_SELF_BUFF` (MIRROR_PRIORITY) | — | 1 |  |
+| **84** | 6 | 7:6 | — | `H_SELF_BUFF` (FEYNMAN) | — | 4 |  |
+| **85** | 1 | 17:1 | — | — | — | 1 |  |
+| **86** | 10 | 6:1, 7:9 | — | `H_SELF_BUFF` (CHAR_SPECIFIC_B) | — | 8 |  |
+| **87** | 1 | 2:1 | — | `H_HEAL_ENERGY` (ENERGY_HEAL) | — | 1 |  |
+| **88** | 2 | 3:2 | — | `H_SELF_BUFF` (CHARGE) | — | 2 |  |
+| **89** | 11 | 13:1, 25:10 | — | `H_SELF_BUFF` (REFRACT) | — | 11 |  |
+| **90** | 2 | 5:2 | — | — | — | 2 |  |
+| **91** | 11 | 5:11 | — | `H_HIT_COUNT_DELTA` (DYNAMIC_HIT) | — | 9 |  |
+| **92** | 20 | 2:20 | — | `H_SELF_BUFF` (FREEZE_LOCK) | — | 20 |  |
+| **93** | 16 | 13:16 | — | `H_SELF_BUFF` (ENTRY_FIRST_TURN) | — | 17 |  |
+| **94** | 2 | 1:1, 4:1 | — | `H_METEOR_MARK` (MARK_METEOR) | — | 3 |  |
+| **95** | 2 | 3:2 | — | — | — | 2 |  |
+| **96** | 2 | 4:2 | — | — | — | 3 |  |
+| **97** | 1 | 3:1 | — | — | — | 1 |  |
+| **98** | 18 | 2:18 | — | — | — | 19 |  |
+| **99** | 2 | 1:2 | — | — | — | 2 |  |
+| **100** | 10 | 8:10 | — | `H_HEAL_ENERGY` (ELEMENT_ENERGY) | — | 6 |  |
+| **101** | 1 | 3:1 | — | `H_SELF_BUFF` (EXTEND_ENTRY) | — | 1 |  |
+| **102** | 10 | 5:10 | — | `H_CUTE_GAIN` (CUTE_SPEED) | — | 10 |  |
+| **103** | 3 | 5:3 | — | `H_SELF_BUFF` (DIFF_SKILL_COST) | — | 3 |  |
+| **104** | 1 | 1:1 | — | `H_SELF_BUFF` (MAGIC_KILLER) | — | 3 |  |
+| **105** | 2 | 8:2 | — | `H_SELF_BUFF` (SKILL_CHECK) | — | 2 |  |
+| **106** | 2 | 2:2 | — | `H_SELF_BUFF` (POSITION_COST) | — | 2 |  |
+| **107** | 10 | 2:10 | — | `H_POWER_DYNAMIC` (COND_POWER) | — | 10 |  |
+| **108** | 23 | 4:23 | — | `H_POWER_DYNAMIC` (FLAT_POWER) | — | 37 |  |
+| **109** | 2 | 5:2 | — | `H_HEAL_HP` (OVERFLOW_HEAL) | — | 2 |  |
+| **110** | 1 | 1:1 | — | `H_SELF_BUFF` (MARK_NO_DECAY) | — | 3 |  |
+| **111** | 2 | 3:2 | — | `H_SELF_BUFF` (BURN_REVERSE) | — | 2 |  |
+| **112** | 1 | 1:1 | — | `H_SELF_BUFF` (COVER) | — | 1 |  |
+| **113** | 1 | 3:1 | — | — | — | 1 |  |
+| **114** | 2 | 2:2 | — | `H_SELF_BUFF` (CAP_RAISE) | — | 4 |  |
+| **115** | 1 | 0:1 | — | `H_HIT_COUNT_DELTA` (DRIVE) | — | 1 |  |
+| **116** | 1 | 0:1 | — | — | — | 1 |  |
+| **117** | 14 | 2:14 | — | `H_SELF_BUFF` (SLOT_MOD) | — | 11 |  |
+| **118** | 1 | 1:1 | — | `H_SELF_BUFF` (RETURN) | — | 1 |  |
+| **119** | 2 | 2:2 | — | `H_SELF_BUFF` (FIRST_USE_POWER) | — | 2 |  |
+| **120** | 2 | 1:2 | — | `H_SELF_BUFF` (SIDE_COST) | — | 2 |  |
+| **121** | 9 | 5:2, 6:7 | — | `H_SELF_BUFF` (TEST) | — | 8 |  |
+| **122** | 2 | 3:2 | — | — | — | 2 |  |
+| **123** | 1 | 2:1 | — | — | — | 1 |  |
+| **124** | 1 | 1:1 | — | — | — | 1 |  |
+| **125** | 1 | 5:1 | — | — | — | 1 |  |
+| **126** | 2 | 5:2 | — | — | — | 2 |  |
+| **127** | 1 | 1:1 | — | — | — | 2 |  |
+| **128** | 1 | 1:1 | — | — | — | 1 |  |
+| **129** | 1 | 0:1 | — | — | — | 1 |  |
+| **130** | 3 | 1:3 | — | `H_SELF_BUFF` (ALERT) | — | 3 |  |
+| **131** | 1 | 3:1 | — | — | — | 1 |  |
+| **132** | 3 | 7:3 | — | `H_SELF_BUFF` (BORROW) | — | 3 |  |
+| **133** | 2 | 2:2 | — | — | — | 1 |  |
+| **134** | 1 | 3:1 | — | — | — | 1 |  |
+| **135** | 1 | 2:1 | — | — | — | 1 |  |
+| **136** | 2 | 1:2 | — | `H_SELF_BUFF` (CUTE_NO_CAP) | — | 4 |  |
+| **138** | 5 | 3:5 | — | — | — | 5 |  |
+| **139** | 1 | 2:1 | — | — | — | 1 |  |
+| **140** | 1 | 0:1 | — | — | — | 1 |  |
+| **141** | 1 | 3:1 | — | — | — | 1 |  |
+| **142** | 8 | 1:8 | — | `H_SELF_BUFF` (CUTE_CHAIN) | — | 8 |  |
+| **143** | 13 | 7:13 | — | — | — | 12 |  |
+| **144** | 1 | 4:1 | — | — | — | 1 |  |
+| **145** | 2 | 7:2 | — | — | — | 2 |  |
+| **146** | 33 | 5:33 | — | — | — | 36 |  |
+| **147** | 2 | 3:2 | — | — | — | 2 |  |
+| **148** | 1 | 3:1 | — | — | — | 1 |  |
+| **151** | 1 | 3:1 | — | — | — | 0 |  |
+| **153** | 1 | 4:1 | — | — | — | 0 |  |
+| **154** | 4 | 2:4 | — | — | — | 2 |  |
+| **155** | 1 | 1:1 | — | — | — | 1 |  |
 
 ## 4. Rule debt
 
@@ -265,7 +277,7 @@ Per prefix: the dominant `buffbase_order` (the schema axis underlying the prefix
 
 | prefix | handler | alias | dominant order | concentration | identity? | clean rewrite? |
 |---:|---|---|---:|---:|:---:|:---:|
-| 2011 | `H_DAMAGE_REDUCTION` | DAMAGE_REDUCE | 11 | 91.6% | ✓ | — |
+| 2011 | `H_DAMAGE_REDUCTION` | DAMAGE_REDUCE | 11 | 91.8% | ✓ | — |
 | 2046 | `H_SELF_BUFF` | ON_KILL | 46 | 95.8% | ✓ | — |
 | 2050 | `H_SELF_BUFF` | ENTRY_STATUS | 50 | 83.3% | ✓ | — |
 
