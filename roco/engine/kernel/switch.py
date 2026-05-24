@@ -18,7 +18,7 @@ from roco.common.enums import AbilityFlag, Element
 from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import ELEMENT_BUG, PET_ABILITY, PET_PRIMARY, PET_SECONDARY, SKILL_ELEMENT, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_rows import TIMING_ENEMY_SWITCH, TIMING_SWITCH_IN, TIMING_SWITCH_OUT
+from roco.engine.kernel.op_rows import TIMING_HOOK_ENEMY_SWITCH, TIMING_PAK_SDT, TIMING_HOOK_SWITCH_OUT
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.state import KernelState, SideState, replace_pet, replace_side, side
 
@@ -146,7 +146,7 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
         1 for idx, other in enumerate(side_state.pets)
         if idx != slot and not other.fainted and hot.PETS[other.pet_id][PET_PRIMARY] == ELEMENT_BUG
     )
-    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_SWITCH_IN, ctx)
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_PAK_SDT, ctx)
     if ctx.entry_self_damage_bps:
         pet = pet._replace(current_hp=max(1, pet.current_hp - pet.current_hp * ctx.entry_self_damage_bps // BPS))
     if ctx.drain_bps:
@@ -188,7 +188,7 @@ def apply_switch_out_ability(side_state: SideState, outgoing_slot: int, incoming
         return side_state
     ctx = StageCtx()
     ctx.reset(0, outgoing_slot, 0, incoming_slot, 0)
-    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_SWITCH_OUT, ctx)
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_HOOK_SWITCH_OUT, ctx)
     if ctx.heal_hp_bps:
         max_hp = hot.PETS[incoming.pet_id][STAT_HP]
         incoming = incoming._replace(current_hp=min(max_hp, incoming.current_hp + max_hp * ctx.heal_hp_bps // BPS))
@@ -208,7 +208,7 @@ def apply_enemy_switch_reactions(state: KernelState, reactor_side_id: int, switc
         return state
     ctx = StageCtx()
     ctx.reset(reactor_side_id, reactor_slot, switched_side_id, incoming_slot, 0)
-    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_ENEMY_SWITCH, ctx)
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_HOOK_ENEMY_SWITCH, ctx)
     if ctx.entry_cost_delta:
         reactor = reactor._replace(global_cost_delta=max(-15, min(15, reactor.global_cost_delta + ctx.entry_cost_delta)))
         reactor_side = replace_pet(reactor_side, reactor_slot, reactor)

@@ -5,6 +5,7 @@ from typing import Any
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.emit import write_static_files
 
+from .battle_events import write_battle_events
 from .bloodline_magic import write_bloodline_magic
 from .buffbase import write_buffbase_params
 from .canonical_adapters import write_canonical_adapters
@@ -25,6 +26,7 @@ def write_all() -> dict[str, Any]:
     bundle = build_static_bundle()
     static_paths = write_static_files(bundle, STATIC_DIR)
 
+    battle_event_count = write_battle_events(bundle)
     primitive_result = write_primitive_map(bundle)
     battle_global_count = write_battle_globals(bundle)
     skill_dam_type_count = write_skill_dam_types(bundle)
@@ -43,6 +45,7 @@ def write_all() -> dict[str, Any]:
     return {
         "source_hash": bundle.source_hash,
         "static_paths": static_paths,
+        "battle_event_count": battle_event_count,
         "primitive_stats": primitive_result["stats"],
         "battle_global_num_count": battle_global_count,
         "skill_dam_type_count": skill_dam_type_count,

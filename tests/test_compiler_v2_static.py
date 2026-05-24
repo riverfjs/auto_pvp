@@ -7,7 +7,7 @@ import pytest
 
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.emit import write_static_files
-from roco.compiler_v2.sources import DEFAULT_LUA_ROOT, parse_lua_enums
+from roco.compiler_v2.sources import DEFAULT_LUA_ROOT, LuaEnumSource, parse_lua_enums
 
 
 def test_lua_enum_parser_reads_real_battle_enums():
@@ -64,8 +64,15 @@ def test_static_files_are_importable_python(tmp_path: Path):
 def test_generated_runtime_static_adapters_match_bundle():
     bundle = build_static_bundle()
 
-    from roco.generated import battle_globals, bloodline_magic, skill_dam_types, weather_table
+    from roco.generated import (
+        battle_events,
+        battle_globals,
+        bloodline_magic,
+        skill_dam_types,
+        weather_table,
+    )
 
+    assert battle_events.BATTLE_EVENT_VALUES == bundle.lua_enums["BattleEvent"]
     assert battle_globals.BATTLE_GLOBAL_NUMS == bundle.battle_global_nums
     assert skill_dam_types.SKILL_DAM_TYPE_TO_ELEMENT == bundle.skill_dam_type_to_element
     assert skill_dam_types.SKILL_DAM_TYPE_TO_ELEMENT_NAME[7] == "地"
@@ -84,6 +91,25 @@ def test_generated_runtime_static_adapters_match_bundle():
 def test_compiler_v2_has_no_semantics_table_module():
     path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "semantics.py"
     assert not path.exists()
+
+
+def test_generated_battle_events_match_pak_lua_enum():
+    from roco.generated import battle_events
+
+    assert battle_events.BATTLE_EVENT_VALUES == LuaEnumSource().enums(("BattleEvent",))["BattleEvent"]
+    assert battle_events.BEVT_ROUND_CALC_START == 6
+    assert battle_events.BEVT_BEFORE_HURT == 11
+
+
+def test_compiler_v2_has_no_generated_runtime_imports():
+    root = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2"
+    offenders: list[str] = []
+    forbidden = ("from roco.generated", "import roco.generated", "roco/generated/primitive_map.json")
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        if any(term in text for term in forbidden):
+            offenders.append(path.relative_to(root).as_posix())
+    assert offenders == []
 
 
 def _import_module(path: Path, name: str):

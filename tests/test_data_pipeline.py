@@ -7,7 +7,7 @@ import pytest
 
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
-from roco.engine import catalog_compiler
+from roco.data import catalog_compiler
 from roco.compiler_v2.static_artifacts.marks import mark_note_by_idx
 from roco.data.utils import load_jsonl, write_jsonl
 

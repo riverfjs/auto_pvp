@@ -47,7 +47,7 @@ engine 运行时生成物构建器
 roco/generated/*
     |
     v
-roco.engine.catalog_compiler
+roco.data.catalog_compiler
     - pak canonical 记录
     - 已链接的技能/特性 runtime rows
     |
@@ -92,11 +92,11 @@ pak 有命名来源时，`primitive_key` 必须来自 pak：
 `uv run roco-refresh-artifacts` 按顺序执行这些步骤：
 
 1. `roco.compiler_v2.gen_prefix_map`
-   在 `roco/generated/` 下生成静态 pak/Lua 事实和 primitive maps。
+   在 `roco/generated/` 下生成静态 pak/Lua 事实、BattleEvent 常量和 primitive maps。
 2. `roco.engine.kernel.gen_runtime_artifacts`
    生成 engine-owned 的 `handler_indices.py`、`handler_order.py` 和
    `handler_table.py`。
-3. `roco.engine.catalog_compiler`
+3. `roco.data.catalog_compiler`
    从 pak 派生的 canonical 记录构建 `catalog_hot.py` 和 `catalog_debug.py`，
    并通过 engine 契约链接 primitive rows。
 4. `roco.compiler_v2.build_effect_families`
@@ -124,6 +124,7 @@ pak 有命名来源时，`primitive_key` 必须来自 pak：
 ```text
 catalog_hot.py              kernel 运行时目录
 catalog_debug.py            名称和调试查询表
+battle_events.py            Enum.BattleEvent 运行时常量
 handler_table.py            handler_idx -> op_* 函数表
 handler_indices.py          H_* 常量
 handler_order.py            engine handler 顺序

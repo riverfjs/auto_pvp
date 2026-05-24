@@ -53,10 +53,10 @@ from roco.engine.kernel.counter import fire_counter_skill
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.damage import damage, marked_skill_cost
 from roco.engine.kernel.op_rows import (
-    TIMING_AFTER_MOVE,
-    TIMING_BEFORE_MOVE,
-    TIMING_CALC_DAMAGE,
-    TIMING_TAKE_DAMAGE,
+    TIMING_PAK_BEFORE_HURT,
+    TIMING_HOOK_BEFORE_MOVE,
+    TIMING_PAK_ROUND_CALC_START,
+    TIMING_HOOK_TAKE_DAMAGE,
 )
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.residual import apply_after_move, end_turn
@@ -231,8 +231,8 @@ def _execute(
     if devotion_active:
         ctx.power_bps += _unpack_devotion(actor_side.devotion, DevotionIdx.FEIDUAN) * 1000
         ctx.hit_count += _unpack_devotion(actor_side.devotion, DevotionIdx.CHONGQUN)
-    _run_ability_timing(actor, TIMING_BEFORE_MOVE, ctx)
-    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_BEFORE_MOVE, ctx)
+    _run_ability_timing(actor, TIMING_HOOK_BEFORE_MOVE, ctx)
+    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_HOOK_BEFORE_MOVE, ctx)
     cost = max(0, cost - ctx.cost_delta if actor.ability_flags & int(AbilityFlag.COST_INVERT) else cost + ctx.cost_delta)
     if choice.action_code == ACTION_MAGIC and ctx.counter_success:
         ctx.power_bps = ctx.power_bps * WILLPOWER_COUNTER_STATUS_BPS // BPS
@@ -251,17 +251,17 @@ def _execute(
         actor_side = replace_pet(actor_side, actor_slot, actor)
         state = replace_side(state, actor_side_id, actor_side)
     if is_attack and first_strike:
-        _run_ability_timing(actor, TIMING_CALC_DAMAGE, ctx)
+        _run_ability_timing(actor, TIMING_PAK_ROUND_CALC_START, ctx)
     # Run the skill's CALC_DAMAGE side effects regardless of whether the
     # skill itself does damage — pak attaches things like dispel-marks
     # (焚烧烙印 / 1042008) to ``cast_moment=6`` on non-attack skills, and
     # gating them behind ``is_attack`` would just silently drop them.
-    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_CALC_DAMAGE, ctx)
+    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_PAK_ROUND_CALC_START, ctx)
     if is_attack:
         dealt = damage(actor, target, skill, ctx, state.weather, actor_side.marks, target_side.marks, first_strike)
         ctx.damage_dealt = dealt
         if dealt > 0:
-            _run_ability_timing(target, TIMING_TAKE_DAMAGE, ctx)
+            _run_ability_timing(target, TIMING_HOOK_TAKE_DAMAGE, ctx)
         next_hp = target.current_hp - dealt
         if next_hp <= 0 and target.ability_flags & int(AbilityFlag.CUTE_LETHAL_SHIELD):
             target = target._replace(current_hp=1, cute=target.cute + 1)
@@ -318,14 +318,14 @@ def _execute(
         state = replace_side(state, actor_side_id, actor_side)
     # ``ctx.actor_energy`` was set to the actor's *pre-cost* energy back at the
     # top of _execute (so BEFORE_MOVE / CALC_DAMAGE ops see the same reading
-    # pak documents for those timings).  By the time TIMING_AFTER_MOVE runs,
+    # pak documents for those timings).  By the time TIMING_PAK_BEFORE_HURT runs,
     # the skill cost, HP-for-energy substitution, counter, and first-action
     # branches have all settled — refresh the reading once here so AFTER_MOVE
     # ops (e.g. ``op_auto_switch_on_zero_energy`` for buff 20030160) see the
     # actor's actual remaining energy.  No other ctx field is refreshed.
     ctx.actor_energy = actor.current_energy
-    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_AFTER_MOVE, ctx)
-    _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
+    run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_PAK_BEFORE_HURT, ctx)
+    _run_ability_timing(actor, TIMING_PAK_BEFORE_HURT, ctx)
     ctx.poison_stacks += _unpack_skill_count(actor.element_poison_stacks, Element(skill[SKILL_ELEMENT]))
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)

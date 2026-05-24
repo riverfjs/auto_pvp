@@ -27,8 +27,8 @@ ET_INLAY = int(_enum_value("EffectType", "ET_INLAY"))
 BFT_CONDITIONAL_GRANT = int(_enum_value("BuffType", "BFT_NINETY_ONE"))
 BFT_BASE_EFFECT = int(_enum_value("BuffType", "BFT_O_EIGHT"))
 BFT_TRANSMISSION = int(_enum_value("BuffType", "BFT_O_FIFTEEN"))
-CUTE_BUFFBASE_PREFIX = 2000 + int(_enum_value("BuffType", "BFT_O_TWO"))
-TIMING_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
+BFT_CUTE_EFFECT = int(_enum_value("BuffType", "BFT_O_TWO"))
+TIMING_HOOK_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
 
 _TAG_RE = re.compile(r"</?[^>]+>")
 _SLOT_CLAUSE_RE = re.compile(r"本技能位于(?P<slots>.*?)时[，,]?(?P<body>[^。；]*)")
@@ -54,7 +54,7 @@ def decode_source_context(
         if _is_conditional_grant_buff(buff_rec):
             hit_outcome = _decode_conditional_hit_count(buff_rec, pak_data.buff_conf, text)
             if hit_outcome is not None:
-                return [(hit_outcome, TIMING_BEFORE_MOVE)]
+                return [(hit_outcome, TIMING_HOOK_BEFORE_MOVE)]
         if _is_transmission_buff(buff_rec):
             outcomes = _decode_slot_skill_mod(text)
             _append_transmission_gap(
@@ -215,9 +215,18 @@ def _condition_refs_are_cute_effects(
         if rec is None:
             return False
         base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
-        if not base_ids or not all(base_id // 1000 == CUTE_BUFFBASE_PREFIX for base_id in base_ids):
+        if not base_ids or not all(base_id // 1000 in _cute_buffbase_prefixes() for base_id in base_ids):
             return False
     return True
+
+
+@lru_cache(maxsize=1)
+def _cute_buffbase_prefixes() -> frozenset[int]:
+    return frozenset(
+        base_id // 1000
+        for base_id, order in BUFFBASE_ORDER.items()
+        if order == BFT_CUTE_EFFECT
+    )
 
 
 def _record_text(rec: dict) -> str:
@@ -253,7 +262,7 @@ def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, st
                 hit_bonus or 0,
                 1,
             ),
-            TIMING_BEFORE_MOVE,
+            TIMING_HOOK_BEFORE_MOVE,
         )]
     return []
 

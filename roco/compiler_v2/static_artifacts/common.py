@@ -15,6 +15,7 @@ PAK_BIN = DEFAULT_PAK_DATA_DIR / "BinData"
 
 INIT_PATH = GEN_DIR / "__init__.py"
 PRIMITIVE_MAP_PATH = GEN_DIR / "primitive_map.json"
+BATTLE_EVENTS_PATH = GEN_DIR / "battle_events.py"
 BATTLE_GLOBALS_PATH = GEN_DIR / "battle_globals.py"
 PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
 SKILL_DAM_TYPES_PATH = GEN_DIR / "skill_dam_types.py"

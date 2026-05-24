@@ -32,16 +32,15 @@ buff in BUFF_CONF directly — that path has no ambiguity since the entry
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 from roco.common.primitive_keys import effect_kind_key
+from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome, EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import (
     extract_int_list,
     pack_primitive_params,
     safe_int,
 )
+from roco.compiler_v2.primitive_map_builder import build_primitive_map
 
 
 def _load_ability_flag_table() -> dict[int, AbilityFlagOutcome]:
@@ -76,22 +75,16 @@ def count_buff_repeats(params_raw: list, buff_id: int) -> int:
     return 1
 
 
-_MAP_PATH = Path(__file__).resolve().parents[2] / "generated" / "primitive_map.json"
-
-
 def _load_primitive_maps() -> tuple[dict[int, str], dict[int, str], dict[int, str], dict[int, str]]:
-    """Load buff-primitive lookup tables from the generated json.
+    """Build buff-primitive lookup tables directly from pak/Lua source.
 
     Returns ``(buff_id_map, prefix_map, base_id_map, base_id_via_order_map)``.
     The first table handles pak-visible exact buff identities such as mark
-    buffs that reuse generic base rows.  ``base_id_map`` is generated from
-    engine-owned semantic anchors resolved through pak names, ``via_order``
-    is the pak-axis pre-join of ``BUFFBASE_CONF.buffbase_order`` → primitive,
-    and ``prefix_map`` is the remaining mixed-prefix family map.
+    buffs that reuse generic base rows.  ``via_order`` is the pak-axis pre-join
+    of ``BUFFBASE_CONF.buffbase_order`` → primitive, and ``prefix_map`` is the
+    remaining mixed-prefix family map.
     """
-    if not _MAP_PATH.exists():
-        return {}, {}, {}, {}
-    data = json.loads(_MAP_PATH.read_text(encoding="utf-8"))
+    data = build_primitive_map(build_static_bundle())
     buff_id_map = {int(k): str(v) for k, v in data.get("buff_id_map", {}).items()}
     prefix_map = {int(k): str(v) for k, v in data.get("prefix_map", {}).items()}
     base_id_map = {int(k): str(v) for k, v in data.get("base_id_map", {}).items()}
@@ -198,7 +191,7 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
     # first unmapped prefix as the primitive.  "Unmapped" means either
     # the prefix is absent from PREFIX_PRIMITIVE_MAP or it is present with
     # an empty primitive (defensive — the generator no longer emits empty
-    # values, but treat both shapes the same so a stale primitive_map.json
+    # values, but treat both shapes the same so a stale primitive map
     # can't silently shadow gaps as ``buff_unclassified``).
     for bid in base_ids:
         pfx = bid // 1000

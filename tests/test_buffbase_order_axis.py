@@ -59,7 +59,7 @@ BUFFBASE_CONF_PATH = (
 )
 
 
-TIMING_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
+TIMING_HOOK_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
 
 
 @pytest.fixture(scope="module")
@@ -132,9 +132,7 @@ def test_generated_base_id_via_order_map_size(resolved_axes, buffbase_conf):
 
 
 def test_generated_prefix_map_carries_via_order_block():
-    """The classifier reads from primitive_map.json.  The
-    new ``base_id_via_order_map`` block must be present and non-empty
-    after gen_prefix_map runs."""
+    """The generated audit artifact mirrors the pak-source primitive map."""
     data = json.loads(PRIMITIVE_MAP_PATH.read_text(encoding="utf-8"))
     assert "base_id_via_order_map" in data
     assert len(data["base_id_via_order_map"]) > 0
@@ -270,7 +268,7 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     assert gaps == []
     assert rows == [(
         P_HIT_COUNT_PER_POISON_EFFECT,
-        TIMING_BEFORE_MOVE,
+        TIMING_HOOK_BEFORE_MOVE,
         1,
         10000,
         1,
@@ -283,7 +281,7 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     assert gaps == []
     assert rows == [(
         P_CUTE_HIT_PER_STACK,
-        TIMING_BEFORE_MOVE,
+        TIMING_HOOK_BEFORE_MOVE,
         1,
         10000,
         2,
@@ -302,7 +300,7 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070160], pak)
-    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
+    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
     assert gaps == [{
         "primitive": source_context_key("transmission"),
         "timing_code": pak_cast_moment_key(11),
@@ -320,11 +318,11 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     }]
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070030], pak)
-    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
+    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
     assert gaps[0]["reason"] == "transmission_unimplemented"
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070170], pak)
-    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
+    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
     assert any(gap["reason"] == "transmission_unimplemented" for gap in gaps)
 
 

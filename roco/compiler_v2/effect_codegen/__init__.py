@@ -40,6 +40,7 @@ Rate = ``success_rate`` raw (10000 = 100%).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 from roco.compiler_v2.effect_codegen.classify import (
     collect_buff_candidates,
@@ -60,6 +61,7 @@ from roco.compiler_v2.effect_codegen.params import (
 )
 from roco.compiler_v2.effect_codegen.source_context import decode_source_context
 from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.sources import LuaEnumSource
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 
 __all__ = [
@@ -69,7 +71,16 @@ __all__ = [
 ]
 
 
-BFT_ASSIGN_ORDER = 17
+@lru_cache(maxsize=1)
+def _buff_type_enum() -> dict[str, int]:
+    return LuaEnumSource().enums(("BuffType",))["BuffType"]
+
+
+def _buff_type(name: str) -> int:
+    return int(_buff_type_enum()[name])
+
+
+BFT_ASSIGN_ORDER = _buff_type("BFT_ASSIGN")
 
 
 @dataclass(frozen=True)

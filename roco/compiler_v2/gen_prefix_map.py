@@ -9,6 +9,7 @@ def main() -> None:
     stats = write_all()
     print(f"compiler_v2 source_hash: {stats['source_hash']}")
     print(f"static pak/lua snapshot -> {stats['static_paths']['manifest']}")
+    print(f"battle_events.py: {stats['battle_event_count']} BattleEvent constants")
     primitive_stats = stats["primitive_stats"]
     print(
         "primitive_map.json: "

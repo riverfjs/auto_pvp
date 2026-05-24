@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
-
 from roco.common.constants import BPS
 from roco.common.enums import Element, StatusType, WeatherType
+from roco.common.mark_indices import DevotionIdx, MarkIdx
 
 BUFF_UNIT_BPS = 100
 BUFF_LANE_BITS = 8
@@ -132,15 +131,6 @@ def _set_status(packed: int, t: StatusType, val: int) -> int:
     shift = t.value * 8
     packed &= ~(0xFF << shift)
     return packed | ((val & 0xFF) << shift)
-
-
-class MarkIdx(IntEnum):
-    MOISTURE = 0; DRAGON = 1; MOMENTUM = 2; WIND = 3; CHARGE = 4; SOLAR = 5; ATTACK = 6
-    SLOW = 7; SPIRIT = 8; METEOR = 9; POISON = 10; THORN = 11; SLUGGISH = 12
-
-
-class DevotionIdx(IntEnum):
-    JIAMEI = 0; FEIDUAN = 1; CHONGJIAN = 2; KUNFU = 3; CHONGQUN = 4
 
 
 def _pack_marks(**counts) -> int:

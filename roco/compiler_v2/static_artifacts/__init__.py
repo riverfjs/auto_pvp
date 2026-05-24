@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from .battle_events import write_battle_events
 from .bloodline_magic import build_bloodline_magic_tables, write_bloodline_magic
 from .buffbase import BUFFBASE_PARAMS_PATH, _normalize_slot, build_buffbase_tables, write_buffbase_params
 from .canonical_adapters import build_canonical_adapters, write_canonical_adapters
 from .common import (
     BATTLE_GLOBALS_PATH,
+    BATTLE_EVENTS_PATH,
     BLOODLINE_MAGIC_PATH,
     BUFFBASE_PARAMS_PATH,
     BUFF_IMMUNITY_PATH,
@@ -30,6 +32,7 @@ from .weather import build_weather_tables, write_weather_decoders, write_weather
 
 __all__ = [
     "BATTLE_GLOBALS_PATH",
+    "BATTLE_EVENTS_PATH",
     "BLOODLINE_MAGIC_PATH",
     "BUFFBASE_PARAMS_PATH",
     "BUFF_IMMUNITY_PATH",
@@ -53,6 +56,7 @@ __all__ = [
     "mark_note_by_idx",
     "mark_note_to_primitive",
     "write_all",
+    "write_battle_events",
     "write_battle_globals",
     "write_bloodline_magic",
     "write_buff_immunity_table",

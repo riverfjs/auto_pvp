@@ -20,10 +20,12 @@ the same map to :func:`classify.decode_effect` and to
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 
 from roco.common.enums import AbilityFlag
 from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome
+from roco.compiler_v2.sources import LuaEnumSource
 
 _DEFAULT_EFFECT_CONF_PATH = (
     Path(__file__).resolve().parents[3]
@@ -66,20 +68,28 @@ _DEFAULT_SKILL_CONF_PATH = (
     / "SKILL_CONF.json"
 )
 
-ABILITY_SKILL_TYPE = 2
-EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST = 66
-EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE = 76
-BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = 143
-BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = 154
-BUFFBASE_ORDER_ATTR_CHANGE = 1
-BUFFBASE_ORDER_CHECK_BUFF_LAYER = 40
 
-DESC_POISON = 1001
-DESC_BURN = 1002
-DESC_FREEZE = 1004
-DESC_LEECH = 1008
-DESC_POISON_MARK = 1014
-DESC_METEOR_MARK = 1035
+@lru_cache(maxsize=None)
+def _enum_value(enum_name: str, symbol: str) -> int:
+    return int(LuaEnumSource().enums((enum_name,))[enum_name][symbol])
+
+
+ABILITY_SKILL_TYPE = _enum_value("SkillActiveType", "SAT_FEATURE")
+EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST = _enum_value("EffectType", "ET_SHUFFLE_SKILLS")
+EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE = _enum_value("EffectType", "ET_DOT_SUCK")
+BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = _enum_value("BuffType", "BFT_O_FORTYTHREE")
+BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = _enum_value("BuffType", "BFT_O_FIFTYFOUR")
+BUFFBASE_ORDER_ATTR_CHANGE = _enum_value("BuffType", "BFT_ATTR_CHANGE")
+BUFFBASE_ORDER_CHECK_BUFF_LAYER = _enum_value("BuffType", "BFT_CHECK_BUFF_LAYER")
+
+_DESC_NOTE_LABELS = {
+    "poison": "中毒",
+    "burn": "灼烧",
+    "freeze": "冻结",
+    "leech": "寄生",
+    "poison_mark": "中毒印记",
+    "meteor_mark": "星陨印记",
+}
 
 
 def _load_rows(path: Path) -> dict[int, dict]:
@@ -307,11 +317,12 @@ def _derive_ability_flags(
 ) -> dict[int, AbilityFlagOutcome]:
     out: dict[int, AbilityFlagOutcome] = {}
     desc_notes = _desc_notes(desc_note_conf)
+    desc_refs = _desc_refs(desc_notes)
 
     for effect_id, rec in sorted(effect_conf.items()):
         if ability_consumers is not None and effect_id not in ability_consumers:
             continue
-        flag = _flag_from_effect_row(rec, buff_conf, desc_notes)
+        flag = _flag_from_effect_row(rec, buff_conf, desc_notes, desc_refs)
         if flag is not None:
             _put_flag(out, effect_id, flag, "EFFECT_CONF")
 
@@ -323,6 +334,7 @@ def _derive_ability_flags(
             buff_conf,
             buffbase_conf,
             desc_notes,
+            desc_refs,
             ability_consumers.get(buff_id, ()) if ability_consumers is not None else (),
         )
         if flag is not None:
@@ -353,10 +365,24 @@ def _desc_notes(desc_note_conf: dict[int, dict]) -> dict[int, str]:
     }
 
 
+def _desc_refs(desc_notes: dict[int, str]) -> dict[str, int]:
+    refs: dict[str, int] = {}
+    for key, label in _DESC_NOTE_LABELS.items():
+        matches = [desc_id for desc_id, note in desc_notes.items() if note == label]
+        if len(matches) != 1:
+            raise RuntimeError(
+                f"DESC_NOTE_CONF expected exactly one note {label!r} for {key}; "
+                f"found {matches!r}"
+            )
+        refs[key] = matches[0]
+    return refs
+
+
 def _flag_from_effect_row(
     rec: dict,
     buff_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
 ) -> str | None:
     if int(rec.get("type") or 0) != 3:
         return None
@@ -374,7 +400,7 @@ def _flag_from_effect_row(
         return None
     if _slot_values(params, 1) != (1,):
         return None
-    return _flag_for_status_refs(_slot_values(params, 0), buff_conf, desc_notes)
+    return _flag_for_status_refs(_slot_values(params, 0), buff_conf, desc_notes, desc_refs)
 
 
 def _flag_from_buff_row(
@@ -382,6 +408,7 @@ def _flag_from_buff_row(
     buff_conf: dict[int, dict],
     buffbase_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
     ability_rows: tuple[dict, ...] = (),
 ) -> str | None:
     if int(rec.get("type") or 0) != 3:
@@ -405,7 +432,7 @@ def _flag_from_buff_row(
                 status_refs.extend(_slot_values(params, 0))
 
     if orders and all(order == BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE for order in orders):
-        return _flag_for_status_refs(tuple(status_refs), buff_conf, desc_notes)
+        return _flag_for_status_refs(tuple(status_refs), buff_conf, desc_notes, desc_refs)
 
     if (
         len(base_ids) > 1
@@ -414,7 +441,7 @@ def _flag_from_buff_row(
     ):
         return "MARK_STACK_NO_REPLACE"
 
-    if _is_freeze_counts_as_meteor(rec, buff_conf, buffbase_conf, desc_notes, ability_rows):
+    if _is_freeze_counts_as_meteor(rec, buff_conf, buffbase_conf, desc_notes, desc_refs, ability_rows):
         return "FREEZE_COUNTS_AS_METEOR"
 
     return None
@@ -425,6 +452,7 @@ def _is_freeze_counts_as_meteor(
     buff_conf: dict[int, dict],
     buffbase_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
     ability_rows: tuple[dict, ...],
 ) -> bool:
     """Detect the pak order-40 virtual counter behind 月牙雪糕.
@@ -437,7 +465,7 @@ def _is_freeze_counts_as_meteor(
     Both sides are required so this cannot classify unrelated prefix_2040
     buffs such as 嫉妒.
     """
-    if not _ability_desc_mentions_freeze_meteor(desc_notes, ability_rows):
+    if not _ability_desc_mentions_freeze_meteor(desc_notes, desc_refs, ability_rows):
         return False
     base_ids = tuple(_maybe_int(v) for v in rec.get("buff_base_ids") or ())
     base_ids = tuple(v for v in base_ids if v > 0)
@@ -464,15 +492,17 @@ def _is_freeze_counts_as_meteor(
 
 def _ability_desc_mentions_freeze_meteor(
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
     ability_rows: tuple[dict, ...],
 ) -> bool:
-    freeze = desc_notes.get(DESC_FREEZE, "冻结")
-    meteor = desc_notes.get(DESC_METEOR_MARK, "星陨印记")
+    freeze = desc_notes[desc_refs["freeze"]]
+    meteor_id = desc_refs["meteor_mark"]
+    meteor = desc_notes[meteor_id]
     for row in ability_rows:
         desc = str(row.get("desc") or "")
         if freeze and freeze not in desc:
             continue
-        if f"<desc_id={DESC_METEOR_MARK}>" in desc or (meteor and meteor in desc):
+        if f"<desc_id={meteor_id}>" in desc or (meteor and meteor in desc):
             return True
     return False
 
@@ -505,11 +535,12 @@ def _flag_for_status_refs(
     refs: tuple[int, ...],
     buff_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
 ) -> str | None:
     tags = {
         tag
         for ref in refs
-        for tag in (_status_tag_for_buff(ref, buff_conf, desc_notes),)
+        for tag in (_status_tag_for_buff(ref, buff_conf, desc_notes, desc_refs),)
         if tag
     }
     if tags == {"burn"}:
@@ -523,6 +554,7 @@ def _status_tag_for_buff(
     buff_id: int,
     buff_conf: dict[int, dict],
     desc_notes: dict[int, str],
+    desc_refs: dict[str, int],
 ) -> str | None:
     rec = buff_conf.get(buff_id)
     if not isinstance(rec, dict):
@@ -535,15 +567,15 @@ def _status_tag_for_buff(
     buff_type = int(rec.get("type") or 0)
 
     if buff_type == 2:
-        if desc_notes.get(DESC_BURN) in labels:
+        if desc_notes[desc_refs["burn"]] in labels:
             return "burn"
-        if desc_notes.get(DESC_POISON) in labels:
+        if desc_notes[desc_refs["poison"]] in labels:
             return "poison"
-        if desc_notes.get(DESC_LEECH) in labels:
+        if desc_notes[desc_refs["leech"]] in labels:
             return "leech"
         return None
 
-    if buff_type == 4 and desc_notes.get(DESC_POISON_MARK) in labels:
+    if buff_type == 4 and desc_notes[desc_refs["poison_mark"]] in labels:
         return "poison"
 
     return None

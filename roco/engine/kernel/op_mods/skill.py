@@ -20,7 +20,7 @@ from roco.engine.kernel.op_rows import (
     ROW_ARG2,
     ROW_ARG3,
     ROW_TIMING,
-    TIMING_BEFORE_MOVE,
+    TIMING_HOOK_BEFORE_MOVE,
 )
 
 @handles_buff([
@@ -43,7 +43,7 @@ def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
 def op_skill_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if not slot_mask_matches(ctx, row[ROW_ARG0]):
         return
-    if row[ROW_TIMING] == TIMING_BEFORE_MOVE:
+    if row[ROW_TIMING] == TIMING_HOOK_BEFORE_MOVE:
         ctx.cost_delta -= row[ROW_ARG1]
     ctx.power += row[ROW_ARG2]
     ctx.hit_count += row[ROW_ARG3]

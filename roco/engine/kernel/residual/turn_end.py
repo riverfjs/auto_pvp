@@ -20,7 +20,7 @@ from roco.engine.common.choices import SIDE_A, SIDE_B
 from roco.engine.kernel.active_buffs import tick_active_buffs
 from roco.engine.kernel.catalog import PET_ABILITY, PET_PRIMARY, PET_SECONDARY
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_rows import TIMING_TURN_END
+from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_ADD
 from roco.engine.kernel.ops import run_skill_timing
 from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.residual.mark_ticks import tick_marks
@@ -138,5 +138,5 @@ def _run_actor_turn_end(
     ctx.marks_dispelled = (
         state.marks_dispelled_a if side_id == SIDE_A else state.marks_dispelled_b
     )
-    run_skill_timing(rows, rng_range, TIMING_TURN_END, ctx)
+    run_skill_timing(rows, rng_range, TIMING_PAK_BEFORE_ADD, ctx)
     return apply_after_move(state, side_id, slot, target_side_id, target_slot, ctx)

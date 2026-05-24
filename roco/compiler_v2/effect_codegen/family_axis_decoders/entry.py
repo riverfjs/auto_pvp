@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from roco.common.buffbase import pack_buff_delta_from_buff_ids
 from roco.common.entry_sources import (
     ENTRY_SOURCE_COUNTER,
     ENTRY_SOURCE_DEFENSE,
@@ -19,7 +18,11 @@ from roco.common.skill_mod_modes import (
     ENTRY_MOD_POWER_BPS,
     ENTRY_MOD_POWER_FLAT,
 )
-from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.effect_codegen.buffbase_source import (
+    BUFFBASE_ORDER,
+    BUFFBASE_PARAMS,
+    pack_buff_delta_from_buff_ids,
+)
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 from roco.compiler_v2.effect_codegen.params import extract_int_list, safe_int
 

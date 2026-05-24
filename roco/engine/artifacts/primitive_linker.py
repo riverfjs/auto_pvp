@@ -10,16 +10,16 @@ from roco.common.primitive_keys import (
     strip_prefix,
 )
 from roco.engine.artifacts.primitive_bindings import handler_const_from_primitive
-from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE
 from roco.generated import handler_indices as hi
-from roco.generated.static.lua_enums import LUA_ENUMS
+from roco.generated.battle_events import BATTLE_EVENT_VALUES
 
 
 PrimitiveRow = tuple[str, str, int, int, int, int, int, int]
 RuntimeEffectRow = tuple[int, int, int, int, int, int, int, int]
 
 ENGINE_HOOK_TIMINGS = {
-    "before_move": TIMING_BEFORE_MOVE,
+    "before_move": TIMING_HOOK_BEFORE_MOVE,
 }
 
 
@@ -68,7 +68,7 @@ def timing_to_kernel_value(timing_raw: object, *, source_name: str) -> int:
         )
     battle_event = strip_prefix(timing_raw, BATTLE_EVENT_PREFIX)
     if battle_event is not None:
-        value = LUA_ENUMS.get("BattleEvent", {}).get(battle_event)
+        value = BATTLE_EVENT_VALUES.get(battle_event)
         if value is None:
             raise RuntimeError(
                 f"{source_name!r} produced unknown pak battle event timing {timing_raw!r}"

@@ -22,7 +22,7 @@ def op_install_counter(ctx: StageCtx, row: tuple[int, ...]) -> None:
     stashes in ``ctx.actor_counter_install_skill_id``.  ``apply_after_move``
     folds it into ``SideState.counter_skill_id``, and ``mechanics`` fires
     the looked-up counter skill on the next incoming hit
-    (``TIMING_CHECK_HIT``), then clears the slot.
+    (``TIMING_PAK_ROUND_END``), then clears the slot.
     """
     skill_id = row[ROW_ARG0]
     if skill_id > 0:

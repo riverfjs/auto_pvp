@@ -1,11 +1,12 @@
 from pathlib import Path
+import re
 
 import pytest
 
 from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
-from roco.compiler_v2.scalar_damage import calc_attack_damage
+from roco.data.scalar_damage import calc_attack_damage
 from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
@@ -26,7 +27,7 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE, TIMING_CALC_DAMAGE
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_ROUND_CALC_START
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
 from roco.generated import handler_indices as hi
@@ -216,11 +217,11 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
         (
-            (hi.H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),
-            (hi.H_DAMAGE_REDUCTION, TIMING_CALC_DAMAGE, 0, 0, 0, 8000, 0, 0, 0),
+            (hi.H_DAMAGE, TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 37, 3, 0, 0),
+            (hi.H_DAMAGE_REDUCTION, TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 8000, 0, 0, 0),
         ),
         (0, 2),
-        TIMING_CALC_DAMAGE,
+        TIMING_PAK_ROUND_CALC_START,
         ctx,
     )
     ctx.power_bps = 15000
@@ -253,11 +254,11 @@ def test_before_move_primitives_from_source_context():
 
     run_skill_timing(
         (
-            (hi.H_HIT_COUNT_PER_POISON_EFFECT, TIMING_BEFORE_MOVE, 1, 10000, 0, 2, 0, 0, 0),
-            (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0, 0b0101, 2, 30, 1),
+            (hi.H_HIT_COUNT_PER_POISON_EFFECT, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 2, 0, 0, 0),
+            (hi.H_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 0b0101, 2, 30, 1),
         ),
         (0, 2),
-        TIMING_BEFORE_MOVE,
+        TIMING_HOOK_BEFORE_MOVE,
         ctx,
     )
 
@@ -661,7 +662,7 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "sqlite3",
         "catalog_debug",
         "roco.data",
-        "roco.engine.catalog_compiler",
+        "roco.data.catalog_compiler",
         "roco.compiler_v2.classifiers",
         "params.get",
         "record_event",
@@ -695,6 +696,29 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         assert (root / "roco/engine/kernel" / rel).exists()
     assert not (root / "roco/engine/kernel/op_tags.py").exists()
     assert not (root / "roco/engine/kernel/op_mods.py").exists()
+
+
+def test_engine_has_no_compiler_imports():
+    root = Path(__file__).resolve().parents[1] / "roco" / "engine"
+    offenders: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        if "from roco.compiler_v2" in text or "import roco.compiler_v2" in text:
+            offenders.append(path.relative_to(root).as_posix())
+    assert offenders == []
+
+
+def test_op_rows_uses_generated_pak_timings_and_explicit_engine_hooks():
+    root = Path(__file__).resolve().parents[1]
+    text = (root / "roco/engine/kernel/op_rows.py").read_text(encoding="utf-8")
+    assert "from roco.generated import battle_events" in text
+    assert not re.search(r"^TIMING_PAK_[A-Z0-9_]+\s*=\s*\d+", text, re.MULTILINE)
+    assert re.findall(r"^TIMING_HOOK_[A-Z0-9_]+\s*=\s*(\d+)", text, re.MULTILINE) == [
+        "901",
+        "902",
+        "903",
+        "904",
+    ]
 
 
 def test_retired_root_engine_modules_are_not_legacy_entrypoints():

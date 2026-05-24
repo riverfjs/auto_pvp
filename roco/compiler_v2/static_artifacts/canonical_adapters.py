@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from roco.common.packing import MarkIdx
+from roco.common.mark_indices import MarkIdx
 
 from .common import CANONICAL_ADAPTERS_PATH, PAK_BIN, PAK_DATA, _assign, _load_json_table, _maybe_int
 from .marks import mark_note_by_idx

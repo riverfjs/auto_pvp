@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.common.primitive_keys import (
     MARK_NOTE_PREFIX,
     STATUS_NOTE_PREFIX,
@@ -17,7 +16,11 @@ from roco.common.primitive_keys import (
     effect_order_key,
     struct_key,
 )
-from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.effect_codegen.buffbase_source import (
+    BUFFBASE_ORDER,
+    BUFFBASE_PARAMS,
+    pack_buff_delta_from_base_ids,
+)
 
 _STATUS_OR_MARK_BUFF_TYPES = frozenset({
     buff_type_key("BFT_ABSORB"),

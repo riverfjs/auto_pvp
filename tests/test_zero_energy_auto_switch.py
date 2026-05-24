@@ -8,15 +8,15 @@ ability's desc:
     回合结束时，若场上的己方精灵能量等于0，自己立即替换此精灵。
 
 This file proves the runtime path that delivers that semantic at
-``TIMING_AFTER_MOVE`` (cast_moment 11).  Two unit tests guard the
+``TIMING_PAK_BEFORE_HURT`` (cast_moment 11).  Two unit tests guard the
 boundary cases (zero energy → switch; positive energy → no switch);
 the integration test exercises the full ``mechanics.update`` chain
 through skill cost deduction and the ``ctx.actor_energy`` refresh that
 Phase 5C-i introduced — without that refresh, ``ctx.actor_energy`` at
-``TIMING_AFTER_MOVE`` would be the pre-cost value and the buff would
+``TIMING_PAK_BEFORE_HURT`` would be the pre-cost value and the buff would
 never fire.
 
-cast_moment 26 (``TIMING_PASSIVE_COND``) is decoder-classified to the
+cast_moment 26 (``TIMING_PAK_BEFORE_DIE``) is decoder-classified to the
 same handler but currently runtime-inert — no dispatcher runs ability
 rows at that timing yet.  That's deferred to a future phase; this
 file does not test cast_moment 26.
@@ -76,7 +76,7 @@ def _opponent_default_move_slot() -> int:
 def test_zero_energy_after_move_triggers_auto_switch():
     """End-to-end: actor starts at ``STARTING_ENERGY`` (= 10) and uses a
     cost-10 skill, so post-cost energy is exactly 0.  The ability row
-    for buff 20030160 must fire at TIMING_AFTER_MOVE and the side-A
+    for buff 20030160 must fire at TIMING_PAK_BEFORE_HURT and the side-A
     active slot must change to a non-fainted bench pet.
 
     This is the **sensitivity test** for the Phase 5C-i
@@ -84,7 +84,7 @@ def test_zero_energy_after_move_triggers_auto_switch():
     stays at the pre-cost value (10) the whole way through, the
     auto-switch op sees 10 > 0, no switch happens.  With the refresh,
     ``ctx.actor_energy`` is set to the actor's post-cost
-    ``current_energy`` (= 0) just before TIMING_AFTER_MOVE, the op
+    ``current_energy`` (= 0) just before TIMING_PAK_BEFORE_HURT, the op
     fires, and ``apply_after_move`` consumes ``ctx.force_switch``.
     """
     cost = hot.SKILLS[_FULL_DRAIN_SKILL][SKILL_ENERGY]
@@ -114,7 +114,7 @@ def test_zero_energy_after_move_triggers_auto_switch():
     # Core assertion: side_a's active slot moved off the actor.  The
     # actor's ``current_energy`` after the move may not be 0 — ability
     # 200166 also carries an energy-heal row at cast_moment 11 (effect
-    # 20520080) that runs in the same TIMING_AFTER_MOVE dispatch and
+    # 20520080) that runs in the same TIMING_PAK_BEFORE_HURT dispatch and
     # writes ``ctx.energy_gain``, which ``apply_after_move`` folds back
     # into ``current_energy`` after the auto-switch op has already
     # consumed ``ctx.actor_energy``.  What this test exercises is that
@@ -125,7 +125,7 @@ def test_zero_energy_after_move_triggers_auto_switch():
     assert not result.state.side_a.pets[new_active].fainted
 
 
-# ── unit: TIMING_AFTER_MOVE ability row sets ctx.force_switch on 0 ───────
+# ── unit: TIMING_PAK_BEFORE_HURT ability row sets ctx.force_switch on 0 ───────
 
 
 def _seeded_state_with_star_ability_actor(bench_pet: int = _BENCH_PET):
@@ -140,9 +140,9 @@ def _seeded_state_with_star_ability_actor(bench_pet: int = _BENCH_PET):
 
 def test_zero_energy_unit_after_move_sets_force_switch():
     """Skip the cost-deduction logic: hand-build ctx with actor_energy=0,
-    fire TIMING_AFTER_MOVE, assert ctx.force_switch flips to 1, and
+    fire TIMING_PAK_BEFORE_HURT, assert ctx.force_switch flips to 1, and
     confirm apply_after_move's _auto_switch consumes the flag."""
-    from roco.engine.kernel.op_rows import TIMING_AFTER_MOVE
+    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     actor = state.side_a.pets[0]
@@ -151,7 +151,7 @@ def test_zero_energy_unit_after_move_sets_force_switch():
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
     ctx.actor_energy = 0
 
-    _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
+    _run_ability_timing(actor, TIMING_PAK_BEFORE_HURT, ctx)
     assert ctx.force_switch == 1
 
     new_state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
@@ -161,7 +161,7 @@ def test_zero_energy_unit_after_move_sets_force_switch():
 def test_positive_energy_no_switch():
     """Same hand-built fixture, but actor_energy stays > 0.  The op must
     leave ctx.force_switch == 0 and apply_after_move must not switch."""
-    from roco.engine.kernel.op_rows import TIMING_AFTER_MOVE
+    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     actor = state.side_a.pets[0]
@@ -170,7 +170,7 @@ def test_positive_energy_no_switch():
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
     ctx.actor_energy = 50
 
-    _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
+    _run_ability_timing(actor, TIMING_PAK_BEFORE_HURT, ctx)
     assert ctx.force_switch == 0
 
     new_state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
@@ -182,7 +182,7 @@ def test_no_replacement_no_crash():
     return the state unchanged rather than raise.  This guards against
     a real-game scenario where 星地善良 triggers but no bench is alive
     to receive the switch."""
-    from roco.engine.kernel.op_rows import TIMING_AFTER_MOVE
+    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     # Knock the bench pet down to fainted.
@@ -193,7 +193,7 @@ def test_no_replacement_no_crash():
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
     ctx.actor_energy = 0
-    _run_ability_timing(actor, TIMING_AFTER_MOVE, ctx)
+    _run_ability_timing(actor, TIMING_PAK_BEFORE_HURT, ctx)
     assert ctx.force_switch == 1
 
     new_state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)

@@ -14,7 +14,7 @@ from roco.engine.kernel.op_rows import (
     ROW_ARG2,
     ROW_ARG3,
     ROW_TIMING,
-    TIMING_BEFORE_MOVE,
+    TIMING_HOOK_BEFORE_MOVE,
 )
 from roco.engine.kernel.state import COST_SCOPE_ALL
 
@@ -99,7 +99,7 @@ def op_heal_on_grass_skill(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 def op_skill_cost_reduction_type(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.skill_category == row[ROW_ARG0]:
-        if row[ROW_TIMING] == TIMING_BEFORE_MOVE:
+        if row[ROW_TIMING] == TIMING_HOOK_BEFORE_MOVE:
             ctx.cost_delta -= row[ROW_ARG1]
         else:
             ctx.heal_energy += row[ROW_ARG1]
@@ -115,7 +115,7 @@ def op_passive_energy_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 def op_on_skill_element_cost_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.skill_element == row[ROW_ARG0]:
-        if row[ROW_TIMING] == TIMING_BEFORE_MOVE:
+        if row[ROW_TIMING] == TIMING_HOOK_BEFORE_MOVE:
             ctx.cost_delta -= row[ROW_ARG1]
         else:
             ctx.heal_energy += row[ROW_ARG1]

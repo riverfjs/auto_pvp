@@ -8,7 +8,7 @@ failure in one cannot corrupt the next:
     2. roco.engine.kernel.gen_runtime_artifacts
                                      -> roco/generated/handler_indices.py
                                         + handler_order.py + handler_table.py
-    3. roco.engine.catalog_compiler
+    3. roco.data.catalog_compiler
                                      -> roco/generated/catalog_hot.py
                                         + catalog_debug.py
     4. roco.compiler_v2.build_effect_families
@@ -99,7 +99,7 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     steps: list[tuple[str, list[str]]] = []
     steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
     steps.append(("gen_runtime_artifacts", [py, "-m", "roco.engine.kernel.gen_runtime_artifacts"]))
-    steps.append(("catalog_compiler", [py, "-m", "roco.engine.catalog_compiler"]))
+    steps.append(("catalog_compiler", [py, "-m", "roco.data.catalog_compiler"]))
     steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((
         "build_effect_families --check",

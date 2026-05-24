@@ -19,7 +19,7 @@ from roco.common.constants import (
     TYPE_WEAK_BPS,
 )
 from roco.common.enums import ELEMENT_NAMES, Element
-from roco.compiler_v2.scalar_damage import _effectiveness_bps, get_type_multiplier
+from roco.data.scalar_damage import _effectiveness_bps, get_type_multiplier
 from roco.generated.type_chart import TYPE_CHART_BPS
 
 
