@@ -1,4 +1,5 @@
 import json
+import runpy
 import sys
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import pytest
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
 from roco.data.catalog import compile_catalog
-from roco.compiler_v2.artifact import compile_artifacts
+from roco.compiler_v2.catalog_compiler import compile_catalogs
 from roco.data.import_db import import_abilities, import_marks, import_pets, import_skills, import_teams
 from roco.data.migrate import migrate
 from roco.data.utils import content_hash, load_jsonl, write_jsonl
@@ -18,6 +19,7 @@ def _sample_data():
     skills = [
         {"kind": "skill", "name": "火花", "element": "火", "category": "魔攻", "energy": 1, "power": 60, "effect_text": "造成魔伤", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
         {"kind": "skill", "name": "拍击", "element": "普通", "category": "物攻", "energy": 1, "power": 40, "effect_text": "造成物伤", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
+        {"kind": "skill", "name": "展示文案技能", "element": "普通", "category": "状态", "energy": 1, "power": 0, "effect_text": "", "flavor_text": "这不是机制描述", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
     ]
     abilities = [
         {"kind": "ability", "name": "诈死", "description": "力竭不扣MP", "flags": 0, "effects": [], "effect_rows": [], "classification": {"status": "ok", "source": "pak"}},
@@ -74,7 +76,7 @@ def test_migrate_import_compile_catalog(tmp_path: Path):
     assert catalog.pets_by_name["地地"].types == ("地", "")
     assert catalog.skills_by_name["火花"].element == "火"
     assert len(catalog.pets_by_id) == 5
-    assert len(catalog.skills_by_id) == 2
+    assert len(catalog.skills_by_id) == 3
 
     conn.close()
 
@@ -89,7 +91,7 @@ def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
     conn.commit()
     conn.close()
 
-    hot_path, debug_path = compile_artifacts(
+    hot_path, debug_path = compile_catalogs(
         db_path,
         hot_path=tmp_path / "catalog_hot.py",
         debug_path=tmp_path / "catalog_debug.py",
@@ -106,7 +108,84 @@ def test_sqlite_compiles_hot_and_debug_kernel_artifacts(tmp_path: Path):
     assert "PET_NAMES" not in hot_text
     assert "PET_NAMES =" in debug_text
     assert "PET_IDS_BY_NAME =" in debug_text
+    assert "SKILL_DESCRIPTIONS =" in debug_text
+    assert "SKILL_EFFECT_TEXTS =" in debug_text
+    assert "ABILITY_DESCRIPTIONS =" in debug_text
+    assert "造成魔伤" in debug_text
+    assert "力竭不扣MP" in debug_text
     assert "SKILL_IDS_BY_TEXT =" in debug_text
+    debug = runpy.run_path(str(debug_path))
+    flavor_only_idx = debug["SKILL_IDS_BY_NAME"]["展示文案技能"]
+    assert debug["SKILL_DESCRIPTIONS"][flavor_only_idx] == ""
+    assert debug["SKILL_EFFECT_TEXTS"][flavor_only_idx] == ""
+    assert debug["SKILL_FLAVOR_TEXTS"][flavor_only_idx] == "这不是机制描述"
+
+
+def test_effect_gaps_store_source_descriptions(tmp_path: Path):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    import_abilities(conn, [{
+        "kind": "ability",
+        "name": "未实现特性",
+        "description": "这条描述应该进入 gap 方便 debug",
+        "flags": 0,
+        "effect_rows": [],
+        "effect_gaps": [{
+            "primitive": "effect_9999",
+            "timing_code": 11,
+            "params": {"effect_id": 9999},
+            "reason": "effect_type_3_state_change",
+        }],
+    }])
+    import_skills(conn, [{
+        "kind": "skill",
+        "name": "未实现技能",
+        "element": "普通",
+        "category": "状态",
+        "energy": 1,
+        "power": 0,
+        "effect_text": "这条技能描述应该进入 gap",
+        "flavor_text": "",
+        "flags": 0,
+        "effect_rows": [],
+        "effect_gaps": [{
+            "primitive": "prefix_2999",
+            "timing_code": 11,
+            "params": {"buff_id": 29990010},
+            "reason": "prefix_2999_unmapped",
+        }],
+    }])
+    rows = conn.execute(
+        "SELECT source_type, source_desc FROM effect_gaps ORDER BY source_type"
+    ).fetchall()
+    assert rows == [
+        ("ability", "这条描述应该进入 gap 方便 debug"),
+        ("skill", "这条技能描述应该进入 gap"),
+    ]
+    conn.close()
+
+
+def test_skill_gap_source_desc_does_not_fallback_to_flavor_text(tmp_path: Path):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    import_skills(conn, [{
+        "kind": "skill",
+        "name": "仅展示文案",
+        "element": "普通",
+        "category": "状态",
+        "energy": 1,
+        "power": 0,
+        "effect_text": "",
+        "flavor_text": "这不是机制描述",
+        "flags": 0,
+        "effect_rows": [],
+        "effect_gaps": [{
+            "primitive": "effect_9999",
+            "timing_code": 11,
+            "params": {"effect_id": 9999},
+            "reason": "effect_type_3_state_change",
+        }],
+    }])
+    assert conn.execute("SELECT source_desc FROM effect_gaps").fetchone()[0] == ""
+    conn.close()
 
 
 def test_import_rejects_legacy_structured_elements(tmp_path: Path):
@@ -326,6 +405,65 @@ def test_team_import_succeeds_without_gap_system(tmp_path: Path):
     conn.close()
 
 
+def test_team_import_skips_unsupported_bloodline_magic(tmp_path: Path, capsys):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    skills, abilities, pets = _sample_data()
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
+
+    teams = [{
+        "kind": "team",
+        "id": "T1",
+        "title": "old team",
+        "author": "",
+        "type": "PVP",
+        "bloodline_magic": "强化术",
+        "description": "",
+        "upload_date": "",
+        "pets": [{"slot": 1, "name": "谜谜", "name_short": "谜谜", "bloodline": "", "nature": "", "ivs": [], "moves": ["拍击"]}],
+    }]
+    import_teams(conn, teams, pet_lookup, skill_lookup)
+
+    assert conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0] == 0
+    assert "teams skipped unsupported bloodline_magic: 1 (强化术=1)" in capsys.readouterr().out
+    conn.close()
+
+
+def test_team_import_skips_unsupported_effect_gap_sources(tmp_path: Path, capsys):
+    conn = migrate(reset=True, db_path=tmp_path / "data.db")
+    skills, abilities, pets = _sample_data()
+    skills[1] = {
+        **skills[1],
+        "effect_gaps": [{
+            "primitive": "effect_9999",
+            "timing_code": 11,
+            "params": {"effect_id": 9999},
+            "reason": "effect_type_3_state_change",
+        }],
+    }
+    ability_lookup = import_abilities(conn, abilities)
+    skill_lookup = import_skills(conn, skills)
+    pet_lookup = import_pets(conn, pets, skill_lookup, ability_lookup)
+
+    teams = [{
+        "kind": "team",
+        "id": "T1",
+        "title": "unsupported team",
+        "author": "",
+        "type": "PVP",
+        "bloodline_magic": "",
+        "description": "",
+        "upload_date": "",
+        "pets": [{"slot": 1, "name": "谜谜", "name_short": "谜谜", "bloodline": "", "nature": "", "ivs": [], "moves": ["拍击"]}],
+    }]
+    import_teams(conn, teams, pet_lookup, skill_lookup)
+
+    assert conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0] == 0
+    assert "teams skipped unsupported team data: 1 (skill:拍击=1)" in capsys.readouterr().out
+    conn.close()
+
+
 def test_core_pet_naming_guard():
     legacy = "Poke" + "mon"
     forbidden = ("Persistent" + legacy, "Active" + legacy, legacy)
@@ -396,11 +534,11 @@ def test_used_gap_fails_strict_validation(tmp_path: Path):
     conn = migrate(reset=True, db_path=tmp_path / "data.db")
     conn.execute("INSERT INTO abilities (name, description) VALUES (?, ?)", ("某ability", "desc"))
     conn.execute(
-        "INSERT INTO effect_gaps (source_type, source_name, primitive, params_json, reason, used_count) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        ("ability", "某ability", "effect_9999", "{}", "effect_type_3_state_change", 5),
+        "INSERT INTO effect_gaps (source_type, source_name, source_desc, primitive, params_json, reason, used_count) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("ability", "某ability", "这是用于错误输出的描述", "effect_9999", "{}", "effect_type_3_state_change", 5),
     )
-    with pytest.raises(RuntimeError, match=r"used effect_gaps row\(s\) block build"):
+    with pytest.raises(RuntimeError, match=r"这是用于错误输出的描述"):
         assert_no_blocking_effect_gaps(conn)
     conn.close()
 

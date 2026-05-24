@@ -24,4 +24,3 @@ class StaticBundle:
     buffbase_order_names: dict[int, str]
     buffbase_order_counts: dict[int, int]
     buff_base_to_order: dict[int, int]
-    buff_id_to_base_ids: dict[int, tuple[int, ...]]

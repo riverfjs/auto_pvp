@@ -202,7 +202,7 @@ def resolve_handler_axes(
 
     ``handles_buff`` and ``handles_prefix`` use ``Enum.BuffType`` symbols
     rather than numeric ids.  Exact outliers are generated from pak
-    structures in :mod:`roco.compiler_v2.artifacts`, not from engine-owned
+    structures in :mod:`roco.compiler_v2.static_artifacts`, not from engine-owned
     pak names.
     """
 

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from roco.common.constants import LEADER_USES, SIDE_LIVES, STARTING_ENERGY, WILLPOWER_USES
+from roco.common.constants import LEADER_USES, MAGIC_WILLPOWER, SIDE_LIVES, STARTING_ENERGY, WILLPOWER_USES
 from roco.generated import catalog_hot as hot
+from roco.generated.bloodline_magic import PAK_ELEMENT_TO_BLOODLINE
 from roco.common.enums import AbilityFlag, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import NO_WINNER, SIDE_A
 from roco.common.packing import _pack_buff, _set_status, _unpack_status
@@ -210,14 +211,15 @@ def _move_row(pet_id: int, override: tuple[int, ...] | None) -> tuple[int, int, 
 def _bloodline_row(pet_id: int, override: int | None) -> int:
     if override is not None and override >= 0:
         return override
-    return hot.PETS[pet_id][7]
+    primary = hot.PETS[pet_id][7]
+    return PAK_ELEMENT_TO_BLOODLINE[primary]
 
 
 def make_side(
     pet_ids: tuple[int, ...],
     move_rows: tuple[tuple[int, ...], ...] | None = None,
     bloodlines: tuple[int, ...] | None = None,
-    bloodline_magic_id: int = 1,
+    bloodline_magic_id: int = MAGIC_WILLPOWER,
 ) -> SideState:
     pets = tuple(_pet_state(pet_id) for pet_id in pet_ids)
     moves = tuple(_move_row(pet_id, move_rows[idx] if move_rows and idx < len(move_rows) else None)
@@ -258,8 +260,8 @@ def make_state(
     team_b_moves: tuple[tuple[int, ...], ...] | None = None,
     team_a_bloodlines: tuple[int, ...] | None = None,
     team_b_bloodlines: tuple[int, ...] | None = None,
-    team_a_bloodline_magic_id: int = 1,
-    team_b_bloodline_magic_id: int = 1,
+    team_a_bloodline_magic_id: int = MAGIC_WILLPOWER,
+    team_b_bloodline_magic_id: int = MAGIC_WILLPOWER,
     weather: int = WeatherType.NONE.value,
     weather_duration: int = 0,
     rng_seed: int = 1,

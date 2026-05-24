@@ -29,6 +29,7 @@ REQUIRED_FIELDS = (
     "count",
     "example_source_ids",
     "editor_names",
+    "source_descriptions",
     "param_shape",
     "cross_refs",
     "sample_skill_consumers",
@@ -104,6 +105,11 @@ def test_effect_families_jsonl_well_formed(catalog, pak_tables):
                 f"{family['family_key']}: example_source_id {sid} not in "
                 f"{family['source_table']}"
             )
+        for consumer in family["sample_skill_consumers"] + family["sample_ability_consumers"]:
+            assert "source_desc" in consumer, (
+                f"{family['family_key']}: sample consumer missing source_desc"
+            )
+            assert consumer["source_desc"] == consumer["desc"]
 
 
 def test_effect_families_pak_evidence_nonempty(catalog):

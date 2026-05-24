@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from roco.data.catalog import compile_catalog
-from roco.compiler_v2.artifact import compile_artifacts
+from roco.compiler_v2.catalog_compiler import compile_catalogs
 from roco.data.canonical import load_canonical_records
 from roco.data.import_db import (
     import_abilities,
@@ -121,7 +121,7 @@ def main() -> None:
         _cleanup_db_files(tmp_db)
         raise
 
-    hot_path, debug_path = compile_artifacts(TARGET_DB)
+    hot_path, debug_path = compile_catalogs(TARGET_DB)
     print(
         f"Built -> {TARGET_DB} "
         f"({len(catalog.pets_by_id)} pets, {len(catalog.skills_by_id)} skills, "

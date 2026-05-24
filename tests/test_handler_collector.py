@@ -125,7 +125,7 @@ def test_collect_handler_axes_runs_on_real_op_mods():
     """The real engine owns semantic coverage metadata, not numeric ids."""
     axes = collect_handler_axes()
     assert {axis: len(bucket) for axis, bucket in axes.items()} == {
-        "buff_type": 82,
+        "buff_type": 78,
         "prefix_type": 3,
     }
     assert "BFT_ATTR_CHANGE" in axes["buff_type"]

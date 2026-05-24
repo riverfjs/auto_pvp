@@ -48,16 +48,20 @@ def render_markdown(families: list[dict]) -> str:
                      f"| used_consumer_count: {f['used_consumer_count']}")
         if f["editor_names"]:
             lines.append(f"- editor_names: {', '.join(f['editor_names'][:10])}")
+        if f.get("source_descriptions"):
+            lines.append(f"- source_descriptions: {', '.join(f['source_descriptions'][:5])}")
         lines.append(f"- example_source_ids: {f['example_source_ids']}")
         lines.append(f"- coverage_breakdown: {f['coverage_breakdown']}")
         if f["sample_skill_consumers"]:
             lines.append("- sample_skill_consumers:")
             for c in f["sample_skill_consumers"]:
-                lines.append(f"    - `{c['source_id']}` {c['name']} — {c['desc'][:80]}")
+                desc = c.get("source_desc") or c.get("desc", "")
+                lines.append(f"    - `{c['source_id']}` {c['name']} — {desc[:80]}")
         if f["sample_ability_consumers"]:
             lines.append("- sample_ability_consumers:")
             for c in f["sample_ability_consumers"]:
-                lines.append(f"    - `{c['source_id']}` {c['name']} — {c['desc'][:80]}")
+                desc = c.get("source_desc") or c.get("desc", "")
+                lines.append(f"    - `{c['source_id']}` {c['name']} — {desc[:80]}")
         if f["desc_note_refs"]:
             lines.append("- desc_note_refs:")
             for d in f["desc_note_refs"]:

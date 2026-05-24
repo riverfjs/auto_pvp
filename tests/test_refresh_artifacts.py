@@ -56,6 +56,8 @@ def test_default_order(monkeypatch):
         "build_effect_families --check",
         "pak_schema_audit",
         "pak_schema_audit --check",
+        "bindata_coverage_audit",
+        "bindata_coverage_audit --check",
     ]
 
 
@@ -126,6 +128,8 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
         "build_effect_families --check",
         "pak_schema_audit",
         "pak_schema_audit --check",
+        "bindata_coverage_audit",
+        "bindata_coverage_audit --check",
         "pytest",
     ]
 

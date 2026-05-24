@@ -39,12 +39,18 @@ Rate = ``success_rate`` raw (10000 = 100%).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 # Re-export every handler index so callers (and tests) can write
 # ``from roco.compiler_v2.effect_codegen import H_BURN`` without reaching into
 # ``roco.generated.handler_indices`` directly.
 from roco.generated.handler_indices import *  # noqa: F401,F403
 
-from roco.compiler_v2.effect_codegen.classify import decode_buff_direct, decode_effect
+from roco.compiler_v2.effect_codegen.classify import (
+    collect_buff_candidates,
+    decode_buff_direct,
+    decode_effect,
+)
 from roco.compiler_v2.effect_codegen.exact_decoders import decode_exact
 from roco.compiler_v2.effect_codegen.family_axes import decode_family_axes
 from roco.compiler_v2.effect_codegen.outcomes import (
@@ -54,12 +60,45 @@ from roco.compiler_v2.effect_codegen.outcomes import (
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.effect_codegen.params import is_status_or_mark_handler
+from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 __all__ = [
     "PakTables",
     "generate_effect_rows",
     "build_ability_effect_rows",
 ]
+
+
+BFT_ASSIGN_ORDER = 17
+
+
+@dataclass(frozen=True)
+class _AssignRef:
+    ref_id: int
+    target_type: int | None
+    success_rate: int
+    source_buff_id: int
+    source_base_id: int
+
+
+def _as_int_tuple(value: object) -> tuple[int, ...]:
+    if isinstance(value, tuple):
+        raw_values = value
+    elif isinstance(value, list):
+        raw_values = tuple(value)
+    elif value is None:
+        raw_values = ()
+    else:
+        raw_values = (value,)
+    out: list[int] = []
+    for raw in raw_values:
+        try:
+            item = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if item:
+            out.append(item)
+    return tuple(out)
 
 
 def _emit_row(
@@ -105,6 +144,208 @@ def _emit_row(
         p2,
         p3,
     )
+
+
+def _assign_refs(
+    buff_id: int,
+    pak_data: PakTables,
+) -> tuple[list[_AssignRef], list[GapOutcome]] | None:
+    rec = pak_data.buff_conf.get(buff_id)
+    if rec is None:
+        return None
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    assign_base_ids = [
+        base_id for base_id in base_ids
+        if BUFFBASE_ORDER.get(base_id) == BFT_ASSIGN_ORDER
+    ]
+    if not assign_base_ids:
+        return None
+    refs: list[_AssignRef] = []
+    gaps: list[GapOutcome] = []
+    for base_id in assign_base_ids:
+        params = BUFFBASE_PARAMS.get(base_id) or ()
+        raw_refs = _as_int_tuple(params[0] if len(params) > 0 else ())
+        rate = int(params[1]) if len(params) > 1 and not isinstance(params[1], tuple) else 10000
+        target_code = int(params[2]) if len(params) > 2 and not isinstance(params[2], tuple) else 0
+        if not raw_refs:
+            gaps.append(GapOutcome(
+                primitive=f"assign_{base_id}",
+                effect_id=None,
+                buff_id=buff_id,
+                reason="assign_no_refs",
+                params={"buff_id": buff_id, "buff_base_id": base_id},
+            ))
+            continue
+        if rate <= 0:
+            gaps.append(GapOutcome(
+                primitive=f"assign_{base_id}",
+                effect_id=None,
+                buff_id=buff_id,
+                reason="assign_zero_rate",
+                params={"buff_id": buff_id, "buff_base_id": base_id, "rate": rate},
+            ))
+            continue
+        if target_code not in (0, 1, 2, 3, 4):
+            gaps.append(GapOutcome(
+                primitive=f"assign_condition_{target_code}",
+                effect_id=None,
+                buff_id=buff_id,
+                reason="assign_condition_unsupported",
+                params={
+                    "buff_id": buff_id,
+                    "buff_base_id": base_id,
+                    "assigned_refs": list(raw_refs),
+                    "assign_target_or_condition": target_code,
+                },
+            ))
+            continue
+        for ref_id in raw_refs:
+            refs.append(_AssignRef(
+                ref_id=ref_id,
+                target_type=target_code or None,
+                success_rate=rate,
+                source_buff_id=buff_id,
+                source_base_id=base_id,
+            ))
+    return refs, gaps
+
+
+def _single_assign_buff_from_effect(
+    effect_id: int,
+    pak_data: PakTables,
+) -> int:
+    rec = pak_data.effect_conf.get(effect_id)
+    if rec is None or int(rec.get("type", 0) or 0) != 1:
+        return 0
+    params_raw = rec.get("effect_param") or rec.get("params") or []
+    candidates = collect_buff_candidates(params_raw, pak_data.buff_conf)
+    if len(candidates) != 1:
+        return 0
+    buff_id = candidates[0]
+    return buff_id if _assign_refs(buff_id, pak_data) is not None else 0
+
+
+def _decode_reference_outcomes(
+    ref_id: int,
+    pak_data: PakTables,
+) -> list[tuple[EmitOutcome | GapOutcome | AbilityFlagOutcome, int | None]]:
+    family = decode_family_axes(ref_id, pak_data.effect_conf, pak_data.buff_conf)
+    if family is not None:
+        if isinstance(family, tuple):
+            outcome, timing_override = family
+            return [(outcome, timing_override)]
+        return [(family, None)]
+
+    override = decode_exact(ref_id)
+    if override is not None:
+        if isinstance(override, tuple):
+            outcome, timing_override = override
+            return [(outcome, timing_override)]
+        return [(override, None)]
+
+    if ref_id in pak_data.effect_conf:
+        outcomes = decode_effect(ref_id, pak_data.effect_conf, pak_data.buff_conf)
+    elif ref_id in pak_data.buff_conf:
+        outcomes = decode_buff_direct(ref_id, pak_data.buff_conf)
+    else:
+        outcomes = [GapOutcome(
+            primitive=f"effect_{ref_id}",
+            effect_id=ref_id,
+            buff_id=None,
+            reason="effect_id_not_in_pak",
+            params={"effect_id": ref_id},
+        )]
+    return [(outcome, None) for outcome in outcomes]
+
+
+def _decode_reference_rows(
+    ref_id: int,
+    pak_data: PakTables,
+    *,
+    timing: int,
+    target_type: int,
+    success_rate: int,
+    buff_group_level: int,
+    effect_order: int,
+    allow_ability_flags: bool,
+    root_ref_id: int,
+    visited: frozenset[int] = frozenset(),
+) -> tuple[list[tuple[int, ...]], list[dict]]:
+    if ref_id in visited:
+        gap = GapOutcome(
+            primitive=f"effect_{ref_id}",
+            effect_id=ref_id if ref_id in pak_data.effect_conf else None,
+            buff_id=ref_id if ref_id in pak_data.buff_conf else None,
+            reason="assign_recursive_ref",
+            params={"effect_id": ref_id if ref_id in pak_data.effect_conf else None, "buff_id": ref_id if ref_id in pak_data.buff_conf else None},
+        )
+        return [], [_gap_dict(gap, timing, effect_order, target_type, success_rate)]
+    next_visited = visited | {ref_id}
+
+    assign_buff_id = ref_id if ref_id in pak_data.buff_conf else _single_assign_buff_from_effect(ref_id, pak_data)
+    assigned = _assign_refs(assign_buff_id, pak_data) if assign_buff_id else None
+    if assigned is not None:
+        refs, assign_gaps = assigned
+        rows: list[tuple[int, ...]] = []
+        gaps: list[dict] = []
+        for gap in assign_gaps:
+            gap_dict = _gap_dict(gap, timing, effect_order, target_type, success_rate)
+            gap_dict["params"].setdefault("assigned_from", ref_id)
+            gaps.append(gap_dict)
+        for ref in refs:
+            child_rows, child_gaps = _decode_reference_rows(
+                ref.ref_id,
+                pak_data,
+                timing=timing,
+                target_type=ref.target_type or target_type,
+                success_rate=success_rate * ref.success_rate // 10000,
+                buff_group_level=1,
+                effect_order=effect_order,
+                allow_ability_flags=allow_ability_flags,
+                root_ref_id=root_ref_id,
+                visited=next_visited,
+            )
+            rows.extend(child_rows)
+            for gap in child_gaps:
+                gap["params"].setdefault("assigned_from", ref.source_buff_id)
+                gap["params"].setdefault("assigned_from_base", ref.source_base_id)
+                gap["params"].setdefault("assigned_ref", ref.ref_id)
+                gaps.append(gap)
+        return rows, gaps
+
+    rows: list[tuple[int, ...]] = []
+    gaps: list[dict] = []
+    for outcome, timing_override in _decode_reference_outcomes(ref_id, pak_data):
+        row_timing = timing_override or timing
+        if isinstance(outcome, EmitOutcome):
+            rows.append(_emit_row(
+                outcome,
+                timing=row_timing,
+                target_type=target_type,
+                success_rate=success_rate,
+                buff_group_level=buff_group_level,
+            ))
+        elif isinstance(outcome, GapOutcome):
+            gaps.append(_gap_dict(outcome, row_timing, effect_order, target_type, success_rate))
+        elif isinstance(outcome, AbilityFlagOutcome):
+            if allow_ability_flags and outcome.effect_id == root_ref_id:
+                continue
+            gaps.append(_gap_dict(
+                GapOutcome(
+                    primitive=f"effect_{outcome.effect_id}",
+                    effect_id=outcome.effect_id,
+                    buff_id=outcome.effect_id if outcome.effect_id in pak_data.buff_conf else None,
+                    reason="assign_ability_flag_requires_provenance",
+                    params={"effect_id": outcome.effect_id, "flag": outcome.flag_name},
+                ),
+                row_timing,
+                effect_order,
+                target_type,
+                success_rate,
+            ))
+        else:
+            raise RuntimeError(f"unknown effect decoder outcome: {outcome!r}")
+    return rows, gaps
 
 
 def generate_effect_rows(
@@ -159,87 +400,33 @@ def generate_effect_rows(
         success_rate = entry.get("success_rate", 10000)
         buff_group_level = int(entry.get("buff_group_level", 0) or 0)
 
-        # Pak-axis family decoders win first — they read pak's own
-        # schema fields (e.g. ``effect_order``) so the whole family is
-        # covered uniformly without per-id rule rows.  Same return
-        # shape as ``decode_exact`` so the tuple/timing handling below
-        # serves both.
-        family = decode_family_axes(
-            effect_id, pak_data.effect_conf, pak_data.buff_conf,
+        child_rows, child_gaps = _decode_reference_rows(
+            int(effect_id),
+            pak_data,
+            timing=cast_moment,
+            target_type=target_type,
+            success_rate=success_rate,
+            buff_group_level=buff_group_level,
+            effect_order=order,
+            allow_ability_flags=allow_ability_flags,
+            root_ref_id=int(effect_id),
         )
-        if family is not None:
-            if isinstance(family, tuple):
-                outcome, timing_override = family
-                timing = timing_override or cast_moment
-            else:
-                outcome = family
-                timing = cast_moment
-            rows.append(_emit_row(
-                outcome,
-                timing=timing,
-                target_type=target_type,
-                success_rate=success_rate,
-                buff_group_level=buff_group_level,
-            ))
-            continue
-
-        # Hand-curated exact decoders (currently generated weather setters)
-        # take precedence over the structural decoder.
-        override = decode_exact(effect_id)
-        if override is not None:
-            if isinstance(override, tuple):
-                outcome, timing_override = override
-                timing = timing_override or cast_moment
-            else:
-                outcome = override
-                timing = cast_moment
-            rows.append(_emit_row(
-                outcome,
-                timing=timing,
-                target_type=target_type,
-                success_rate=success_rate,
-                buff_group_level=buff_group_level,
-            ))
-            continue
-
-        if effect_id in pak_data.effect_conf:
-            outcomes = decode_effect(effect_id, pak_data.effect_conf, pak_data.buff_conf)
-        elif effect_id in pak_data.buff_conf:
-            outcomes = decode_buff_direct(effect_id, pak_data.buff_conf)
-        else:
-            outcomes = [GapOutcome(
-                primitive=f"effect_{effect_id}",
-                effect_id=effect_id,
-                buff_id=None,
-                reason="effect_id_not_in_pak",
-                params={"effect_id": effect_id},
-            )]
-
-        for outcome in outcomes:
-            if isinstance(outcome, EmitOutcome):
-                rows.append(_emit_row(
-                    outcome,
-                    timing=cast_moment,
-                    target_type=target_type,
-                    success_rate=success_rate,
-                    buff_group_level=buff_group_level,
-                ))
-            elif isinstance(outcome, GapOutcome):
-                gaps.append(_gap_dict(outcome, cast_moment, order, target_type, success_rate))
-            elif isinstance(outcome, AbilityFlagOutcome):
-                if not allow_ability_flags:
-                    raise RuntimeError(
-                        f"AbilityFlagOutcome leaked into a non-ability decoding "
-                        f"path (effect_id={outcome.effect_id}, "
-                        f"flag={outcome.flag_name}). generate_effect_rows must "
-                        f"be called with allow_ability_flags=True only from "
-                        f"ability builders."
-                    )
-                # The bit is set later by compiler_v2.ability_flags via the
-                # ability_effect_ids × pak-derived ability flag join.
-                continue
-            else:
-                raise RuntimeError(f"unknown effect decoder outcome: {outcome!r}")
+        if not allow_ability_flags:
+            leaked = [
+                gap for gap in child_gaps
+                if gap.get("reason") == "assign_ability_flag_requires_provenance"
+            ]
+            if leaked:
+                first = leaked[0]["params"]
+                raise RuntimeError(
+                    f"AbilityFlagOutcome leaked into a non-ability decoding "
+                    f"path (effect_id={first.get('effect_id')}, "
+                    f"flag={first.get('flag')}). generate_effect_rows must "
+                    f"be called with allow_ability_flags=True only from "
+                    f"ability builders."
+                )
+        rows.extend(child_rows)
+        gaps.extend(child_gaps)
 
     return rows, gaps
 

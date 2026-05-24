@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.common.constants import DEFAULT_MAX_TURNS
+from roco.common.constants import DEFAULT_MAX_TURNS, MAGIC_WILLPOWER
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
 from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, WIN_DRAW, Choice
@@ -36,8 +36,8 @@ class BattleEngine:
         team_b_moves: tuple[tuple[int, ...], ...] | None = None,
         team_a_bloodlines: tuple[int, ...] | None = None,
         team_b_bloodlines: tuple[int, ...] | None = None,
-        team_a_bloodline_magic_id: int = 1,
-        team_b_bloodline_magic_id: int = 1,
+        team_a_bloodline_magic_id: int = MAGIC_WILLPOWER,
+        team_b_bloodline_magic_id: int = MAGIC_WILLPOWER,
         rng_seed: int = 1,
         max_turns: int = DEFAULT_MAX_TURNS,
     ) -> "BattleEngine":

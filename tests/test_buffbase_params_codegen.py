@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler_v2.artifacts import (
+from roco.compiler_v2.static_artifacts import (
     BUFFBASE_PARAMS_PATH,
     _normalize_slot,
     build_buffbase_tables,

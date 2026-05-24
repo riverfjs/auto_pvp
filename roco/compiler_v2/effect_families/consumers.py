@@ -14,11 +14,16 @@ from collections import defaultdict
 def _collect_consumer(record: dict, kind: str) -> dict:
     """Project a skills/abilities canonical row into a compact consumer dict."""
     source_fields = record.get("source_fields") or {}
+    if kind == "skill":
+        source_desc = str(record.get("effect_text") or "")
+    else:
+        source_desc = str(record.get("description") or source_fields.get("desc") or "")
     return {
         "kind": kind,  # 'skill' / 'ability'
         "source_id": int(record.get("source_id") or source_fields.get("id") or 0),
         "name": str(record.get("name", "")),
-        "desc": str(source_fields.get("desc", "")),
+        "desc": source_desc,
+        "source_desc": source_desc,
     }
 
 

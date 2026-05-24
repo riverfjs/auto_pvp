@@ -20,7 +20,6 @@ from roco.common.constants import (
     MAGIC_LEADER_TRANSFORM,
     MAGIC_WILLPOWER,
     WILLPOWER_COUNTER_STATUS_BPS,
-    WILLPOWER_POWER,
 )
 from roco.engine.kernel.actions import (
     can_pay_hp_for_energy,
@@ -32,6 +31,7 @@ from roco.engine.kernel.actions import (
 from roco.engine.common.rng import next_rng
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
 from roco.generated import catalog_hot as hot
+from roco.generated.bloodline_magic import WILLPOWER_RUNTIME_SKILL_BY_BLOODLINE_ID
 from roco.engine.kernel.catalog import (
     ELEMENT_GROUND,
     PET_ABILITY,
@@ -192,9 +192,12 @@ def _priority(state: KernelState, side_id: int, choice: Choice) -> int:
 
 def _choice_category(state: KernelState, side_id: int, choice: Choice) -> int:
     if choice.action_code == ACTION_MAGIC:
-        if side(state, side_id).bloodline_magic_id == MAGIC_LEADER_TRANSFORM:
+        magic_id = side(state, side_id).bloodline_magic_id
+        if magic_id == MAGIC_LEADER_TRANSFORM:
             return 0
-        return SkillCategory.MAGICAL.value
+        if magic_id == MAGIC_WILLPOWER:
+            return SkillCategory.MAGICAL.value
+        return 0
     if choice.action_code != ACTION_MOVE:
         return 0
     side_state = side(state, side_id)
@@ -238,10 +241,10 @@ def _execute(
         if actor_side.bloodline_magic_id != MAGIC_WILLPOWER or actor_side.willpower_uses <= 0:
             return state, 0
         bloodline = actor_side.bloodlines[actor_slot] if actor_slot < len(actor_side.bloodlines) else -1
-        if bloodline < 0 or bloodline >= hot.ELEMENT_COUNT:
+        skill = WILLPOWER_RUNTIME_SKILL_BY_BLOODLINE_ID.get(bloodline)
+        if skill is None:
             return state, 0
         skill_id = 0
-        skill = (0, bloodline, SkillCategory.MAGICAL.value, 0, WILLPOWER_POWER, 0, 1, 0)
         actor_side = actor_side._replace(willpower_uses=actor_side.willpower_uses - 1)
         state = replace_side(state, actor_side_id, actor_side)
     elif choice.action_code != ACTION_MOVE:

@@ -47,6 +47,9 @@ roco.data.build_db
 _db/data.db
     |
     v
+roco.compiler_v2.catalog_compiler
+    |
+    v
 roco/generated/catalog_hot.py
 roco/generated/catalog_debug.py
     |
@@ -115,10 +118,14 @@ mark_groups.py              mark cover groups
 natures.py                  nature stat modifiers
 canonical_adapters.py       pak -> canonical adapters
 static/lua_enums.py         Lua enum snapshot
-static/pak_axes.py          pak numeric axes joined to enum names
+static/pak_axes.py          compiler-only effect/buff axes joined to enum names
 static/manifest.py          source hashes
 audit/effect_families.jsonl generated machine-readable audit
 ```
+
+Top-level generated modules are runtime/data adapters. `static/pak_axes.py` is a
+compiler-only effect/buff axis snapshot and intentionally does not duplicate
+`battle_globals.py` or `skill_dam_types.py`.
 
 `roco/generated/audit/effect_families.jsonl` is not a rule file. It is generated
 audit data. Do not edit it by hand.
@@ -127,6 +134,12 @@ audit data. Do not edit it by hand.
 
 `_db/data.db` is a local intermediate build artifact and inspection surface,
 not a checked-in source file. The engine does not read it at runtime.
+
+Team rows are optional sample data. During DB import, a team is inserted only
+when its bloodline magic, pets, skills, and referenced skill/ability effects are
+fully resolvable by the generated static data and current engine handlers.
+Unsupported teams are skipped with printed counts; they are not rewritten to
+defaults.
 
 Important tables:
 
@@ -209,6 +222,8 @@ tools/                       maintenance scripts, including sparse pak update
 roco/generated/              generated runtime/data artifacts
 roco/generated/audit/        generated machine-readable audits
 roco/compiler_v2/            pak/Lua readers, emitters, structural decoders
+roco/compiler_v2/static_artifacts/
+                             generated static artifact emitters split by domain
 roco/compiler_v2/rules/      hand-maintained migration inputs only, not dispatch source
 roco/data/                   pak canonicalization, DB import, catalog compilation
 roco/engine/kernel/          fixed integer battle kernel

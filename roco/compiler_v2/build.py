@@ -45,7 +45,6 @@ def build_static_bundle(
     lua_enums = lua.enums(enum_names)
     effect_conf = pak.table("EFFECT_CONF")
     buffbase_conf = pak.table("BUFFBASE_CONF")
-    buff_conf = pak.table("BUFF_CONF")
     battle_global_conf = pak.table("BATTLE_GLOBAL_CONFIG")
     type_dictionary = pak.table("TYPE_DICTIONARY")
     pak_root = pak.data_dir.parent if pak.data_dir.name == "BinData" else pak.data_dir
@@ -57,6 +56,10 @@ def build_static_bundle(
         pak.source_file("BUFF_CONF"),
         pak.source_file("BATTLE_GLOBAL_CONFIG"),
         pak.source_file("TYPE_DICTIONARY"),
+        pak.source_file("WEATHER_CONF"),
+        pak.source_file("PET_BLOOD_CONF"),
+        pak.source_file("PLAYER_MAGIC_CONF"),
+        pak.source_file("BAG_ITEM_CONF"),
         pak.source_file("SKILL_CONF"),
         pak.source_file("DESC_NOTE_CONF"),
         pak.source_file("NATURE_CONF"),
@@ -89,14 +92,6 @@ def build_static_bundle(
         if isinstance(base_id, int) and order is not None:
             buff_base_to_order[base_id] = order
 
-    buff_id_to_base_ids: dict[int, tuple[int, ...]] = {}
-    for buff_id, rec in buff_conf.items():
-        if not isinstance(buff_id, int):
-            continue
-        base_ids = tuple(int(v) for v in rec.get("buff_base_ids") or [] if _maybe_int(v) is not None)
-        if base_ids:
-            buff_id_to_base_ids[buff_id] = base_ids
-
     skill_dam_type_names = {value: name for name, value in lua_enums["SkillDamType"].items()}
     (
         skill_dam_type_to_element,
@@ -121,7 +116,6 @@ def build_static_bundle(
         buffbase_order_names=buffbase_order_names,
         buffbase_order_counts=dict(sorted(buffbase_order_counts.items())),
         buff_base_to_order=dict(sorted(buff_base_to_order.items())),
-        buff_id_to_base_ids=dict(sorted(buff_id_to_base_ids.items())),
     )
 
 

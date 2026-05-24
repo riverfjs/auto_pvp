@@ -54,8 +54,9 @@ def test_static_files_are_importable_python(tmp_path: Path):
 
     assert pak_axes.EFFECT_ORDER_NAMES[31] == "ET_COUNTER"
     assert pak_axes.BUFFBASE_ORDER_NAMES[58] == "BFT_FREEZE"
-    assert pak_axes.SKILL_DAM_TYPE_TO_ELEMENT_NAME[8] == "地"
-    assert pak_axes.BATTLE_GLOBAL_NUMS["battle_pvp_level"] == 60
+    assert pak_axes.EFFECT_ORDER_COUNTS[31] > 0
+    assert pak_axes.BUFFBASE_ORDER_COUNTS[58] > 0
+    assert pak_axes.BUFF_BASE_TO_ORDER
     assert lua_enums.EFFECT_TYPE["ET_COUNTER"] == 31
     assert manifest.SOURCE_HASH == bundle.source_hash
 
@@ -63,11 +64,21 @@ def test_static_files_are_importable_python(tmp_path: Path):
 def test_generated_runtime_static_adapters_match_bundle():
     bundle = build_static_bundle()
 
-    from roco.generated import battle_globals, skill_dam_types
+    from roco.generated import battle_globals, bloodline_magic, skill_dam_types, weather_table
 
     assert battle_globals.BATTLE_GLOBAL_NUMS == bundle.battle_global_nums
     assert skill_dam_types.SKILL_DAM_TYPE_TO_ELEMENT == bundle.skill_dam_type_to_element
     assert skill_dam_types.SKILL_DAM_TYPE_TO_ELEMENT_NAME[7] == "地"
+    assert weather_table.WEATHER_ROWS[6]["name"] == "沙尘暴"
+    assert weather_table.PAK_WEATHER_TYPE_TO_KERNEL[6] == 2
+    assert weather_table.PAK_WEATHER_DEFAULT_TURNS[6] == 8
+    assert bloodline_magic.PAK_BLOODLINE_LEADER == 19
+    assert bloodline_magic.PAK_BLOODLINE_POLLUTANT == 23
+    assert bloodline_magic.PAK_ELEMENT_TO_BLOODLINE[0] == 1
+    assert bloodline_magic.PLAYER_MAGIC_WILLPOWER_ID == 100002
+    assert bloodline_magic.PLAYER_MAGIC_LEADER_TRANSFORM_ID == 100007
+    assert bloodline_magic.WILLPOWER_RUNTIME_SKILL_BY_BLOODLINE_ID[1][4] == 80
+    assert bloodline_magic.WILLPOWER_COUNTER_STATUS_BPS == 25000
 
 
 def test_compiler_v2_has_no_semantics_table_module():

@@ -438,6 +438,14 @@ def test_catalog_abilityflag_slots_match_expected_pak_consumers():
         pytest.skip("_db/data.db missing; run `uv run python -m roco.data.build_db` first")
     conn = sqlite3.connect(str(db_path))
     try:
+        has_abilities_table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'abilities'"
+        ).fetchone()
+        if not has_abilities_table:
+            pytest.skip(
+                "_db/data.db has no abilities table; run "
+                "`uv run python -m roco.data.build_db` first"
+            )
         for ability_name, expected_flag in (("仁心", AbilityFlag.HEAL_ON_BURN_DAMAGE),
                                             ("耐活王", AbilityFlag.HEAL_ON_POISON_DAMAGE),
                                             ("吟游之弦", AbilityFlag.MARK_STACK_NO_REPLACE)):

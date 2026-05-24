@@ -28,7 +28,7 @@ def write_static_files(bundle: StaticBundle, out_dir: Path) -> dict[str, Path]:
     init_path.write_text(
         HEADER
         + "from .lua_enums import LUA_ENUMS\n"
-        + "from .pak_axes import EFFECT_ORDER_NAMES, BUFFBASE_ORDER_NAMES, SKILL_DAM_TYPE_TO_ELEMENT\n"
+        + "from .pak_axes import EFFECT_ORDER_NAMES, BUFFBASE_ORDER_NAMES, BUFF_BASE_TO_ORDER\n"
         + "from .manifest import SOURCE_HASH\n",
         encoding="utf-8",
     )
@@ -55,19 +55,11 @@ def _render_lua_enums(bundle: StaticBundle) -> str:
 
 def _render_pak_axes(bundle: StaticBundle) -> str:
     parts = [HEADER]
-    parts.append(_assign("BATTLE_GLOBAL_NUMS", bundle.battle_global_nums))
-    parts.append(_assign("BATTLE_GLOBAL_LISTS", bundle.battle_global_lists))
-    parts.append(_assign("BATTLE_GLOBAL_STRINGS", bundle.battle_global_strings))
-    parts.append(_assign("SKILL_DAM_TYPE_NAMES", bundle.skill_dam_type_names))
-    parts.append(_assign("SKILL_DAM_TYPE_TO_ELEMENT", bundle.skill_dam_type_to_element))
-    parts.append(_assign("SKILL_DAM_TYPE_TO_ELEMENT_NAME", bundle.skill_dam_type_to_element_name))
-    parts.append(_assign("SKILL_DAM_TYPE_UNMAPPED", bundle.skill_dam_type_unmapped))
     parts.append(_assign("EFFECT_ORDER_NAMES", bundle.effect_order_names))
     parts.append(_assign("EFFECT_ORDER_COUNTS", bundle.effect_order_counts))
     parts.append(_assign("BUFFBASE_ORDER_NAMES", bundle.buffbase_order_names))
     parts.append(_assign("BUFFBASE_ORDER_COUNTS", bundle.buffbase_order_counts))
     parts.append(_assign("BUFF_BASE_TO_ORDER", bundle.buff_base_to_order))
-    parts.append(_assign("BUFF_ID_TO_BASE_IDS", bundle.buff_id_to_base_ids))
     return "\n".join(parts)
 
 

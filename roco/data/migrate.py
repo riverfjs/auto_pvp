@@ -16,6 +16,7 @@ from roco.data.utils import DB_DIR
 from roco.compiler_v2.effect_model import Timing
 from roco.generated.pak_ops import EFF_DAMAGE
 from roco.common.enums import ELEMENT_NAMES
+from roco.generated.bloodline_magic import BLOODLINE_DB_ROWS, BLOODLINE_MAGIC_DB_ROWS
 
 
 SCHEMA = """
@@ -140,6 +141,7 @@ CREATE TABLE IF NOT EXISTS effect_gaps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_type TEXT NOT NULL,
     source_name TEXT NOT NULL,
+    source_desc TEXT NOT NULL DEFAULT '',
     primitive TEXT NOT NULL,
     timing_code INTEGER,
     params_json TEXT NOT NULL DEFAULT '{}',
@@ -328,18 +330,21 @@ def _seed_static_rows(conn: sqlite3.Connection) -> None:
     )
     conn.executemany(
         "INSERT OR IGNORE INTO bloodlines (id, code, name, kind, element_id) VALUES (?, ?, ?, ?, ?)",
-        [(i, code, name, "element", i) for i, (code, name) in enumerate(zip(ELEMENT_CODES, ELEMENT_NAMES))]
-        + [
-            (18, "leader", "首领", "leader", None),
-        ],
+        BLOODLINE_DB_ROWS,
     )
     conn.executemany(
         "INSERT OR IGNORE INTO bloodline_magics (id, code, name, uses_per_battle, description) VALUES (?, ?, ?, ?, ?)",
-        [
-            (1, "willpower_strike", "愿力冲击", 2, "以当前精灵血脉属性发动愿力冲击。"),
-            (2, "leader_transform", "进化之力", 1, "首领血脉进化接口，形态数据缺失时由 audit 暴露。"),
-        ],
+        BLOODLINE_MAGIC_DB_ROWS,
     )
+
+
+def _ensure_schema_columns(conn: sqlite3.Connection) -> None:
+    effect_gap_columns = {
+        str(row[1])
+        for row in conn.execute("PRAGMA table_info(effect_gaps)")
+    }
+    if "source_desc" not in effect_gap_columns:
+        conn.execute("ALTER TABLE effect_gaps ADD COLUMN source_desc TEXT NOT NULL DEFAULT ''")
 
 
 def migrate(reset: bool = False, db_path: str | Path | None = None) -> sqlite3.Connection:
@@ -360,6 +365,7 @@ def migrate(reset: bool = False, db_path: str | Path | None = None) -> sqlite3.C
         conn.execute("PRAGMA foreign_keys = ON")
 
     conn.executescript(SCHEMA)
+    _ensure_schema_columns(conn)
     _seed_static_rows(conn)
     conn.commit()
     return conn

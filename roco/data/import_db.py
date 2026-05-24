@@ -5,13 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+from collections import Counter
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
 from roco.data.canonical import load_canonical_records
-from roco.data.utils import DB_DIR, RULES_DIR, content_hash, iter_jsonl
+from roco.data.utils import DB_DIR, RULES_DIR, iter_jsonl
 from roco.common.enums import SkillCategory, normalize_element_name
+from roco.generated.bloodline_magic import DEFAULT_BLOODLINE_MAGIC_NAME
 
 
 Record = Mapping[str, Any]
@@ -74,20 +76,39 @@ def _bloodline_id(conn: sqlite3.Connection, raw: str | None) -> int | None:
 
 
 def _bloodline_magic_id(conn: sqlite3.Connection, raw: str | None) -> int:
-    name = str(raw or "").strip() or "愿力冲击"
-    code = {
-        "愿力冲击": "willpower_strike",
-        "进化之力": "leader_transform",
-    }.get(name, f"magic_{content_hash(name)[:12]}")
-    uses = 2 if name == "愿力冲击" else 1 if name == "进化之力" else 0
-    conn.execute(
-        "INSERT OR IGNORE INTO bloodline_magics (code, name, uses_per_battle, description) VALUES (?, ?, ?, ?)",
-        (code, name, uses, ""),
-    )
+    name = str(raw or "").strip() or DEFAULT_BLOODLINE_MAGIC_NAME
     row = conn.execute("SELECT id FROM bloodline_magics WHERE name = ?", (name,)).fetchone()
     if row is None:
-        raise ValueError(f"bloodline magic not inserted: {name}")
+        raise ValueError(f"bloodline magic not generated from pak static: {name}")
     return int(row[0])
+
+
+def _team_skip_reason(
+    team: Record,
+    pet_lookup: dict[str, int],
+    skill_lookup: dict[str, int],
+    gap_skills: set[str],
+    gap_abilities: set[str],
+    pet_abilities: dict[int, str],
+    skill_names: dict[int, str],
+) -> str | None:
+    for pet in team.get("pets", []) or []:
+        pet_name = str(pet.get("name", ""))
+        pet_id = pet_lookup.get(pet_name) or pet_lookup.get(str(pet.get("name_short", "")))
+        if pet_id is None:
+            return f"unknown_pet:{pet_name}"
+        ability_name = pet_abilities.get(pet_id, "")
+        if ability_name in gap_abilities:
+            return f"ability:{ability_name}"
+        for move in pet.get("moves", []) or []:
+            move_name = str(move)
+            skill_id = skill_lookup.get(move_name)
+            if skill_id is None:
+                return f"unknown_skill:{move_name}"
+            skill_name = skill_names.get(skill_id, move_name)
+            if skill_name in gap_skills:
+                return f"skill:{skill_name}"
+    return None
 
 
 def _category(raw: object) -> tuple[int, str]:
@@ -117,6 +138,7 @@ _CATEGORY_NAMES = {
 def _gap_row(
     source_type: str,
     source_name: str,
+    source_desc: str,
     primitive: str,
     timing_code: int | None,
     params: Mapping[str, Any] | None,
@@ -125,6 +147,7 @@ def _gap_row(
     return (
         source_type,
         source_name,
+        source_desc,
         primitive,
         timing_code,
         _json(dict(params or {})),
@@ -137,8 +160,8 @@ def _insert_gaps(conn: sqlite3.Connection, rows: Iterable[tuple]) -> int:
     gap_rows = list(rows)
     if gap_rows:
         conn.executemany(
-            "INSERT INTO effect_gaps (source_type, source_name, primitive, timing_code, params_json, reason, used_count) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO effect_gaps (source_type, source_name, source_desc, primitive, timing_code, params_json, reason, used_count) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             gap_rows,
         )
     return len(gap_rows)
@@ -207,6 +230,7 @@ def import_abilities(conn: sqlite3.Connection, abilities: Iterable[Record]) -> d
             gap_rows.append(_gap_row(
                 "ability",
                 name,
+                str(record.get("description", "")),
                 str(gap.get("primitive", "")),
                 gap.get("timing_code"),
                 gap.get("params") or {},
@@ -280,6 +304,7 @@ def import_skills(conn: sqlite3.Connection, skills: Iterable[Record]) -> dict[st
             gap_rows.append(_gap_row(
                 "skill",
                 name,
+                str(record.get("effect_text", "")),
                 str(gap.get("primitive", "")),
                 gap.get("timing_code"),
                 gap.get("params") or {},
@@ -496,13 +521,55 @@ def import_teams(
     skill_lookup: dict[str, int],
 ) -> None:
     records = _records(teams, "team")
+    accepted_records: list[Record] = []
+    skipped_magic: Counter[str] = Counter()
+    skipped_team_reason: Counter[str] = Counter()
     team_rows: list[tuple] = []
     pet_rows: list[tuple] = []
     skill_rows: list[tuple] = []
+    gap_skills = {
+        str(row[0])
+        for row in conn.execute("SELECT DISTINCT source_name FROM effect_gaps WHERE source_type = 'skill'")
+    }
+    gap_abilities = {
+        str(row[0])
+        for row in conn.execute("SELECT DISTINCT source_name FROM effect_gaps WHERE source_type = 'ability'")
+    }
+    pet_abilities = {
+        int(row[0]): str(row[1] or "")
+        for row in conn.execute(
+            """
+            SELECT p.id, a.name
+            FROM pets p
+            LEFT JOIN abilities a ON a.id = p.ability_id
+            """
+        )
+    }
+    skill_names = {
+        int(row[0]): str(row[1])
+        for row in conn.execute("SELECT id, name FROM skills")
+    }
 
     for team in records:
-        magic_name = str(team.get("bloodline_magic", "") or "愿力冲击")
-        magic_id = _bloodline_magic_id(conn, magic_name)
+        magic_name = str(team.get("bloodline_magic", "") or DEFAULT_BLOODLINE_MAGIC_NAME)
+        try:
+            magic_id = _bloodline_magic_id(conn, magic_name)
+        except ValueError:
+            skipped_magic[magic_name] += 1
+            continue
+        skip_reason = _team_skip_reason(
+            team,
+            pet_lookup,
+            skill_lookup,
+            gap_skills,
+            gap_abilities,
+            pet_abilities,
+            skill_names,
+        )
+        if skip_reason is not None:
+            skipped_team_reason[skip_reason] += 1
+            continue
+        accepted_records.append(team)
         team_rows.append((
             str(team.get("id", "")),
             str(team.get("title", "")),
@@ -519,7 +586,7 @@ def import_teams(
         team_rows,
     )
 
-    for team in records:
+    for team in accepted_records:
         tid = str(team.get("id", ""))
         for pet in team.get("pets", []) or []:
             pet_rows.append((
@@ -543,7 +610,7 @@ def import_teams(
         (team_id, slot): tpid
         for tpid, team_id, slot in conn.execute("SELECT id, team_id, slot FROM team_pets")
     }
-    for team in records:
+    for team in accepted_records:
         tid = str(team.get("id", ""))
         for pet in team.get("pets", []) or []:
             tpid = team_pet_ids[(tid, int(pet.get("slot", 0)))]
@@ -563,6 +630,12 @@ def import_teams(
     assert_no_missing_leader_transforms(conn)
     assert_no_blocking_effect_gaps(conn)
     print(f"  teams: {len(team_rows)} inserted")
+    if skipped_magic:
+        details = ", ".join(f"{name}={count}" for name, count in skipped_magic.most_common(8))
+        print(f"  teams skipped unsupported bloodline_magic: {sum(skipped_magic.values())} ({details})")
+    if skipped_team_reason:
+        details = ", ".join(f"{reason}={count}" for reason, count in skipped_team_reason.most_common(8))
+        print(f"  teams skipped unsupported team data: {sum(skipped_team_reason.values())} ({details})")
     print(f"  team_pets: {len(pet_rows)} slots inserted")
     print(f"  team_pet_skills: {len(skill_rows)} moves inserted")
 

@@ -3,5 +3,5 @@
 from __future__ import annotations
 
 from .lua_enums import LUA_ENUMS
-from .pak_axes import EFFECT_ORDER_NAMES, BUFFBASE_ORDER_NAMES, SKILL_DAM_TYPE_TO_ELEMENT
+from .pak_axes import EFFECT_ORDER_NAMES, BUFFBASE_ORDER_NAMES, BUFF_BASE_TO_ORDER
 from .manifest import SOURCE_HASH

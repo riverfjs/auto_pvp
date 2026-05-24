@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+from roco.generated.bloodline_magic import PAK_BLOODLINE_LEADER, PLAYER_MAGIC_LEADER_TRANSFORM_ID
+
 
 def assert_no_kernel_noop_rows(conn: sqlite3.Connection) -> None:
     """Reject any ``skill_effects`` / ``ability_effects`` row with ``tag_code = 0``.
@@ -47,7 +49,7 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
 
     rows = conn.execute(
         """
-        SELECT source_type, source_name, primitive, timing_code, params_json, reason, used_count
+        SELECT source_type, source_name, source_desc, primitive, timing_code, params_json, reason, used_count
         FROM effect_gaps
         WHERE used_count > 0
         """
@@ -56,11 +58,12 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
         {
             "source_type": row[0],
             "source_name": row[1],
-            "primitive": row[2],
-            "timing_code": row[3],
-            "params_json": row[4],
-            "reason": row[5],
-            "used_count": row[6],
+            "source_desc": row[2],
+            "primitive": row[3],
+            "timing_code": row[4],
+            "params_json": row[5],
+            "reason": row[6],
+            "used_count": row[7],
         }
         for row in rows
     ]
@@ -69,9 +72,12 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
         return
     sample = []
     for row in used_gap_rows[:20]:
+        desc = str(row["source_desc"]).strip()
+        desc_part = f" desc={desc[:80]!r}" if desc else ""
         sample.append(
             f"{row['source_type']}:{row['source_name']} primitive={row['primitive']} "
             f"timing={row['timing_code']} reason={row['reason']} used={row['used_count']}"
+            f"{desc_part}"
         )
     raise RuntimeError(
         f"{len(used_gap_rows)} used effect_gaps row(s) block build; "
@@ -81,8 +87,8 @@ def assert_no_blocking_effect_gaps(conn: sqlite3.Connection) -> None:
 
 
 def assert_no_missing_leader_transforms(conn: sqlite3.Connection) -> None:
-    magic = conn.execute("SELECT id FROM bloodline_magics WHERE code = 'leader_transform'").fetchone()
-    bloodline = conn.execute("SELECT id FROM bloodlines WHERE code = 'leader'").fetchone()
+    magic = conn.execute("SELECT id FROM bloodline_magics WHERE id = ?", (PLAYER_MAGIC_LEADER_TRANSFORM_ID,)).fetchone()
+    bloodline = conn.execute("SELECT id FROM bloodlines WHERE id = ?", (PAK_BLOODLINE_LEADER,)).fetchone()
     if magic is None or bloodline is None:
         return
     rows = conn.execute(

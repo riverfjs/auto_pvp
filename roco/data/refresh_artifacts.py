@@ -16,6 +16,10 @@ failure in one cannot corrupt the next:
                                      -> _docs/pak_schema_audit.md (schema mining)
     6. roco.compiler_v2.pak_schema_audit --check
                                      -> stability self-check on step 5
+    7. roco.compiler_v2.bindata_coverage_audit
+                                     -> roco/generated/audit/bindata_coverage.json
+    8. roco.compiler_v2.bindata_coverage_audit --check
+                                     -> stability self-check on step 7
 
 Two optional flags layer on top:
 
@@ -103,6 +107,11 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     steps.append((
         "pak_schema_audit --check",
         [py, "-m", "roco.compiler_v2.pak_schema_audit", "--check"],
+    ))
+    steps.append(("bindata_coverage_audit", [py, "-m", "roco.compiler_v2.bindata_coverage_audit"]))
+    steps.append((
+        "bindata_coverage_audit --check",
+        [py, "-m", "roco.compiler_v2.bindata_coverage_audit", "--check"],
     ))
     return steps
 

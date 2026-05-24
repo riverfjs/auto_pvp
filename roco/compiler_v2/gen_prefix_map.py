@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.compiler_v2.artifacts import write_all
+from roco.compiler_v2.static_artifacts import write_all
 
 
 def main() -> None:
@@ -23,9 +23,17 @@ def main() -> None:
     print(f"mark_groups.py: {stats['mark_group_count']} cover groups")
     print(f"pak_ops.py: {stats['pak_op_count']} prefixes")
     print(f"type_chart.py: {stats['type_chart_size']}x{stats['type_chart_size']} BPS table")
+    print(f"weather_table.py: {stats['weather_table_count']} WEATHER_CONF rows")
     print(f"weather_decoders.py: {stats['weather_count']} weather effects")
     print(f"counter_skill_table.py: {stats['counter_count']} counter response skills")
     print(f"buff_immunity_table.py: {stats['immunity_count']} immunity buffs")
+    bloodline = stats["bloodline_magic_counts"]
+    print(
+        "bloodline_magic.py: "
+        f"{bloodline['bloodline_count']} bloodlines + "
+        f"{bloodline['player_magic_count']} player magics "
+        f"({bloodline['supported_magic_count']} engine-supported)"
+    )
     print(f"buffbase_params.py: {stats['buffbase_count']} base ids")
     print(f"natures.py: {stats['nature_count']} player natures")
     adapters = stats["canonical_adapter_counts"]

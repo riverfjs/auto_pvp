@@ -3,9 +3,9 @@
 from roco.generated.handler_indices import H_WEATHER
 
 WEATHER_EFFECT_DECODERS: dict[int, tuple[int, int, int, int, int, int]] = {
-    1028001: (H_WEATHER, 1, 8, 0, 0, 0),  # pak RAIN
-    1028002: (H_WEATHER, 1, 8, 0, 0, 0),  # pak RAIN
-    1028003: (H_WEATHER, 2, 8, 0, 0, 0),  # pak SANDSTORM
-    1028004: (H_WEATHER, 0, 0, 0, 0, 0),  # pak NONE
-    1028005: (H_WEATHER, 3, 8, 0, 0, 0),  # pak SNOW
+    1028001: (H_WEATHER, 1, 8, 0, 0, 0),  # pak 小雨
+    1028002: (H_WEATHER, 1, 8, 0, 0, 0),  # pak 小雨
+    1028003: (H_WEATHER, 2, 8, 0, 0, 0),  # pak 沙尘暴
+    1028004: (H_WEATHER, 0, 0, 0, 0, 0),  # pak 晴天
+    1028005: (H_WEATHER, 3, 8, 0, 0, 0),  # pak 暴风雪
 }

@@ -114,7 +114,7 @@ def damage(
     if skill[SKILL_ELEMENT] != ELEMENT_ILLUSION:
         total += _meteor_damage_stacks(actor, target, target_marks) * METEOR_POWER
     total += ctx.flat_damage
-    return max(0, (total * ctx.damage_bps) // BPS)
+    return max(0, (total * ctx.damage_bps * ctx.damage_reduction_bps) // (BPS * BPS))
 
 
 def _hit_count(actor: PetState, target: PetState, ctx: StageCtx) -> int:

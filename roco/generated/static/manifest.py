@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 
-SOURCE_HASH = '2a798b8203f46d81519b54f1275d7eff579304ec5791b9f7f468ee91a53055e1'
+SOURCE_HASH = '3caeb395a8cd4147d3f42d2266216a70c8eead175ff424128e025773ca65b028'
 
 SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name': 'ATTRIBUTE_CONF.json',
                                                             'sha256': 'e875e44ecf49738403b0b09faf6a2d67f02cf353bb4126de593d04f11ea81e41',
                                                             'size': 19602},
+ 'pak-public-kit/output/data/BinData/BAG_ITEM_CONF.json': {'name': 'BAG_ITEM_CONF.json',
+                                                           'sha256': '8c80df87585c09a965c585757ba1f4c340f799fb0ddfe688894cf1ed3dfae294',
+                                                           'size': 4734890},
  'pak-public-kit/output/data/BinData/BATTLE_GLOBAL_CONFIG.json': {'name': 'BATTLE_GLOBAL_CONFIG.json',
                                                                   'sha256': '581a52787261bfae8a77ef5d82ed9d6054782c1ef6e8207b198642afb41436fc',
                                                                   'size': 84270},
@@ -26,12 +29,21 @@ SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name
  'pak-public-kit/output/data/BinData/NATURE_CONF.json': {'name': 'NATURE_CONF.json',
                                                          'sha256': '92647f1bde91342755cc0e04c63a84fefece0000b76ab774cc010245ee5e0790',
                                                          'size': 29878},
+ 'pak-public-kit/output/data/BinData/PET_BLOOD_CONF.json': {'name': 'PET_BLOOD_CONF.json',
+                                                            'sha256': '82fb9aa8a9681fe087cc6446781b8eee42769606dab430cc488f3e29854adb39',
+                                                            'size': 28802},
+ 'pak-public-kit/output/data/BinData/PLAYER_MAGIC_CONF.json': {'name': 'PLAYER_MAGIC_CONF.json',
+                                                               'sha256': 'd8797d6f47ce393174ded452662f310e49a9812c5272b7519fac791d2b68a9fe',
+                                                               'size': 3333},
  'pak-public-kit/output/data/BinData/SKILL_CONF.json': {'name': 'SKILL_CONF.json',
                                                         'sha256': '90d6728d78a6f6d144e3194d22886c9d7a954489c22f76fc842080292899345f',
                                                         'size': 1629863},
  'pak-public-kit/output/data/BinData/TYPE_DICTIONARY.json': {'name': 'TYPE_DICTIONARY.json',
                                                              'sha256': '5770df8e481e6ef209185229d387e8f7c44f1d98bcc1fb0734e6b2a8d98d58f2',
                                                              'size': 29693},
+ 'pak-public-kit/output/data/BinData/WEATHER_CONF.json': {'name': 'WEATHER_CONF.json',
+                                                          'sha256': '925e94c7162cf4e23628e91064c4df0cd057beb1cfa79a72ec343b21aad08c26',
+                                                          'size': 13177},
  'pak-public-kit/output/data/moves.json': {'name': 'moves.json',
                                            'sha256': '2cebb3d8eedd5302a60a45da9ffec7dc92b7a018e291b82858a517ef89d623a1',
                                            'size': 332016},

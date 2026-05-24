@@ -61,12 +61,17 @@ def _build_family(
 ) -> dict:
     source_ids = sorted(source_ids)
     record_names = []
+    record_descs = []
     for sid in source_ids:
         rec = record_lookup.get(sid) or {}
         name = str(rec.get("editor_name") or rec.get("name") or "")
         if name:
             record_names.append(name)
+        desc = str(rec.get("desc") or rec.get("add_des") or "")
+        if desc:
+            record_descs.append(desc)
     editor_names = sorted(set(record_names))
+    source_descriptions = sorted(set(record_descs))
     consumers = []
     for sid in source_ids:
         consumers.extend(consumer_index.get(sid, []))
@@ -114,6 +119,7 @@ def _build_family(
             pak_evidence.append(
                 f"EFFECT_CONF.json: {sid} type={rec.get('type')} "
                 f"effect_order={rec.get('effect_order')} "
+                f"add_des={rec.get('add_des', '')!r} "
                 f"effect_param={json.dumps(param_repr, ensure_ascii=False)}"
             )
         pak_evidence.append("EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)")
@@ -124,7 +130,8 @@ def _build_family(
             base_ids = [int(b) for b in (rec.get("buff_base_ids") or []) if b]
             pak_evidence.append(
                 f"BUFF_CONF.json: {bid} buff_base_ids={base_ids} "
-                f"editor_name={rec.get('editor_name', '')!r}"
+                f"name={rec.get('name', rec.get('editor_name', ''))!r} "
+                f"desc={rec.get('desc', '')!r}"
             )
         pak_evidence.append("BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)")
     exact_semantic_hits = sorted(eid for eid in source_ids if eid in exact_emit_ids)
@@ -146,6 +153,7 @@ def _build_family(
         "count": len(source_ids),
         "example_source_ids": source_ids[:5],
         "editor_names": editor_names,
+        "source_descriptions": source_descriptions[:10],
         "param_shape": _collect_param_shape(source_ids, record_lookup, pak),
         "cross_refs": _cross_refs(source_ids, record_lookup, pak),
         "sample_skill_consumers": sample_skill_consumers,

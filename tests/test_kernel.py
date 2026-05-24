@@ -216,8 +216,11 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
-        ((H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),),
-        (0, 1),
+        (
+            (H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),
+            (hi.H_DAMAGE_REDUCTION, TIMING_CALC_DAMAGE, 0, 0, 0, 8000, 0, 0, 0),
+        ),
+        (0, 2),
         TIMING_CALC_DAMAGE,
         ctx,
     )
@@ -233,10 +236,11 @@ def test_effect_row_stage_and_damage_rounding_semantics():
         * BPS
         * BPS
     ) // (target_row[4] * BPS * BPS * BPS * BPS)
-    expected = ((max(MIN_DAMAGE, per_hit) * 3 + 7) * 5000) // BPS
+    expected = ((max(MIN_DAMAGE, per_hit) * 3 + 7) * 5000 * 8000) // (BPS * BPS)
 
     assert ctx.power == 37
     assert ctx.hit_count == 3
+    assert ctx.damage_reduction_bps == 8000
     assert _damage(actor, target, skill, ctx) == expected
 
 
@@ -635,7 +639,7 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "sqlite3",
         "catalog_debug",
         "roco.data",
-        "roco.compiler_v2.artifact",
+        "roco.compiler_v2.catalog_compiler",
         "roco.compiler_v2.classifiers",
         "params.get",
         "record_event",

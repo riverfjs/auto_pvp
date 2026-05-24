@@ -8,10 +8,11 @@ import sqlite3
 from collections import Counter
 from typing import NamedTuple
 
-from roco.common.constants import DEFAULT_MAX_TURNS
+from roco.common.constants import DEFAULT_MAX_TURNS, MAGIC_WILLPOWER
 from roco.data.utils import DB_DIR
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
+from roco.generated.bloodline_magic import PAK_ELEMENT_TO_BLOODLINE
 from roco.engine.facade.battle import BattleEngine
 from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, focus_choice, move_choice, switch_choice
 from roco.common.constants import TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS
@@ -127,10 +128,14 @@ def load_team_from_db(team_id: str, conn: sqlite3.Connection) -> TeamSpec | None
         )
         pet_ids.append(pet_id)
         move_rows.append(tuple((moves or hot.PET_SKILLS[pet_id])[:4]))
-        bloodlines.append(slot["bloodline_id"] if slot["bloodline_id"] is not None else hot.PETS[pet_id][PET_PRIMARY])
+        bloodlines.append(
+            slot["bloodline_id"]
+            if slot["bloodline_id"] is not None
+            else PAK_ELEMENT_TO_BLOODLINE[hot.PETS[pet_id][PET_PRIMARY]]
+        )
     if not pet_ids:
         return None
-    magic_id = int(team_row["bloodline_magic_id"] or 1) if team_row else 1
+    magic_id = int(team_row["bloodline_magic_id"] or MAGIC_WILLPOWER) if team_row else MAGIC_WILLPOWER
     return TeamSpec(tuple(pet_ids), tuple(move_rows), tuple(bloodlines), magic_id)
 
 

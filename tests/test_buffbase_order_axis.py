@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from roco.compiler_v2.effect_codegen import classify as cls
+from roco.compiler_v2.effect_codegen import generate_effect_rows
 from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import pack_handler_params
@@ -220,6 +221,54 @@ def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
     hit_outcome = decode_buff_direct(20450050, pak.buff_conf)[0]
     assert isinstance(hit_outcome, EmitOutcome)
     assert hit_outcome.p0 == 1
+
+
+def test_bft_assign_expands_unconditional_refs_with_target_override():
+    """BFT_ASSIGN is a structural dispatcher, not a runtime hit-count op."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20170090,  # -> ET_HEAL_ENERGY 1019003
+        "cast_moment": 12,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert gaps == []
+    assert rows == [(hi.H_HEAL_ENERGY, 12, 1, 10000, 3, 0, 0, 0)]
+
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20170830,  # -> two 星陨印记 refs, target override=2
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert gaps == []
+    assert rows == [
+        (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
+        (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
+    ]
+
+
+def test_bft_assign_keeps_condition_and_nested_flag_as_gaps():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    _rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20170210,  # target/condition code 299909
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak, allow_ability_flags=True)
+    assert gaps[0]["primitive"] == "assign_condition_299909"
+    assert gaps[0]["reason"] == "assign_condition_unsupported"
+
+    _rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20170290,  # -> AbilityFlagOutcome 1066001 via BFT_ASSIGN
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak, allow_ability_flags=True)
+    assert gaps[0]["reason"] == "assign_ability_flag_requires_provenance"
+    assert gaps[0]["params"]["assigned_ref"] == 1066001
 
 
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
