@@ -42,6 +42,7 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("target_skill_slot", -1),
     ("target_skill_energy", 0),
     ("target_poison_stacks", 0),
+    ("target_poison_effect_stacks", 0),
     ("power", 0),
     ("hit_count", 1),
     ("power_bps", BPS),

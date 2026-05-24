@@ -87,6 +87,10 @@ def op_hit_count_per_poison(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.hit_count += ctx.target_poison_stacks * row[ROW_ARG0]
 
 
+def op_hit_count_per_poison_effect(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    ctx.hit_count += ctx.target_poison_effect_stacks * row[ROW_ARG0]
+
+
 def op_stat_scale_hits_per_hp_lost(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.hit_count += ctx.actor_hp_lost_quarters * row[ROW_ARG0]
 

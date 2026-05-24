@@ -7,11 +7,13 @@ from typing import NamedTuple
 from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, ACTION_SWITCH, SIDE_A, SIDE_B, Choice
 from roco.common.packing import (
     DevotionIdx,
+    MarkIdx,
     _cooldown_at,
     _inc_skill_count,
     _inc_u8_count,
     _unpack_devotion,
     _unpack_element_u8,
+    _unpack_mark,
     _unpack_skill_count,
 )
 from roco.common.constants import (
@@ -307,6 +309,9 @@ def _execute(
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
     ctx.target_skill_energy = _target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
+    ctx.target_poison_effect_stacks = (
+        ctx.target_poison_stacks + _unpack_mark(target_side.marks, MarkIdx.POISON)
+    )
     ctx.power = (
         skill[SKILL_POWER]
         + actor.global_power_bonus

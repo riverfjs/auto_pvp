@@ -18,6 +18,7 @@ from roco.compiler_v2.effect_codegen.outcomes import (
     GapOutcome,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
+from roco.compiler_v2.effect_codegen.source_context import decode_source_context
 
 
 COVERAGE_STATUSES = frozenset({
@@ -39,6 +40,7 @@ def _classify_one_source_id(
     weather_ids: set[int],
     exact_emit_ids: set[int],
     ability_flag_ids: frozenset[int],
+    source_rows: list[dict] | None = None,
 ) -> str:
     """Run the actual decoder path and report which bucket ``sid`` falls in.
 
@@ -69,8 +71,14 @@ def _classify_one_source_id(
         family = decode_family_axes(sid, pak.effect_conf, pak.buff_conf)
         if family is not None:
             return "auto_structural"
+        context_bucket = _classify_with_source_context(sid, pak, source_rows)
+        if context_bucket is not None:
+            return context_bucket
         outcomes = decode_effect(sid, pak.effect_conf, pak.buff_conf)
     elif sid in pak.buff_conf:
+        context_bucket = _classify_with_source_context(sid, pak, source_rows)
+        if context_bucket is not None:
+            return context_bucket
         outcomes = decode_buff_direct(sid, pak.buff_conf)
     else:
         return "gap"
@@ -85,6 +93,27 @@ def _classify_one_source_id(
     if has_emit and not has_gap:
         return "auto_structural"
     return "gap"
+
+
+def _classify_with_source_context(
+    sid: int,
+    pak: PakTables,
+    source_rows: list[dict] | None,
+) -> str | None:
+    if not source_rows:
+        return None
+    buckets: list[str] = []
+    for source_row in source_rows:
+        outcomes = decode_source_context(sid, pak, source_row)
+        if outcomes is None:
+            continue
+        decoded = [outcome for outcome, _timing in outcomes]
+        has_emit = any(isinstance(outcome, EmitOutcome) for outcome in decoded)
+        has_gap = any(isinstance(outcome, GapOutcome) for outcome in decoded)
+        buckets.append("gap" if has_gap or not has_emit else "auto_structural")
+    if not buckets:
+        return None
+    return "gap" if "gap" in buckets else "auto_structural"
 
 
 def _derive_coverage_status(breakdown: dict[str, int]) -> str:

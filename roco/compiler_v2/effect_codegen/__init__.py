@@ -60,6 +60,7 @@ from roco.compiler_v2.effect_codegen.outcomes import (
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.effect_codegen.params import is_status_or_mark_handler
+from roco.compiler_v2.effect_codegen.source_context import decode_source_context
 from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 __all__ = [
@@ -228,6 +229,7 @@ def _single_assign_buff_from_effect(
 def _decode_reference_outcomes(
     ref_id: int,
     pak_data: PakTables,
+    source_row: dict | None,
 ) -> list[tuple[EmitOutcome | GapOutcome | AbilityFlagOutcome, int | None]]:
     family = decode_family_axes(ref_id, pak_data.effect_conf, pak_data.buff_conf)
     if family is not None:
@@ -242,6 +244,10 @@ def _decode_reference_outcomes(
             outcome, timing_override = override
             return [(outcome, timing_override)]
         return [(override, None)]
+
+    source_outcomes = decode_source_context(ref_id, pak_data, source_row)
+    if source_outcomes is not None:
+        return source_outcomes
 
     if ref_id in pak_data.effect_conf:
         outcomes = decode_effect(ref_id, pak_data.effect_conf, pak_data.buff_conf)
@@ -269,6 +275,7 @@ def _decode_reference_rows(
     effect_order: int,
     allow_ability_flags: bool,
     root_ref_id: int,
+    source_row: dict | None,
     visited: frozenset[int] = frozenset(),
 ) -> tuple[list[tuple[int, ...]], list[dict]]:
     if ref_id in visited:
@@ -303,6 +310,7 @@ def _decode_reference_rows(
                 effect_order=effect_order,
                 allow_ability_flags=allow_ability_flags,
                 root_ref_id=root_ref_id,
+                source_row=source_row,
                 visited=next_visited,
             )
             rows.extend(child_rows)
@@ -315,7 +323,7 @@ def _decode_reference_rows(
 
     rows: list[tuple[int, ...]] = []
     gaps: list[dict] = []
-    for outcome, timing_override in _decode_reference_outcomes(ref_id, pak_data):
+    for outcome, timing_override in _decode_reference_outcomes(ref_id, pak_data, source_row):
         row_timing = timing_override or timing
         if isinstance(outcome, EmitOutcome):
             rows.append(_emit_row(
@@ -410,6 +418,7 @@ def generate_effect_rows(
             effect_order=order,
             allow_ability_flags=allow_ability_flags,
             root_ref_id=int(effect_id),
+            source_row=skill_row,
         )
         if not allow_ability_flags:
             leaked = [

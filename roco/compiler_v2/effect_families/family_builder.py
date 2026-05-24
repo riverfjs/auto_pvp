@@ -106,6 +106,7 @@ def _build_family(
             weather_ids=weather_ids,
             exact_emit_ids=exact_emit_ids,
             ability_flag_ids=ability_flag_ids,
+            source_rows=_source_rows_for_audit(consumer_index.get(sid, [])),
         )
         breakdown[bucket + "_count"] += 1
     coverage_status = _derive_coverage_status(breakdown)
@@ -164,6 +165,17 @@ def _build_family(
         "coverage_breakdown": breakdown,
         "pak_evidence": pak_evidence,
     }
+
+
+def _source_rows_for_audit(consumers: list[dict]) -> list[dict]:
+    return [
+        {
+            "id": c.get("source_id"),
+            "name": c.get("name", ""),
+            "desc": c.get("source_desc") or c.get("desc") or "",
+        }
+        for c in consumers
+    ]
 
 
 def build_families() -> list[dict]:

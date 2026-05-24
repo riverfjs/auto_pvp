@@ -27,7 +27,7 @@ from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
 from roco.compiler_v2.effect_codegen import H_DAMAGE
-from roco.engine.kernel.op_rows import TIMING_CALC_DAMAGE
+from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE, TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
 from roco.generated import handler_indices as hi
@@ -242,6 +242,29 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     assert ctx.hit_count == 3
     assert ctx.damage_reduction_bps == 8000
     assert _damage(actor, target, skill, ctx) == expected
+
+
+def test_before_move_primitives_from_source_context():
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    ctx.skill_slot = 2
+    ctx.target_poison_effect_stacks = 3
+    ctx.power = 50
+    ctx.hit_count = 1
+
+    run_skill_timing(
+        (
+            (hi.H_HIT_COUNT_PER_POISON_EFFECT, TIMING_BEFORE_MOVE, 1, 10000, 0, 2, 0, 0, 0),
+            (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0, 0b0101, 2, 30, 1),
+        ),
+        (0, 2),
+        TIMING_BEFORE_MOVE,
+        ctx,
+    )
+
+    assert ctx.hit_count == 8
+    assert ctx.power == 80
+    assert ctx.cost_delta == -2
 
 
 def test_kernel_after_move_status_and_status_ticks():

@@ -8,9 +8,9 @@ Total families: **186**
 
 - `ability_flag`: 4
 - `auto_structural`: 90
-- `gap`: 71
+- `gap`: 70
 - `generated_weather`: 1
-- `mixed`: 20
+- `mixed`: 21
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
@@ -866,10 +866,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2091` — BUFF_CONF_DIRECT
 
-- count: **3** | coverage: `gap` | used_consumer_count: 2
+- count: **3** | coverage: `mixed` | used_consumer_count: 2
 - editor_names: 侵蚀
 - example_source_ids: [20910010, 20910020, 20910030]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 2, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7190260` S3夜游魔B — 凝望
 - sample_ability_consumers:

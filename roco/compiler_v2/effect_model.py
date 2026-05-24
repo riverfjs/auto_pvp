@@ -2,8 +2,9 @@
 
 The pak-prefix → debug-name table lives in :mod:`roco.generated.pak_ops`
 (regenerated from BUFF_CONF and engine ``op_meta`` declarations).  This
-module now only carries the small ``Timing`` enum (1:1 with pak
-``cast_moment``) and the compiled dataclasses used by the data layer.
+module now only carries the small ``Timing`` enum (pak ``cast_moment`` plus
+compiler-owned pre-resolution timings) and the compiled dataclasses used by
+the data layer.
 
 The legacy ``PakOp`` enum has been retired: its prefix members were a
 hand-mirrored copy of pak schema that would drift on every pak update,
@@ -23,11 +24,11 @@ EMPTY_PARAMS = MappingProxyType({})
 
 
 # ---------------------------------------------------------------------------
-# Timing -- values match pak cast_moment directly
+# Timing -- pak cast_moment values plus compiler-owned pre-resolution hooks.
 # ---------------------------------------------------------------------------
 
 class Timing(IntEnum):
-    """Effect trigger points matching pak ``cast_moment`` values."""
+    """Effect trigger points used by generated kernel rows."""
 
     CALC_DAMAGE = 6       # pre-attack setup
     CHECK_HIT = 7         # post-hit
@@ -40,6 +41,7 @@ class Timing(IntEnum):
     CHARGE = 25           # charge/prep
     PASSIVE_COND = 26     # passive conditional
     BATTLE_START = 27     # entry aura
+    BEFORE_MOVE = 901     # compiler-owned hook before cost payment/damage
 
 
 # ---------------------------------------------------------------------------

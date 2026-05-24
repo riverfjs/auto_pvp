@@ -123,4 +123,5 @@ HANDLER_ORDER: tuple[str, ...] = (
     'op_entry_element_skill_mod_by_count',
     'op_entry_self_buff_by_used_skill_count',
     'op_entry_self_buff_by_source_count',
+    'op_hit_count_per_poison_effect',
 )

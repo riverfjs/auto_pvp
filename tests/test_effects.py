@@ -92,6 +92,7 @@ def test_timing_matches_cast_moment():
     assert Timing.CALC_DAMAGE == 6
     assert Timing.SWITCH_IN == 24
     assert Timing.TURN_START == 10
+    assert Timing.BEFORE_MOVE == 901
 
 
 def test_generate_effect_rows_buff_ref(pak):

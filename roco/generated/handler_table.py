@@ -66,6 +66,7 @@ from roco.engine.kernel.op_mods.combat import (
     op_set_self_cooldown,
     op_stat_scale_hits_per_hp_lost,
     op_hit_count_by_team_skill_count,
+    op_hit_count_per_poison_effect,
 )
 from roco.engine.kernel.op_resources import (
     op_anti_heal,
@@ -268,6 +269,7 @@ HANDLERS: tuple = (
     op_entry_element_skill_mod_by_count,  # 119
     op_entry_self_buff_by_used_skill_count,  # 120
     op_entry_self_buff_by_source_count,  # 121
+    op_hit_count_per_poison_effect,  # 122
 )
 
 HANDLER_COUNT = len(HANDLERS)

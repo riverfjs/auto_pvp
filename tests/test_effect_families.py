@@ -220,6 +220,13 @@ def test_effect_families_covers_blocker_gaps(by_key):
         )
 
 
+def test_effect_families_counts_source_context_coverage(by_key):
+    family = by_key["buff_conf_direct:prefix_2091"]
+    assert family["coverage_status"] == "mixed"
+    assert family["coverage_breakdown"]["auto_structural_count"] == 2
+    assert family["coverage_breakdown"]["gap_count"] == 1
+
+
 # ── check mode ───────────────────────────────────────────────────────────
 
 

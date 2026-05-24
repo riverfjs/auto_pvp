@@ -28,6 +28,7 @@ from roco.compiler_v2.effect_codegen.params import pack_handler_params
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.handler_axes import collect_handler_axes, resolve_handler_axes
+from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE
 from roco.generated import handler_indices as hi
 
 
@@ -247,6 +248,72 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
         (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
     ]
+
+
+def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
+    """Order-91 conditional grants need source text for the counted condition."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[200204], pak, allow_ability_flags=True)
+    assert gaps == []
+    assert rows == [(
+        hi.H_HIT_COUNT_PER_POISON_EFFECT,
+        TIMING_BEFORE_MOVE,
+        1,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )]
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[200183], pak, allow_ability_flags=True)
+    assert gaps == []
+    assert rows == [(
+        hi.H_CUTE_HIT_PER_STACK,
+        TIMING_BEFORE_MOVE,
+        1,
+        10000,
+        2,
+        0,
+        0,
+        0,
+    )]
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7190260], pak)
+    assert any(row[0] == hi.H_HIT_COUNT_DELTA and row[4] == 1 for row in rows)
+    assert any(gap["primitive"] == "prefix_2091" and gap["params"]["buff_id"] == 20910030 for gap in gaps)
+
+
+def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
+    """Slot power/cost is executable; transmission movement is still explicit gap."""
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7070160], pak)
+    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
+    assert gaps == [{
+        "primitive": "transmission",
+        "timing_code": 11,
+        "effect_order": 0,
+        "reason": "transmission_unimplemented",
+        "params": {
+            "effect_id": 1083001,
+            "buff_id": None,
+            "ref_id": 1083001,
+            "amount": 1,
+            "source_id": 7070160,
+            "target_type": 1,
+            "success_rate": 10000,
+        },
+    }]
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7070030], pak)
+    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
+    assert gaps[0]["reason"] == "transmission_unimplemented"
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7070170], pak)
+    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
+    assert any(gap["reason"] == "transmission_unimplemented" for gap in gaps)
 
 
 def test_bft_assign_keeps_condition_and_nested_flag_as_gaps():

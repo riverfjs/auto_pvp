@@ -8,7 +8,14 @@ from roco.common.packing import _add_element_nibble, _add_element_u8
 from roco.engine.kernel.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_meta import handles_buff
-from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_ARG3
+from roco.engine.kernel.op_rows import (
+    ROW_ARG0,
+    ROW_ARG1,
+    ROW_ARG2,
+    ROW_ARG3,
+    ROW_TIMING,
+    TIMING_BEFORE_MOVE,
+)
 
 ENTRY_MOD_POWER_BPS = 1
 ENTRY_MOD_POWER_FLAT = 2
@@ -36,6 +43,8 @@ def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
 def op_skill_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if not slot_mask_matches(ctx, row[ROW_ARG0]):
         return
+    if row[ROW_TIMING] == TIMING_BEFORE_MOVE:
+        ctx.cost_delta -= row[ROW_ARG1]
     ctx.power += row[ROW_ARG2]
     ctx.hit_count += row[ROW_ARG3]
 
