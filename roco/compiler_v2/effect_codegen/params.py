@@ -10,42 +10,87 @@ from __future__ import annotations
 from typing import Any
 
 from roco.common.buffbase import pack_buff_delta_from_base_ids
-from roco.compiler_v2.handler_registry import handler_indices as _hi, load_handler_indices
+from roco.common.primitive_keys import (
+    MARK_NOTE_PREFIX,
+    STATUS_NOTE_PREFIX,
+    buff_type_key,
+    effect_order_key,
+    struct_key,
+)
 from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
-H_ANTI_HEAL = _hi.H_ANTI_HEAL
-H_BURN = _hi.H_BURN
-H_CUTE_BENCH_COST_REDUCE = _hi.H_CUTE_BENCH_COST_REDUCE
-H_ENEMY_DEBUFF = _hi.H_ENEMY_DEBUFF
-H_FREEZE = _hi.H_FREEZE
-H_HIT_COUNT_DELTA = _hi.H_HIT_COUNT_DELTA
-H_HIT_COUNT_BY_TEAM_SKILL_COUNT = _hi.H_HIT_COUNT_BY_TEAM_SKILL_COUNT
-H_LEECH = _hi.H_LEECH
-H_POISON = _hi.H_POISON
-H_SELF_BUFF = _hi.H_SELF_BUFF
-H_SELF_DEBUFF = _hi.H_SELF_DEBUFF
+_STATUS_OR_MARK_BUFF_TYPES = frozenset({
+    buff_type_key("BFT_ABSORB"),
+    buff_type_key("BFT_DAM"),
+    buff_type_key("BFT_FREEZE"),
+    buff_type_key("BFT_NINETY_FOUR"),
+    buff_type_key("BFT_SIXTY_EIGHT"),
+})
 
-_MARK_HANDLER_NAMES = {
-    "ATTACK",
-    "CHARGE",
-    "DRAGON",
-    "METEOR",
-    "MOISTURE",
-    "MOMENTUM",
-    "POISON",
-    "SLOW",
-    "SLUGGISH",
-    "SOLAR",
-    "SPIRIT",
-    "THORN",
-    "WIND",
-}
-_MARK_HANDLER_IDS = frozenset(
-    value
-    for name, value in load_handler_indices().items()
-    if name.endswith("_MARK")
-    and name.removeprefix("H_").removesuffix("_MARK") in _MARK_HANDLER_NAMES
+_STAT_DELTA_BUFF_TYPES = frozenset(
+    buff_type_key(symbol)
+    for symbol in (
+        "BFT_ASSIGN_ATTACK_FIRST",
+        "BFT_ATTR_CHANGE",
+        "BFT_BAN",
+        "BFT_BUFF_AFTER_SKILL",
+        "BFT_CAST_REPEAT_SKILL",
+        "BFT_CAST_SKILL_AFTER_ATTACK",
+        "BFT_CHANGE_CATCH_VALUE",
+        "BFT_CHECK_HP",
+        "BFT_DETECT_ENEMY_SKILLS",
+        "BFT_EIGHTY",
+        "BFT_EIGHTY_EIGHT",
+        "BFT_EIGHTY_FOUR",
+        "BFT_EIGHTY_NINE",
+        "BFT_EIGHTY_SIX",
+        "BFT_EIGHTY_THREE",
+        "BFT_ENTER_BATTLE",
+        "BFT_FIELD_REDUSE_COST",
+        "BFT_INC_DAM_BY_BUFF",
+        "BFT_KILL_BUFF",
+        "BFT_NINETY_THREE",
+        "BFT_NINETY_TWO",
+        "BFT_O_EIGHTEEN",
+        "BFT_O_ELEVEN",
+        "BFT_O_FIVE",
+        "BFT_O_FORTYTWO",
+        "BFT_O_FOUR",
+        "BFT_O_FOURTEEN",
+        "BFT_O_NINETEEN",
+        "BFT_O_ONE",
+        "BFT_O_SEVENTEEN",
+        "BFT_O_SIX",
+        "BFT_O_TEN",
+        "BFT_O_THIRTY",
+        "BFT_O_THIRTYSIX",
+        "BFT_O_THIRTYTWO",
+        "BFT_O_THREE",
+        "BFT_O_TWELVE",
+        "BFT_O_TWENTY",
+        "BFT_O_TWENTYONE",
+        "BFT_RECORD_CAST_SKILL",
+        "BFT_RELAY",
+        "BFT_SEVENTY_FIVE",
+        "BFT_SEVENTY_NINE",
+        "BFT_SEVENTY_SEVEN",
+        "BFT_SEVENTY_SIX",
+        "BFT_SEVENTY_THREE",
+        "BFT_SEVENTY_TWO",
+        "BFT_SIXTY_SEVEN",
+        "BFT_SKILL_BAN",
+        "BFT_SKILL_CHANGE",
+        "BFT_SPIKES",
+        "BFT_STRENGTHEN_THE_SKILL",
+        "BFT_TARGET_HAS_BUFF",
+    )
 )
+
+_TEAM_SKILL_HIT_COUNT = struct_key("team_skill_hit_count")
+_FLAT_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
+_HEAL_REVERSAL = struct_key("heal_reversal")
+_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
+_ET_MULTIPLE = effect_order_key("ET_MULTIPLE")
 
 
 def unwrap_param(lst: list, index: int) -> Any:
@@ -88,39 +133,47 @@ def extract_int_list(lst: list, index: int) -> list[int]:
     return []
 
 
-def is_status_or_mark_handler(h: int) -> bool:
-    """True if handler ``h`` packs a stack count in p0."""
-    return h in (H_BURN, H_POISON, H_FREEZE, H_LEECH) or h in _MARK_HANDLER_IDS
+def is_status_or_mark_primitive(primitive: str) -> bool:
+    """True if primitive ``primitive`` packs a stack count in p0."""
+    return (
+        primitive.startswith(MARK_NOTE_PREFIX)
+        or primitive.startswith(STATUS_NOTE_PREFIX)
+        or primitive in _STATUS_OR_MARK_BUFF_TYPES
+    )
 
 
-def pack_handler_params(
-    h: int,
+def is_flat_hit_count_delta_primitive(primitive: str) -> bool:
+    return primitive in (_FLAT_HIT_COUNT_DELTA, _ET_MULTIPLE)
+
+
+def pack_primitive_params(
+    primitive: str,
     buff_id: int,
     buff_conf: dict[int, dict],
     stack_count: int = 1,
 ) -> tuple[int, int, int, int]:
-    """Pack kernel-compatible params for handler ``h`` from a pak buff record.
+    """Pack primitive params from a pak buff record.
 
-    Each kernel handler reads specific semantics from p0-p3, so the packing
-    rule depends on the handler family:
+    Each primitive reads specific semantics from p0-p3, so the packing rule
+    depends on the primitive family:
 
-    * status / mark handlers carry ``stack_count`` in p0;
-    * stat-buff handlers pack up to four ``buff_base_ids`` across p0-p3;
-    * unknown handlers fall back to the same stat-buff packing.
+    * status / mark primitives carry ``stack_count`` in p0;
+    * stat-buff primitives pack a packed stat delta in p0;
+    * unknown primitives fall back to raw ``buff_base_ids`` across p0-p3.
     """
     rec = buff_conf.get(buff_id) or {}
     base_ids = [bid for bid in (rec.get("buff_base_ids") or []) if bid]
 
-    if is_status_or_mark_handler(h):
+    if is_status_or_mark_primitive(primitive):
         return (max(1, stack_count), 0, 0, 0)
-    if h == H_HIT_COUNT_BY_TEAM_SKILL_COUNT:
+    if primitive == _TEAM_SKILL_HIT_COUNT:
         return (max(1, stack_count), 0, 0, 0)
-    if h == H_HIT_COUNT_DELTA:
+    if primitive == _FLAT_HIT_COUNT_DELTA:
         delta = _flat_hit_count_delta_amount(base_ids)
         if delta == 0:
             raise RuntimeError(f"cannot derive flat hit-count delta from buff {buff_id}")
         return (delta, 0, 0, 0)
-    if h == H_ANTI_HEAL:
+    if primitive == _HEAL_REVERSAL:
         multiplier = 2
         if base_ids:
             base_params = BUFFBASE_PARAMS.get(int(base_ids[0])) or ()
@@ -128,12 +181,12 @@ def pack_handler_params(
             if isinstance(trigger, tuple) and len(trigger) >= 2:
                 multiplier = max(1, int(trigger[1]) // 10)
         return (multiplier, 0, 0, 0)
-    if h == H_CUTE_BENCH_COST_REDUCE:
+    if primitive == _CUTE_BENCH_COST_REDUCE:
         amount = _cute_bench_cost_reduce_amount(base_ids, buff_conf)
         if amount <= 0:
             raise RuntimeError(f"cannot derive cute bench cost reduction from buff {buff_id}")
         return (amount, 0, 0, 0)
-    if h in (H_SELF_BUFF, H_ENEMY_DEBUFF, H_SELF_DEBUFF):
+    if primitive in _STAT_DELTA_BUFF_TYPES:
         return (pack_buff_delta_from_base_ids(tuple(int(v) for v in base_ids)), 0, 0, 0)
     p = (base_ids + [0, 0, 0, 0])[:4]
     return (p[0], p[1], p[2], p[3])

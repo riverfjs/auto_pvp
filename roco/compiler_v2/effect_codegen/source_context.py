@@ -8,18 +8,27 @@ amount or slot condition. Unsupported parts stay as GapOutcome rows.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Any
 
+from roco.common.primitive_keys import source_context_key
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
-from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE
-from roco.compiler_v2.handler_registry import handler_indices as hi
 from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.sources import LuaEnumSource
+from roco.compiler_v2.timing_keys import ENGINE_HOOK_BEFORE_MOVE
 
-ET_INLAY = 83
-BFT_CONDITIONAL_GRANT = 91
-BFT_BASE_EFFECT = 108
-BFT_TRANSMISSION = 115
-CUTE_BUFFBASE_PREFIX = 2102
+
+@lru_cache(maxsize=None)
+def _enum_value(enum_name: str, symbol: str) -> int:
+    return int(LuaEnumSource().enums((enum_name,))[enum_name][symbol])
+
+
+ET_INLAY = int(_enum_value("EffectType", "ET_INLAY"))
+BFT_CONDITIONAL_GRANT = int(_enum_value("BuffType", "BFT_NINETY_ONE"))
+BFT_BASE_EFFECT = int(_enum_value("BuffType", "BFT_O_EIGHT"))
+BFT_TRANSMISSION = int(_enum_value("BuffType", "BFT_O_FIFTEEN"))
+CUTE_BUFFBASE_PREFIX = 2000 + int(_enum_value("BuffType", "BFT_O_TWO"))
+TIMING_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
 
 _TAG_RE = re.compile(r"</?[^>]+>")
 _SLOT_CLAUSE_RE = re.compile(r"本技能位于(?P<slots>.*?)时[，,]?(?P<body>[^。；]*)")
@@ -32,7 +41,7 @@ def decode_source_context(
     ref_id: int,
     pak_data: Any,
     source_row: dict | None,
-) -> list[tuple[EmitOutcome | GapOutcome, int | None]] | None:
+) -> list[tuple[EmitOutcome | GapOutcome, str | None]] | None:
     """Decode source-text dependent primitives for one effect/buff reference."""
     if not source_row:
         return None
@@ -148,12 +157,9 @@ def _decode_conditional_hit_count(
         return None
 
     if "中毒效果" in text and _condition_refs_are_poison_effects(condition_refs, buff_conf):
-        handler = getattr(hi, "H_HIT_COUNT_PER_POISON_EFFECT", 0)
-        if handler > 0:
-            return EmitOutcome(handler, amount, 0, 0, 0, 1)
-        return None
+        return EmitOutcome(source_context_key("hit_count_per_poison_effect"), amount, 0, 0, 0, 1)
     if "萌化" in text and _condition_refs_are_cute_effects(condition_refs, buff_conf):
-        return EmitOutcome(hi.H_CUTE_HIT_PER_STACK, amount, 0, 0, 0, 1)
+        return EmitOutcome(source_context_key("cute_hit_per_stack"), amount, 0, 0, 0, 1)
     return None
 
 
@@ -227,7 +233,7 @@ def _is_transmission_buff(buff_rec: dict) -> bool:
     )
 
 
-def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, int | None]]:
+def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, str | None]]:
     for match in _SLOT_CLAUSE_RE.finditer(text):
         mask = _slot_mask(match.group("slots"))
         if mask == 0:
@@ -240,7 +246,7 @@ def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, in
             continue
         return [(
             EmitOutcome(
-                hi.H_SKILL_MOD,
+                source_context_key("slot_skill_mod"),
                 mask,
                 cost_reduce or 0,
                 power_bonus or 0,
@@ -266,7 +272,7 @@ def _first_int(pattern: str, text: str) -> int | None:
 
 
 def _append_transmission_gap(
-    outcomes: list[tuple[EmitOutcome | GapOutcome, int | None]],
+    outcomes: list[tuple[EmitOutcome | GapOutcome, str | None]],
     *,
     ref_id: int,
     effect_id: int | None,
@@ -277,7 +283,7 @@ def _append_transmission_gap(
     amount = _transmission_amount(text) or 1
     outcomes.append((
         GapOutcome(
-            primitive="transmission",
+            primitive=source_context_key("transmission"),
             effect_id=effect_id,
             buff_id=buff_id,
             reason="transmission_unimplemented",

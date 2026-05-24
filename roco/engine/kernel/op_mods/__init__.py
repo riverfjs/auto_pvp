@@ -9,8 +9,8 @@ Split by topic — see the individual submodules:
 * :mod:`.combat` — counters, interrupts, hit counts, forced switches,
   cost mods, devotion.
 
-The handler registry (:file:`gen_prefix_map.py`) AST-scans each submodule
-directly and emits ``handler_table.py`` with one ``from … import …`` per
-op function, so the static HANDLERS tuple stays the only run-time
-dispatch table.  This ``__init__`` is intentionally light.
+``roco.engine.kernel.gen_runtime_artifacts`` scans engine op modules and emits
+``handler_table.py`` with one ``from ... import ...`` per op function, so the
+static HANDLERS tuple stays the only runtime dispatch table.  This
+``__init__`` is intentionally light.
 """

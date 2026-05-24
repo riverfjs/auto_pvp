@@ -1,20 +1,19 @@
-"""Compiled effect primitives and trigger timings.
+"""Compiled effect primitives.
 
-The generated pak-prefix debug table is emitted from BUFF_CONF and engine
-``op_meta`` declarations.  This module now only carries the small ``Timing``
-enum (pak ``cast_moment`` plus compiler-owned pre-resolution timings) and the
-compiled dataclasses used by the data layer.
+The generated pak-prefix debug table is emitted from BUFF_CONF and primitive
+axis declarations.  Timing is no longer a compiler enum: pak timings are
+emitted as ``battle_event:<Enum.BattleEvent symbol>`` keys, and engine-only
+hooks are emitted as ``engine_hook:<name>`` keys.
 
 The legacy ``PakOp`` enum has been retired: its prefix members were a
 hand-mirrored copy of pak schema that would drift on every pak update,
-and the kernel never used it — runtime dispatch is keyed by handler
-indices, not pak prefixes.
+and the kernel never used it — compiler output is keyed by primitive strings,
+not pak prefixes.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import IntEnum
 from types import MappingProxyType
 from typing import Any
 
@@ -23,36 +22,15 @@ EMPTY_PARAMS = MappingProxyType({})
 
 
 # ---------------------------------------------------------------------------
-# Timing -- pak cast_moment values plus compiler-owned pre-resolution hooks.
-# ---------------------------------------------------------------------------
-
-class Timing(IntEnum):
-    """Effect trigger points used by generated kernel rows."""
-
-    CALC_DAMAGE = 6       # pre-attack setup
-    CHECK_HIT = 7         # post-hit
-    FAINT = 9             # faint trigger
-    TURN_START = 10       # turn start
-    AFTER_MOVE = 11       # main effect resolution
-    TURN_END = 12         # end of turn
-    PASSIVE_PERSIST = 23  # passive persistent
-    SWITCH_IN = 24        # switch in
-    CHARGE = 25           # charge/prep
-    PASSIVE_COND = 26     # passive conditional
-    BATTLE_START = 27     # entry aura
-    BEFORE_MOVE = 901     # compiler-owned hook before cost payment/damage
-
-
-# ---------------------------------------------------------------------------
 # Dataclasses used by the data-catalog layer
 # ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class EffectSpec:
-    """One compiled effect row keyed by kernel handler index."""
+    """One compiled effect row keyed by primitive tag."""
 
     tag: int                                    # kernel handler index
-    timing: Timing
+    timing: str
     params: MappingProxyType[str, Any] = EMPTY_PARAMS
     chance: float = 1.0
     condition: str = ""

@@ -5,14 +5,26 @@ from pathlib import Path
 
 import pytest
 
-from roco.compiler_v2.effect_model import Timing
+from roco.common.primitive_keys import (
+    buff_type_key,
+    effect_kind_key,
+    effect_order_variant_key,
+    status_note_key,
+    struct_key,
+)
 from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
 from roco.compiler_v2.effect_codegen import (
     PakTables,
     generate_effect_rows,
     build_ability_effect_rows,
-    H_DAMAGE, H_DISPEL_MARKS_TO_BURN, H_HEAL_HP, H_HIT_COUNT_DELTA, H_SELF_BUFF, H_POISON,
 )
+from roco.compiler_v2.timing_keys import pak_cast_moment_key
+
+P_DAMAGE = effect_kind_key(2)
+P_DISPEL_MARKS_TO_BURN = effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks_to_burn")
+P_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
+P_POISON = status_note_key("中毒")
+P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
 
 
 def _write_table(path: Path, rows: dict[str, dict]) -> None:
@@ -87,12 +99,11 @@ def test_pak_op_prefix_table_covers_major_families():
 
 
 def test_timing_matches_cast_moment():
-    assert Timing.AFTER_MOVE == 11
-    assert Timing.TURN_END == 12
-    assert Timing.CALC_DAMAGE == 6
-    assert Timing.SWITCH_IN == 24
-    assert Timing.TURN_START == 10
-    assert Timing.BEFORE_MOVE == 901
+    assert pak_cast_moment_key(11) == "battle_event:BEVT_BEFORE_HURT"
+    assert pak_cast_moment_key(12) == "battle_event:BEVT_BEFORE_ADD"
+    assert pak_cast_moment_key(6) == "battle_event:BEVT_ROUND_CALC_START"
+    assert pak_cast_moment_key(24) == "battle_event:BEVT_SDT"
+    assert pak_cast_moment_key(10) == "battle_event:BEVT_BEFORE_SKILL_DAMAGE_CALC"
 
 
 def test_generate_effect_rows_buff_ref(pak):
@@ -104,7 +115,7 @@ def test_generate_effect_rows_buff_ref(pak):
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == H_SELF_BUFF
+    assert rows[0][0] == P_SELF_BUFF
     assert gaps == []
 
 
@@ -117,7 +128,7 @@ def test_generate_effect_rows_damage_ref(pak):
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == H_DAMAGE
+    assert rows[0][0] == P_DAMAGE
     assert gaps == []
 
 
@@ -144,7 +155,7 @@ def test_generate_effect_rows_timing_from_cast_moment(pak):
         "success_rate": 10000,
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
-    assert rows[0][1] == Timing.TURN_END
+    assert rows[0][1] == pak_cast_moment_key(12)
 
 
 def test_generate_effect_rows_empty_skill_result(pak):
@@ -171,7 +182,7 @@ def test_generate_effect_rows_skips_blank_entry(pak):
     ]}
     rows, gaps = generate_effect_rows(skill_row, pak)
     assert len(rows) == 1
-    assert rows[0][0] == H_POISON
+    assert rows[0][0] == P_POISON
     assert gaps == []
 
 
@@ -188,7 +199,7 @@ def test_generate_effect_rows_stack_priority(pak):
         "effect_id": 20070010, "cast_moment": 11, "result_target_type": 2,
         "success_rate": 10000, "buff_group_level": 3,
     }]}, pak)
-    assert rows[0][0] == H_POISON
+    assert rows[0][0] == P_POISON
     assert rows[0][4] == 3  # p0 = buff_group_level
 
 
@@ -198,7 +209,7 @@ def test_generate_effect_rows_hit_count_uses_buff_group_level(pak):
         "success_rate": 10000, "buff_group_level": 3,
     }]}, pak)
     assert gaps == []
-    assert rows[0][0] == H_HIT_COUNT_DELTA
+    assert rows[0][0] == P_HIT_COUNT_DELTA
     assert rows[0][4] == 3
 
 
@@ -211,7 +222,7 @@ def test_build_ability_effect_rows(pak):
     }]}
     rows, gaps = build_ability_effect_rows(ability_row, pak)
     assert len(rows) >= 1
-    assert rows[0][0] == H_POISON
+    assert rows[0][0] == P_POISON
     assert gaps == []
 
 
@@ -280,13 +291,11 @@ def test_no_buff_type1_returns_gap(pak):
 
 
 def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
-    """A buff whose base_id prefix has no handler must surface as
+    """A buff whose base_id prefix has no primitive must surface as
     ``prefix_<n>_unmapped`` — not ``buff_unclassified``.
 
-    Locks in the fix for the regression where dropping
-    ``handler: H_NOOP`` rows in old prefix semantics left zero
-    values in ``prefix_handler_map.json``; ``buff_<n>`` reason was
-    misclassifying buffs as ``buff_unclassified`` instead.
+    Locks in the fix for the regression where empty old prefix semantics
+    misclassified buffs as ``buff_unclassified`` instead.
     """
     from roco.compiler_v2.effect_codegen import classify
 
@@ -299,8 +308,8 @@ def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
         "buff_base_ids": [2999001],
         "type": 1,
     }
-    monkeypatch.setitem(classify.PREFIX_HANDLER_MAP, 2999, 0)  # ensure not mapped
-    classify.PREFIX_HANDLER_MAP.pop(2999, None)
+    monkeypatch.setitem(classify.PREFIX_PRIMITIVE_MAP, 2999, "")  # ensure not mapped
+    classify.PREFIX_PRIMITIVE_MAP.pop(2999, None)
 
     skill_row = {"skill_result": [{
         "effect_id": 29991234,  # direct buff reference path
@@ -330,12 +339,11 @@ def test_unknown_effect_id_becomes_gap(pak):
     assert gaps[0]["primitive"] == "effect_9999999"
 
 
-def test_emit_outcome_invariant_handler_idx_positive(pak):
-    """Every EmitOutcome emitted via the structural decoder must have handler_idx > 0.
+def test_emit_outcome_invariant_primitive_nonempty(pak):
+    """Every EmitOutcome emitted via the structural decoder must have a primitive.
 
     Runs the fixture pak through both decoders, scans every effect_id
-    that resolves to an EmitOutcome, and asserts ``handler_idx > 0``.
-    Catches regressions where a decoder silently emits H_NOOP=0 again.
+    that resolves to an EmitOutcome, and asserts the primitive is non-empty.
     Does NOT read ``_data/canonical/*``; works purely on the in-memory
     fixture so stale on-disk artifacts can't pollute the assertion.
     """
@@ -348,7 +356,7 @@ def test_emit_outcome_invariant_handler_idx_positive(pak):
         }]}
         rows, _gaps = generate_effect_rows(skill_row, pak)
         for row in rows:
-            assert row[0] > 0, f"effect_id {eid} produced tag_code={row[0]} (H_NOOP not allowed)"
+            assert row[0], f"effect_id {eid} produced empty primitive"
 
 
 def test_no_python_exact_effect_rules_table():
@@ -391,5 +399,5 @@ def test_former_exact_burn_mark_row_uses_family_decoder(pak):
 
     entry = decode_family_axes(1042014, pak.effect_conf, pak.buff_conf)
     assert entry is not None
-    assert entry.handler_idx == H_DISPEL_MARKS_TO_BURN
+    assert entry.primitive == P_DISPEL_MARKS_TO_BURN
     assert entry.p0 == 5

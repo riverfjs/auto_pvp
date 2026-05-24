@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from roco.common.primitive_keys import effect_order_key
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
-from roco.compiler_v2.handler_registry import H_HEAL_HP, H_LIFE_DRAIN
 
 from roco.compiler_v2.effect_codegen.family_axis_decoders.basic import (
     decode_copy_buff,
@@ -50,7 +50,7 @@ def decode_family_axes(
     effect_id: int,
     effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
-) -> EmitOutcome | tuple[EmitOutcome, int] | None:
+) -> EmitOutcome | tuple[EmitOutcome, str] | None:
     """Return a pak-family outcome for ``effect_id``, or ``None`` to fall through."""
     rec = effect_conf.get(effect_id)
     if rec is None:
@@ -60,9 +60,9 @@ def decode_family_axes(
     if order == ET_PURIFY and effect_type == 1:
         return decode_purify(rec)
     if order == ET_HEAL_HP and effect_type == 1:
-        return emit_from_param(rec, H_HEAL_HP, 1)
+        return emit_from_param(rec, effect_order_key("ET_RECOVER"), 1)
     if order == ET_LIFE_DRAIN and effect_type == 1:
-        return emit_from_param(rec, H_LIFE_DRAIN, 0)
+        return emit_from_param(rec, effect_order_key("ET_SUCKBLOOD"), 0)
     if order == ET_HEAL_ENERGY and effect_type == 3:
         return decode_heal_energy(rec)
     if order == ET_BUFF_BY_PACK_PET_NUM and effect_type == 3:

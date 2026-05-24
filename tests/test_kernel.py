@@ -26,7 +26,6 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.compiler_v2.effect_codegen import H_DAMAGE
 from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE, TIMING_CALC_DAMAGE
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
@@ -217,7 +216,7 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
         (
-            (H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),
+            (hi.H_DAMAGE, TIMING_CALC_DAMAGE, 0, 0, 0, 37, 3, 0, 0),
             (hi.H_DAMAGE_REDUCTION, TIMING_CALC_DAMAGE, 0, 0, 0, 8000, 0, 0, 0),
         ),
         (0, 2),
@@ -273,7 +272,7 @@ def test_kernel_after_move_status_and_status_ticks():
     burn_skill = _skill_id("焚烧烙印")
     poison_skill, poison_row = _skill_with_handler(
         hi.H_POISON,
-        without=(H_DAMAGE,),
+        without=(hi.H_DAMAGE,),
         predicate=lambda skill_id, row: row[1] == 11 and hot.SKILLS[skill_id][SKILL_POWER] == 0,
     )
 
@@ -662,7 +661,7 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
         "sqlite3",
         "catalog_debug",
         "roco.data",
-        "roco.compiler_v2.catalog_compiler",
+        "roco.engine.catalog_compiler",
         "roco.compiler_v2.classifiers",
         "params.get",
         "record_event",

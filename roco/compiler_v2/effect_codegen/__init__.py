@@ -1,15 +1,14 @@
-"""Effect code generation from SKILL_CONF / EFFECT_CONF / BUFF_CONF.
+"""Effect primitive generation from SKILL_CONF / EFFECT_CONF / BUFF_CONF.
 
 Public surface: :class:`PakTables`, :func:`generate_effect_rows`,
 :func:`build_ability_effect_rows`.  Each ``skill_result`` entry resolves
 to exactly one :class:`EmitOutcome`, :class:`GapOutcome`, or
-:class:`AbilityFlagOutcome` — never the H_NOOP
-sentinel.  ``H_NOOP`` itself only exists at the kernel dispatch layer
-(``ops.py``) as the "skip this row" index.
+:class:`AbilityFlagOutcome`.  The compiler emits primitive rows; the engine
+later links those primitives to kernel handlers.
 
 Outcome routing:
 
-* :class:`EmitOutcome` → effect_rows (runtime kernel row).
+* :class:`EmitOutcome` → effect_rows (primitive row).
 * :class:`GapOutcome` → generated audit/debug gap metadata.
 * :class:`AbilityFlagOutcome` → dropped here; later compiled into the
   catalog ``ABILITY_FLAGS`` tuple by
@@ -24,8 +23,8 @@ Internal layout:
 
 * :mod:`.outcomes` — row/gap/ability-flag dataclasses
 * :mod:`.pak` — lazy pak table loaders
-* :mod:`.params` — pak ``effect_param`` extraction + handler-param packing
-* :mod:`.classify` — buff_id → handler index; structural + gap outcomes;
+* :mod:`.params` — pak ``effect_param`` extraction + primitive-param packing
+* :mod:`.classify` — buff_id → primitive; structural + gap outcomes;
   also consults :mod:`.ability_flags_from_effects` to surface
   :class:`AbilityFlagOutcome` for pak-derived passive ability rows.
 * :mod:`.exact_decoders` — generated exact tables, currently weather
@@ -33,15 +32,14 @@ Internal layout:
   rules loader (effects that compile to passive flags, not runtime rows)
 * :mod:`.audit` — gap-row metadata helper (no longer classifies)
 
-Timing = ``cast_moment`` directly; Target = ``result_target_type``;
+Timing = ``battle_event:<Enum.BattleEvent symbol>`` from ``cast_moment``;
+Target = ``result_target_type``;
 Rate = ``success_rate`` raw (10000 = 100%).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
-from roco.compiler_v2.handler_registry import load_handler_indices
 
 from roco.compiler_v2.effect_codegen.classify import (
     collect_buff_candidates,
@@ -56,11 +54,13 @@ from roco.compiler_v2.effect_codegen.outcomes import (
     GapOutcome,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
-from roco.compiler_v2.effect_codegen.params import is_status_or_mark_handler
+from roco.compiler_v2.effect_codegen.params import (
+    is_flat_hit_count_delta_primitive,
+    is_status_or_mark_primitive,
+)
 from roco.compiler_v2.effect_codegen.source_context import decode_source_context
 from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
-
-globals().update(load_handler_indices())
+from roco.compiler_v2.timing_keys import pak_cast_moment_key
 
 __all__ = [
     "PakTables",
@@ -104,12 +104,12 @@ def _as_int_tuple(value: object) -> tuple[int, ...]:
 def _emit_row(
     outcome: EmitOutcome,
     *,
-    timing: int,
+    timing: str,
     target_type: int,
     success_rate: int,
     buff_group_level: int,
-) -> tuple[int, ...]:
-    """Pack an :class:`EmitOutcome` plus per-entry pak fields into a runtime row.
+) -> tuple[object, ...]:
+    """Pack an :class:`EmitOutcome` plus per-entry pak fields into a primitive row.
 
     Stack-count priority: pak's own ``effect_param`` shape (``stacks`` —
     buff_id repeats, e.g. 焚烧烙印 packs 5 burn copies to mean 5 stacks)
@@ -126,16 +126,12 @@ def _emit_row(
         stacks = buff_group_level
     else:
         stacks = 1
-    if is_status_or_mark_handler(outcome.handler_idx) and stacks > 1:
+    if is_status_or_mark_primitive(outcome.primitive) and stacks > 1:
         p0 = stacks
-    elif outcome.handler_idx == H_HIT_COUNT_DELTA and stacks > 1:
+    elif is_flat_hit_count_delta_primitive(outcome.primitive) and stacks > 1:
         p0 *= stacks
-    assert outcome.handler_idx > 0, (
-        "EmitOutcome must carry a non-zero handler_idx; "
-        f"got {outcome.handler_idx}"
-    )
     return (
-        outcome.handler_idx,
+        outcome.primitive,
         timing,
         target_type,
         success_rate,
@@ -229,7 +225,7 @@ def _decode_reference_outcomes(
     ref_id: int,
     pak_data: PakTables,
     source_row: dict | None,
-) -> list[tuple[EmitOutcome | GapOutcome | AbilityFlagOutcome, int | None]]:
+) -> list[tuple[EmitOutcome | GapOutcome | AbilityFlagOutcome, str | None]]:
     family = decode_family_axes(ref_id, pak_data.effect_conf, pak_data.buff_conf)
     if family is not None:
         if isinstance(family, tuple):
@@ -267,7 +263,7 @@ def _decode_reference_rows(
     ref_id: int,
     pak_data: PakTables,
     *,
-    timing: int,
+    timing: str,
     target_type: int,
     success_rate: int,
     buff_group_level: int,
@@ -276,7 +272,7 @@ def _decode_reference_rows(
     root_ref_id: int,
     source_row: dict | None,
     visited: frozenset[int] = frozenset(),
-) -> tuple[list[tuple[int, ...]], list[dict]]:
+) -> tuple[list[tuple[object, ...]], list[dict]]:
     if ref_id in visited:
         gap = GapOutcome(
             primitive=f"effect_{ref_id}",
@@ -292,7 +288,7 @@ def _decode_reference_rows(
     assigned = _assign_refs(assign_buff_id, pak_data) if assign_buff_id else None
     if assigned is not None:
         refs, assign_gaps = assigned
-        rows: list[tuple[int, ...]] = []
+        rows: list[tuple[object, ...]] = []
         gaps: list[dict] = []
         for gap in assign_gaps:
             gap_dict = _gap_dict(gap, timing, effect_order, target_type, success_rate)
@@ -320,7 +316,7 @@ def _decode_reference_rows(
                 gaps.append(gap)
         return rows, gaps
 
-    rows: list[tuple[int, ...]] = []
+    rows: list[tuple[object, ...]] = []
     gaps: list[dict] = []
     for outcome, timing_override in _decode_reference_outcomes(ref_id, pak_data, source_row):
         row_timing = timing_override or timing
@@ -360,7 +356,7 @@ def generate_effect_rows(
     pak_data: PakTables,
     *,
     allow_ability_flags: bool = False,
-) -> tuple[list[tuple[int, ...]], list[dict]]:
+) -> tuple[list[tuple[object, ...]], list[dict]]:
     """Decode a ``skill_result`` list into (rows, gaps).
 
     Parameters
@@ -379,8 +375,8 @@ def generate_effect_rows(
     Returns
     -------
     rows : list[tuple]
-        Each tuple is ``(handler_idx, timing, target, rate, p0, p1, p2, p3)``.
-        ``handler_idx`` is always > 0 (H_NOOP is forbidden at this layer).
+        Each tuple is ``(primitive, timing, target, rate, p0, p1, p2, p3)``.
+        The compiler never emits engine handler indices.
     gaps : list[dict]
         Unsupported / unrecognised effects for generated audit output.
 
@@ -391,7 +387,7 @@ def generate_effect_rows(
         ``allow_ability_flags`` is False — that means a pak ability-flag
         effect_id leaked into a non-ability decoding path.
     """
-    rows: list[tuple[int, ...]] = []
+    rows: list[tuple[object, ...]] = []
     gaps: list[dict] = []
 
     for order, entry in enumerate(skill_row.get("skill_result") or []):
@@ -401,7 +397,17 @@ def generate_effect_rows(
             # real effects.  These carry no semantics and would otherwise
             # flood ``effect_gaps`` with ``effect_0`` noise.
             continue
-        cast_moment = entry.get("cast_moment", 11)
+        if "cast_moment" not in entry:
+            gap = GapOutcome(
+                primitive=f"effect_{int(effect_id)}",
+                effect_id=int(effect_id),
+                buff_id=int(effect_id) if int(effect_id) in pak_data.buff_conf else None,
+                reason="skill_result_missing_cast_moment",
+                params={"effect_id": int(effect_id), "skill_result_index": order},
+            )
+            gaps.append(_gap_dict(gap, "", order, entry.get("result_target_type", 1), entry.get("success_rate", 10000)))
+            continue
+        cast_moment = pak_cast_moment_key(int(entry.get("cast_moment") or 0))
         target_type = entry.get("result_target_type", 1)
         success_rate = entry.get("success_rate", 10000)
         buff_group_level = int(entry.get("buff_group_level", 0) or 0)
@@ -441,7 +447,7 @@ def generate_effect_rows(
 def build_ability_effect_rows(
     ability_row: dict,
     pak_data: PakTables,
-) -> tuple[list[tuple[int, ...]], list[dict]]:
+) -> tuple[list[tuple[object, ...]], list[dict]]:
     """Decode an ability's effect rows; tolerates the ``effect_list`` alias.
 
     Unlike a skill builder, this path accepts :class:`AbilityFlagOutcome`
@@ -458,7 +464,7 @@ def build_ability_effect_rows(
 
 def _gap_dict(
     gap: GapOutcome,
-    timing_code: int,
+    timing_code: object,
     effect_order: int,
     target_type: int,
     success_rate: int,

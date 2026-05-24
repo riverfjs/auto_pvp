@@ -1,42 +1,43 @@
 from __future__ import annotations
 
+from roco.common.primitive_keys import mark_note_key
 from roco.common.packing import MarkIdx
-from roco.compiler_v2.handler_axes import collect_handler_axes
+from roco.compiler_v2.primitive_axes import MARK_NOTE_MARKS
 
 from .common import MARK_GROUPS_PATH, PAK_BIN, _load_json_table
 
 
 def mark_note_by_idx(raw_axes: dict | None = None) -> dict[MarkIdx, str]:
-    raw = raw_axes or collect_handler_axes()
+    raw = raw_axes or {
+        "mark_note": {
+            note: (mark_note_key(note), mark_name)
+            for note, mark_name in MARK_NOTE_MARKS.items()
+        }
+    }
     out: dict[MarkIdx, str] = {}
-    for note, (_handler_name, mark_name) in raw.get("mark_note", {}).items():
+    for note, (_primitive, mark_name) in raw.get("mark_note", {}).items():
         if mark_name not in MarkIdx.__members__:
-            raise RuntimeError(f"mark handler declares unknown MarkIdx {mark_name!r}")
+            raise RuntimeError(f"mark primitive declares unknown MarkIdx {mark_name!r}")
         out[MarkIdx[mark_name]] = str(note)
     return dict(sorted(out.items(), key=lambda item: item[0].value))
 
 
-def mark_note_to_handler(handler_indices: dict[str, int], raw_axes: dict | None = None) -> dict[str, int]:
-    raw = raw_axes or collect_handler_axes()
+def mark_note_to_primitive(raw_axes: dict | None = None) -> dict[str, str]:
+    raw = raw_axes or {
+        "mark_note": {
+            note: (mark_note_key(note), mark_name)
+            for note, mark_name in MARK_NOTE_MARKS.items()
+        }
+    }
     valid_notes = set(_desc_notes_by_id().values())
-    out: dict[str, int] = {}
-    for note, (handler_name, mark_name) in raw.get("mark_note", {}).items():
+    out: dict[str, str] = {}
+    for note, (primitive, mark_name) in raw.get("mark_note", {}).items():
         if note not in valid_notes:
             raise RuntimeError(f"DESC_NOTE_CONF missing mark note {note!r}")
         if mark_name not in MarkIdx.__members__:
-            raise RuntimeError(f"mark handler declares unknown MarkIdx {mark_name!r}")
-        const = _handler_const(handler_name)
-        handler = handler_indices.get(const)
-        if handler is None:
-            raise RuntimeError(f"mark handler {handler_name!r} resolves to missing {const!r}")
-        out[str(note)] = handler
+            raise RuntimeError(f"mark primitive declares unknown MarkIdx {mark_name!r}")
+        out[str(note)] = primitive
     return out
-
-
-def _handler_const(handler_name: str) -> str:
-    if handler_name.startswith("op_"):
-        return "H_" + handler_name[3:].upper()
-    return "H_" + handler_name.upper()
 
 
 def _desc_notes_by_id() -> dict[int, str]:
@@ -47,53 +48,52 @@ def _desc_notes_by_id() -> dict[int, str]:
         if isinstance(note_id, int) and str(rec.get("note") or "").strip()
     }
 
-def write_mark_groups(handler_indices: dict[str, int], prefix_result: dict) -> tuple[tuple[str, ...], ...]:
+def write_mark_groups(prefix_result: dict) -> tuple[tuple[str, ...], ...]:
     valid_mark_names = {idx.name for idx in MarkIdx}
-    handler_to_mark = {
-        handler_indices[key]: key.removeprefix("H_").removesuffix("_MARK")
-        for key in handler_indices
-        if key.endswith("_MARK")
-        and key.removeprefix("H_").removesuffix("_MARK") in valid_mark_names
+    primitive_to_mark = {
+        mark_note_key(note): mark_name
+        for note, mark_name in MARK_NOTE_MARKS.items()
+        if mark_name in valid_mark_names
     }
-    if not handler_to_mark:
+    if not primitive_to_mark:
         MARK_GROUPS_PATH.write_text(
             "from roco.common.packing import MarkIdx  # noqa: F401\n"
             "MARK_COVER_GROUPS: tuple = ()\n",
             encoding="utf-8",
         )
         return ()
-    mark_handlers = set(handler_to_mark)
+    mark_primitives = set(primitive_to_mark)
     buff_id_map = {int(k): v for k, v in prefix_result.get("buff_id_map", {}).items()}
     base_id_map = {int(k): v for k, v in prefix_result["base_id_map"].items()}
     prefix_map = {int(k): v for k, v in prefix_result["prefix_map"].items()}
-    groups: dict[int, set[int]] = {}
+    groups: dict[int, set[str]] = {}
     for buff_id, rec in _load_json_table(PAK_BIN / "BUFF_CONF.json").items():
-        handler = 0
+        primitive = ""
         if isinstance(buff_id, int):
-            h = buff_id_map.get(buff_id, 0)
-            if h in mark_handlers:
-                handler = h
+            candidate = buff_id_map.get(buff_id, "")
+            if candidate in mark_primitives:
+                primitive = candidate
         for bid in rec.get("buff_base_ids") or []:
-            if handler:
+            if primitive:
                 break
             bid = int(bid)
-            if bid in base_id_map and base_id_map[bid] in mark_handlers:
-                handler = base_id_map[bid]
+            if bid in base_id_map and base_id_map[bid] in mark_primitives:
+                primitive = base_id_map[bid]
                 break
             pfx = bid // 1000
-            if pfx in prefix_map and prefix_map[pfx] in mark_handlers:
-                handler = prefix_map[pfx]
+            if pfx in prefix_map and prefix_map[pfx] in mark_primitives:
+                primitive = prefix_map[pfx]
                 break
-        if not handler:
+        if not primitive:
             continue
         for sign in rec.get("buff_groupsigns") or []:
             if sign:
-                groups.setdefault(int(sign), set()).add(handler)
+                groups.setdefault(int(sign), set()).add(primitive)
     cover_groups: list[tuple[str, ...]] = []
     for handlers in groups.values():
         if len(handlers) < 2:
             continue
-        names = tuple(sorted(handler_to_mark[h] for h in handlers if h in handler_to_mark))
+        names = tuple(sorted(primitive_to_mark[p] for p in handlers if p in primitive_to_mark))
         if len(names) >= 2:
             cover_groups.append(names)
     lines = [

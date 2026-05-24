@@ -1,14 +1,13 @@
-"""Tests for the BUFFBASE_CONF.buffbase_order axis of buff handler dispatch.
+"""Tests for the BUFFBASE_CONF.buffbase_order axis of primitive dispatch.
 
 The buffbase_order axis is the pak-native primary lookup for direct
 BUFF_CONF references.  The current compiler does not read JSONL seeds or
-Python order tables; it collects engine-owned ``op_meta`` declarations
-that reference stable ``Enum.BuffType`` symbols and resolves those
-symbols through generated Lua data.
+Python order tables; it resolves primitive-axis ``Enum.BuffType`` symbols
+through generated Lua data.
 
-* The codegen join with BUFFBASE_CONF produces a base_id → handler map
+* The codegen join with BUFFBASE_CONF produces a base_id → primitive map
   that the runtime classifier picks up before mixed-prefix dispatch.
-* The 3 mixed prefixes left on the engine prefix axis are not
+* The 3 mixed prefixes left on the prefix axis are not
   silently shadowed by an over-broad buffbase_order rule.
 * No compiler-owned ``buffbase_order -> handler`` table comes back.
 """
@@ -20,34 +19,52 @@ from pathlib import Path
 
 import pytest
 
+from roco.common.primitive_keys import (
+    buff_type_key,
+    effect_order_key,
+    mark_note_key,
+    source_context_key,
+    struct_key,
+)
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
 from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
-from roco.compiler_v2.effect_codegen.params import pack_handler_params
+from roco.compiler_v2.effect_codegen.params import pack_primitive_params
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
-from roco.compiler_v2.handler_axes import collect_handler_axes, resolve_handler_axes
-from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE
-from roco.generated import handler_indices as hi
+from roco.compiler_v2.primitive_axes import PREFIX_TYPE_ALIASES, resolve_primitive_axes
+from roco.compiler_v2.timing_keys import ENGINE_HOOK_BEFORE_MOVE, pak_cast_moment_key
+
+P_ANTI_HEAL = struct_key("heal_reversal")
+P_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
+P_CUTE_HIT_PER_STACK = source_context_key("cute_hit_per_stack")
+P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
+P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
+P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
+P_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
+P_HIT_COUNT_PER_POISON_EFFECT = source_context_key("hit_count_per_poison_effect")
+P_METEOR_MARK = mark_note_key("星陨印记")
+P_MOISTURE_MARK = mark_note_key("湿润印记")
+P_PASSIVE_ENERGY_REDUCE = buff_type_key("BFT_CHANGE_SKILL_ENERGY_COST")
+P_POISON_MARK = mark_note_key("中毒印记")
+P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
+P_SKILL_MOD = source_context_key("slot_skill_mod")
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PREFIX_MAP_PATH = REPO_ROOT / "roco" / "generated" / "prefix_handler_map.json"
+PRIMITIVE_MAP_PATH = REPO_ROOT / "roco" / "generated" / "primitive_map.json"
 BUFFBASE_CONF_PATH = (
     REPO_ROOT / "pak-public-kit" / "output" / "data" / "BinData" / "BUFFBASE_CONF.json"
 )
 
 
-@pytest.fixture(scope="module")
-def handler_indices() -> dict[str, int]:
-    out = {k: int(v) for k, v in vars(hi).items() if k.startswith("H_") and isinstance(v, int)}
-    return out
+TIMING_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
 
 
 @pytest.fixture(scope="module")
-def resolved_axes(handler_indices):
-    return resolve_handler_axes(handler_indices, build_static_bundle().lua_enums)
+def resolved_axes():
+    return resolve_primitive_axes(build_static_bundle().lua_enums)
 
 
 @pytest.fixture(scope="module")
@@ -84,14 +101,11 @@ def test_engine_orders_disjoint_from_mixed_prefixes(resolved_axes):
     assert 50 not in seed
 
 
-def test_engine_axis_handlers_all_resolve(handler_indices, resolved_axes):
-    """Every handler declared on the engine axis exists in ``handler_indices.py``."""
-    valid = set(handler_indices.values())
-    for order, handler_idx in resolved_axes.buffbase_order.items():
-        assert handler_idx in valid, (
-            f"buffbase_order={order} resolves to handler_idx={handler_idx} "
-            "which is not in handler_indices"
-        )
+def test_primitive_axis_values_are_nonempty(resolved_axes):
+    """Every compiler primitive-axis entry resolves to a primitive string."""
+    for order, primitive in resolved_axes.buffbase_order.items():
+        assert isinstance(order, int)
+        assert primitive
 
 
 def test_compiler_v2_has_no_buffbase_order_table():
@@ -113,15 +127,15 @@ def test_generated_base_id_via_order_map_size(resolved_axes, buffbase_conf):
         if rec.get("buffbase_order") is not None
         and int(rec["buffbase_order"]) in resolved_axes.buffbase_order
     )
-    data = json.loads(PREFIX_MAP_PATH.read_text(encoding="utf-8"))
+    data = json.loads(PRIMITIVE_MAP_PATH.read_text(encoding="utf-8"))
     assert len(data["base_id_via_order_map"]) == expected_count
 
 
 def test_generated_prefix_map_carries_via_order_block():
-    """The runtime classifier reads from prefix_handler_map.json.  The
+    """The classifier reads from primitive_map.json.  The
     new ``base_id_via_order_map`` block must be present and non-empty
     after gen_prefix_map runs."""
-    data = json.loads(PREFIX_MAP_PATH.read_text(encoding="utf-8"))
+    data = json.loads(PRIMITIVE_MAP_PATH.read_text(encoding="utf-8"))
     assert "base_id_via_order_map" in data
     assert len(data["base_id_via_order_map"]) > 0
 
@@ -140,13 +154,11 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
         f"only the 3 mixed: 2011, 2046, 2050)"
     )
     assert resolved_axes.base_id == {}
-    raw_axes = collect_handler_axes()
-    assert set(raw_axes["prefix_type"]) == {
+    assert set(PREFIX_TYPE_ALIASES) == {
         "BFT_DAMNUM_CHANGE",
         "BFT_KILL_BUFF",
         "BFT_ENTER_BATTLE",
     }
-    assert "base_id" not in raw_axes
 
 
 # ── runtime classifier integration ────────────────────────────────────────
@@ -165,11 +177,11 @@ def test_runtime_classifier_routes_clean_prefix_via_via_order(buffbase_conf):
     )
     # Synthesize a buff_conf dict referencing only that base_id.
     buff_conf_stub = {99999999: {"buff_base_ids": [target_bid]}}
-    h = cls.classify_buff_handler(99999999, buff_conf_stub)
-    assert h == hi.H_SELF_BUFF
+    h = cls.classify_buff_primitive(99999999, buff_conf_stub)
+    assert h == P_SELF_BUFF
     # And the resolution path must be via_order_map, not prefix_map.
     assert target_bid in cls.BASE_ID_VIA_ORDER_MAP
-    assert 2001 not in cls.PREFIX_HANDLER_MAP
+    assert 2001 not in cls.PREFIX_PRIMITIVE_MAP
 
 
 def test_runtime_classifier_routes_named_mark_buff_before_shared_base_id():
@@ -180,40 +192,40 @@ def test_runtime_classifier_routes_named_mark_buff_before_shared_base_id():
     BUFF_CONF.id map must keep those semantic identities separate.
     """
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
-    assert cls.classify_buff_handler(20070011, pak.buff_conf) == hi.H_POISON_MARK
-    assert cls.classify_buff_handler(20320070, pak.buff_conf) == hi.H_MOISTURE_MARK
-    assert cls.classify_buff_handler(20320220, pak.buff_conf) == hi.H_PASSIVE_ENERGY_REDUCE
-    assert 2032007 not in cls.BASE_ID_HANDLER_MAP
+    assert cls.classify_buff_primitive(20070011, pak.buff_conf) == P_POISON_MARK
+    assert cls.classify_buff_primitive(20320070, pak.buff_conf) == P_MOISTURE_MARK
+    assert cls.classify_buff_primitive(20320220, pak.buff_conf) == P_PASSIVE_ENERGY_REDUCE
+    assert 2032007 not in cls.BASE_ID_PRIMITIVE_MAP
 
 
 def test_runtime_classifier_routes_heal_reversal_exact_buff():
     """Order-146 heal reversal is an exact structural BUFF_CONF row, not a whole-prefix rule."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
-    assert cls.classify_buff_handler(21460330, pak.buff_conf) == hi.H_ANTI_HEAL
+    assert cls.classify_buff_primitive(21460330, pak.buff_conf) == P_ANTI_HEAL
 
 
 def test_runtime_classifier_routes_cute_bench_cost_reduce_exact_buff():
     """Order-40 cute-stack trigger maps only the proved all-skill cost reducer."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
-    handler = cls.classify_buff_handler(20400130, pak.buff_conf)
-    assert handler == hi.H_CUTE_BENCH_COST_REDUCE
-    assert pack_handler_params(handler, 20400130, pak.buff_conf) == (1, 0, 0, 0)
+    handler = cls.classify_buff_primitive(20400130, pak.buff_conf)
+    assert handler == P_CUTE_BENCH_COST_REDUCE
+    assert pack_primitive_params(handler, 20400130, pak.buff_conf) == (1, 0, 0, 0)
 
 
 def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
     """Order-45 hit-count rows are exact structural rows, not a whole-order rule."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
-    plus = cls.classify_buff_handler(20450050, pak.buff_conf)
-    minus = cls.classify_buff_handler(20450090, pak.buff_conf)
-    assert plus == hi.H_HIT_COUNT_DELTA
-    assert minus == hi.H_HIT_COUNT_DELTA
-    assert pack_handler_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
-    assert pack_handler_params(minus, 20450090, pak.buff_conf) == (-1, 0, 0, 0)
+    plus = cls.classify_buff_primitive(20450050, pak.buff_conf)
+    minus = cls.classify_buff_primitive(20450090, pak.buff_conf)
+    assert plus == P_HIT_COUNT_DELTA
+    assert minus == P_HIT_COUNT_DELTA
+    assert pack_primitive_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
+    assert pack_primitive_params(minus, 20450090, pak.buff_conf) == (-1, 0, 0, 0)
 
-    assert cls.classify_buff_handler(20450020, pak.buff_conf) == 0
-    assert cls.classify_buff_handler(20450030, pak.buff_conf) == 0
-    assert cls.classify_buff_handler(21150010, pak.buff_conf) == 0
+    assert cls.classify_buff_primitive(20450020, pak.buff_conf) == ""
+    assert cls.classify_buff_primitive(20450030, pak.buff_conf) == ""
+    assert cls.classify_buff_primitive(21150010, pak.buff_conf) == ""
 
     drive_outcome = decode_buff_direct(21150010, pak.buff_conf)[0]
     assert isinstance(drive_outcome, GapOutcome)
@@ -235,7 +247,7 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         "success_rate": 10000,
     }]}, pak)
     assert gaps == []
-    assert rows == [(hi.H_HEAL_ENERGY, 12, 1, 10000, 3, 0, 0, 0)]
+    assert rows == [(P_HEAL_ENERGY, pak_cast_moment_key(12), 1, 10000, 3, 0, 0, 0)]
 
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20170830,  # -> two 星陨印记 refs, target override=2
@@ -245,8 +257,8 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
     }]}, pak)
     assert gaps == []
     assert rows == [
-        (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
-        (hi.H_METEOR_MARK, 11, 2, 10000, 1, 0, 0, 0),
+        (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
+        (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
     ]
 
 
@@ -257,7 +269,7 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     rows, gaps = generate_effect_rows(pak.skill_conf[200204], pak, allow_ability_flags=True)
     assert gaps == []
     assert rows == [(
-        hi.H_HIT_COUNT_PER_POISON_EFFECT,
+        P_HIT_COUNT_PER_POISON_EFFECT,
         TIMING_BEFORE_MOVE,
         1,
         10000,
@@ -270,7 +282,7 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     rows, gaps = generate_effect_rows(pak.skill_conf[200183], pak, allow_ability_flags=True)
     assert gaps == []
     assert rows == [(
-        hi.H_CUTE_HIT_PER_STACK,
+        P_CUTE_HIT_PER_STACK,
         TIMING_BEFORE_MOVE,
         1,
         10000,
@@ -281,7 +293,7 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     )]
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7190260], pak)
-    assert any(row[0] == hi.H_HIT_COUNT_DELTA and row[4] == 1 for row in rows)
+    assert any(row[0] == effect_order_key("ET_MULTIPLE") and row[4] == 1 for row in rows)
     assert any(gap["primitive"] == "prefix_2091" and gap["params"]["buff_id"] == 20910030 for gap in gaps)
 
 
@@ -290,10 +302,10 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070160], pak)
-    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
+    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
     assert gaps == [{
-        "primitive": "transmission",
-        "timing_code": 11,
+        "primitive": source_context_key("transmission"),
+        "timing_code": pak_cast_moment_key(11),
         "effect_order": 0,
         "reason": "transmission_unimplemented",
         "params": {
@@ -308,11 +320,11 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     }]
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070030], pak)
-    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
+    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
     assert gaps[0]["reason"] == "transmission_unimplemented"
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070170], pak)
-    assert (hi.H_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
+    assert (P_SKILL_MOD, TIMING_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
     assert any(gap["reason"] == "transmission_unimplemented" for gap in gaps)
 
 
@@ -350,9 +362,9 @@ def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
     )
     assert target_bid not in cls.BASE_ID_VIA_ORDER_MAP
     buff_conf_stub = {99999999: {"buff_base_ids": [target_bid]}}
-    h = cls.classify_buff_handler(99999999, buff_conf_stub)
-    assert h == hi.H_DAMAGE_REDUCTION
-    assert 2011 in cls.PREFIX_HANDLER_MAP
+    h = cls.classify_buff_primitive(99999999, buff_conf_stub)
+    assert h == P_DAMAGE_REDUCTION
+    assert 2011 in cls.PREFIX_PRIMITIVE_MAP
 
 
 def test_runtime_classifier_outlier_routes_to_via_order_handler(buffbase_conf):
@@ -365,5 +377,5 @@ def test_runtime_classifier_outlier_routes_to_via_order_handler(buffbase_conf):
     target_bid = 2050011
     assert target_bid in cls.BASE_ID_VIA_ORDER_MAP
     buff_conf_stub = {99999999: {"buff_base_ids": [target_bid]}}
-    h = cls.classify_buff_handler(99999999, buff_conf_stub)
-    assert h == hi.H_FORCE_SWITCH
+    h = cls.classify_buff_primitive(99999999, buff_conf_stub)
+    assert h == P_FORCE_SWITCH

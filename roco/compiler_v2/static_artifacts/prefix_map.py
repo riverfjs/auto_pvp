@@ -2,31 +2,32 @@ from __future__ import annotations
 
 import json
 
-from roco.compiler_v2.handler_axes import resolve_handler_axes
+from roco.common.primitive_keys import status_note_key, struct_key
 from roco.compiler_v2.model import StaticBundle
+from roco.compiler_v2.primitive_axes import resolve_primitive_axes
 
-from .common import PAK_BIN, PREFIX_MAP_PATH, _load_json_table, _maybe_int
-from .marks import mark_note_to_handler
+from .common import PAK_BIN, PRIMITIVE_MAP_PATH, _load_json_table, _maybe_int
+from .marks import mark_note_to_primitive
 
 
-def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBundle) -> dict:
+def write_primitive_map(bundle: StaticBundle) -> dict:
     buffbase_rows = _load_json_table(PAK_BIN / "BUFFBASE_CONF.json")
     buff_rows = _load_json_table(PAK_BIN / "BUFF_CONF.json")
     skill_rows = _load_json_table(PAK_BIN / "SKILL_CONF.json")
 
-    axes = resolve_handler_axes(handler_indices, bundle.lua_enums)
+    axes = resolve_primitive_axes(bundle.lua_enums)
     order_seed = axes.buffbase_order
     prefix_seed = axes.prefix
     base_id_seed = axes.base_id
 
-    base_id_via_order_map: dict[int, int] = {}
+    base_id_via_order_map: dict[int, str] = {}
     for base_id, rec in buffbase_rows.items():
         if not isinstance(base_id, int):
             continue
         order = int(rec.get("buffbase_order") or 0)
-        h = order_seed.get(order)
-        if h is not None:
-            base_id_via_order_map[base_id] = h
+        primitive = order_seed.get(order)
+        if primitive is not None:
+            base_id_via_order_map[base_id] = primitive
 
     all_prefixes: set[int] = set()
     all_base_ids: set[int] = set()
@@ -36,7 +37,10 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
                 all_base_ids.add(int(bid))
                 all_prefixes.add(int(bid) // 1000)
 
-    prefix_map = {pfx: h for pfx, h in sorted(prefix_seed.items()) if pfx in all_prefixes}
+    prefix_map = {
+        pfx: primitive for pfx, primitive in sorted(prefix_seed.items())
+        if pfx in all_prefixes
+    }
     base_ids_by_prefix: dict[int, set[int]] = {}
     for bid in all_base_ids:
         base_ids_by_prefix.setdefault(bid // 1000, set()).add(bid)
@@ -48,8 +52,7 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
             continue
         unmapped.append(pfx)
 
-    buff_id_map = _build_buff_id_handler_map(
-        handler_indices,
+    buff_id_map = _build_buff_id_primitive_map(
         bundle,
         buff_rows,
         buffbase_rows,
@@ -71,18 +74,21 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
             "unmapped_prefixes": unmapped,
         },
     }
-    PREFIX_MAP_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    return {**result, "prefix_aliases": axes.prefix_aliases, "handler_axes": axes}
+    PRIMITIVE_MAP_PATH.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return {**result, "prefix_aliases": axes.prefix_aliases, "primitive_axes": axes}
 
-def _build_buff_id_handler_map(
-    handler_indices: dict[str, int],
+
+def _build_buff_id_primitive_map(
     bundle: StaticBundle,
     buff_rows: dict[int | str, dict],
     buffbase_rows: dict[int | str, dict],
     skill_rows: dict[int | str, dict],
     raw_axes: dict[str, dict[int | str, tuple[str, str]]],
-) -> dict[int, int]:
-    """Derive exact BUFF_CONF.id handlers from pak structures.
+) -> dict[int, str]:
+    """Derive exact BUFF_CONF.id primitives from pak structures.
 
     Some mark buffs reuse generic BUFFBASE rows (for example poison or
     skill-cost rows).  A base_id-only dispatch would therefore compile the
@@ -99,35 +105,26 @@ def _build_buff_id_handler_map(
 
     bgs_area = bundle.lua_enums.get("BuffGroupSign", {}).get("BGS_AREA")
     desc_notes = _desc_notes_by_id()
-    mark_name_to_handler = mark_note_to_handler(handler_indices, raw_axes)
+    mark_name_to_primitive = mark_note_to_primitive(raw_axes)
 
-    status_name_to_handler = {
-        desc_notes[note_id]: handler_indices[const]
-        for note_id, const in (
-            (1001, "H_POISON"),
-            (1002, "H_BURN"),
-            (1008, "H_LEECH"),
-        )
-        if note_id in desc_notes and const in handler_indices
+    status_name_to_primitive = {
+        desc_notes[note_id]: status_note_key(desc_notes[note_id])
+        for note_id in (1001, 1002, 1008)
+        if note_id in desc_notes
     }
-    auto_switch_handler = handler_indices.get("H_AUTO_SWITCH_ON_ZERO_ENERGY")
-    auto_switch_buff_ids = (
-        _derive_zero_energy_auto_switch_buff_ids(skill_rows, buff_rows, buffbase_rows)
-        if auto_switch_handler is not None
-        else set()
+    auto_switch_buff_ids = _derive_zero_energy_auto_switch_buff_ids(
+        skill_rows,
+        buff_rows,
+        buffbase_rows,
     )
-    team_skill_hit_handler = handler_indices.get("H_HIT_COUNT_BY_TEAM_SKILL_COUNT")
-    hit_count_delta_handler = handler_indices.get("H_HIT_COUNT_DELTA")
-    anti_heal_handler = handler_indices.get("H_ANTI_HEAL")
-    cute_bench_cost_handler = handler_indices.get("H_CUTE_BENCH_COST_REDUCE")
 
-    out: dict[int, int] = {}
+    out: dict[int, str] = {}
     for buff_id, rec in buff_rows.items():
         if not isinstance(buff_id, int):
             continue
         name = str(rec.get("name") or "").strip()
-        handler = mark_name_to_handler.get(name)
-        if handler is not None:
+        primitive = mark_name_to_primitive.get(name)
+        if primitive is not None:
             groups = {
                 int(sign)
                 for sign in rec.get("buff_groupsigns") or []
@@ -138,7 +135,7 @@ def _build_buff_id_handler_map(
             # common cover-group shape when present.
             if bgs_area is not None and groups and bgs_area not in groups:
                 continue
-            _put_exact_buff_handler(out, buff_id, handler, f"mark name={name!r}")
+            _put_exact_buff_primitive(out, buff_id, primitive, f"mark name={name!r}")
             continue
 
         labels = {
@@ -148,51 +145,48 @@ def _build_buff_id_handler_map(
         }
         if int(rec.get("type") or 0) == 2:
             for label in sorted(labels):
-                handler = status_name_to_handler.get(label)
-                if handler is not None:
-                    _put_exact_buff_handler(out, buff_id, handler, f"status label={label!r}")
+                primitive = status_name_to_primitive.get(label)
+                if primitive is not None:
+                    _put_exact_buff_primitive(out, buff_id, primitive, f"status label={label!r}")
                     break
 
         if buff_id in auto_switch_buff_ids:
-            _put_exact_buff_handler(
+            _put_exact_buff_primitive(
                 out,
                 buff_id,
-                auto_switch_handler,
+                struct_key("zero_energy_auto_switch"),
                 "SKILL_CONF order-52 zero-energy condition chain",
             )
 
-        if team_skill_hit_handler is not None and _is_team_skill_hit_count_buff(rec, buffbase_rows):
-            _put_exact_buff_handler(
+        if _is_team_skill_hit_count_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(
                 out,
                 buff_id,
-                team_skill_hit_handler,
+                struct_key("team_skill_hit_count"),
                 "BUFFBASE_CONF order-3 team skill count hit modifier",
             )
 
-        if hit_count_delta_handler is not None and _is_flat_hit_count_delta_buff(rec, buffbase_rows):
-            _put_exact_buff_handler(
+        if _is_flat_hit_count_delta_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(
                 out,
                 buff_id,
-                hit_count_delta_handler,
+                struct_key("flat_hit_count_delta"),
                 "BUFFBASE_CONF order-45 flat hit-count delta",
             )
 
-        if anti_heal_handler is not None and _is_heal_reversal_buff(rec, buffbase_rows):
-            _put_exact_buff_handler(
+        if _is_heal_reversal_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(
                 out,
                 buff_id,
-                anti_heal_handler,
+                struct_key("heal_reversal"),
                 "BUFFBASE_CONF order-146 heal reversal trigger",
             )
 
-        if (
-            cute_bench_cost_handler is not None
-            and _is_cute_bench_cost_reduce_buff(rec, buff_rows, buffbase_rows)
-        ):
-            _put_exact_buff_handler(
+        if _is_cute_bench_cost_reduce_buff(rec, buff_rows, buffbase_rows):
+            _put_exact_buff_primitive(
                 out,
                 buff_id,
-                cute_bench_cost_handler,
+                struct_key("cute_bench_cost_reduce"),
                 "BUFFBASE_CONF order-40 cute-stack trigger to all-skill cost reduction",
             )
     return out
@@ -291,18 +285,18 @@ def _all_skill_cost_reduce_amount(
     delta = slots[3][0]
     return abs(delta) if delta < 0 else 0
 
-def _put_exact_buff_handler(
-    out: dict[int, int],
+def _put_exact_buff_primitive(
+    out: dict[int, str],
     buff_id: int,
-    handler: int,
+    primitive: str,
     context: str,
 ) -> None:
     existing = out.get(buff_id)
-    if existing is not None and existing != handler:
+    if existing is not None and existing != primitive:
         raise RuntimeError(
-            f"BUFF_CONF[{buff_id}] exact handler conflict: {existing} vs {handler} ({context})"
+            f"BUFF_CONF[{buff_id}] exact primitive conflict: {existing} vs {primitive} ({context})"
         )
-    out[buff_id] = handler
+    out[buff_id] = primitive
 
 def _desc_notes_by_id() -> dict[int, str]:
     rows = _load_json_table(PAK_BIN / "DESC_NOTE_CONF.json")

@@ -7,7 +7,7 @@ import pytest
 
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
-from roco.compiler_v2 import catalog_compiler
+from roco.engine import catalog_compiler
 from roco.compiler_v2.static_artifacts.marks import mark_note_by_idx
 from roco.data.utils import load_jsonl, write_jsonl
 
@@ -105,11 +105,11 @@ def test_static_catalog_compiles_from_canonical_records(tmp_path: Path, monkeypa
 def test_static_catalog_rejects_noop_effect_rows(tmp_path: Path, monkeypatch):
     canonical = _sample_canonical()
     bad_skill = dict(canonical["skills"][0])
-    bad_skill["effect_rows"] = [(0, 11, 1, 10000, 0, 0, 0, 0)]
+    bad_skill["effect_rows"] = [("", 11, 1, 10000, 0, 0, 0, 0)]
     canonical["skills"] = (bad_skill,)
     monkeypatch.setattr(catalog_compiler, "load_canonical_records", lambda _pak_dir: canonical)
 
-    with pytest.raises(RuntimeError, match="H_NOOP / 0"):
+    with pytest.raises(RuntimeError, match="empty effect primitive"):
         catalog_compiler.compile_catalogs(
             tmp_path / "pak",
             hot_path=tmp_path / "catalog_hot.py",

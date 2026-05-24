@@ -1,14 +1,14 @@
-"""Pak-effect classification — pak-first, no H_NOOP at the boundary.
+"""Pak-effect classification — pak-first primitive output.
 
 Each decoder returns ``list[EmitOutcome | GapOutcome | AbilityFlagOutcome]``
-(never H_NOOP tuples).  See :mod:`.outcomes` for the four-state contract.
+(never engine handler rows).  See :mod:`.outcomes` for the four-state contract.
 
 Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 
-* ``type=2`` decodes structurally from ``effect_param`` to ``H_DAMAGE``.
+* ``type=2`` decodes structurally from ``effect_param`` to ``damage``.
 * ``type=1`` whose ``effect_param`` contains exactly one buff_id in
   BUFF_CONF is treated as "apply that buff"; the buff is then classified
-  via :func:`classify_buff_handler` (exact ``buff_id`` → exact
+  via :func:`classify_buff_primitive` (exact ``buff_id`` → exact
   ``buff_base_id`` → pak order → mixed-prefix family).  Single-candidate
   effects are deterministic — pak
   literally wrote one buff to apply.
@@ -23,7 +23,7 @@ Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
   builder path accepts that outcome; the skill builder raises if it
   ever sees one (see :func:`generate_effect_rows`).
 
-``classify_buff_handler`` (exact ``buff_id``/``buff_base_id`` then pak
+``classify_buff_primitive`` (exact ``buff_id``/``buff_base_id`` then pak
 order/prefix) is also
 used by :func:`decode_buff_direct` when a skill_result references a
 buff in BUFF_CONF directly — that path has no ambiguity since the entry
@@ -35,12 +35,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from roco.compiler_v2.handler_registry import H_DAMAGE
-
+from roco.common.primitive_keys import effect_kind_key
 from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome, EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import (
     extract_int_list,
-    pack_handler_params,
+    pack_primitive_params,
     safe_int,
 )
 
@@ -77,72 +76,72 @@ def count_buff_repeats(params_raw: list, buff_id: int) -> int:
     return 1
 
 
-_MAP_PATH = Path(__file__).resolve().parents[2] / "generated" / "prefix_handler_map.json"
+_MAP_PATH = Path(__file__).resolve().parents[2] / "generated" / "primitive_map.json"
 
 
-def _load_handler_maps() -> tuple[dict[int, int], dict[int, int], dict[int, int], dict[int, int]]:
-    """Load buff-handler lookup tables from the generated json.
+def _load_primitive_maps() -> tuple[dict[int, str], dict[int, str], dict[int, str], dict[int, str]]:
+    """Load buff-primitive lookup tables from the generated json.
 
     Returns ``(buff_id_map, prefix_map, base_id_map, base_id_via_order_map)``.
     The first table handles pak-visible exact buff identities such as mark
     buffs that reuse generic base rows.  ``base_id_map`` is generated from
     engine-owned semantic anchors resolved through pak names, ``via_order``
-    is the pak-axis pre-join of ``BUFFBASE_CONF.buffbase_order`` → handler,
+    is the pak-axis pre-join of ``BUFFBASE_CONF.buffbase_order`` → primitive,
     and ``prefix_map`` is the remaining mixed-prefix family map.
     """
     if not _MAP_PATH.exists():
         return {}, {}, {}, {}
     data = json.loads(_MAP_PATH.read_text(encoding="utf-8"))
-    buff_id_map = {int(k): v for k, v in data.get("buff_id_map", {}).items()}
-    prefix_map = {int(k): v for k, v in data.get("prefix_map", {}).items()}
-    base_id_map = {int(k): v for k, v in data.get("base_id_map", {}).items()}
+    buff_id_map = {int(k): str(v) for k, v in data.get("buff_id_map", {}).items()}
+    prefix_map = {int(k): str(v) for k, v in data.get("prefix_map", {}).items()}
+    base_id_map = {int(k): str(v) for k, v in data.get("base_id_map", {}).items()}
     via_order_map = {
-        int(k): v for k, v in data.get("base_id_via_order_map", {}).items()
+        int(k): str(v) for k, v in data.get("base_id_via_order_map", {}).items()
     }
     return buff_id_map, prefix_map, base_id_map, via_order_map
 
 
-BUFF_ID_HANDLER_MAP, PREFIX_HANDLER_MAP, BASE_ID_HANDLER_MAP, BASE_ID_VIA_ORDER_MAP = _load_handler_maps()
+BUFF_ID_PRIMITIVE_MAP, PREFIX_PRIMITIVE_MAP, BASE_ID_PRIMITIVE_MAP, BASE_ID_VIA_ORDER_MAP = _load_primitive_maps()
 
 
-def classify_buff_handler(buff_id: int, buff_conf: dict[int, dict]) -> int:
-    """Map a buff_id to a handler index via the generated axis stack.
+def classify_buff_primitive(buff_id: int, buff_conf: dict[int, dict]) -> str:
+    """Map a buff_id to a primitive string via the generated axis stack.
 
     Lookup order:
 
-    1. Exact ``BUFF_CONF.id`` map (``BUFF_ID_HANDLER_MAP``).  Generated
+    1. Exact ``BUFF_CONF.id`` map (``BUFF_ID_PRIMITIVE_MAP``).  Generated
        from pak-visible semantic identities whose base rows are shared.
-    2. Exact ``base_id`` anchors (``BASE_ID_HANDLER_MAP``), generated from
+    2. Exact ``base_id`` anchors (``BASE_ID_PRIMITIVE_MAP``), generated from
        engine-owned semantic names resolved through current pak data.
     3. Pak-axis ``buffbase_order`` resolution
        (``BASE_ID_VIA_ORDER_MAP``).  This is the primary axis post-7C —
        most buff families dispatch here.
-    4. Legacy ``prefix`` map (``PREFIX_HANDLER_MAP``).  Only the few
+    4. Legacy ``prefix`` map (``PREFIX_PRIMITIVE_MAP``).  Only the few
        prefixes whose buffbase_order distribution is not 100% concen-
        trated remain at this layer; everything else has been migrated.
 
-    Returns 0 when no mapping exists; callers must convert 0 into a
+    Returns "" when no mapping exists; callers must convert it into a
     :class:`GapOutcome` rather than emitting a runtime row.
     """
     rec = buff_conf.get(buff_id)
     if rec is None:
-        return 0
-    h = BUFF_ID_HANDLER_MAP.get(buff_id, 0)
-    if h:
-        return h
+        return ""
+    primitive = BUFF_ID_PRIMITIVE_MAP.get(buff_id, "")
+    if primitive:
+        return primitive
     base_ids = rec.get("buff_base_ids") or []
     for bid in base_ids:
-        if bid and bid in BASE_ID_HANDLER_MAP:
-            return BASE_ID_HANDLER_MAP[bid]
+        if bid and bid in BASE_ID_PRIMITIVE_MAP:
+            return BASE_ID_PRIMITIVE_MAP[bid]
     for bid in base_ids:
         if bid and bid in BASE_ID_VIA_ORDER_MAP:
             return BASE_ID_VIA_ORDER_MAP[bid]
     for bid in base_ids:
         if bid:
-            h = PREFIX_HANDLER_MAP.get(bid // 1000, 0)
-            if h:
-                return h
-    return 0
+            primitive = PREFIX_PRIMITIVE_MAP.get(bid // 1000, "")
+            if primitive:
+                return primitive
+    return ""
 
 
 def collect_buff_candidates(
@@ -172,7 +171,7 @@ def _single_buff(params_raw: list, buff_conf: dict[int, dict]) -> int:
 def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -> GapOutcome:
     """Build a GapOutcome for a buff classification miss.
 
-    ``classify_buff_handler`` returned 0 — figure out *why* and pick a
+    ``classify_buff_primitive`` returned "" — figure out *why* and pick a
     precise reason so the audit row points at the actual coverage hole
     (missing base_id mapping, intentional-noop-removed prefix, unseeded
     prefix, or empty buff record).
@@ -197,17 +196,17 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
         )
     # base_id present but neither exact nor prefix matched.  Report the
     # first unmapped prefix as the primitive.  "Unmapped" means either
-    # the prefix is absent from PREFIX_HANDLER_MAP or it is present with
-    # a zero handler (defensive — the generator no longer emits zeros,
-    # but treat both shapes the same so a stale prefix_handler_map.json
+    # the prefix is absent from PREFIX_PRIMITIVE_MAP or it is present with
+    # an empty primitive (defensive — the generator no longer emits empty
+    # values, but treat both shapes the same so a stale primitive_map.json
     # can't silently shadow gaps as ``buff_unclassified``).
     for bid in base_ids:
         pfx = bid // 1000
-        if bid in BASE_ID_HANDLER_MAP:
+        if bid in BASE_ID_PRIMITIVE_MAP:
             continue
         if bid in BASE_ID_VIA_ORDER_MAP:
             continue
-        if PREFIX_HANDLER_MAP.get(pfx, 0) == 0:
+        if not PREFIX_PRIMITIVE_MAP.get(pfx, ""):
             return GapOutcome(
                 primitive=f"prefix_{pfx}",
                 effect_id=effect_id,
@@ -220,7 +219,7 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
                     "prefixes": sorted({b // 1000 for b in base_ids}),
                 },
             )
-    # Every base_id has a mapped prefix but pack_handler_params (or some
+    # Every base_id has a mapped prefix but pack_primitive_params (or some
     # caller) still rejected — keep a precise fall-through.
     return GapOutcome(
         primitive=f"buff_{buff_id}",
@@ -270,11 +269,16 @@ def decode_effect(
         candidates = collect_buff_candidates(params_raw, buff_conf)
         if len(candidates) == 1:
             buff_id = candidates[0]
-            h = classify_buff_handler(buff_id, buff_conf)
-            if h:
+            primitive = classify_buff_primitive(buff_id, buff_conf)
+            if primitive:
                 raw_stacks = count_buff_repeats(params_raw, buff_id)
-                p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf, raw_stacks)
-                return [EmitOutcome(h, p0, p1, p2, p3, raw_stacks)]
+                p0, p1, p2, p3 = pack_primitive_params(
+                    primitive,
+                    buff_id,
+                    buff_conf,
+                    raw_stacks,
+                )
+                return [EmitOutcome(primitive, p0, p1, p2, p3, raw_stacks)]
             return [_buff_gap(effect_id, buff_id, buff_conf)]
         if len(candidates) > 1:
             return [GapOutcome(
@@ -302,7 +306,7 @@ def decode_effect(
         mode = safe_int(params_raw, 0)
         power = safe_int(params_raw, 2)
         self_damage = safe_int(params_raw, 6)
-        return [EmitOutcome(H_DAMAGE, mode, power, self_damage, 0, 1)]
+        return [EmitOutcome(effect_kind_key(2), mode, power, self_damage, 0, 1)]
 
     if etype == 3:
         return [GapOutcome(
@@ -334,8 +338,8 @@ def decode_buff_direct(
     flag_outcome = ABILITY_FLAG_OUTCOMES.get(buff_id)
     if flag_outcome is not None:
         return [flag_outcome]
-    h = classify_buff_handler(buff_id, buff_conf)
-    if h:
-        p0, p1, p2, p3 = pack_handler_params(h, buff_id, buff_conf)
-        return [EmitOutcome(h, p0, p1, p2, p3, 1)]
+    primitive = classify_buff_primitive(buff_id, buff_conf)
+    if primitive:
+        p0, p1, p2, p3 = pack_primitive_params(primitive, buff_id, buff_conf)
+        return [EmitOutcome(primitive, p0, p1, p2, p3, 1)]
     return [_buff_gap(None, buff_id, buff_conf)]

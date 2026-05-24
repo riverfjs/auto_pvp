@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from roco.common.primitive_keys import effect_order_key, effect_order_variant_key
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 from roco.compiler_v2.effect_codegen.params import safe_int
 from roco.compiler_v2.sources import LuaEnumSource
-from roco.engine.kernel.op_rows import TIMING_AFTER_MOVE, TIMING_SWITCH_IN
+from roco.compiler_v2.timing_keys import pak_battle_event_key
 
 
 def _effect_type(name: str) -> int:
@@ -37,8 +38,8 @@ ET_BUFF_BY_CHANGE_TIMES = _effect_type("ET_BUFF_BY_CHANGE_TIMES")
 ET_BUFF_BY_EQUIP_SKILL_NUM = _effect_type("ET_BUFF_BY_EQUIP_SKILL_NUM")
 ET_LIMIT_FIGHT_BY_HP = _effect_type("ET_LIMIT_FIGHT_BY_HP")
 
-COUNTER_INSTALL_TIMING = TIMING_AFTER_MOVE
-SWITCH_IN_TIMING = TIMING_SWITCH_IN
+COUNTER_INSTALL_TIMING = pak_battle_event_key("BEVT_BEFORE_HURT")
+SWITCH_IN_TIMING = pak_battle_event_key("BEVT_SDT")
 COUNT_FAINTED_ALLY = -1
 
 
@@ -46,13 +47,36 @@ def params(rec: dict) -> list:
     return rec.get("effect_param") or rec.get("params") or []
 
 
-def emit(handler_idx: int, p0: int, p1: int = 0, p2: int = 0, p3: int = 0) -> EmitOutcome:
-    return EmitOutcome(handler_idx, p0, p1, p2, p3, 1)
+def emit(primitive: str, p0: int, p1: int = 0, p2: int = 0, p3: int = 0) -> EmitOutcome:
+    return EmitOutcome(primitive, p0, p1, p2, p3, 1)
 
 
-def emit_from_param(rec: dict, handler_idx: int, slot: int) -> EmitOutcome | None:
+def emit_effect_order(
+    effect_order_symbol: str,
+    p0: int,
+    p1: int = 0,
+    p2: int = 0,
+    p3: int = 0,
+) -> EmitOutcome:
+    _effect_type(effect_order_symbol)
+    return emit(effect_order_key(effect_order_symbol), p0, p1, p2, p3)
+
+
+def emit_effect_order_variant(
+    effect_order_symbol: str,
+    variant: str,
+    p0: int,
+    p1: int = 0,
+    p2: int = 0,
+    p3: int = 0,
+) -> EmitOutcome:
+    _effect_type(effect_order_symbol)
+    return emit(effect_order_variant_key(effect_order_symbol, variant), p0, p1, p2, p3)
+
+
+def emit_from_param(rec: dict, primitive: str, slot: int) -> EmitOutcome | None:
     params_raw = params(rec)
     value = safe_int(params_raw, slot)
     if value == 0:
         return None
-    return emit(handler_idx, value)
+    return emit(primitive, value)

@@ -37,8 +37,8 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.canonical import canonical_list
-from roco.compiler_v2.handler_registry import func_to_const, load_handler_indices
 from roco.compiler_v2.effect_families.paths import CATALOG_JSONL as EFFECT_FAMILIES_JSONL
+from roco.compiler_v2.primitive_axes import resolve_primitive_axes
 
 # Repo root: roco/compiler_v2/pak_schema_audit.py -> parents[2]
 ROOT = Path(__file__).resolve().parents[2]
@@ -172,65 +172,59 @@ def _load_exact_rules() -> list[dict]:
     return []
 
 
-def _handler_indices() -> dict[str, int]:
-    return load_handler_indices()
-
-
-def _load_handler_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[dict]]:
+def _load_primitive_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[dict]]:
     """Return (buffbase_order_rules, prefix_rules, legacy_base_id_overrides).
 
-    The active source is engine-owned ``op_meta`` decorator metadata.
-    ``handles_buff`` / ``handles_prefix`` store ``Enum.BuffType`` symbols,
-    so this helper resolves symbols through the current Lua static bundle.
+    The active source is compiler primitive-axis metadata.  ``BuffType``
+    symbols are resolved through the current Lua static bundle.
     """
 
     from roco.compiler_v2.build import build_static_bundle
-    from roco.compiler_v2.handler_axes import resolve_handler_axes
 
     bundle = build_static_bundle()
-    resolved = resolve_handler_axes(_handler_indices(), bundle.lua_enums)
+    resolved = resolve_primitive_axes(bundle.lua_enums)
     buff_type_enum = bundle.lua_enums["BuffType"]
 
     by_order: dict[int, dict] = {}
-    for symbol, (handler_name, alias) in resolved.raw["buff_type"].items():
+    for symbol, (primitive, alias) in resolved.raw["buff_type"].items():
         order = int(buff_type_enum[str(symbol)])
         by_order[order] = {
             "buffbase_order": order,
             "buff_type": symbol,
-            "handler": func_to_const(handler_name),
+            "primitive": primitive,
             "alias": alias,
-            "source": "engine_op_meta",
+            "source": "compiler_primitive_axis",
         }
 
     by_prefix: dict[int, dict] = {}
-    for symbol, (handler_name, alias) in resolved.raw["prefix_type"].items():
+    for symbol, (primitive, alias) in resolved.raw["prefix_type"].items():
         prefix = 2000 + int(buff_type_enum[str(symbol)])
         by_prefix[prefix] = {
             "prefix": prefix,
             "buff_type": symbol,
-            "handler": func_to_const(handler_name),
+            "primitive": primitive,
             "alias": alias,
-            "source": "engine_op_meta",
+            "source": "compiler_primitive_axis",
         }
 
     overrides: list[dict] = []
-    for base_id, (handler_name, note) in resolved.raw.get("base_id", {}).items():
+    for base_id, (primitive, note) in resolved.raw.get("base_id", {}).items():
         overrides.append({
             "base_id": int(base_id),
-            "handler": func_to_const(handler_name),
+            "primitive": primitive,
             "note": note,
-            "source": "engine_op_meta",
+            "source": "compiler_primitive_axis",
         })
     return by_order, by_prefix, sorted(overrides, key=lambda r: r["base_id"])
 
 
 def _load_prefix_rules() -> tuple[dict[int, dict], list[dict]]:
-    _order_rules, prefix_rules, overrides = _load_handler_axis_rules()
+    _order_rules, prefix_rules, overrides = _load_primitive_axis_rules()
     return prefix_rules, overrides
 
 
 def _load_buffbase_order_rules() -> dict[int, dict]:
-    buffbase_order_rules, _prefix_rules, _overrides = _load_handler_axis_rules()
+    buffbase_order_rules, _prefix_rules, _overrides = _load_primitive_axis_rules()
     return buffbase_order_rules
 
 
@@ -342,7 +336,7 @@ def buffbase_families(
             prefix_distribution[int(bid) // 1000] += 1
             referencing_buff_ids.update(refs_by_base_id.get(bid, set()))
 
-        # Most-frequent prefix that ALSO has a handler rule, if any.
+        # Most-frequent prefix that ALSO has a primitive rule, if any.
         covering: dict | None = None
         total_prefix_count = sum(prefix_distribution.values())
         for prefix, count in prefix_distribution.most_common():
@@ -350,7 +344,7 @@ def buffbase_families(
                 rule = prefix_rules[prefix]
                 covering = {
                     "prefix": prefix,
-                    "handler": rule["handler"],
+                    "primitive": rule["primitive"],
                     "alias": rule.get("alias"),
                     "share": f"{count}/{total_prefix_count}",
                 }
@@ -371,7 +365,7 @@ def buffbase_families(
             "referencing_buff_ids_count": len(referencing_buff_ids),
             "covering_buffbase_order_rule": (
                 {
-                    "handler": covering_order["handler"],
+                    "primitive": covering_order["primitive"],
                     "alias": covering_order.get("alias"),
                 }
                 if covering_order
@@ -392,27 +386,27 @@ def exact_rule_debt(
     cluster_threshold: int = 3,
 ) -> list[dict]:
     """Annotate each exact rule with its EFFECT_CONF.effect_order and
-    flag (effect_order, handler) clusters above ``cluster_threshold``
+    flag (effect_order, primitive) clusters above ``cluster_threshold``
     as migration candidates."""
     cluster_counts: defaultdict[tuple[int, str], int] = defaultdict(int)
     annotated: list[dict] = []
     for rec in exact_rules:
         eid = int(rec["effect_id"])
-        handler = rec["handler"]
+        primitive = rec["primitive"]
         pak_rec = effect_conf.get(eid, {})
         order = int(pak_rec.get("effect_order", -1)) if pak_rec else -1
         pak_type = int(pak_rec.get("type", -1)) if pak_rec else -1
         annotated.append({
             "effect_id": eid,
-            "handler": handler,
+            "primitive": primitive,
             "pak_type": pak_type,
             "effect_order": order,
             "pak_editor_name": rec.get("pak_editor_name", ""),
             "args": rec.get("args"),
         })
-        cluster_counts[(order, handler)] += 1
+        cluster_counts[(order, primitive)] += 1
     for entry in annotated:
-        size = cluster_counts[(entry["effect_order"], entry["handler"])]
+        size = cluster_counts[(entry["effect_order"], entry["primitive"])]
         entry["cluster_size"] = size
         entry["migration_candidate"] = (
             entry["effect_order"] >= 0 and size >= cluster_threshold
@@ -444,7 +438,7 @@ def prefix_rule_debt(
         if total == 0:
             out.append({
                 "prefix": prefix,
-                "handler": rule["handler"],
+                "primitive": rule["primitive"],
                 "alias": rule.get("alias"),
                 "dominant_buffbase_order": None,
                 "concentration": 0.0,
@@ -458,7 +452,7 @@ def prefix_rule_debt(
         concentration = top_n / total
         out.append({
             "prefix": prefix,
-            "handler": rule["handler"],
+            "primitive": rule["primitive"],
             "alias": rule.get("alias"),
             "dominant_buffbase_order": top,
             "concentration": round(concentration, 4),
@@ -555,14 +549,14 @@ def render_markdown(
     lines.append("")
     lines.append(
         f"Total `buffbase_order` families: **{len(buffbase_fams)}**.  "
-        "`buffbase_order rule` is the engine-owned `handles_buff` axis "
+        "`buffbase_order rule` is the primitive axis "
         "resolved through `Enum.BuffType`; `prefix rule` is the "
         "mixed-prefix axis kept only for the 3 prefixes whose "
         "buffbase_order distribution is not 100% concentrated."
     )
     lines.append("")
     lines.append(
-        "| order | count | param slots | trigger_types | buffbase_order rule | prefix rule (legacy) | refs | editor_name samples |"
+        "| order | count | param slots | trigger_types | buffbase_order rule | prefix rule | refs | editor_name samples |"
     )
     lines.append("|---:|---:|---|---|---|---|---:|---|")
     for b in buffbase_fams:
@@ -570,14 +564,14 @@ def render_markdown(
         tt = _fmt_dict_inline(b["trigger_types"])
         order_rule = b["covering_buffbase_order_rule"]
         if order_rule:
-            order_rule_str = f"`{order_rule['handler']}`"
+            order_rule_str = f"`{order_rule['primitive']}`"
             if order_rule.get("alias"):
                 order_rule_str += f" ({order_rule['alias']})"
         else:
             order_rule_str = "—"
         pfx_rule = b["covering_prefix_rule"]
         if pfx_rule:
-            pfx_rule_str = f"`{pfx_rule['prefix']}`→`{pfx_rule['handler']}` ({pfx_rule['share']})"
+            pfx_rule_str = f"`{pfx_rule['prefix']}`→`{pfx_rule['primitive']}` ({pfx_rule['share']})"
         else:
             pfx_rule_str = "—"
         samples = ", ".join(b["editor_name_samples"][:3])
@@ -594,7 +588,7 @@ def render_markdown(
     lines.append(
         "Migration candidates per rule file.  An exact rule is a "
         "candidate when ≥3 rules share the same "
-        "`(EFFECT_CONF.effect_order, handler)` — that cluster can "
+        "`(EFFECT_CONF.effect_order, primitive)` — that cluster can "
         "collapse into one family decoder.  A prefix rule is a "
         "candidate when its dominant `buffbase_order` reaches 100% "
         "concentration."
@@ -607,21 +601,21 @@ def render_markdown(
     candidate_count = 0
     for r in exact_debt:
         if r["migration_candidate"]:
-            by_cluster[(r["effect_order"], r["handler"])].append(r)
+            by_cluster[(r["effect_order"], r["primitive"])].append(r)
             candidate_count += 1
     if not by_cluster:
         lines.append("_No exact-rule cluster reaches ≥3 rules._")
     else:
-        lines.append("| effect_order | handler | rule count | sample editor_names |")
+        lines.append("| effect_order | primitive | rule count | sample editor_names |")
         lines.append("|---:|---|---:|---|")
-        for (order, handler), rows in sorted(
+        for (order, primitive), rows in sorted(
             by_cluster.items(), key=lambda kv: (-len(kv[1]), kv[0])
         ):
             sample_names = sorted({
                 r["pak_editor_name"] for r in rows if r["pak_editor_name"]
             })[:3]
             lines.append(
-                f"| {order} | `{handler}` | **{len(rows)}** | "
+                f"| {order} | `{primitive}` | **{len(rows)}** | "
                 f"{', '.join(sample_names)} |"
             )
     remaining = len(exact_debt) - candidate_count
@@ -632,7 +626,7 @@ def render_markdown(
     )
     lines.append("")
 
-    lines.append("### 4b. Engine prefix-axis rekey candidates")
+    lines.append("### 4b. Prefix-axis rekey candidates")
     lines.append("")
     lines.append(
         "Per prefix: the dominant `buffbase_order` (the schema axis "
@@ -642,7 +636,7 @@ def render_markdown(
     )
     lines.append("")
     lines.append(
-        "| prefix | handler | alias | dominant order | concentration | "
+        "| prefix | primitive | alias | dominant order | concentration | "
         "identity? | clean rewrite? |"
     )
     lines.append("|---:|---|---|---:|---:|:---:|:---:|")
@@ -653,7 +647,7 @@ def render_markdown(
         clean = "✓" if r["clean_rewrite"] else "—"
         alias = r["alias"] or ""
         lines.append(
-            f"| {r['prefix']} | `{r['handler']}` | {alias} | {order_str} | "
+            f"| {r['prefix']} | `{r['primitive']}` | {alias} | {order_str} | "
             f"{r['concentration'] * 100:.1f}% | {ident} | {clean} |"
         )
     clean_count = sum(1 for r in prefix_debt if r["clean_rewrite"])

@@ -14,11 +14,7 @@ PAK_DATA = DEFAULT_PAK_DATA_DIR
 PAK_BIN = DEFAULT_PAK_DATA_DIR / "BinData"
 
 INIT_PATH = GEN_DIR / "__init__.py"
-REGISTRY_PATH = ROOT / "roco" / "compiler_v2" / "handler_registry.json"
-INDICES_PATH = GEN_DIR / "handler_indices.py"
-ORDER_PATH = GEN_DIR / "handler_order.py"
-TABLE_PATH = GEN_DIR / "handler_table.py"
-PREFIX_MAP_PATH = GEN_DIR / "prefix_handler_map.json"
+PRIMITIVE_MAP_PATH = GEN_DIR / "primitive_map.json"
 BATTLE_GLOBALS_PATH = GEN_DIR / "battle_globals.py"
 PAK_OPS_PATH = GEN_DIR / "pak_ops.py"
 SKILL_DAM_TYPES_PATH = GEN_DIR / "skill_dam_types.py"

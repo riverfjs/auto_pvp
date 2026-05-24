@@ -1,9 +1,9 @@
-"""Decoder outcomes — no H_NOOP or silent discard at the compiler boundary.
+"""Decoder outcomes — primitive rows, no engine handlers at compiler boundary.
 
 Every pak skill_result entry decodes to exactly one of these:
 
-* :class:`EmitOutcome` — produces a runtime row (kernel handler index > 0).
-  Routed to generated skill/ability effect rows.
+* :class:`EmitOutcome` — produces a primitive row.  The engine linker later
+  maps ``primitive`` to a concrete kernel handler.
 * :class:`GapOutcome` — unsupported / unrecognised.  Routed to
   generated audit/debug gap metadata.
 * :class:`AbilityFlagOutcome` — pak effect that compiles into an
@@ -16,8 +16,8 @@ Every pak skill_result entry decodes to exactly one of these:
   leak (effect_id mis-routed to a skill_result) becomes a loud error.
 
 Decoders may emit a *list* of outcomes (some pak effects map to multiple
-rows). Unsupported pak semantics must remain a :class:`GapOutcome`;
-there is intentionally no runtime discard outcome.
+rows). Unsupported pak semantics must remain a :class:`GapOutcome`; there is
+intentionally no runtime discard outcome.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class EmitOutcome:
-    handler_idx: int   # > 0 by construction; H_NOOP forbidden
+    primitive: str
     p0: int
     p1: int
     p2: int

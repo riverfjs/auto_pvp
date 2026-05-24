@@ -13,7 +13,7 @@ from .common import (
     MARK_GROUPS_PATH,
     NATURES_PATH,
     PAK_OPS_PATH,
-    PREFIX_MAP_PATH,
+    PRIMITIVE_MAP_PATH,
     SKILL_DAM_TYPES_PATH,
     TYPE_CHART_PATH,
     WEATHER_DECODERS_PATH,
@@ -21,12 +21,11 @@ from .common import (
 )
 from .core import write_battle_globals, write_pak_ops, write_skill_dam_types, write_type_chart
 from .counter_skill import write_counter_skill_table
-from .handlers import write_handler_artifacts
 from .immunity import write_buff_immunity_table
-from .marks import MarkIdx, mark_note_by_idx, mark_note_to_handler, write_mark_groups
+from .marks import MarkIdx, mark_note_by_idx, mark_note_to_primitive, write_mark_groups
 from .natures import build_nature_tables, write_natures
 from .orchestrator import write_all
-from .prefix_map import write_prefix_handler_map
+from .prefix_map import write_primitive_map
 from .weather import build_weather_tables, write_weather_decoders, write_weather_table
 
 __all__ = [
@@ -39,7 +38,7 @@ __all__ = [
     "MARK_GROUPS_PATH",
     "NATURES_PATH",
     "PAK_OPS_PATH",
-    "PREFIX_MAP_PATH",
+    "PRIMITIVE_MAP_PATH",
     "SKILL_DAM_TYPES_PATH",
     "TYPE_CHART_PATH",
     "WEATHER_DECODERS_PATH",
@@ -52,7 +51,7 @@ __all__ = [
     "build_nature_tables",
     "build_weather_tables",
     "mark_note_by_idx",
-    "mark_note_to_handler",
+    "mark_note_to_primitive",
     "write_all",
     "write_battle_globals",
     "write_bloodline_magic",
@@ -60,11 +59,10 @@ __all__ = [
     "write_buffbase_params",
     "write_canonical_adapters",
     "write_counter_skill_table",
-    "write_handler_artifacts",
     "write_mark_groups",
     "write_natures",
     "write_pak_ops",
-    "write_prefix_handler_map",
+    "write_primitive_map",
     "write_skill_dam_types",
     "write_type_chart",
     "write_weather_decoders",

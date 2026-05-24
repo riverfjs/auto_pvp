@@ -51,6 +51,7 @@ def test_default_order(monkeypatch):
     assert refresh.main([]) == 0
     assert [label for label, _ in calls] == [
         "gen_prefix_map",
+        "gen_runtime_artifacts",
         "catalog_compiler",
         "build_effect_families",
         "build_effect_families --check",
@@ -123,6 +124,7 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
     labels = [label for label, _ in calls]
     assert labels == [
         "gen_prefix_map",
+        "gen_runtime_artifacts",
         "catalog_compiler",
         "build_effect_families",
         "build_effect_families --check",

@@ -4,22 +4,25 @@ Chains the canonical steps in order, each as an isolated subprocess so a
 failure in one cannot corrupt the next:
 
     1. roco.compiler_v2.gen_prefix_map  -> roco/generated/static, battle globals,
-                                        skill damage adapters, handlers, etc.
-    2. roco.compiler_v2.catalog_compiler
+                                        skill damage adapters, primitive maps, etc.
+    2. roco.engine.kernel.gen_runtime_artifacts
+                                     -> roco/generated/handler_indices.py
+                                        + handler_order.py + handler_table.py
+    3. roco.engine.catalog_compiler
                                      -> roco/generated/catalog_hot.py
                                         + catalog_debug.py
-    3. roco.compiler_v2.build_effect_families
+    4. roco.compiler_v2.build_effect_families
                                      -> roco/generated/audit/effect_families.jsonl
                                         + _docs/effect_family_audit.md
-    4. roco.compiler_v2.build_effect_families --check
+    5. roco.compiler_v2.build_effect_families --check
                                      -> stability self-check on step 3
-    5. roco.compiler_v2.pak_schema_audit
+    6. roco.compiler_v2.pak_schema_audit
                                      -> _docs/pak_schema_audit.md (schema mining)
-    6. roco.compiler_v2.pak_schema_audit --check
+    7. roco.compiler_v2.pak_schema_audit --check
                                      -> stability self-check on step 5
-    7. roco.compiler_v2.bindata_coverage_audit
+    8. roco.compiler_v2.bindata_coverage_audit
                                      -> roco/generated/audit/bindata_coverage.json
-    8. roco.compiler_v2.bindata_coverage_audit --check
+    9. roco.compiler_v2.bindata_coverage_audit --check
                                      -> stability self-check on step 7
 
 Two optional flags layer on top:
@@ -95,7 +98,8 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps: list[tuple[str, list[str]]] = []
     steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
-    steps.append(("catalog_compiler", [py, "-m", "roco.compiler_v2.catalog_compiler"]))
+    steps.append(("gen_runtime_artifacts", [py, "-m", "roco.engine.kernel.gen_runtime_artifacts"]))
+    steps.append(("catalog_compiler", [py, "-m", "roco.engine.catalog_compiler"]))
     steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((
         "build_effect_families --check",

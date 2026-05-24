@@ -9,14 +9,13 @@ def main() -> None:
     stats = write_all()
     print(f"compiler_v2 source_hash: {stats['source_hash']}")
     print(f"static pak/lua snapshot -> {stats['static_paths']['manifest']}")
-    print(f"handler_indices.py: {stats['handler_count']} constants")
-    prefix_stats = stats["prefix_stats"]
+    primitive_stats = stats["primitive_stats"]
     print(
-        "prefix_handler_map.json: "
-        f"{prefix_stats['base_ids_via_order']} base_ids via buffbase_order + "
-        f"{prefix_stats['mixed_prefix_count']} mixed prefixes "
-        f"({len(prefix_stats['unmapped_prefixes'])} unmapped of "
-        f"{prefix_stats['total_prefixes']} seen)"
+        "primitive_map.json: "
+        f"{primitive_stats['base_ids_via_order']} base_ids via buffbase_order + "
+        f"{primitive_stats['mixed_prefix_count']} mixed prefixes "
+        f"({len(primitive_stats['unmapped_prefixes'])} unmapped of "
+        f"{primitive_stats['total_prefixes']} seen)"
     )
     print(f"battle_globals.py: {stats['battle_global_num_count']} numeric keys")
     print(f"skill_dam_types.py: {stats['skill_dam_type_count']} element adapters")

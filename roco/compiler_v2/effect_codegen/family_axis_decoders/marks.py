@@ -7,14 +7,11 @@ from functools import lru_cache
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 from roco.compiler_v2.effect_codegen.params import extract_int_list, safe_int
 from roco.compiler_v2.sources import PakSource
-from roco.compiler_v2.handler_registry import (
-    H_BURN,
-    H_DISPEL_MARKS,
-    H_DISPEL_MARKS_TO_BURN,
-    H_SELF_BUFF,
-)
 
-from roco.compiler_v2.effect_codegen.family_axis_decoders.common import emit, params
+from roco.compiler_v2.effect_codegen.family_axis_decoders.common import (
+    emit_effect_order_variant,
+    params,
+)
 
 
 def decode_buff_convert(rec: dict, buff_conf: dict[int, dict]) -> EmitOutcome | None:
@@ -30,16 +27,16 @@ def decode_buff_convert(rec: dict, buff_conf: dict[int, dict]) -> EmitOutcome | 
         and len(target_ids) == 1
         and _is_internal_mark_sentinel(target_ids[0], buff_conf)
     ):
-        return emit(H_DISPEL_MARKS, 0)
+        return emit_effect_order_variant("ET_BUFF_CONVERT", "dispel_marks", 0)
 
     if (
         len(source_ids) == 1
         and _is_internal_mark_sentinel(source_ids[0], buff_conf)
         and target_ids
         and len(set(target_ids)) == 1
-        and _buff_handler_family(target_ids[0], buff_conf) == H_BURN
+        and _is_burn_family(target_ids[0], buff_conf)
     ):
-        return emit(H_DISPEL_MARKS_TO_BURN, len(target_ids))
+        return emit_effect_order_variant("ET_BUFF_CONVERT", "dispel_marks_to_burn", len(target_ids))
     return None
 
 
@@ -56,13 +53,13 @@ def _is_internal_mark_sentinel(buff_id: int, buff_conf: dict[int, dict]) -> bool
     if rec is None:
         return False
     name = str(rec.get("editor_name") or rec.get("name") or "")
-    if "标记" in name and _buff_handler_family(buff_id, buff_conf) == H_SELF_BUFF:
+    if "标记" in name and _is_self_buff_family(buff_id, buff_conf):
         return True
     if name:
         return False
     if int(rec.get("type", 0) or 0) != 3 or int(rec.get("add_max", 0) or 0) != 99:
         return False
-    if _buff_handler_family(buff_id, buff_conf) != H_SELF_BUFF:
+    if not _is_self_buff_family(buff_id, buff_conf):
         return False
     for reduce_rule in rec.get("buff_group_reduce") or []:
         if not isinstance(reduce_rule, dict):
@@ -75,17 +72,24 @@ def _is_internal_mark_sentinel(buff_id: int, buff_conf: dict[int, dict]) -> bool
     return False
 
 
-def _buff_handler_family(buff_id: int, buff_conf: dict[int, dict]) -> int:
+def _is_burn_family(buff_id: int, buff_conf: dict[int, dict]) -> bool:
     rec = buff_conf.get(buff_id)
     if rec is None:
-        return 0
+        return False
     for base_id in rec.get("buff_base_ids") or []:
-        order = _buffbase_order(int(base_id))
-        if order == 7:
-            return H_BURN
-        if order == 1:
-            return H_SELF_BUFF
-    return 0
+        if _buffbase_order(int(base_id)) == 7:
+            return True
+    return False
+
+
+def _is_self_buff_family(buff_id: int, buff_conf: dict[int, dict]) -> bool:
+    rec = buff_conf.get(buff_id)
+    if rec is None:
+        return False
+    for base_id in rec.get("buff_base_ids") or []:
+        if _buffbase_order(int(base_id)) == 1:
+            return True
+    return False
 
 
 def _buffbase_order(base_id: int) -> int:

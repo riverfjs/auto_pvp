@@ -33,15 +33,24 @@ pak-public-kit/output/data
 compiler_v2
     - static pak/Lua facts
     - structural effect decoders
-    - engine op_meta handler axes
+    - pak-derived primitive rows
+    |
+    v
+roco/generated/primitive_map.json
+roco/generated/static/*
+    |
+    v
+engine runtime artifact builders
+    - primitive key -> handler linking
+    - handler dispatch table
     |
     v
 roco/generated/*
     |
     v
-roco.compiler_v2.catalog_compiler
+roco.engine.catalog_compiler
     - pak canonical records
-    - compiled skill/ability effect rows
+    - linked skill/ability runtime rows
     |
     v
 roco/generated/catalog_hot.py
@@ -63,26 +72,48 @@ The effect row layout is fixed end to end:
 Older text sometimes called this `(handler_idx, timing, target, rate, p0-p3)`;
 the runtime tuple is the 9-field row above.
 
+Compiler rows are not runtime rows. They use:
+
+```text
+(primitive_key, timing_key, target, rate, p0, p1, p2, p3)
+```
+
+`primitive_key` is pak-derived when pak has a name:
+`effect_order:ET_*`, `buff_type:BFT_*`, `mark_note:<DESC_NOTE_CONF.note>`,
+`status_note:<DESC_NOTE_CONF.note>`, or `effect_kind:<EFFECT_CONF.type>`.
+Only pak-missing interpretations use explicit project namespaces such as
+`struct:*` or `source_context:*`.
+
+`timing_key` is `battle_event:<Enum.BattleEvent symbol>` for pak
+`cast_moment`. Engine-only stages are explicit `engine_hook:*` keys and are
+bound inside the engine linker.
+
 ## Refresh Pipeline
 
 `uv run roco-refresh-artifacts` runs these steps in order:
 
 1. `roco.compiler_v2.gen_prefix_map`
-   Generates static pak/Lua facts and handler dispatch artifacts under
-   `roco/generated/`.
-2. `roco.compiler_v2.catalog_compiler`
+   Generates static pak/Lua facts and primitive maps under `roco/generated/`.
+2. `roco.engine.kernel.gen_runtime_artifacts`
+   Generates engine-owned `handler_indices.py`, `handler_order.py`, and
+   `handler_table.py`.
+3. `roco.engine.catalog_compiler`
    Builds `catalog_hot.py` and `catalog_debug.py` directly from pak-derived
-   canonical records.
-3. `roco.compiler_v2.build_effect_families`
+   canonical records, linking primitive rows through the engine contract.
+4. `roco.compiler_v2.build_effect_families`
    Writes generated audit output:
    `roco/generated/audit/effect_families.jsonl` and
    `_docs/effect_family_audit.md`.
-4. `roco.compiler_v2.build_effect_families --check`
+5. `roco.compiler_v2.build_effect_families --check`
    Verifies the audit output is deterministic.
-5. `roco.compiler_v2.pak_schema_audit`
+6. `roco.compiler_v2.pak_schema_audit`
    Writes `_docs/pak_schema_audit.md`.
-6. `roco.compiler_v2.pak_schema_audit --check`
+7. `roco.compiler_v2.pak_schema_audit --check`
    Verifies the schema audit is deterministic.
+8. `roco.compiler_v2.bindata_coverage_audit`
+   Writes `roco/generated/audit/bindata_coverage.json`.
+9. `roco.compiler_v2.bindata_coverage_audit --check`
+   Verifies the bindata coverage audit is deterministic.
 
 `uv run roco-refresh-artifacts --check` is for clean-tree/CI verification. Do
 not use `--check` immediately after a real pak update; a real update is expected
@@ -92,17 +123,13 @@ to produce a diff.
 
 Runtime and data generated files live in `roco/generated/`:
 
-The stable handler registry source lives at
-`roco/compiler_v2/handler_registry.json`; `gen_prefix_map` emits
-`handler_indices.py`, `handler_order.py`, and `handler_table.py` from it.
-
 ```text
 catalog_hot.py              kernel runtime catalog
 catalog_debug.py            names and debug lookup tables
 handler_table.py            handler_idx -> op_* function table
 handler_indices.py          H_* constants
-handler_order.py            append-only handler order
-prefix_handler_map.json     BUFF_CONF / BUFFBASE_CONF handler maps
+handler_order.py            engine handler order
+primitive_map.json          BUFF_CONF / BUFFBASE_CONF -> primitive key maps
 buffbase_params.py          BUFFBASE_CONF params
 pak_ops.py                  pak op/prefix metadata
 battle_globals.py           BATTLE_GLOBAL_CONFIG constants
@@ -197,15 +224,20 @@ Allowed compiler logic:
 - source readers and emitters
 - structural decoders based on pak axes and parameter shape
 - small explicit policy adapters when pak does not encode runtime behavior
-- engine-owned `op_meta` declarations resolved through generated Lua enum data
+- primitive keys and primitive params derived from pak/Lua structure
 
 Forbidden long-term pattern:
 
 - hand-maintained `effect_id -> handler`
 - hand-maintained `buff_id -> handler`
 - hand-maintained `buffbase_order -> handler`
+- compiler imports from `roco.engine`
 - JSONL files acting as runtime dispatch rules
 - engine importing pak/Lua/JSON/SQLite
+
+The compiler must not maintain an engine op registry. Engine bindings live in
+`roco/engine/artifacts/primitive_bindings.py` plus `op_meta` declarations
+beside the relevant `op_*` functions.
 
 ## Directory Map
 
@@ -243,7 +275,9 @@ uv run python -m roco.compiler_v2.gen_prefix_map
 Add a new runtime handler:
 
 1. Write an `op_*` function under `roco/engine/kernel`.
-2. Add `op_meta` declarations only when the handler owns a pak axis.
+2. Add `op_meta` declarations only when the handler owns a pak axis; add a
+   `primitive_bindings.py` entry for `effect_order:*`, `struct:*`, or
+   `source_context:*` keys.
 3. Run `uv run roco-refresh-artifacts`.
 4. Add or update focused tests.
 
