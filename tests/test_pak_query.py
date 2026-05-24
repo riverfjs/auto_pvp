@@ -1,4 +1,5 @@
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
+from roco.pak_query import cli
 from roco.pak_query.index import PakLookup
 
 
@@ -44,6 +45,17 @@ def test_skill_stone_query_includes_item_and_handbook_unlock_conditions():
     ]
     assert any(topic.get("handbook_pet") == "月亮砣" for topic in handbook_topics)
     assert any("使用1次毒沼" in topic.get("topic_desc", "") for topic in handbook_topics)
+
+
+def test_skill_cli_prints_shared_stone_conditions_once(capsys):
+    rc = cli.main(["skill", "伺机而动"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.count("获取: 炼金造物获得") == 1
+    assert out.count("获取: 完成鸭吉吉的图鉴课题获得") == 1
+    assert out.count("图鉴: 鸭吉吉 - 使用1次伺机而动") == 1
+    assert "冬羽雀 (3028) | 技能石技能\n    伺机而动" not in out
+    assert "冬羽雀 (3028) | 技能石技能" in out
 
 
 def test_ability_query_lists_owning_pets():

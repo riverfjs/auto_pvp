@@ -105,8 +105,6 @@ def _print_skill_reports(index: PakLookup, reports: list[dict[str, Any]]) -> int
                 if link.level_point is not None:
                     suffix.append(f"血脉Lv{link.level_point}")
             print(f"  {pet_text} | {' | '.join(suffix)}")
-            if link.source_type == "stone" and link.item_sources:
-                _print_item_sources(link.item_sources, prefix="    ")
     return 0
 
 
