@@ -1,40 +1,51 @@
 from __future__ import annotations
 
-from enum import IntEnum
+from roco.common.packing import MarkIdx
+from roco.compiler_v2.handler_axes import collect_handler_axes
 
 from .common import MARK_GROUPS_PATH, PAK_BIN, _load_json_table
 
 
-class MarkIdx(IntEnum):
-    MOISTURE = 0
-    DRAGON = 1
-    MOMENTUM = 2
-    WIND = 3
-    CHARGE = 4
-    SOLAR = 5
-    ATTACK = 6
-    SLOW = 7
-    SPIRIT = 8
-    METEOR = 9
-    POISON = 10
-    THORN = 11
-    SLUGGISH = 12
+def mark_note_by_idx(raw_axes: dict | None = None) -> dict[MarkIdx, str]:
+    raw = raw_axes or collect_handler_axes()
+    out: dict[MarkIdx, str] = {}
+    for note, (_handler_name, mark_name) in raw.get("mark_note", {}).items():
+        if mark_name not in MarkIdx.__members__:
+            raise RuntimeError(f"mark handler declares unknown MarkIdx {mark_name!r}")
+        out[MarkIdx[mark_name]] = str(note)
+    return dict(sorted(out.items(), key=lambda item: item[0].value))
 
 
-MARK_NOTE_BY_IDX: dict[MarkIdx, str] = {
-    MarkIdx.MOISTURE: "湿润印记",
-    MarkIdx.DRAGON: "龙噬印记",
-    MarkIdx.MOMENTUM: "蓄势印记",
-    MarkIdx.WIND: "风起印记",
-    MarkIdx.CHARGE: "蓄电印记",
-    MarkIdx.SOLAR: "光合印记",
-    MarkIdx.ATTACK: "攻击印记",
-    MarkIdx.SLOW: "减速印记",
-    MarkIdx.SPIRIT: "降灵印记",
-    MarkIdx.METEOR: "星陨印记",
-    MarkIdx.POISON: "中毒印记",
-    MarkIdx.THORN: "棘刺印记",
-}
+def mark_note_to_handler(handler_indices: dict[str, int], raw_axes: dict | None = None) -> dict[str, int]:
+    raw = raw_axes or collect_handler_axes()
+    valid_notes = set(_desc_notes_by_id().values())
+    out: dict[str, int] = {}
+    for note, (handler_name, mark_name) in raw.get("mark_note", {}).items():
+        if note not in valid_notes:
+            raise RuntimeError(f"DESC_NOTE_CONF missing mark note {note!r}")
+        if mark_name not in MarkIdx.__members__:
+            raise RuntimeError(f"mark handler declares unknown MarkIdx {mark_name!r}")
+        const = _handler_const(handler_name)
+        handler = handler_indices.get(const)
+        if handler is None:
+            raise RuntimeError(f"mark handler {handler_name!r} resolves to missing {const!r}")
+        out[str(note)] = handler
+    return out
+
+
+def _handler_const(handler_name: str) -> str:
+    if handler_name.startswith("op_"):
+        return "H_" + handler_name[3:].upper()
+    return "H_" + handler_name.upper()
+
+
+def _desc_notes_by_id() -> dict[int, str]:
+    rows = _load_json_table(PAK_BIN / "DESC_NOTE_CONF.json")
+    return {
+        note_id: str(rec.get("note") or "").strip()
+        for note_id, rec in rows.items()
+        if isinstance(note_id, int) and str(rec.get("note") or "").strip()
+    }
 
 def write_mark_groups(handler_indices: dict[str, int], prefix_result: dict) -> tuple[tuple[str, ...], ...]:
     valid_mark_names = {idx.name for idx in MarkIdx}

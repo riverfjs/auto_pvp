@@ -6,7 +6,7 @@ from roco.compiler_v2.handler_axes import resolve_handler_axes
 from roco.compiler_v2.model import StaticBundle
 
 from .common import PAK_BIN, PREFIX_MAP_PATH, _load_json_table, _maybe_int
-from .marks import MARK_NOTE_BY_IDX
+from .marks import mark_note_to_handler
 
 
 def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBundle) -> dict:
@@ -54,6 +54,7 @@ def write_prefix_handler_map(handler_indices: dict[str, int], bundle: StaticBund
         buff_rows,
         buffbase_rows,
         skill_rows,
+        axes.raw,
     )
 
     result = {
@@ -79,6 +80,7 @@ def _build_buff_id_handler_map(
     buff_rows: dict[int | str, dict],
     buffbase_rows: dict[int | str, dict],
     skill_rows: dict[int | str, dict],
+    raw_axes: dict[str, dict[int | str, tuple[str, str]]],
 ) -> dict[int, int]:
     """Derive exact BUFF_CONF.id handlers from pak structures.
 
@@ -97,12 +99,7 @@ def _build_buff_id_handler_map(
 
     bgs_area = bundle.lua_enums.get("BuffGroupSign", {}).get("BGS_AREA")
     desc_notes = _desc_notes_by_id()
-    mark_name_to_handler: dict[str, int] = {}
-    for mark_idx, note in MARK_NOTE_BY_IDX.items():
-        const = f"H_{mark_idx.name}_MARK"
-        handler = handler_indices.get(const)
-        if handler is not None:
-            mark_name_to_handler[note] = handler
+    mark_name_to_handler = mark_note_to_handler(handler_indices, raw_axes)
 
     status_name_to_handler = {
         desc_notes[note_id]: handler_indices[const]

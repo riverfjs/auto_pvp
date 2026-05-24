@@ -29,6 +29,7 @@ OP_MODULES: tuple[str, ...] = (
 _DECORATOR_AXES: dict[str, tuple[str, type]] = {
     "handles_buff": ("buff_type", str),
     "handles_prefix": ("prefix_type", str),
+    "handles_mark": ("mark_note", str),
 }
 
 

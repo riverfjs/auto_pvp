@@ -4,8 +4,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from roco.common.packing import MarkIdx
+
 from .common import CANONICAL_ADAPTERS_PATH, PAK_BIN, PAK_DATA, _assign, _load_json_table, _maybe_int
-from .marks import MARK_NOTE_BY_IDX, MarkIdx
+from .marks import mark_note_by_idx
 
 
 def _canonical_skill_category_from_pak(row: dict[str, Any]) -> str:
@@ -56,8 +58,7 @@ def build_canonical_adapters(pak_data: Path = PAK_DATA, pak_bin: Path = PAK_BIN)
             desc_id_by_note[note] = desc_id
 
     mark_defs: list[tuple[int, str, int, str]] = []
-    for idx in sorted(MARK_NOTE_BY_IDX, key=lambda item: item.value):
-        note = MARK_NOTE_BY_IDX[idx]
+    for idx, note in mark_note_by_idx().items():
         desc_id = desc_id_by_note.get(note)
         if desc_id is None:
             raise RuntimeError(f"DESC_NOTE_CONF missing canonical mark note {note!r}")

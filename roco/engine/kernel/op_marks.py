@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from roco.common.packing import MarkIdx, _set_mark, _unpack_mark
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff
+from roco.engine.kernel.op_meta import handles_buff, handles_mark
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_TARGET, TARGET_ALLY, TARGET_SELF, TARGET_TEAM
 from roco.generated.mark_groups import MARK_COVER_GROUPS
 
@@ -34,51 +34,63 @@ def _op_mark(ctx: StageCtx, row: tuple[int, ...], idx: MarkIdx) -> None:
         ctx.mark_enemy = _mark_add(ctx.mark_enemy, idx, stacks)
 
 
+@handles_mark([("湿润印记", "MOISTURE")])
 def op_moisture_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.MOISTURE)
 
 
+@handles_mark([("龙噬印记", "DRAGON")])
 def op_dragon_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.DRAGON)
 
 
+@handles_mark([("蓄势印记", "MOMENTUM")])
 def op_momentum_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.MOMENTUM)
 
 
+@handles_mark([("风起印记", "WIND")])
 def op_wind_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.WIND)
 
 
+@handles_mark([("蓄电印记", "CHARGE")])
 def op_charge_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.CHARGE)
 
 
+@handles_mark([("光合印记", "SOLAR")])
 def op_solar_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.SOLAR)
 
 
+@handles_mark([("攻击印记", "ATTACK")])
 def op_attack_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.ATTACK)
 
 
+@handles_mark([("减速印记", "SLOW")])
 def op_slow_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.SLOW)
 
 
+@handles_mark([("降灵印记", "SPIRIT")])
 def op_spirit_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.SPIRIT)
 
 
 @handles_buff([("BFT_NINETY_FOUR", "MARK_METEOR")])
+@handles_mark([("星陨印记", "METEOR")])
 def op_meteor_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.METEOR)
 
 
+@handles_mark([("中毒印记", "POISON")])
 def op_poison_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.POISON)
 
 
+@handles_mark([("棘刺印记", "THORN")])
 def op_thorn_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
     _op_mark(ctx, row, MarkIdx.THORN)
 

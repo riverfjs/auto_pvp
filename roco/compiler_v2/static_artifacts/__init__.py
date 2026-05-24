@@ -23,7 +23,7 @@ from .core import write_battle_globals, write_pak_ops, write_skill_dam_types, wr
 from .counter_skill import write_counter_skill_table
 from .handlers import write_handler_artifacts
 from .immunity import write_buff_immunity_table
-from .marks import MARK_NOTE_BY_IDX, MarkIdx, write_mark_groups
+from .marks import MarkIdx, mark_note_by_idx, mark_note_to_handler, write_mark_groups
 from .natures import build_nature_tables, write_natures
 from .orchestrator import write_all
 from .prefix_map import write_prefix_handler_map
@@ -44,7 +44,6 @@ __all__ = [
     "TYPE_CHART_PATH",
     "WEATHER_DECODERS_PATH",
     "WEATHER_TABLE_PATH",
-    "MARK_NOTE_BY_IDX",
     "MarkIdx",
     "_normalize_slot",
     "build_bloodline_magic_tables",
@@ -52,6 +51,8 @@ __all__ = [
     "build_canonical_adapters",
     "build_nature_tables",
     "build_weather_tables",
+    "mark_note_by_idx",
+    "mark_note_to_handler",
     "write_all",
     "write_battle_globals",
     "write_bloodline_magic",

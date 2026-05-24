@@ -458,11 +458,6 @@
       "symbol": "IMMUNITY_SPECS"
     },
     {
-      "file": "roco/compiler_v2/static_artifacts/marks.py",
-      "reason": "manual canonical mark note-id/name/index binding over DESC_NOTE_CONF",
-      "symbol": "MARK_NOTE_BY_IDX"
-    },
-    {
       "file": "roco/common/enums.py",
       "reason": "runtime enums should be generated or checked against Lua/BinData enums",
       "symbol": "Element/SkillCategory/StatusType/WeatherType"
@@ -472,7 +467,7 @@
     "bindata_table_count": 628,
     "combat_candidate_count": 276,
     "manual_kernel_constant_count": 31,
-    "manual_semantic_binding_count": 3,
+    "manual_semantic_binding_count": 2,
     "referenced_combat_table_count": 15,
     "unreferenced_combat_table_count": 261,
     "unreferenced_core_table_count": 0
@@ -3865,8 +3860,10 @@
         "roco/compiler_v2/effect_families/io.py",
         "roco/compiler_v2/effect_families/refs.py",
         "roco/compiler_v2/static_artifacts/canonical_adapters.py",
+        "roco/compiler_v2/static_artifacts/marks.py",
         "roco/compiler_v2/static_artifacts/prefix_map.py",
         "roco/data/parse_pak.py",
+        "roco/engine/kernel/op_meta.py",
         "roco/generated/canonical_adapters.py",
         "roco/generated/static/manifest.py"
       ],

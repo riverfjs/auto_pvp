@@ -75,11 +75,6 @@ MANUAL_SEMANTIC_BINDINGS = (
         "reason": "manual immunity tag/bit/keyword binding over BUFF_CONF.desc",
     },
     {
-        "file": "roco/compiler_v2/static_artifacts/marks.py",
-        "symbol": "MARK_NOTE_BY_IDX",
-        "reason": "manual canonical mark note-id/name/index binding over DESC_NOTE_CONF",
-    },
-    {
         "file": "roco/common/enums.py",
         "symbol": "Element/SkillCategory/StatusType/WeatherType",
         "reason": "runtime enums should be generated or checked against Lua/BinData enums",

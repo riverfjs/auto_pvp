@@ -34,7 +34,7 @@ def test_bindata_coverage_audit_flags_manual_kernel_debt():
     assert "MAGIC_WILLPOWER" not in constants
     assert "BLOODLINE_LEADER" not in constants
     assert "IMMUNITY_SPECS" in bindings
-    assert "MARK_NOTE_BY_IDX" in bindings
+    assert "MARK_NOTE_BY_IDX" not in bindings
 
 
 def test_bindata_coverage_audit_generated_file_is_current():

@@ -127,9 +127,11 @@ def test_collect_handler_axes_runs_on_real_op_mods():
     assert {axis: len(bucket) for axis, bucket in axes.items()} == {
         "buff_type": 78,
         "prefix_type": 3,
+        "mark_note": 12,
     }
     assert "BFT_ATTR_CHANGE" in axes["buff_type"]
     assert "BFT_DAMNUM_CHANGE" in axes["prefix_type"]
+    assert "湿润印记" in axes["mark_note"]
     assert "base_id" not in axes
 
 
@@ -138,6 +140,7 @@ def test_resolve_handler_axes_resolves_names_to_indices(monkeypatch):
     fake_axes = {
         "buff_type": {"BFT_ATTR_CHANGE": ("op_self_buff", "STAT_MOD")},
         "prefix_type": {},
+        "mark_note": {},
     }
     monkeypatch.setattr(
         "roco.compiler_v2.handler_axes.collect_handler_axes",
@@ -158,6 +161,7 @@ def test_resolve_handler_axes_unknown_handler_raises(monkeypatch):
     fake_axes = {
         "buff_type": {"BFT_ATTR_CHANGE": ("op_nonexistent_handler", "X")},
         "prefix_type": {},
+        "mark_note": {},
     }
     monkeypatch.setattr(
         "roco.compiler_v2.handler_axes.collect_handler_axes",
