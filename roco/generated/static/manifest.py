@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-SOURCE_HASH = '3caeb395a8cd4147d3f42d2266216a70c8eead175ff424128e025773ca65b028'
+SOURCE_HASH = 'a9819c6e1a6be6831b7c5719050f8a1c2f0aeb6e8a84fd75077e5b076d936e5d'
 
 SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name': 'ATTRIBUTE_CONF.json',
                                                             'sha256': 'e875e44ecf49738403b0b09faf6a2d67f02cf353bb4126de593d04f11ea81e41',
@@ -45,8 +45,8 @@ SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name
                                                           'sha256': '925e94c7162cf4e23628e91064c4df0cd057beb1cfa79a72ec343b21aad08c26',
                                                           'size': 13177},
  'pak-public-kit/output/data/moves.json': {'name': 'moves.json',
-                                           'sha256': '2cebb3d8eedd5302a60a45da9ffec7dc92b7a018e291b82858a517ef89d623a1',
-                                           'size': 332016},
+                                           'sha256': '564e905858c73d23ce0adf082a629f46955d2220825553483aaf8fd5a979cdaa',
+                                           'size': 331038},
  'pak-public-kit/output/scripts/lua/Data/Config/Enum.lua': {'name': 'Enum.lua',
                                                             'sha256': 'e778b6687bb1d91c96c019cb972f7c06c4d276cc54fc68e7163aa37bc8b7f244',
                                                             'size': 216270}}

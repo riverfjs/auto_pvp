@@ -242,7 +242,7 @@ BLOODLINES_BY_ID = {1: {'attribute_type': 39,
       'name': '奇异',
       'pak_blood_type': 1,
       'tips_desc': '该血脉精灵，拥有1个常规状态无法学习的技能'}}
-BLOODLINE_DB_ROWS = ((1, 'bloodline_1', '普通', 'element', 0),
+BLOODLINE_CATALOG_ROWS = ((1, 'bloodline_1', '普通', 'element', 0),
  (2, 'bloodline_2', '草', 'element', 1),
  (3, 'bloodline_3', '火', 'element', 2),
  (4, 'bloodline_4', '水', 'element', 3),
@@ -1382,7 +1382,7 @@ PLAYER_MAGICS_BY_ID = {100001: {'bag_item_id': 104001,
                                 25,
                                 26),
           'uses_per_battle': 1}}
-BLOODLINE_MAGIC_DB_ROWS = ((100002, 'willpower_strike', '愿力强化', 2, '对任意系别血脉的精灵使用，本回合技能栏首个技能替换为【愿力冲击】，每场战斗可使用2次，冷却3回合。'),
+BLOODLINE_MAGIC_CATALOG_ROWS = ((100002, 'willpower_strike', '愿力强化', 2, '对任意系别血脉的精灵使用，本回合技能栏首个技能替换为【愿力冲击】，每场战斗可使用2次，冷却3回合。'),
  (100007, 'leader_transform', '进化之力', 1, '对首领血脉的精灵使用，可以使该精灵在本场战斗中进化；部分精灵搭配首领信物，方可激活远古血脉。'))
 BLOODLINE_MAGIC_IDS_BY_NAME = {'愿力强化': 100002, '进化之力': 100007}
 PLAYER_MAGIC_WILLPOWER_ID = 100002

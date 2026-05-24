@@ -34,6 +34,12 @@ DEFAULT_PAK_DATA_DIR = Path(
 
 DESC_ID_RE = re.compile(r"<desc_id=(\d+)>(.*?)</>")
 TAG_RE = re.compile(r"<[^>]+>")
+MOVE_EFFECT_TEXT_RE = re.compile(
+    r"(造成|对敌方|敌方|自己|回复|恢复|获得|减伤|连击|本技能|魔法伤害|物理伤害|物伤|魔伤|"
+    r"消耗|能量|速度|物攻|魔攻|物防|魔防|威力|命中|应对|印记|萌化|睡眠|中毒|烧伤|"
+    r"暴击|先手|后手|生命|回合|下次|本次|永久|打断|蓄力|吸血|脱离|交换|失去|赋予|"
+    r"翻倍|冷却|眩晕|冻结|变成|无法更换)"
+)
 
 
 class PakData:
@@ -94,9 +100,9 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
         merged["_move_record"] = move
         selected[sid] = merged
 
-    selected_names = {_clean_name(row.get("name")) for row in selected.values()}
+    selected_names = {_skill_name(row, desc_notes) for row in selected.values()}
     for row in data.skill_conf.values():
-        name = _clean_name(row.get("name"))
+        name = _skill_name(row, desc_notes)
         if not name or name in selected_names:
             continue
         if row.get("Skill_Type") is None:
@@ -123,7 +129,7 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
     emitted_names: set[str] = set()
     for sid in sorted(selected):
         row = selected[sid]
-        name = _clean_name(row.get("name"))
+        name = _skill_name(row, desc_notes)
         if not name or name in emitted_names:
             continue
         record = _skill_record(row, desc_notes)
@@ -313,12 +319,11 @@ def _skill_flags(row: dict[str, Any]) -> int:
 
 def _skill_record(row: dict[str, Any], desc_notes: dict[int, str]) -> dict:
     move = row.get("_move_record") or {}
-    name = _clean_name(row.get("name") or move.get("name"))
+    name, desc = _skill_text(row, desc_notes, fallback_name=True)
     element = _skill_element(row, move)
     category = _skill_category(row, move)
     power = _first_int(row.get("dam_para"), move.get("power") or 0)
     energy = _first_int(row.get("energy_cost"), move.get("energy_cost") or 0)
-    desc = _clean_desc(row.get("desc") or move.get("description") or "", desc_notes)
     return {
         "kind": "skill",
         "name": name,
@@ -362,6 +367,63 @@ def _skill_category(row: dict[str, Any], move: dict[str, Any]) -> str:
     return "状态"
 
 
+def _skill_name(row: dict[str, Any], desc_notes: dict[int, str]) -> str:
+    return _skill_text(row, desc_notes, fallback_name=False)[0]
+
+
+def _skill_text(
+    row: dict[str, Any],
+    desc_notes: dict[int, str],
+    *,
+    fallback_name: bool,
+) -> tuple[str, str]:
+    move = row.get("_move_record") or {}
+    move_name = _move_localized_text(move, "name")
+    move_desc = _move_localized_text(move, "description")
+    if move_name:
+        return _normalize_skill_text(
+            _clean_name(move_name),
+            _clean_desc(move_desc or move.get("description") or row.get("desc") or "", desc_notes),
+            _int(row.get("id") or move.get("id")),
+            fallback_name=fallback_name,
+        )
+
+    return _normalize_skill_text(
+        _clean_name(row.get("name")),
+        _clean_desc(row.get("desc", ""), desc_notes),
+        _int(row.get("id")),
+        fallback_name=fallback_name,
+    )
+
+
+def _normalize_skill_text(
+    name: str,
+    desc: str,
+    skill_id: int,
+    *,
+    fallback_name: bool,
+) -> tuple[str, str]:
+    if name and _looks_like_move_effect_text(name) and desc and not _looks_like_move_effect_text(desc):
+        return desc, name
+    if name or not fallback_name:
+        return name, desc
+    return f"技能 {skill_id}", desc
+
+
+def _move_localized_text(move: dict[str, Any], field: str) -> str:
+    zh = (move.get("localized") or {}).get("zh") if isinstance(move, dict) else {}
+    if isinstance(zh, dict):
+        value = zh.get(field)
+        if value:
+            return str(value)
+    value = move.get(field) if isinstance(move, dict) else ""
+    return str(value or "")
+
+
+def _looks_like_move_effect_text(text: str) -> bool:
+    return bool(text and MOVE_EFFECT_TEXT_RE.search(text))
+
+
 def _pet_elements(pet: dict[str, Any]) -> list[str]:
     primary = _type_label(pet.get("main_type"))
     secondary = _type_label(pet.get("sub_type"))
@@ -386,7 +448,11 @@ def _pet_skill_links(
     by_pet = {int(row.get("pet_id")): row for row in entries if row.get("pet_id") is not None}
     row = by_pet.get(pet_id, {})
     links: list[dict] = []
-    for source_type, key in (("技能", "move_pool_ids"), ("可学技能石", "move_stone_ids")):
+    for source_type, key in (
+        ("技能", "move_pool_ids"),
+        ("可学技能石", "move_stone_ids"),
+        ("血脉技能", "legacy_move_ids"),
+    ):
         for skill_id in row.get(key, []) or []:
             name = skill_names_by_id.get(_int(skill_id))
             if not name:

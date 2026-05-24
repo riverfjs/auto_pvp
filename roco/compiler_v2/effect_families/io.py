@@ -1,8 +1,7 @@
 """pak / canonical record / compiler semantic loaders.
 
 No behavioural reuse from :mod:`roco.data` — these helpers read directly
-from disk so the family catalog stays buildable without going through
-``build_db`` first.
+from disk so the family catalog stays buildable as a static artifact.
 """
 
 from __future__ import annotations

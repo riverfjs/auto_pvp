@@ -413,7 +413,7 @@ def test_kernel_mark_primitives_and_same_polarity_replacement():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
     moisture = _skill_id("打湿")
-    wind = _skill_id("风起")
+    wind, _ = _skill_with_handler(hi.H_WIND_MARK)
 
     wet_state = update(
         make_state((fire,), (water,), team_a_moves=((moisture,),), team_b_moves=((0,),)),

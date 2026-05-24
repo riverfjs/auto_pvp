@@ -3,13 +3,14 @@
 Every pak skill_result entry decodes to exactly one of these:
 
 * :class:`EmitOutcome` — produces a runtime row (kernel handler index > 0).
-  Routed to ``skill_effects`` / ``ability_effects``.
+  Routed to generated skill/ability effect rows.
 * :class:`GapOutcome` — unsupported / unrecognised.  Routed to
-  ``effect_gaps``.  ``used_count > 0`` blocks strict ``build_db``.
+  generated audit/debug gap metadata.
 * :class:`AbilityFlagOutcome` — pak effect that compiles into an
   ``ABILITY_FLAGS`` bit on the owning ability, not a runtime row.
   Routed nowhere directly; the bit is set by ``compiler_v2.ability_flags``
-  via the join ``ability_effect_ids`` × pak-derived ability flag semantics.
+  via the join of generated ``ability_effect_ids`` provenance ×
+  pak-derived ability flag semantics.
   Only the ability decoding path may surface this outcome — the skill
   builder calls ``generate_effect_rows(allow_ability_flags=False)`` so a
   leak (effect_id mis-routed to a skill_result) becomes a loud error.

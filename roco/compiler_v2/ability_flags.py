@@ -1,8 +1,9 @@
-"""Populate ``ABILITY_FLAGS`` from ability skill_result provenance."""
+"""Populate ``ABILITY_FLAGS`` from ability ``skill_result`` provenance."""
 
 from __future__ import annotations
 
-import sqlite3
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from roco.common.enums import AbilityFlag
 from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
@@ -19,7 +20,7 @@ def load_effect_flag_table() -> dict[int, AbilityFlagOutcome]:
 
 
 def populate(
-    conn: sqlite3.Connection,
+    ability_effect_ids: Iterable[tuple[int, int, int, int, int, int, int] | Mapping[str, Any]],
     *,
     effect_to_flag: dict[int, AbilityFlagOutcome],
     ability_flags: list[int],
@@ -29,11 +30,14 @@ def populate(
     if not effect_to_flag:
         return 0
     matched = 0
-    rows = conn.execute(
-        "SELECT ability_id, effect_id FROM ability_effect_ids ORDER BY ability_id, sort_order"
-    )
     capacity = len(ability_flags)
-    for ability_id, effect_id in rows:
+    for row in ability_effect_ids:
+        if isinstance(row, Mapping):
+            ability_id = int(row["ability_id"])
+            effect_id = int(row["effect_id"])
+        else:
+            ability_id = int(row[0])
+            effect_id = int(row[2])
         outcome = effect_to_flag.get(int(effect_id))
         if outcome is None:
             continue

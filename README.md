@@ -39,15 +39,9 @@ compiler_v2
 roco/generated/*
     |
     v
-roco.data.build_db
+roco.compiler_v2.catalog_compiler
     - pak canonical records
     - compiled skill/ability effect rows
-    |
-    v
-_db/data.db
-    |
-    v
-roco.compiler_v2.catalog_compiler
     |
     v
 roco/generated/catalog_hot.py
@@ -76,9 +70,9 @@ the runtime tuple is the 9-field row above.
 1. `roco.compiler_v2.gen_prefix_map`
    Generates static pak/Lua facts and handler dispatch artifacts under
    `roco/generated/`.
-2. `roco.data.build_db`
-   Rebuilds `_db/data.db` from pak-derived canonical records, then writes
-   `catalog_hot.py` and `catalog_debug.py`.
+2. `roco.compiler_v2.catalog_compiler`
+   Builds `catalog_hot.py` and `catalog_debug.py` directly from pak-derived
+   canonical records.
 3. `roco.compiler_v2.build_effect_families`
    Writes generated audit output:
    `roco/generated/audit/effect_families.jsonl` and
@@ -130,32 +124,28 @@ compiler-only effect/buff axis snapshot and intentionally does not duplicate
 `roco/generated/audit/effect_families.jsonl` is not a rule file. It is generated
 audit data. Do not edit it by hand.
 
-## SQLite
+## Pak Lookup CLI
 
-`_db/data.db` is a local intermediate build artifact and inspection surface,
-not a checked-in source file. The engine does not read it at runtime.
+`uv run roco-pak` is the inspection surface for pak data. It reads
+`pak-public-kit/output/data` directly and does not import the engine or generated
+runtime catalog.
 
-Team rows are optional sample data. During DB import, a team is inserted only
-when its bloodline magic, pets, skills, and referenced skill/ability effects are
-fully resolvable by the generated static data and current engine handlers.
-Unsupported teams are skipped with printed counts; they are not rewritten to
-defaults.
-
-Important tables:
-
-```text
-skills / abilities / pets              normalized pak-facing catalog rows
-skill_effects / ability_effects        compiled kernel effect rows
-ability_effect_ids                     original pak effect_id provenance for ability flags
-effect_gaps                            unsupported pak effects that block strict builds when used
-pet_skills / pet_transforms            pet loadouts and form transforms
-teams / team_pets / team_pet_skills    sample/team data
-elements / statuses / weathers / marks enum-like domain tables
-bloodlines / bloodline_magics          bloodline metadata
+```bash
+uv run roco-pak pet 音速犬
+uv run roco-pak skill 火焰箭
+uv run roco-pak skill 毒沼
+uv run roco-pak ability 专注力
 ```
 
-`catalog_hot.py` is compiled from this DB. It keeps only the integer arrays the
-kernel needs.
+The CLI supports:
+
+- pet name/id -> base skills, bloodline skills, skill-stone skills, abilities
+- skill name/id -> pets that can learn it, including skill-stone unlock sources
+- ability name/id -> owning pets
+
+Skill-stone unlock text is joined from pak tables:
+`LEVEL_SKILL_CONF`, `BAG_ITEM_CONF`, `handbook-rewards.json`, and
+`PET_HANDBOOK`.
 
 ## Engine Runtime
 
@@ -225,10 +215,10 @@ roco/compiler_v2/            pak/Lua readers, emitters, structural decoders
 roco/compiler_v2/static_artifacts/
                              generated static artifact emitters split by domain
 roco/compiler_v2/rules/      hand-maintained migration inputs only, not dispatch source
-roco/data/                   pak canonicalization, DB import, catalog compilation
+roco/data/                   pak/team canonicalization and refresh orchestration
+roco/pak_query/              independent pak lookup CLI
 roco/engine/kernel/          fixed integer battle kernel
 roco/engine/facade/          user-facing name/id boundary
-_db/data.db                  generated SQLite build artifact
 _docs/effect_family_audit.md generated human-readable effect coverage audit
 _docs/pak_schema_audit.md    generated pak schema/axis audit
 _docs/damage-formula.md      hand-written damage formula note

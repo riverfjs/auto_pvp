@@ -272,7 +272,7 @@ def build_bloodline_magic_tables(bundle: StaticBundle | None = None) -> dict[str
 
     return {
         "bloodlines": bloodlines,
-        "bloodline_db_rows": tuple(
+        "bloodline_catalog_rows": tuple(
             (
                 bloodline_id,
                 row["code"],
@@ -288,7 +288,7 @@ def build_bloodline_magic_tables(bundle: StaticBundle | None = None) -> dict[str
         "pak_bloodline_leader": leader_bloodline,
         "pak_bloodline_pollutant": pollutant_bloodline,
         "player_magics": player_magics,
-        "supported_magic_db_rows": tuple(sorted(supported_magic_rows)),
+        "supported_magic_catalog_rows": tuple(sorted(supported_magic_rows)),
         "supported_magic_ids_by_name": {
             player_magics[magic_id]["name"]: magic_id
             for magic_id in sorted(id_by_kind.values())
@@ -311,14 +311,14 @@ def write_bloodline_magic(bundle: StaticBundle | None = None) -> dict[str, int]:
         "",
     ]
     lines.append(_assign("BLOODLINES_BY_ID", tables["bloodlines"]).rstrip())
-    lines.append(_assign("BLOODLINE_DB_ROWS", tables["bloodline_db_rows"]).rstrip())
+    lines.append(_assign("BLOODLINE_CATALOG_ROWS", tables["bloodline_catalog_rows"]).rstrip())
     lines.append(_assign("BLOODLINE_IDS_BY_NAME", tables["bloodline_ids_by_name"]).rstrip())
     lines.append(_assign("PAK_BLOODLINE_TO_ELEMENT", tables["pak_bloodline_to_element"]).rstrip())
     lines.append(_assign("PAK_ELEMENT_TO_BLOODLINE", tables["pak_element_to_bloodline"]).rstrip())
     lines.append(_assign("PAK_BLOODLINE_LEADER", tables["pak_bloodline_leader"]).rstrip())
     lines.append(_assign("PAK_BLOODLINE_POLLUTANT", tables["pak_bloodline_pollutant"]).rstrip())
     lines.append(_assign("PLAYER_MAGICS_BY_ID", tables["player_magics"]).rstrip())
-    lines.append(_assign("BLOODLINE_MAGIC_DB_ROWS", tables["supported_magic_db_rows"]).rstrip())
+    lines.append(_assign("BLOODLINE_MAGIC_CATALOG_ROWS", tables["supported_magic_catalog_rows"]).rstrip())
     lines.append(_assign("BLOODLINE_MAGIC_IDS_BY_NAME", tables["supported_magic_ids_by_name"]).rstrip())
     lines.append(_assign("PLAYER_MAGIC_WILLPOWER_ID", tables["player_magic_willpower_id"]).rstrip())
     lines.append(_assign("PLAYER_MAGIC_LEADER_TRANSFORM_ID", tables["player_magic_leader_transform_id"]).rstrip())
@@ -332,5 +332,5 @@ def write_bloodline_magic(bundle: StaticBundle | None = None) -> dict[str, int]:
     return {
         "bloodline_count": len(tables["bloodlines"]),
         "player_magic_count": len(tables["player_magics"]),
-        "supported_magic_count": len(tables["supported_magic_db_rows"]),
+        "supported_magic_count": len(tables["supported_magic_catalog_rows"]),
     }

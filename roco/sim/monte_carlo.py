@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import argparse
 import random
-import sqlite3
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from typing import NamedTuple
 
 from roco.common.constants import DEFAULT_MAX_TURNS, MAGIC_WILLPOWER
-from roco.data.utils import DB_DIR
+from roco.common.enums import normalize_element_name
+from roco.data.canonical import load_canonical_records
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
-from roco.generated.bloodline_magic import PAK_ELEMENT_TO_BLOODLINE
+from roco.generated.bloodline_magic import DEFAULT_BLOODLINE_MAGIC_NAME, PAK_ELEMENT_TO_BLOODLINE
 from roco.engine.facade.battle import BattleEngine
 from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, focus_choice, move_choice, switch_choice
 from roco.common.constants import TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS
@@ -101,53 +102,72 @@ POLICIES: dict[str, type[Policy]] = {
 }
 
 
-def load_team_from_db(team_id: str, conn: sqlite3.Connection) -> TeamSpec | None:
-    team_row = conn.execute("SELECT bloodline_magic_id FROM teams WHERE id = ?", (team_id,)).fetchone()
-    slots = conn.execute(
-        "SELECT id, slot, pet_id, pet_name, bloodline_id FROM team_pets WHERE team_id = ? ORDER BY slot",
-        (team_id,),
-    ).fetchall()
+def _bloodline_id(raw: object) -> int | None:
+    text = str(raw or "").replace("血脉", "").strip()
+    if not text:
+        return None
+    if text == "污染":
+        return None
+    if text == "首领":
+        name = "首领"
+    else:
+        try:
+            name = normalize_element_name(text)
+        except ValueError:
+            return None
+    return debug.BLOODLINE_IDS_BY_NAME.get(name)
+
+
+def _bloodline_magic_id(raw: object) -> int | None:
+    name = str(raw or "").strip() or DEFAULT_BLOODLINE_MAGIC_NAME
+    return debug.BLOODLINE_MAGIC_IDS_BY_NAME.get(name)
+
+
+def load_team_from_record(team: Mapping[str, object]) -> TeamSpec | None:
     pet_ids: list[int] = []
     move_rows: list[tuple[int, ...]] = []
     bloodlines: list[int] = []
-    for slot in slots:
-        pet_id = slot["pet_id"] or debug.PET_IDS_BY_NAME.get(slot["pet_name"], 0)
+    magic_id = _bloodline_magic_id(team.get("bloodline_magic"))
+    if magic_id is None:
+        return None
+    pet_rows = sorted(
+        (row for row in team.get("pets", []) or [] if isinstance(row, Mapping)),
+        key=lambda row: int(row.get("slot", 0) or 0),
+    )
+    for slot in pet_rows:
+        pet_name = str(slot.get("name", ""))
+        pet_id = debug.PET_IDS_BY_NAME.get(pet_name) or debug.PET_IDS_BY_NAME.get(str(slot.get("name_short", "")), 0)
         if not pet_id or pet_id >= len(hot.PETS):
             continue
-        skill_rows = conn.execute(
-            "SELECT skill_id, skill_name FROM team_pet_skills WHERE team_pet_id = ? ORDER BY slot",
-            (slot["id"],),
-        ).fetchall()
         moves = tuple(
             sid
             for sid in (
-                row["skill_id"] or debug.SKILL_IDS_BY_NAME.get(row["skill_name"], 0)
-                for row in skill_rows
+                debug.SKILL_IDS_BY_NAME.get(str(move), 0)
+                for move in slot.get("moves", []) or []
             )
             if sid and sid < len(hot.SKILLS)
         )
         pet_ids.append(pet_id)
         move_rows.append(tuple((moves or hot.PET_SKILLS[pet_id])[:4]))
         bloodlines.append(
-            slot["bloodline_id"]
-            if slot["bloodline_id"] is not None
-            else PAK_ELEMENT_TO_BLOODLINE[hot.PETS[pet_id][PET_PRIMARY]]
+            _bloodline_id(slot.get("bloodline"))
+            or PAK_ELEMENT_TO_BLOODLINE[hot.PETS[pet_id][PET_PRIMARY]]
         )
     if not pet_ids:
         return None
-    magic_id = int(team_row["bloodline_magic_id"] or MAGIC_WILLPOWER) if team_row else MAGIC_WILLPOWER
-    return TeamSpec(tuple(pet_ids), tuple(move_rows), tuple(bloodlines), magic_id)
+    return TeamSpec(tuple(pet_ids), tuple(move_rows), tuple(bloodlines), int(magic_id or MAGIC_WILLPOWER))
 
 
-def load_all_pvp_teams(conn: sqlite3.Connection) -> dict[str, tuple[str, TeamSpec]]:
-    rows = conn.execute(
-        "SELECT id, title FROM teams WHERE team_type = 'pvp' ORDER BY upload_date DESC"
-    ).fetchall()
+def load_all_pvp_teams(records: Iterable[Mapping[str, object]] | None = None) -> dict[str, tuple[str, TeamSpec]]:
+    rows = list(records) if records is not None else list(load_canonical_records().get("teams", ()))
+    rows.sort(key=lambda row: str(row.get("upload_date", "")), reverse=True)
     result: dict[str, tuple[str, TeamSpec]] = {}
     for row in rows:
-        team = load_team_from_db(row["id"], conn)
+        if str(row.get("type", "")).lower() != "pvp":
+            continue
+        team = load_team_from_record(row)
         if team:
-            result[row["id"]] = (row["title"], team)
+            result[str(row.get("id", ""))] = (str(row.get("title", "")), team)
     return result
 
 
@@ -274,12 +294,9 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=10, help="Battles per matchup")
     parser.add_argument("--teams", type=int, default=0, help="Limit to first N teams")
     parser.add_argument("--policy", choices=list(POLICIES), default="random")
-    parser.add_argument("--db", default=str(DB_DIR / "data.db"))
     args = parser.parse_args()
 
-    conn = sqlite3.connect(args.db)
-    conn.row_factory = sqlite3.Row
-    teams = load_all_pvp_teams(conn)
+    teams = load_all_pvp_teams()
     if args.teams > 0:
         teams = {key: teams[key] for key in list(teams)[:args.teams]}
 
@@ -294,7 +311,6 @@ def main() -> None:
     for _key, val in sorted(results["matrix"].items(), key=lambda x: -x[1]["win_rate_a"]):
         if val["win_rate_a"] >= 0.50:
             print(f"{val['team_a']:<16} {val['team_b']:<16} {val['win_rate_a']:>7.1%}")
-    conn.close()
 
 
 if __name__ == "__main__":

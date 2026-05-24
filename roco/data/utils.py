@@ -11,7 +11,6 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "_data"
 RAW_DIR = DATA_DIR / "raw"
 RULES_DIR = DATA_DIR / "rules"
-DB_DIR = ROOT / "_db"
 
 
 def save_json(data, path: Path) -> None:

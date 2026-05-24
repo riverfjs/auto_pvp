@@ -29,8 +29,8 @@ from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import STAT_HP
 
 
-_RENXIN_PET = 80         # 治愈兔, ability 200152 仁心 (normalized DB id)
-_NAIHUO_PET = 553        # 刺轮砣, ability 200240 耐活王 (normalized DB id)
+_RENXIN_PET = 80         # 治愈兔, ability 200152 仁心 (generated catalog id)
+_NAIHUO_PET = 553        # 刺轮砣, ability 200240 耐活王 (generated catalog id)
 _NO_HEAL_PET = 1         # generic pet (ability_flags lacks heal-on-status)
 _TARGET_PET = 100        # any non-leader basic pet for side_b's slot 0
 

@@ -1,7 +1,7 @@
 """Import-time static Pet and skill definitions.
 
 Battle state for the fixed engine lives in ``roco.engine.kernel.state``. This
-module is kept small for parsers, classifiers, and SQLite catalog inspection.
+module is kept small for parsers, classifiers, and debug catalog inspection.
 """
 
 from __future__ import annotations

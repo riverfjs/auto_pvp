@@ -5,8 +5,9 @@ failure in one cannot corrupt the next:
 
     1. roco.compiler_v2.gen_prefix_map  -> roco/generated/static, battle globals,
                                         skill damage adapters, handlers, etc.
-    2. roco.data.build_db            -> _db/data.db + roco/generated/catalog_hot.py
-                                        + catalog_debug.py   (catalog is written here)
+    2. roco.compiler_v2.catalog_compiler
+                                     -> roco/generated/catalog_hot.py
+                                        + catalog_debug.py
     3. roco.compiler_v2.build_effect_families
                                      -> roco/generated/audit/effect_families.jsonl
                                         + _docs/effect_family_audit.md
@@ -31,7 +32,7 @@ Two optional flags layer on top:
                        a real pak refresh, run without --check and
                        review the diff manually before committing.
 
-See ``README.md`` for the full pak -> generated -> DB -> engine data flow.
+See ``README.md`` for the full pak -> generated -> engine data flow.
 """
 
 from __future__ import annotations
@@ -46,9 +47,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Paths the --check probe verifies for cleanliness after a refresh.
 #
-# Deliberately excluded:
-#   - ``_db/data.db``           tracked-but-locally-modified by convention;
-#                               a clean refresh always re-writes it.
 CHECK_PATHS: tuple[str, ...] = (
     "roco/generated",
     "_docs/effect_family_audit.md",
@@ -97,7 +95,7 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps: list[tuple[str, list[str]]] = []
     steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
-    steps.append(("build_db", [py, "-m", "roco.data.build_db"]))
+    steps.append(("catalog_compiler", [py, "-m", "roco.compiler_v2.catalog_compiler"]))
     steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((
         "build_effect_families --check",

@@ -21,26 +21,26 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 
 | family_key | type | order | count | param slots | consumers (skill/ability) | coverage | editor_name samples |
 |---|---:|---:|---:|---|---:|---|---|
-| `effect_conf:t1:o4` | 1 | 4 | 92 | 5:92 | 3/8 | `mixed` | 不朽, 戏耍, 拉拉队长 |
-| `effect_conf:t1:o5` | 1 | 5 | 29 | 6:29 | 17/0 | `auto_structural` | 适者生存, 饱腹感 |
+| `effect_conf:t1:o4` | 1 | 4 | 92 | 5:92 | 4/8 | `mixed` | 不朽, 戏耍, 拉拉队长 |
+| `effect_conf:t1:o5` | 1 | 5 | 29 | 6:29 | 20/0 | `auto_structural` | 适者生存, 饱腹感 |
 | `effect_conf:t1:o9` | 1 | 9 | 1 | 2:1 | 0/0 | `gap` |  |
 | `effect_conf:t1:o10` | 1 | 10 | 2 | 1:2 | 0/0 | `gap` | 养分回收, 春花兔 |
-| `effect_conf:t1:o11` | 1 | 11 | 10 | 2:10 | 5/0 | `auto_structural` | 渴求 |
+| `effect_conf:t1:o11` | 1 | 11 | 10 | 2:10 | 9/0 | `auto_structural` | 渴求 |
 | `effect_conf:t1:o15` | 1 | 15 | 1 | 0:1 | 1/0 | `gap` |  |
 | `effect_conf:t1:o22` | 1 | 22 | 3 | 5:3 | 0/1 | `auto_structural` | 蜂鸣 |
 | `effect_conf:t1:o23` | 1 | 23 | 4 | 9:4 | 0/0 | `auto_structural` |  |
 | `effect_conf:t1:o27` | 1 | 27 | 5 | 2:5 | 3/0 | `gap` |  |
-| `effect_conf:t1:o31` | 1 | 31 | 40 | 6:1, 8:39 | 21/0 | `auto_structural` |  |
-| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 49/0 | `mixed` |  |
-| `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 2/0 | `gap` |  |
+| `effect_conf:t1:o31` | 1 | 31 | 40 | 6:1, 8:39 | 24/0 | `auto_structural` |  |
+| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 54/0 | `mixed` |  |
+| `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 3/0 | `gap` |  |
 | `effect_conf:t1:o34` | 1 | 34 | 10 | 8:10 | 0/2 | `mixed` | 焰胆, 状态接力, 聚能, … (+1) |
-| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 13/0 | `gap` |  |
+| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 12/0 | `gap` |  |
 | `effect_conf:t1:o36` | 1 | 36 | 4 | 2:4 | 6/0 | `gap` |  |
 | `effect_conf:t1:o42` | 1 | 42 | 17 | 5:17 | 6/2 | `mixed` | 蚀刻 |
 | `effect_conf:t1:o50` | 1 | 50 | 14 | 7:14 | 3/0 | `mixed` | 嫁祸, 贪吃 |
-| `effect_conf:t1:o51` | 1 | 51 | 3 | 3:3 | 7/0 | `auto_structural` |  |
+| `effect_conf:t1:o51` | 1 | 51 | 3 | 3:3 | 6/0 | `auto_structural` |  |
 | `effect_conf:t1:o52` | 1 | 52 | 9 | 4:9 | 5/0 | `mixed` | 扩散侵蚀 |
-| `effect_conf:t1:o53` | 1 | 53 | 17 | 3:17 | 9/0 | `mixed` | 扩散侵蚀 |
+| `effect_conf:t1:o53` | 1 | 53 | 17 | 3:17 | 8/0 | `mixed` | 扩散侵蚀 |
 | `effect_conf:t1:o55` | 1 | 55 | 5 | 5:5 | 0/0 | `gap` |  |
 | `effect_conf:t1:o58` | 1 | 58 | 6 | 7:6 | 0/0 | `mixed` | 洄游 |
 | `effect_conf:t1:o59` | 1 | 59 | 1 | 2:1 | 0/0 | `gap` |  |
@@ -50,8 +50,8 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t2:o6` | 2 | 6 | 3 | 1:3 | 0/0 | `auto_structural` |  |
 | `effect_conf:t2:o7` | 2 | 7 | 1 | 0:1 | 0/0 | `auto_structural` |  |
 | `effect_conf:t2:o18` | 2 | 18 | 12 | 1:12 | 1/1 | `auto_structural` |  |
-| `effect_conf:t2:o31` | 2 | 31 | 106 | 8:106 | 69/0 | `auto_structural` |  |
-| `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 1/0 | `auto_structural` |  |
+| `effect_conf:t2:o31` | 2 | 31 | 106 | 8:106 | 84/0 | `auto_structural` |  |
+| `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 2/0 | `auto_structural` |  |
 | `effect_conf:t2:o55` | 2 | 55 | 1 | 5:1 | 0/0 | `auto_structural` |  |
 | `effect_conf:t3:o1` | 3 | 1 | 5 | 7:5 | 4/0 | `gap` |  |
 | `effect_conf:t3:o3` | 3 | 3 | 2 | 3:2 | 0/0 | `gap` |  |
@@ -60,19 +60,19 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o11` | 3 | 11 | 1 | 2:1 | 0/0 | `gap` |  |
 | `effect_conf:t3:o13` | 3 | 13 | 1 | 1:1 | 0/0 | `gap` |  |
 | `effect_conf:t3:o14` | 3 | 14 | 1 | 1:1 | 0/0 | `gap` |  |
-| `effect_conf:t3:o16` | 3 | 16 | 20 | 10:20 | 2/1 | `gap` | 振奋虫心 |
+| `effect_conf:t3:o16` | 3 | 16 | 20 | 10:20 | 3/1 | `gap` | 振奋虫心 |
 | `effect_conf:t3:o17` | 3 | 17 | 1 | 3:1 | 0/0 | `gap` |  |
-| `effect_conf:t3:o19` | 3 | 19 | 52 | 3:52 | 61/1 | `mixed` | 得寸进尺, 快充, 惊吓, … (+5) |
+| `effect_conf:t3:o19` | 3 | 19 | 52 | 3:52 | 62/1 | `mixed` | 得寸进尺, 快充, 惊吓, … (+5) |
 | `effect_conf:t3:o22` | 3 | 22 | 12 | 5:12 | 0/5 | `mixed` | 仁心, 虫群突袭, 虫群鼓舞 |
 | `effect_conf:t3:o23` | 3 | 23 | 49 | 9:49 | 0/0 | `gap` | 嫉妒 |
 | `effect_conf:t3:o25` | 3 | 25 | 7 | 1:7 | 4/0 | `gap` |  |
 | `effect_conf:t3:o28` | 3 | 28 | 5 | 2:5 | 3/0 | `generated_weather` |  |
 | `effect_conf:t3:o29` | 3 | 29 | 1 | 0:1 | 1/0 | `gap` |  |
 | `effect_conf:t3:o30` | 3 | 30 | 1 | 1:1 | 1/0 | `gap` |  |
-| `effect_conf:t3:o31` | 3 | 31 | 64 | 8:64 | 34/0 | `auto_structural` |  |
+| `effect_conf:t3:o31` | 3 | 31 | 64 | 8:64 | 36/0 | `auto_structural` |  |
 | `effect_conf:t3:o34` | 3 | 34 | 14 | 8:14 | 0/10 | `mixed` | 低风阻队形, 渗透, 蒸汽膨胀, … (+1) |
 | `effect_conf:t3:o36` | 3 | 36 | 1 | 2:1 | 0/0 | `gap` | 化茧 |
-| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 89/0 | `mixed` |  |
+| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 97/0 | `mixed` |  |
 | `effect_conf:t3:o38` | 3 | 38 | 20 | 7:20 | 6/0 | `gap` |  |
 | `effect_conf:t3:o39` | 3 | 39 | 2 | 2:1, 4:1 | 1/0 | `gap` |  |
 | `effect_conf:t3:o40` | 3 | 40 | 1 | 1:1 | 1/0 | `gap` |  |
@@ -106,7 +106,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o75` | 3 | 75 | 1 | 0:1 | 0/1 | `gap` |  |
 | `effect_conf:t3:o76` | 3 | 76 | 4 | 2:4 | 0/0 | `ability_flag` | 仁心, 耐活王 |
 | `effect_conf:t3:o77` | 3 | 77 | 2 | 4:2 | 0/2 | `auto_structural` | 图书守卫者, 构装契约者 |
-| `effect_conf:t3:o79` | 3 | 79 | 3 | 2:3 | 0/0 | `gap` |  |
+| `effect_conf:t3:o79` | 3 | 79 | 3 | 2:3 | 1/0 | `gap` |  |
 | `effect_conf:t3:o81` | 3 | 81 | 4 | 1:4 | 1/0 | `gap` |  |
 | `effect_conf:t3:o83` | 3 | 83 | 1 | 0:1 | 1/0 | `gap` |  |
 | `effect_conf:t3:o84` | 3 | 84 | 2 | 1:2 | 3/0 | `gap` |  |

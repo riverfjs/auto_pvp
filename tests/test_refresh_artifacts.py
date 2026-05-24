@@ -3,7 +3,7 @@
 These tests monkeypatch the driver's own ``_run_step`` and
 ``_git_status_porcelain`` callables so the orchestration logic can be
 verified without spawning real subprocesses or touching git.  The
-    wrapped pipeline modules (gen_prefix_map, build_db,
+    wrapped pipeline modules (gen_prefix_map, catalog_compiler,
 build_effect_families) have their own dedicated tests and are not
 re-exercised here.
 """
@@ -51,7 +51,7 @@ def test_default_order(monkeypatch):
     assert refresh.main([]) == 0
     assert [label for label, _ in calls] == [
         "gen_prefix_map",
-        "build_db",
+        "catalog_compiler",
         "build_effect_families",
         "build_effect_families --check",
         "pak_schema_audit",
@@ -123,7 +123,7 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
     labels = [label for label, _ in calls]
     assert labels == [
         "gen_prefix_map",
-        "build_db",
+        "catalog_compiler",
         "build_effect_families",
         "build_effect_families --check",
         "pak_schema_audit",
@@ -134,12 +134,10 @@ def test_with_tests_and_check_run_in_order(monkeypatch):
     ]
 
 
-# ── CHECK_PATHS shape: exclude _db/data.db and the full rules dir ────────
+# ── CHECK_PATHS shape: generated outputs only, not hand rules ─────────────
 
 
-def test_check_paths_exclude_db_and_full_rules_dir():
-    assert "_db/data.db" not in refresh.CHECK_PATHS
-    assert "_db" not in refresh.CHECK_PATHS
+def test_check_paths_exclude_full_rules_dir():
     # The full rules directory must NOT be in scope. Generated audits live
     # under roco/generated, so hand-edited rule files are not reported as
     # artifact drift by this probe.

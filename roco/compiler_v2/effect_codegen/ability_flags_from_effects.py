@@ -5,7 +5,7 @@ Pak ability rows point at either ``EFFECT_CONF`` rows or direct
 ``SKILL_CONF(type=2).skill_result`` gives the referenced ids, and
 ``BUFF_CONF -> BUFFBASE_CONF`` supplies the semantic axis.  The artifact
 layer joins the derived ``skill_result.effect_id → AbilityFlag`` map
-with the ``ability_effect_ids`` SQLite table to populate
+with generated ``ability_effect_ids`` provenance rows to populate
 ``ABILITY_FLAGS`` in :mod:`roco.generated.catalog_hot`.
 
 This loader is intentionally strict: unsupported multiplier or fixture

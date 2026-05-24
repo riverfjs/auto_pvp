@@ -10,11 +10,11 @@ sentinel.  ``H_NOOP`` itself only exists at the kernel dispatch layer
 Outcome routing:
 
 * :class:`EmitOutcome` → effect_rows (runtime kernel row).
-* :class:`GapOutcome` → ``effect_gaps`` table (blocks strict ``build_db``).
+* :class:`GapOutcome` → generated audit/debug gap metadata.
 * :class:`AbilityFlagOutcome` → dropped here; later compiled into the
   catalog ``ABILITY_FLAGS`` tuple by
-  :mod:`roco.compiler_v2.ability_flags` via the join of
-  the ``ability_effect_ids`` table × pak-derived ability flag semantics.
+  :mod:`roco.compiler_v2.ability_flags` via the join of generated
+  ``ability_effect_ids`` provenance × pak-derived ability flag semantics.
   Only :func:`build_ability_effect_rows` accepts this outcome — the
   generic ``generate_effect_rows`` rejects it unless explicitly opted
   in via ``allow_ability_flags=True``, so a stray ability-passive
@@ -383,8 +383,7 @@ def generate_effect_rows(
         Each tuple is ``(handler_idx, timing, target, rate, p0, p1, p2, p3)``.
         ``handler_idx`` is always > 0 (H_NOOP is forbidden at this layer).
     gaps : list[dict]
-        Unsupported / unrecognised effects.  Used + non-zero ``used_count``
-        rows block strict ``build_db``.
+        Unsupported / unrecognised effects for generated audit output.
 
     Raises
     ------

@@ -8,8 +8,8 @@ Covers the four hard boundaries:
 2. **multiplier reject** — loader rejects ``effect_param[1] != [1]``
    (and the shape variants around it).  No defaulting / truncation.
 3. **ABILITY_FLAGS = ability_effect_ids ⨝ pak-derived semantics** — codegen
-   populates the per-ability mask only from the new SQLite table joined
-   with the derived semantic table; canonical records are not re-read at codegen time.
+   populates the per-ability mask from generated in-memory provenance rows
+   joined with the derived semantic table.
 
 (End-to-end residual heal — boundary 4 — lives in
 ``tests/test_status_damage_heal.py``.)
@@ -18,7 +18,6 @@ Covers the four hard boundaries:
 from __future__ import annotations
 
 import json
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -36,6 +35,7 @@ from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
     load_ability_flags_from_effects,
     normalized_payload,
 )
+from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
 
 
@@ -347,44 +347,24 @@ def test_generate_effect_rows_ability_path_accepts_freeze_meteor_flag_outcome():
 # ── codegen join correctness (boundary 3) ─────────────────────────────────
 
 
-def _make_db_with_ability_effect_ids(tmp_path: Path, mapping: list[tuple[int, int, int]]) -> sqlite3.Connection:
-    """Build an in-memory-style temp DB containing the minimal schema for
-    ``ability_flags.populate`` to join.
+def _ability_effect_id_rows(mapping: list[tuple[int, int, int]]) -> list[tuple[int, int, int, int, int, int, int]]:
+    """Return ``(ability_id, source_ability_id, effect_id, timing, target, rate, sort_order)`` rows."""
 
-    ``mapping`` is a list of ``(ability_id, effect_id, sort_order)`` tuples.
-    """
-    db = tmp_path / "test.db"
-    conn = sqlite3.connect(str(db))
-    conn.execute(
-        "CREATE TABLE ability_effect_ids ("
-        " ability_id INTEGER NOT NULL,"
-        " source_ability_id INTEGER NOT NULL,"
-        " effect_id INTEGER NOT NULL,"
-        " timing_code INTEGER NOT NULL,"
-        " target_type INTEGER NOT NULL,"
-        " success_rate INTEGER NOT NULL,"
-        " sort_order INTEGER NOT NULL,"
-        " PRIMARY KEY (ability_id, sort_order))"
-    )
-    for ability_id, effect_id, sort_order in mapping:
-        conn.execute(
-            "INSERT INTO ability_effect_ids "
-            "(ability_id, source_ability_id, effect_id, timing_code, target_type, success_rate, sort_order) "
-            "VALUES (?, ?, ?, 11, 1, 10000, ?)",
-            (ability_id, ability_id * 1000, effect_id, sort_order),
-        )
-    return conn
+    return [
+        (ability_id, ability_id * 1000, effect_id, 11, 1, 10000, sort_order)
+        for ability_id, effect_id, sort_order in mapping
+    ]
 
 
-def test_populate_ors_bits_via_join(tmp_path):
+def test_populate_ors_bits_via_join():
     """Boundary 3: ABILITY_FLAGS comes from ``ability_effect_ids`` ⨝ rules.
 
-    Mock a tiny DB with ability 7 referencing 21540010 (POISON heal),
+    Mock tiny provenance rows with ability 7 referencing 21540010 (POISON heal),
     21540040 (BURN heal), and 21430010 (mark stacking); ability 9
     referencing only 21540040.  After ``populate`` the ability_flags array
     must reflect the OR of all matched rules and nothing else.
     """
-    conn = _make_db_with_ability_effect_ids(tmp_path, [
+    rows = _ability_effect_id_rows([
         (7, 21540010, 0),
         (7, 21540040, 1),
         (7, 21430010, 2),
@@ -392,7 +372,7 @@ def test_populate_ors_bits_via_join(tmp_path):
     ])
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 16
-    matched = ability_flag_artifact.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
+    matched = ability_flag_artifact.populate(rows, effect_to_flag=table, ability_flags=ability_flags)
     assert matched == 4  # four (ability_id, effect_id) pairs joined
     expected_seven = (
         int(AbilityFlag.HEAL_ON_POISON_DAMAGE)
@@ -408,13 +388,13 @@ def test_populate_ors_bits_via_join(tmp_path):
         assert value == 0, f"unexpected non-zero bit at ability_id={idx}: {value}"
 
 
-def test_populate_raises_on_out_of_range_ability_id(tmp_path):
+def test_populate_raises_on_out_of_range_ability_id():
     """A row whose ability_id exceeds the compiled range should fail loud."""
-    conn = _make_db_with_ability_effect_ids(tmp_path, [(50, 21540010, 0)])
+    rows = _ability_effect_id_rows([(50, 21540010, 0)])
     table = load_ability_flags_from_effects()
     ability_flags = [0] * 4  # capacity smaller than the row's ability_id
     with pytest.raises(RuntimeError, match=r"outside of compiled range"):
-        ability_flag_artifact.populate(conn, effect_to_flag=table, ability_flags=ability_flags)
+        ability_flag_artifact.populate(rows, effect_to_flag=table, ability_flags=ability_flags)
 
 
 # ── live catalog drift check ──────────────────────────────────────────────
@@ -424,44 +404,21 @@ def test_catalog_abilityflag_slots_match_expected_pak_consumers():
     """The live ``hot.ABILITY_FLAGS`` table must show 仁心 / 耐活王 with
     the bits driven by Python semantic bindings.
 
-    Ids 200152 (仁心) and 200240 (耐活王) are pak feature ids ≠ DB
-    normalized ids.  Resolve the normalized id via the live SQLite store
-    so the assertion runs end-to-end against the build that just produced
-    the catalog.
+    Ids 200152 (仁心) and 200240 (耐活王) are pak feature ids, while
+    ``hot.ABILITY_FLAGS`` is indexed by the generated catalog id.  Resolve
+    the catalog id through ``catalog_debug.ABILITY_NAMES``.
 
     A failure here means one of: (a) the rules file no longer covers
-    those effect_ids, (b) parse_pak / build_db lost ability_effect_ids
+    those effect_ids, (b) parse_pak/catalog_compiler lost ability_effect_ids
     provenance, or (c) the codegen join did not run.
     """
-    db_path = ROOT / "_db" / "data.db"
-    if not db_path.exists():
-        pytest.skip("_db/data.db missing; run `uv run python -m roco.data.build_db` first")
-    conn = sqlite3.connect(str(db_path))
-    try:
-        has_abilities_table = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'abilities'"
-        ).fetchone()
-        if not has_abilities_table:
-            pytest.skip(
-                "_db/data.db has no abilities table; run "
-                "`uv run python -m roco.data.build_db` first"
-            )
-        for ability_name, expected_flag in (("仁心", AbilityFlag.HEAL_ON_BURN_DAMAGE),
-                                            ("耐活王", AbilityFlag.HEAL_ON_POISON_DAMAGE),
-                                            ("吟游之弦", AbilityFlag.MARK_STACK_NO_REPLACE)):
-            row = conn.execute(
-                "SELECT id FROM abilities WHERE name = ?", (ability_name,)
-            ).fetchone()
-            if not row:
-                pytest.skip(
-                    f"_db/data.db is stale or does not include ability {ability_name!r}; "
-                    "run roco.data.build_db for the end-to-end catalog assertion"
-                )
-            normalized_id = int(row[0])
-            actual = hot.ABILITY_FLAGS[normalized_id]
-            assert actual & int(expected_flag), (
-                f"ability {ability_name!r} (normalized={normalized_id}): "
-                f"expected bit {expected_flag.name} set, got 0x{actual:x}"
-            )
-    finally:
-        conn.close()
+    for ability_name, expected_flag in (("仁心", AbilityFlag.HEAL_ON_BURN_DAMAGE),
+                                        ("耐活王", AbilityFlag.HEAL_ON_POISON_DAMAGE),
+                                        ("吟游之弦", AbilityFlag.MARK_STACK_NO_REPLACE)):
+        assert ability_name in debug.ABILITY_NAMES
+        normalized_id = debug.ABILITY_NAMES.index(ability_name)
+        actual = hot.ABILITY_FLAGS[normalized_id]
+        assert actual & int(expected_flag), (
+            f"ability {ability_name!r} (normalized={normalized_id}): "
+            f"expected bit {expected_flag.name} set, got 0x{actual:x}"
+        )

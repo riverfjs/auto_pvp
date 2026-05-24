@@ -20,6 +20,7 @@ roco-mc = "roco.sim.monte_carlo:main"
 roco-fetch-teams = "roco.data.fetch_teams:main"
 roco-refresh-artifacts = "roco.data.refresh_artifacts:main"
 roco-compile-static = "roco.compiler_v2.gen_prefix_map:main"
+roco-pak = "roco.pak_query.cli:main"
 
 [dependency-groups]
 dev = [

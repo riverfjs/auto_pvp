@@ -1,16 +1,19 @@
-"""Compile SQLite catalog rows into hot/debug Python catalogs for the fixed kernel."""
+"""Compile pak-derived canonical records into hot/debug Python catalogs."""
 
 from __future__ import annotations
 
 import argparse
-import json
 import pprint
-import sqlite3
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from roco.data.utils import DB_DIR, ROOT, content_hash
+from roco.common.enums import ELEMENT_NAMES, SkillCategory, normalize_element_name
 from roco.compiler_v2 import ability_flags as ability_flag_artifact
+from roco.data.canonical import load_canonical_records
+from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
+from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
+from roco.generated.bloodline_magic import BLOODLINE_CATALOG_ROWS, BLOODLINE_MAGIC_CATALOG_ROWS
 from roco.generated.type_chart import TYPE_CHART_BPS as _PAK_TYPE_CHART_BPS
 
 CATALOG_VERSION = 1
@@ -18,87 +21,81 @@ SCHEMA_VERSION = "kernel-v2"
 HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
 DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
 
-def _connect(path: Path | None = None) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(path or DB_DIR / "data.db"))
-    conn.row_factory = sqlite3.Row
-    return conn
+Record = Mapping[str, Any]
+AbilityEffectIdRow = tuple[int, int, int, int, int, int, int]
+
+_CATEGORY_MAP = {
+    "物攻": SkillCategory.PHYSICAL,
+    "魔攻": SkillCategory.MAGICAL,
+    "防御": SkillCategory.DEFENSE,
+    "状态": SkillCategory.STATUS,
+}
 
 
-def _rows(conn: sqlite3.Connection, sql: str) -> list[sqlite3.Row]:
-    return list(conn.execute(sql))
+def _safe_int(value: object) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
-def _source_payload(conn: sqlite3.Connection) -> dict[str, Any]:
-    return {
-        "elements": [tuple(row) for row in _rows(conn, "SELECT id, code, name FROM elements ORDER BY id")],
-        "pets": [tuple(row) for row in _rows(conn, "SELECT id, name, lineage_key, form_type, element_primary_id, element_secondary_id, ability_id, hp, atk_phys, atk_mag, def_phys, def_mag, speed FROM pets ORDER BY id")],
-        "pet_transforms": [tuple(row) for row in _rows(conn, "SELECT source_pet_id, leader_pet_id, reason FROM pet_transforms ORDER BY source_pet_id")],
-        "skills": [
-            tuple(row)
-            for row in _rows(
-                conn,
-                "SELECT id, name, element_id, category_code, skill_dam_type, "
-                "energy, power, flags, effect_text, flavor_text "
-                "FROM skills ORDER BY id",
-            )
-        ],
-        "abilities": [
-            tuple(row)
-            for row in _rows(
-                conn,
-                "SELECT id, name, description, flags, source_version FROM abilities ORDER BY id",
-            )
-        ],
-        "pet_skills": [tuple(row) for row in _rows(conn, "SELECT pet_id, skill_id, sort_order FROM pet_skills WHERE skill_id IS NOT NULL ORDER BY pet_id, sort_order, id")],
-        "skill_effects": [tuple(row) for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id")],
-        "ability_effects": [tuple(row) for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id")],
-        # Pak effect-id provenance for ability flag artifact generation.
-        # Inputs to ABILITY_FLAGS — must be in the hash so that adding a
-        # rule row, renaming an effect, or shifting the canonical sort
-        # order invalidates SOURCE_HASH alongside the catalog rebuild.
-        "ability_effect_ids": [tuple(row) for row in _rows(conn, "SELECT ability_id, source_ability_id, effect_id, timing_code, target_type, success_rate, sort_order FROM ability_effect_ids ORDER BY ability_id, sort_order")],
-        "ability_flags_from_effects_rules": list(ability_flag_artifact.normalized_payload()),
-        "bloodlines": [tuple(row) for row in _rows(conn, "SELECT id, code, name, kind, element_id FROM bloodlines ORDER BY id")],
-        "bloodline_magics": [tuple(row) for row in _rows(conn, "SELECT id, code, name, uses_per_battle FROM bloodline_magics ORDER BY id")],
-    }
+def _required_int(value: object, default: int = 0) -> int:
+    parsed = _safe_int(value)
+    return default if parsed is None else parsed
+
+
+def _records(records: Iterable[Record], kind: str) -> list[Record]:
+    rows = list(records)
+    bad = [str(row.get("name", row.get("id", ""))) for row in rows if row.get("kind") != kind]
+    if bad:
+        raise ValueError(f"expected canonical kind={kind!r}, got mismatches: {', '.join(bad[:5])}")
+    return rows
+
+
+def _element_id(raw: object) -> int:
+    name = normalize_element_name(str(raw or "普通"))
+    return ELEMENT_NAMES.index(name)
+
+
+def _maybe_element_id(raw: object) -> int | None:
+    if not raw:
+        return None
+    return _element_id(raw)
+
+
+def _category_code(raw: object) -> int:
+    if isinstance(raw, SkillCategory):
+        return int(raw.value)
+    cat = _CATEGORY_MAP.get(str(raw or "").strip())
+    if cat is None:
+        raise ValueError(f"unknown skill category: {raw!r}")
+    return int(cat.value)
 
 
 def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ...]:
-    """Type effectiveness BPS table consumed by the kernel hot catalog.
+    """Return the pak-derived type-effectiveness table used by the kernel."""
 
-    Pak ``TYPE_DICTIONARY.json`` is the single source of truth here —
-    ``gen_prefix_map`` reads it once and emits the compiled table to
-    :mod:`roco.generated.type_chart`.  We pass it through unchanged so
-    ``catalog_hot.TYPE_CHART_BPS`` is the same data the codegen wrote;
-    the retired hand-curated type-chart module
-    is retained only for the display/test layer.
-
-    The ``element_names`` argument is used only to assert the generated
-    type chart still matches the pak-derived element table, so drift fails
-    loudly rather than silently truncating rows.
-    """
     if len(element_names) != len(_PAK_TYPE_CHART_BPS):
         raise RuntimeError(
             f"elements table has {len(element_names)} rows but pak type chart "
-            f"has {len(_PAK_TYPE_CHART_BPS)} — regenerate via gen_prefix_map"
+            f"has {len(_PAK_TYPE_CHART_BPS)}; regenerate via gen_prefix_map"
         )
     return _PAK_TYPE_CHART_BPS
 
 
-def _effect_row(row: sqlite3.Row) -> tuple[int, ...]:
-    """Pass through DB values directly — codegen already assigned handler indices and params."""
-    params = json.loads(row["params_json"] or "{}")
-    return (
-        int(row["tag_code"]),       # handler_idx (from codegen)
-        int(row["timing_code"]),    # timing (pak cast_moment)
-        int(params.get("target", 0)),
-        0,                           # flags
-        0,                           # cond
-        int(params.get("p0", 0)),
-        int(params.get("p1", 0)),
-        int(params.get("p2", 0)),
-        int(params.get("p3", 0)),
-    )
+def _effect_row(row_tuple: Iterable[object], *, source_name: str) -> tuple[int, ...]:
+    values = tuple(int(value or 0) for value in row_tuple)
+    if len(values) != 8:
+        raise RuntimeError(f"{source_name!r} produced malformed effect row: {values!r}")
+    handler_idx, timing, target, _rate, p0, p1, p2, p3 = values
+    if handler_idx <= 0:
+        raise RuntimeError(
+            f"{source_name!r} produced an effect row with tag_code={handler_idx}; "
+            "H_NOOP / 0 is forbidden at the compile boundary"
+        )
+    return (handler_idx, timing, target, 0, 0, p0, p1, p2, p3)
 
 
 def _ranges(max_id: int, keyed_rows: list[tuple[int, tuple[int, ...]]]) -> tuple[tuple[int, int], ...]:
@@ -121,167 +118,334 @@ def _format_module(**items: Any) -> str:
     return "\n".join(lines)
 
 
+def _leader_transform_manual() -> dict[str, str]:
+    path = RULES_DIR / "leader_transforms_manual.jsonl"
+    if not path.exists():
+        return {}
+    rules: dict[str, str] = {}
+    for record in iter_jsonl(path):
+        source = str(record.get("source", "") or record.get("name", "")).strip()
+        target = str(record.get("target", "") or record.get("leader", "")).strip()
+        if source and target:
+            rules[source] = target
+    return rules
+
+
+def _leader_transform_rows(
+    pet_records: Iterable[Record],
+    pet_ids_by_name: Mapping[str, int],
+) -> list[tuple[int, int, str]]:
+    pet_rows = [
+        {
+            "id": pet_ids_by_name[str(row["name"])],
+            "name": str(row["name"]),
+            "lineage_key": str(row.get("lineage_key") or row["name"]),
+            "form_type": str(row.get("form_type") or ""),
+        }
+        for row in pet_records
+    ]
+    pets_by_name = {row["name"]: row for row in pet_rows}
+    rows_by_lineage: dict[str, list[dict[str, object]]] = {}
+    for row in pet_rows:
+        rows_by_lineage.setdefault(str(row["lineage_key"] or row["name"]), []).append(row)
+
+    result: dict[int, tuple[int, int, str]] = {}
+    for source_name, leader_name in _leader_transform_manual().items():
+        source = pets_by_name.get(source_name)
+        leader = pets_by_name.get(leader_name)
+        if source is None or leader is None:
+            continue
+        result[int(source["id"])] = (int(source["id"]), int(leader["id"]), "manual")
+
+    for lineage_rows in rows_by_lineage.values():
+        leaders = [row for row in lineage_rows if row["form_type"] == "首领形态"]
+        if len(leaders) != 1:
+            preferred = [
+                row for row in leaders
+                if "#" not in str(row["name"]) and not str(row["name"]).startswith("首领-")
+            ]
+            if len(preferred) == 1:
+                leaders = preferred
+            else:
+                continue
+        if len(leaders) != 1:
+            continue
+        leader_id = int(leaders[0]["id"])
+        for row in lineage_rows:
+            source_id = int(row["id"])
+            result.setdefault(source_id, (source_id, leader_id, "auto_lineage"))
+    return [result[key] for key in sorted(result)]
+
+
+def _ability_effect_id_rows(
+    ability_records: Iterable[Record],
+    ability_ids_by_name: Mapping[str, int],
+) -> list[AbilityEffectIdRow]:
+    rows: list[AbilityEffectIdRow] = []
+    for record in ability_records:
+        name = str(record.get("name", "")).strip()
+        if not name:
+            continue
+        ability_id = ability_ids_by_name[name]
+        source_fields = record.get("source_fields") or {}
+        source_ability_id = int(record.get("source_id") or source_fields.get("id") or 0)
+        entries: list[Mapping[str, Any]] = []
+        for key in ("skill_result", "effect_list"):
+            raw_entries = source_fields.get(key) if isinstance(source_fields, Mapping) else None
+            if isinstance(raw_entries, list):
+                entries.extend(item for item in raw_entries if isinstance(item, Mapping))
+        for sort_order, entry in enumerate(entries):
+            effect_id = int(entry.get("effect_id", 0) or 0)
+            if effect_id <= 0:
+                continue
+            rows.append((
+                ability_id,
+                source_ability_id,
+                effect_id,
+                int(entry.get("cast_moment", 0) or 0),
+                int(entry.get("result_target_type", 0) or 0),
+                int(entry.get("success_rate", 0) or 0),
+                sort_order,
+            ))
+    return rows
+
+
 def compile_catalogs(
-    db_path: Path | None = None,
+    pak_dir: Path | None = None,
     *,
     hot_path: Path = HOT_PATH,
     debug_path: Path = DEBUG_PATH,
 ) -> tuple[Path, Path]:
-    conn = _connect(db_path)
-    try:
-        source_hash = content_hash(_source_payload(conn))
-        elements = tuple(row["name"] for row in _rows(conn, "SELECT id, name FROM elements ORDER BY id"))
-        max_pet_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM pets").fetchone()[0]
-        max_skill_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM skills").fetchone()[0]
-        max_ability_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM abilities").fetchone()[0]
+    canonical = load_canonical_records(pak_dir or DEFAULT_PAK_DATA_DIR)
+    skill_records = _records(canonical["skills"], "skill")
+    ability_records = _records(canonical["abilities"], "ability")
+    pet_records = _records(canonical["pets"], "pet")
 
-        pets: list[tuple[int, int, int, int, int, int, int, int, int, int]] = [(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)] * (max_pet_id + 1)
-        pet_names: list[str] = [""] * (max_pet_id + 1)
-        for row in _rows(conn, "SELECT id, name, hp, atk_phys, atk_mag, def_phys, def_mag, speed, element_primary_id, element_secondary_id, ability_id FROM pets ORDER BY id"):
-            pets[row["id"]] = (
-                row["id"],
-                row["hp"],
-                row["atk_phys"],
-                row["atk_mag"],
-                row["def_phys"],
-                row["def_mag"],
-                row["speed"],
-                row["element_primary_id"],
-                row["element_secondary_id"] if row["element_secondary_id"] is not None else -1,
-                row["ability_id"] or 0,
-            )
-            pet_names[row["id"]] = row["name"]
+    elements = tuple(ELEMENT_NAMES)
+    skill_ids_by_name = {str(row["name"]): idx for idx, row in enumerate(skill_records, start=1)}
+    skill_ids_by_source = {
+        int(row["source_id"]): idx
+        for idx, row in enumerate(skill_records, start=1)
+        if _safe_int(row.get("source_id")) is not None
+    }
+    ability_ids_by_name = {str(row["name"]): idx for idx, row in enumerate(ability_records, start=1)}
+    pet_ids_by_name = {str(row["name"]): idx for idx, row in enumerate(pet_records, start=1)}
 
-        skills: list[tuple[int, int, int, int, int, int, int, int]] = [(0, 0, 0, 0, 0, 0, 1, 0)] * (max_skill_id + 1)
-        skill_names: list[str] = [""] * (max_skill_id + 1)
-        skill_effect_texts: list[str] = [""] * (max_skill_id + 1)
-        skill_flavor_texts: list[str] = [""] * (max_skill_id + 1)
-        skill_ids_by_name: dict[str, int] = {}
-        skill_ids_by_text: dict[str, int] = {}
-        for row in _rows(conn, "SELECT id, name, element_id, category_code, skill_dam_type, energy, power, flags, effect_text, flavor_text FROM skills ORDER BY id"):
-            skills[row["id"]] = (
-                row["id"],
-                row["element_id"],
-                row["category_code"],
-                row["energy"],
-                row["power"],
-                row["flags"],
-                1,
-                row["skill_dam_type"],
-            )
-            skill_names[row["id"]] = row["name"]
-            effect_text = row["effect_text"] or ""
-            flavor_text = row["flavor_text"] or ""
-            skill_effect_texts[row["id"]] = effect_text
-            skill_flavor_texts[row["id"]] = flavor_text
-            skill_ids_by_name[row["name"]] = row["id"]
-            for text_key in (row["effect_text"] or "", row["flavor_text"] or ""):
-                if text_key and text_key not in skill_ids_by_text:
-                    skill_ids_by_text[text_key] = row["id"]
+    max_pet_id = len(pet_records)
+    max_skill_id = len(skill_records)
+    max_ability_id = len(ability_records)
 
-        ability_names: list[str] = [""] * (max_ability_id + 1)
-        ability_descriptions: list[str] = [""] * (max_ability_id + 1)
-        for row in _rows(conn, "SELECT id, name, description FROM abilities ORDER BY id"):
-            ability_names[row["id"]] = row["name"]
-            ability_descriptions[row["id"]] = row["description"] or ""
+    pets: list[tuple[int, int, int, int, int, int, int, int, int, int]] = [
+        (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    ] * (max_pet_id + 1)
+    pet_names: list[str] = [""] * (max_pet_id + 1)
+    pet_source_rows: list[tuple[Any, ...]] = []
+    for pet_id, row in enumerate(pet_records, start=1):
+        name = str(row["name"])
+        elements_raw = tuple(row.get("elements", ())) + ("", "")
+        stats = row.get("stats") or {}
+        ability_name = str(row.get("ability", "")).strip()
+        ability_id = ability_ids_by_name.get(ability_name, 0)
+        if ability_name and not str(row.get("ability_description", "")).strip():
+            raise ValueError(f"pet {name} has ability {ability_name!r} but empty ability_description")
+        primary = _element_id(elements_raw[0] or "普通")
+        secondary = _maybe_element_id(elements_raw[1] or "")
+        pet_tuple = (
+            pet_id,
+            _required_int(stats.get("hp"), 1),
+            _required_int(stats.get("atk_phys"), 0),
+            _required_int(stats.get("atk_mag"), 0),
+            _required_int(stats.get("def_phys"), 0),
+            _required_int(stats.get("def_mag"), 0),
+            _required_int(stats.get("speed"), 0),
+            primary,
+            secondary if secondary is not None else -1,
+            ability_id,
+        )
+        pets[pet_id] = pet_tuple
+        pet_names[pet_id] = name
+        pet_source_rows.append((
+            pet_id,
+            name,
+            str(row.get("lineage_key", "")),
+            str(row.get("form_type", "")),
+            primary,
+            secondary,
+            ability_id,
+            *pet_tuple[1:7],
+        ))
 
-        pet_skills: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (max_pet_id + 1)
-        skill_accum: list[list[int]] = [[] for _ in range(max_pet_id + 1)]
-        for row in _rows(conn, "SELECT pet_id, skill_id FROM pet_skills WHERE skill_id IS NOT NULL ORDER BY pet_id, sort_order, id"):
-            if len(skill_accum[row["pet_id"]]) < 4:
-                skill_accum[row["pet_id"]].append(row["skill_id"])
-        for pet_id, ids in enumerate(skill_accum):
-            pet_skills[pet_id] = tuple((ids + [0, 0, 0, 0])[:4])  # type: ignore[assignment]
+    skills: list[tuple[int, int, int, int, int, int, int, int]] = [
+        (0, 0, 0, 0, 0, 0, 1, 0)
+    ] * (max_skill_id + 1)
+    skill_names: list[str] = [""] * (max_skill_id + 1)
+    skill_effect_texts: list[str] = [""] * (max_skill_id + 1)
+    skill_flavor_texts: list[str] = [""] * (max_skill_id + 1)
+    skill_ids_by_text: dict[str, int] = {}
+    skill_source_rows: list[tuple[Any, ...]] = []
+    skill_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
+    skill_effect_source_rows: list[tuple[Any, ...]] = []
+    for skill_id, row in enumerate(skill_records, start=1):
+        name = str(row["name"])
+        element_id = _element_id(row.get("element", "普通"))
+        category_code = _category_code(row.get("category", "物攻"))
+        skill_dam_type = _required_int(row.get("skill_dam_type"), 0)
+        energy = _required_int(row.get("energy"), 0)
+        power = _required_int(row.get("power"), 0)
+        flags = _required_int(row.get("flags"), 0)
+        effect_text = str(row.get("effect_text") or "")
+        flavor_text = str(row.get("flavor_text") or "")
+        skills[skill_id] = (skill_id, element_id, category_code, energy, power, flags, 1, skill_dam_type)
+        skill_names[skill_id] = name
+        skill_effect_texts[skill_id] = effect_text
+        skill_flavor_texts[skill_id] = flavor_text
+        for text_key in (effect_text, flavor_text):
+            if text_key and text_key not in skill_ids_by_text:
+                skill_ids_by_text[text_key] = skill_id
+        skill_source_rows.append((
+            skill_id,
+            name,
+            element_id,
+            category_code,
+            skill_dam_type,
+            energy,
+            power,
+            flags,
+            effect_text,
+            flavor_text,
+        ))
+        for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
+            effect = _effect_row(raw_effect, source_name=name)
+            skill_effect_keyed.append((skill_id, effect))
+            skill_effect_source_rows.append((skill_id, *effect, order))
 
-        leader_form_by_pet = [0] * (max_pet_id + 1)
-        for row in _rows(conn, "SELECT source_pet_id, leader_pet_id FROM pet_transforms ORDER BY source_pet_id"):
-            if 0 <= row["source_pet_id"] <= max_pet_id:
-                leader_form_by_pet[row["source_pet_id"]] = row["leader_pet_id"]
+    ability_names: list[str] = [""] * (max_ability_id + 1)
+    ability_descriptions: list[str] = [""] * (max_ability_id + 1)
+    ability_source_rows: list[tuple[Any, ...]] = []
+    ability_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
+    ability_effect_source_rows: list[tuple[Any, ...]] = []
+    for ability_id, row in enumerate(ability_records, start=1):
+        name = str(row["name"])
+        desc = str(row.get("description") or "")
+        ability_names[ability_id] = name
+        ability_descriptions[ability_id] = desc
+        ability_source_rows.append((
+            ability_id,
+            name,
+            desc,
+            _required_int(row.get("flags"), 0),
+            str(row.get("source_version", "")),
+        ))
+        for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
+            effect = _effect_row(raw_effect, source_name=name)
+            ability_effect_keyed.append((ability_id, effect))
+            ability_effect_source_rows.append((ability_id, *effect, order))
 
-        pet_ids_by_name = {name: idx for idx, name in enumerate(pet_names) if name}
-        form_transform_by_pet = [0] * (max_pet_id + 1)
-        for name, pet_id in pet_ids_by_name.items():
-            if "棋骑士" not in name:
+    pet_skills: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (max_pet_id + 1)
+    pet_skill_source_rows: list[tuple[int, int, int]] = []
+    for pet_id, row in enumerate(pet_records, start=1):
+        ids: list[int] = []
+        for link in row.get("skills", ()) or ():
+            skill_id = skill_ids_by_name.get(str(link.get("name", "")).strip())
+            if not skill_id:
+                source_id = _safe_int(link.get("source_id"))
+                skill_id = skill_ids_by_source.get(source_id or 0, 0)
+            if not skill_id:
                 continue
-            target = name.replace("棋骑士", "棋绮后")
-            form_transform_by_pet[pet_id] = pet_ids_by_name.get(target, 0)
+            pet_skill_source_rows.append((pet_id, skill_id, _required_int(link.get("sort_order"), 0)))
+            if len(ids) < 4:
+                ids.append(skill_id)
+        pet_skills[pet_id] = tuple((ids + [0, 0, 0, 0])[:4])  # type: ignore[assignment]
 
-        skill_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
-        for row in _rows(conn, "SELECT skill_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM skill_effects ORDER BY skill_id, sort_order, id"):
-            effect = _effect_row(row)
-            skill_effect_keyed.append((row["skill_id"], effect))
-        skill_effect_rows = tuple(item[1] for item in skill_effect_keyed)
+    leader_transform_rows = _leader_transform_rows(pet_records, pet_ids_by_name)
+    leader_form_by_pet = [0] * (max_pet_id + 1)
+    for source_id, leader_id, _reason in leader_transform_rows:
+        if 0 <= source_id <= max_pet_id:
+            leader_form_by_pet[source_id] = leader_id
 
-        ability_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
-        ability_flags = [0] * (max_ability_id + 1)
-        for row in _rows(conn, "SELECT ability_id, timing_code, tag_code, flags, params_json, condition, sort_order FROM ability_effects ORDER BY ability_id, sort_order, id"):
-            effect = _effect_row(row)
-            ability_effect_keyed.append((row["ability_id"], effect))
-        ability_effect_rows = tuple(item[1] for item in ability_effect_keyed)
-        # Populate ABILITY_FLAGS from ability flag semantics
-        # joined against the ability_effect_ids provenance table.  This is
-        # the "fourth outcome" path — runtime row codegen above stays
-        # untouched; passive bits are layered on after.
-        ability_flag_artifact.populate(
-            conn,
-            effect_to_flag=ability_flag_artifact.load_effect_flag_table(),
-            ability_flags=ability_flags,
-        )
-        skipped_effect_stats: tuple[tuple[int, int], ...] = ()
+    form_transform_by_pet = [0] * (max_pet_id + 1)
+    for name, pet_id in pet_ids_by_name.items():
+        if "棋骑士" not in name:
+            continue
+        target = name.replace("棋骑士", "棋绮后")
+        form_transform_by_pet[pet_id] = pet_ids_by_name.get(target, 0)
 
-        hot = _format_module(
-            CATALOG_VERSION=CATALOG_VERSION,
-            SCHEMA_VERSION=SCHEMA_VERSION,
-            SOURCE_HASH=source_hash,
-            ELEMENT_COUNT=len(elements),
-            PETS=tuple(pets),
-            SKILLS=tuple(skills),
-            PET_SKILLS=tuple(pet_skills),
-            LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
-            FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
-            TYPE_CHART_BPS=_type_chart_bps(elements),
-            SKILL_EFFECT_ROWS=skill_effect_rows,
-            SKILL_EFFECT_RANGES=_ranges(max_skill_id, skill_effect_keyed),
-            ABILITY_EFFECT_ROWS=ability_effect_rows,
-            ABILITY_EFFECT_RANGES=_ranges(max_ability_id, ability_effect_keyed),
-            ABILITY_FLAGS=tuple(ability_flags),
-            SKIPPED_EFFECT_STATS=skipped_effect_stats,
-        )
-        debug = _format_module(
-            CATALOG_VERSION=CATALOG_VERSION,
-            SCHEMA_VERSION=SCHEMA_VERSION,
-            SOURCE_HASH=source_hash,
-            ELEMENT_NAMES=elements,
-            PET_NAMES=tuple(pet_names),
-            SKILL_NAMES=tuple(skill_names),
-            SKILL_DESCRIPTIONS=tuple(skill_effect_texts),
-            SKILL_EFFECT_TEXTS=tuple(skill_effect_texts),
-            SKILL_FLAVOR_TEXTS=tuple(skill_flavor_texts),
-            ABILITY_NAMES=tuple(ability_names),
-            ABILITY_DESCRIPTIONS=tuple(ability_descriptions),
-            PET_IDS_BY_NAME={name: idx for idx, name in enumerate(pet_names) if name},
-            SKILL_IDS_BY_NAME={name: idx for idx, name in enumerate(skill_names) if name},
-            SKILL_IDS_BY_TEXT=skill_ids_by_text,
-            LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
-            FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
-            BLOODLINE_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodlines ORDER BY id")},
-            BLOODLINE_MAGIC_IDS_BY_NAME={row["name"]: row["id"] for row in _rows(conn, "SELECT id, name FROM bloodline_magics ORDER BY id")},
-            SKIPPED_EFFECT_STATS=skipped_effect_stats,
-        )
-        hot_path.parent.mkdir(parents=True, exist_ok=True)
-        debug_path.parent.mkdir(parents=True, exist_ok=True)
-        hot_path.write_text(hot, encoding="utf-8")
-        debug_path.write_text(debug, encoding="utf-8")
-        return hot_path, debug_path
-    finally:
-        conn.close()
+    ability_effect_id_rows = _ability_effect_id_rows(ability_records, ability_ids_by_name)
+    ability_flags = [0] * (max_ability_id + 1)
+    effect_to_flag = ability_flag_artifact.load_effect_flag_table()
+    ability_flag_artifact.populate(
+        ability_effect_id_rows,
+        effect_to_flag=effect_to_flag,
+        ability_flags=ability_flags,
+    )
+
+    source_hash = content_hash({
+        "elements": tuple((idx, name) for idx, name in enumerate(elements)),
+        "pets": tuple(pet_source_rows),
+        "pet_transforms": tuple(leader_transform_rows),
+        "skills": tuple(skill_source_rows),
+        "abilities": tuple(ability_source_rows),
+        "pet_skills": tuple(pet_skill_source_rows),
+        "skill_effects": tuple(skill_effect_source_rows),
+        "ability_effects": tuple(ability_effect_source_rows),
+        "ability_effect_ids": tuple(ability_effect_id_rows),
+        "ability_flags_from_effects_rules": ability_flag_artifact.normalized_payload(effect_to_flag),
+        "bloodlines": tuple(BLOODLINE_CATALOG_ROWS),
+        "bloodline_magics": tuple(BLOODLINE_MAGIC_CATALOG_ROWS),
+    })
+    skipped_effect_stats: tuple[tuple[int, int], ...] = ()
+
+    hot = _format_module(
+        CATALOG_VERSION=CATALOG_VERSION,
+        SCHEMA_VERSION=SCHEMA_VERSION,
+        SOURCE_HASH=source_hash,
+        ELEMENT_COUNT=len(elements),
+        PETS=tuple(pets),
+        SKILLS=tuple(skills),
+        PET_SKILLS=tuple(pet_skills),
+        LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
+        FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
+        TYPE_CHART_BPS=_type_chart_bps(elements),
+        SKILL_EFFECT_ROWS=tuple(item[1] for item in skill_effect_keyed),
+        SKILL_EFFECT_RANGES=_ranges(max_skill_id, skill_effect_keyed),
+        ABILITY_EFFECT_ROWS=tuple(item[1] for item in ability_effect_keyed),
+        ABILITY_EFFECT_RANGES=_ranges(max_ability_id, ability_effect_keyed),
+        ABILITY_FLAGS=tuple(ability_flags),
+        SKIPPED_EFFECT_STATS=skipped_effect_stats,
+    )
+    debug = _format_module(
+        CATALOG_VERSION=CATALOG_VERSION,
+        SCHEMA_VERSION=SCHEMA_VERSION,
+        SOURCE_HASH=source_hash,
+        ELEMENT_NAMES=elements,
+        PET_NAMES=tuple(pet_names),
+        SKILL_NAMES=tuple(skill_names),
+        SKILL_DESCRIPTIONS=tuple(skill_effect_texts),
+        SKILL_EFFECT_TEXTS=tuple(skill_effect_texts),
+        SKILL_FLAVOR_TEXTS=tuple(skill_flavor_texts),
+        ABILITY_NAMES=tuple(ability_names),
+        ABILITY_DESCRIPTIONS=tuple(ability_descriptions),
+        PET_IDS_BY_NAME=pet_ids_by_name,
+        SKILL_IDS_BY_NAME=skill_ids_by_name,
+        SKILL_IDS_BY_TEXT=skill_ids_by_text,
+        LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
+        FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
+        BLOODLINE_IDS_BY_NAME={row[2]: row[0] for row in BLOODLINE_CATALOG_ROWS},
+        BLOODLINE_MAGIC_IDS_BY_NAME={row[2]: row[0] for row in BLOODLINE_MAGIC_CATALOG_ROWS},
+        SKIPPED_EFFECT_STATS=skipped_effect_stats,
+    )
+    hot_path.parent.mkdir(parents=True, exist_ok=True)
+    debug_path.parent.mkdir(parents=True, exist_ok=True)
+    hot_path.write_text(hot, encoding="utf-8")
+    debug_path.write_text(debug, encoding="utf-8")
+    return hot_path, debug_path
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", type=Path, default=None)
+    parser.add_argument("--pak-dir", type=Path, default=DEFAULT_PAK_DATA_DIR)
     args = parser.parse_args()
-    hot_path, debug_path = compile_catalogs(args.db)
+    hot_path, debug_path = compile_catalogs(args.pak_dir)
     print(f"Compiled kernel catalog -> {hot_path}")
     print(f"Compiled debug catalog -> {debug_path}")
 

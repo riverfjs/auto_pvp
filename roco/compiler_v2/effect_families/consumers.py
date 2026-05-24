@@ -55,8 +55,8 @@ def _build_consumer_index(
 def _build_team_used(teams: list[dict], pets: list[dict]) -> tuple[set[str], set[str]]:
     """Return (team_used_skill_names, team_used_ability_names) by canonical name.
 
-    Mirrors :func:`roco.data.import_db.import_teams` pet resolution: a team
-    pet's full descriptive ``name`` (e.g. ``星光狮（月光能量的样子）``) often
+    Mirrors canonical team pet resolution: a team pet's full descriptive
+    ``name`` (e.g. ``星光狮（月光能量的样子）``) often
     has no canonical match because pets.jsonl carries form-stripped names
     like ``星光狮``.  Fall back to the team pet's ``name_short`` so ability
     lookups don't drop ~22 form-suffixed pet abilities (化茧 / 电流刺激 …).

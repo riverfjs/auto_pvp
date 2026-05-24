@@ -81,7 +81,6 @@
     "LEGENDARY_BATTLE_AWARD",
     "LEGENDARY_BATTLE_EVENT",
     "LEGENDARY_CHALLENGE_CONF",
-    "LEVEL_SKILL_CONF",
     "LOTTERY_POOL_CONF",
     "LOTTERY_POOL_REWARD_CONF",
     "MAGE_CONF",
@@ -133,7 +132,6 @@
     "PET_FILTER_CONF",
     "PET_FREE_REWARD_CONF",
     "PET_GLOBAL_CONFIG",
-    "PET_HANDBOOK",
     "PET_HANDBOOK_REWARD",
     "PET_INFORMATION_CONF",
     "PET_INFO_CONF",
@@ -220,7 +218,6 @@
     "SKILLFULLY_EXCHANGE_CONF",
     "SKILLMACHINE_FILTER_CONF",
     "SKILL_COLOR_CONF",
-    "SKILL_FILTER_CONF",
     "SKILL_INTERACT_CONF",
     "SKILL_RANDOM_CONF",
     "SKILL_TAG",
@@ -468,8 +465,8 @@
     "combat_candidate_count": 276,
     "manual_kernel_constant_count": 31,
     "manual_semantic_binding_count": 2,
-    "referenced_combat_table_count": 15,
-    "unreferenced_combat_table_count": 261,
+    "referenced_combat_table_count": 18,
+    "unreferenced_combat_table_count": 258,
     "unreferenced_core_table_count": 0
   },
   "tables": [
@@ -2169,7 +2166,8 @@
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/bloodline_magic.py",
         "roco/generated/bloodline_magic.py",
-        "roco/generated/static/manifest.py"
+        "roco/generated/static/manifest.py",
+        "roco/pak_query/index.py"
       ],
       "combat_candidate": true,
       "coverage": "generator_or_importer_referenced",
@@ -5844,9 +5842,11 @@
     },
     {
       "category": "battle_candidate",
-      "code_refs": [],
+      "code_refs": [
+        "roco/pak_query/index.py"
+      ],
       "combat_candidate": true,
-      "coverage": "combat_candidate_unreferenced",
+      "coverage": "referenced",
       "field_count": 22,
       "fields": [
         "blood_skill_COMMON",
@@ -5873,7 +5873,7 @@
         "machine_skill_group"
       ],
       "path": "pak-public-kit/output/data/BinData/LEVEL_SKILL_CONF.json",
-      "referenced_by_code": false,
+      "referenced_by_code": true,
       "row_count": 884,
       "table": "LEVEL_SKILL_CONF"
     },
@@ -9065,9 +9065,11 @@
     },
     {
       "category": "battle_candidate",
-      "code_refs": [],
+      "code_refs": [
+        "roco/pak_query/index.py"
+      ],
       "combat_candidate": true,
-      "coverage": "combat_candidate_unreferenced",
+      "coverage": "referenced",
       "field_count": 8,
       "fields": [
         "belong_area_handbook",
@@ -9080,7 +9082,7 @@
         "type_desc"
       ],
       "path": "pak-public-kit/output/data/BinData/PET_HANDBOOK.json",
-      "referenced_by_code": false,
+      "referenced_by_code": true,
       "row_count": 375,
       "table": "PET_HANDBOOK"
     },
@@ -12175,9 +12177,11 @@
     },
     {
       "category": "battle_candidate",
-      "code_refs": [],
+      "code_refs": [
+        "roco/pak_query/index.py"
+      ],
       "combat_candidate": true,
-      "coverage": "combat_candidate_unreferenced",
+      "coverage": "referenced",
       "field_count": 6,
       "fields": [
         "filter_desc",
@@ -12188,7 +12192,7 @@
         "id"
       ],
       "path": "pak-public-kit/output/data/BinData/SKILL_FILTER_CONF.json",
-      "referenced_by_code": false,
+      "referenced_by_code": true,
       "row_count": 24,
       "table": "SKILL_FILTER_CONF"
     },
@@ -13317,7 +13321,6 @@
       "category": "core_battle",
       "code_refs": [
         "roco/compiler_v2/build.py",
-        "roco/compiler_v2/catalog_compiler.py",
         "roco/compiler_v2/static_artifacts/core.py",
         "roco/generated/skill_dam_types.py",
         "roco/generated/static/manifest.py",
