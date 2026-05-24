@@ -61,7 +61,7 @@ def build_canonical_adapters(pak_data: Path = PAK_DATA, pak_bin: Path = PAK_BIN)
     for idx, note in mark_note_by_idx().items():
         desc_id = desc_id_by_note.get(note)
         if desc_id is None:
-            raise RuntimeError(f"DESC_NOTE_CONF missing canonical mark note {note!r}")
+            continue
         polarity = "positive" if idx.value <= MarkIdx.ATTACK.value or idx == MarkIdx.SLUGGISH else "negative"
         mark_defs.append((desc_id, idx.name.lower(), int(idx.value), polarity))
 

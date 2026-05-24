@@ -9,7 +9,10 @@ from roco.common.constants import (
     TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS, TYPE_NEUTRAL_BPS,
 )
 from roco.common.enums import Element
-from roco.generated.type_chart import TYPE_CHART_BPS
+from roco.compiler_v2.build import build_static_bundle
+from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
+
+TYPE_CHART_BPS = build_type_chart_bps(build_static_bundle())
 
 DAMAGE_FORMULA_CONSTANT = DAMAGE_CONST_BPS / BPS
 STAB_MULTIPLIER = STAB_BPS / BPS

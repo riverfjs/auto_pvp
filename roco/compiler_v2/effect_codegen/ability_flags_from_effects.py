@@ -3,10 +3,9 @@
 Pak ability rows point at either ``EFFECT_CONF`` rows or direct
 ``BUFF_CONF`` rows.  Production derivation follows that structure:
 ``SKILL_CONF(type=2).skill_result`` gives the referenced ids, and
-``BUFF_CONF -> BUFFBASE_CONF`` supplies the semantic axis.  The artifact
-layer joins the derived ``skill_result.effect_id → AbilityFlag`` map
-with generated ``ability_effect_ids`` provenance rows to populate
-``ABILITY_FLAGS`` in :mod:`roco.generated.catalog_hot`.
+``BUFF_CONF -> BUFFBASE_CONF`` supplies the semantic axis.  The artifact layer
+joins the derived ``skill_result.effect_id → AbilityFlag`` map with generated
+``ability_effect_ids`` provenance rows to populate the runtime catalog.
 
 This loader is intentionally strict: unsupported multiplier or fixture
 evidence format is reported loudly.  Temporary fixture files may still

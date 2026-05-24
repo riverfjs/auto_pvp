@@ -25,12 +25,10 @@ from roco.common.constants import (
 )
 from roco.engine.kernel.actions import (
     can_pay_hp_for_energy,
-    energy_cap,
     focus as _focus,
     leader_transform as _leader_transform,
     pay_skill_cost_with_hp,
 )
-from roco.engine.common.rng import next_rng
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType, WeatherType
 from roco.generated import catalog_hot as hot
 from roco.generated.bloodline_magic import WILLPOWER_RUNTIME_SKILL_BY_BLOODLINE_ID
@@ -47,30 +45,25 @@ from roco.engine.kernel.catalog import (
     SKILL_HIT_COUNT,
     SKILL_POWER,
     STAT_HP,
-    STAT_SPEED,
     PET_PRIMARY,
     PET_SECONDARY,
     validate_catalog,
 )
+from roco.engine.kernel.counter import fire_counter_skill
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.damage import damage, marked_skill_cost, marked_speed
+from roco.engine.kernel.damage import damage, marked_skill_cost
 from roco.engine.kernel.op_rows import (
     TIMING_AFTER_MOVE,
     TIMING_BEFORE_MOVE,
     TIMING_CALC_DAMAGE,
     TIMING_TAKE_DAMAGE,
 )
-from roco.generated.counter_skill_table import COUNTER_SKILL_TABLE
-from roco.generated.handler_indices import H_BORROW_TEAM_SKILL, H_SKILL_MOD
 from roco.engine.kernel.ops import run_skill_timing
-from roco.engine.kernel.residual import apply_after_move, end_turn, share_gains_on_side
+from roco.engine.kernel.residual import apply_after_move, end_turn
 from roco.engine.kernel.state import (
-    COST_SCOPE_CURRENT_SLOT,
     KernelState,
     PetState,
-    active_pet,
     cost_mod_amount,
-    pack_cost_mod,
     replace_pet,
     replace_side,
     side,
@@ -78,6 +71,14 @@ from roco.engine.kernel.state import (
     weather_type,
 )
 from roco.engine.kernel.switch import check_winner, clear_barrel_after_action, faint_pet, switch
+from roco.engine.kernel.turn_flow import (
+    borrowed_skill_id,
+    choice_category,
+    choice_to_skill_id,
+    order,
+    start_turn,
+    target_skill_energy,
+)
 
 validate_catalog(hot)
 
@@ -90,30 +91,17 @@ class KernelResult(NamedTuple):
     damage_b: int
 
 
-def _choice_to_skill_id(state: KernelState, side_id: int, choice: Choice) -> int:
-    """Resolve a move-choice to the skill id of the actor at the start of the turn.
-
-    Pak attaches some skill_result rows (e.g. 风起's wind mark, 焚烧烙印's
-    burn payload) to ``cast_moment=12`` (TURN_END).  ``end_turn`` re-runs
-    those rows for the skill captured here so the effect actually fires.
-    """
-    if choice.action_code != ACTION_MOVE or not (0 <= choice.data < 4):
-        return 0
-    side_state = side(state, side_id)
-    return side_state.moves[side_state.active][choice.data]
-
-
 def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResult:
-    state = _start_turn(state)
-    first_side, rng = _order(state, c1, c2)
+    state = start_turn(state)
+    first_side, rng = order(state, c1, c2)
     state = state._replace(rng=rng)
-    skill_a = _choice_to_skill_id(state, SIDE_A, c1)
-    skill_b = _choice_to_skill_id(state, SIDE_B, c2)
+    skill_a = choice_to_skill_id(state, SIDE_A, c1)
+    skill_b = choice_to_skill_id(state, SIDE_B, c2)
     ctx = StageCtx()
     damage_a = 0
     damage_b = 0
-    category_a = _choice_category(state, SIDE_A, c1)
-    category_b = _choice_category(state, SIDE_B, c2)
+    category_a = choice_category(state, SIDE_A, c1)
+    category_b = choice_category(state, SIDE_B, c2)
     if first_side == SIDE_A:
         second_slot = state.side_b.active
         state, damage_a = _execute(state, SIDE_A, c1, SIDE_B, ctx, True, category_b, c2.data)
@@ -127,88 +115,6 @@ def update(state: KernelState, c1: Choice, c2: Choice, options=()) -> KernelResu
     state = end_turn(state, skill_a, skill_b)
     state = check_winner(state)
     return KernelResult(state, state.winner, first_side, damage_a, damage_b)
-
-
-def _start_turn(state: KernelState) -> KernelState:
-    # Reset per-actor mark-dispel tallies so this turn's TURN_END ops
-    # only see dispels their own actor caused this turn.
-    state = state._replace(
-        turn=state.turn + 1,
-        marks_dispelled_a=0,
-        marks_dispelled_b=0,
-    )
-    state, rng = _start_turn_side(state, SIDE_A, state.rng)
-    state, rng = _start_turn_side(state._replace(rng=rng), SIDE_B, rng)
-    return state._replace(rng=rng)
-
-
-def _start_turn_side(state: KernelState, side_id: int, rng: int) -> tuple[KernelState, int]:
-    side_state = side(state, side_id)
-    slot = side_state.active
-    pet = side_state.pets[slot]
-    if pet.fainted or not (pet.ability_flags & int(AbilityFlag.SHUFFLE_SKILLS_REDUCE_LAST)):
-        return state, rng
-    moves, rng = _shuffle_four(side_state.moves[slot], rng)
-    side_state = side_state._replace(
-        moves=side_state.moves[:slot] + (moves,) + side_state.moves[slot + 1:],
-        cost_mods=pack_cost_mod(4, 1, COST_SCOPE_CURRENT_SLOT, 3),
-    )
-    return replace_side(state, side_id, side_state), rng
-
-
-def _shuffle_four(values: tuple[int, int, int, int], rng: int) -> tuple[tuple[int, int, int, int], int]:
-    data = [values[0], values[1], values[2], values[3]]
-    for idx in (3, 2, 1):
-        rng = next_rng(rng)
-        swap = rng % (idx + 1)
-        data[idx], data[swap] = data[swap], data[idx]
-    return (data[0], data[1], data[2], data[3]), rng
-
-
-def _order(state: KernelState, c1: Choice, c2: Choice) -> tuple[int, int]:
-    pri_a = _priority(state, SIDE_A, c1)
-    pri_b = _priority(state, SIDE_B, c2)
-    if pri_a != pri_b:
-        return (SIDE_A if pri_a > pri_b else SIDE_B, state.rng)
-    speed_a = marked_speed(_speed(active_pet(state.side_a)), state.side_a.marks)
-    speed_b = marked_speed(_speed(active_pet(state.side_b)), state.side_b.marks)
-    if speed_a != speed_b:
-        return (SIDE_A if speed_a > speed_b else SIDE_B, state.rng)
-    rng = next_rng(state.rng)
-    return (SIDE_A if rng & 1 else SIDE_B, rng)
-
-
-def _priority(state: KernelState, side_id: int, choice: Choice) -> int:
-    if choice.action_code == ACTION_SWITCH:
-        return 6
-    side_state = side(state, side_id)
-    pet = side_state.pets[side_state.active]
-    priority = pet.priority_boost
-    if choice.action_code == ACTION_MOVE and 0 <= choice.data < 4:
-        skill_id = side_state.moves[side_state.active][choice.data]
-        if skill_id > 0 and hot.SKILLS[skill_id][SKILL_FLAGS] & SKILL_FLAG_AGILITY:
-            priority += 1
-        priority += _ability_slot_priority(pet, choice.data)
-    return priority
-
-
-def _choice_category(state: KernelState, side_id: int, choice: Choice) -> int:
-    if choice.action_code == ACTION_MAGIC:
-        magic_id = side(state, side_id).bloodline_magic_id
-        if magic_id == MAGIC_LEADER_TRANSFORM:
-            return 0
-        if magic_id == MAGIC_WILLPOWER:
-            return SkillCategory.MAGICAL.value
-        return 0
-    if choice.action_code != ACTION_MOVE:
-        return 0
-    side_state = side(state, side_id)
-    if choice.data < 0 or choice.data >= 4:
-        return 0
-    skill_id = side_state.moves[side_state.active][choice.data]
-    if skill_id <= 0:
-        return 0
-    return hot.SKILLS[skill_id][SKILL_CATEGORY]
 
 
 def _execute(
@@ -259,7 +165,7 @@ def _execute(
             return state, 0
         if _cooldown_at(actor.cooldowns, choice.data) > 0:
             return _focus(state, actor_side_id), 0
-        borrowed = _borrowed_skill_id(actor_side, actor_slot, skill_id, state.rng)
+        borrowed = borrowed_skill_id(actor_side, actor_slot, skill_id, state.rng)
         if borrowed > 0:
             skill_id = borrowed
         if actor.ability_flags & int(AbilityFlag.SKILL_SLOT_LOCK) and choice.data != 0:
@@ -307,7 +213,7 @@ def _execute(
     ctx.target_secondary = target_row[PET_SECONDARY]
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
-    ctx.target_skill_energy = _target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
+    ctx.target_skill_energy = target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
     ctx.target_poison_effect_stacks = (
         ctx.target_poison_stacks + _unpack_mark(target_side.marks, MarkIdx.POISON)
@@ -372,7 +278,7 @@ def _execute(
         # fire it now against the attacker.  One-shot — clears after firing
         # whether or not the attacker is still alive.
         if dealt > 0 and target.current_hp > 0:
-            state, counter_dealt = _fire_counter_skill(
+            state, counter_dealt = fire_counter_skill(
                 state, actor_side_id, actor_slot, target_side_id, target_slot, first_strike
             )
             if counter_dealt:
@@ -426,121 +332,8 @@ def _execute(
     return state, dealt
 
 
-def _fire_counter_skill(
-    state: KernelState,
-    attacker_side_id: int,
-    attacker_slot: int,
-    defender_side_id: int,
-    defender_slot: int,
-    first_strike: bool,
-) -> tuple[KernelState, int]:
-    """Fire the defender's armed counter-trigger skill against the attacker.
-
-    Backs the pak 1031xxx "应对！X" family — ``op_install_counter`` stages
-    a 70xxxxx response skill_id into ``SideState.counter_skill_id`` (via
-    ``apply_after_move``).  When the defender then takes a hit, look up
-    the skill's combat stats in :data:`COUNTER_SKILL_TABLE` and run them
-    through the shared ``damage`` path so the counter respects type chart,
-    buffs, marks, etc.  One-shot: ``counter_skill_id`` is cleared whether
-    or not the lookup produced damage.
-    """
-    defender_side = side(state, defender_side_id)
-    counter_skill_id = defender_side.counter_skill_id
-    if counter_skill_id == 0:
-        return state, 0
-    defender_side = defender_side._replace(counter_skill_id=0)
-    state = replace_side(state, defender_side_id, defender_side)
-    stats = COUNTER_SKILL_TABLE.get(counter_skill_id)
-    if stats is None:
-        return state, 0
-    power, element, category, _dam_type, _priority = stats
-    if power <= 0 or category not in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
-        return state, 0
-    attacker_side = side(state, attacker_side_id)
-    attacker = attacker_side.pets[attacker_slot]
-    defender = defender_side.pets[defender_slot]
-    if attacker.fainted or defender.fainted:
-        return state, 0
-    counter_ctx = StageCtx()
-    counter_ctx.reset(defender_side_id, defender_slot, attacker_side_id, attacker_slot, counter_skill_id)
-    counter_ctx.skill_element = element
-    counter_ctx.skill_category = category
-    counter_ctx.power = power
-    counter_ctx.hit_count = 1
-    counter_skill = (counter_skill_id, element, category, 0, power, 0, 1, 0)
-    dealt = damage(
-        defender,
-        attacker,
-        counter_skill,
-        counter_ctx,
-        state.weather,
-        defender_side.marks,
-        attacker_side.marks,
-        first_strike,
-    )
-    if dealt <= 0:
-        return state, 0
-    next_hp = max(0, attacker.current_hp - dealt)
-    attacker = attacker._replace(current_hp=next_hp)
-    attacker_side = replace_pet(attacker_side, attacker_slot, attacker)
-    state = replace_side(state, attacker_side_id, attacker_side)
-    if attacker.current_hp <= 0:
-        state = faint_pet(state, attacker_side_id, attacker_slot, defender_side_id, defender_slot)
-    return state, dealt
-
-
-def _speed(pet: PetState) -> int:
-    return hot.PETS[pet.pet_id][STAT_SPEED]
-
-
 def _run_ability_timing(actor: PetState, timing: int, ctx: StageCtx) -> None:
     ability_id = hot.PETS[actor.pet_id][PET_ABILITY]
     if ability_id <= 0 or ability_id >= len(hot.ABILITY_EFFECT_RANGES):
         return
     run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], timing, ctx)
-
-
-def _target_skill_energy(target_side, target_slot: int, target_skill_slot: int) -> int:
-    if target_skill_slot < 0 or target_skill_slot >= 4:
-        return 0
-    skill_id = target_side.moves[target_slot][target_skill_slot]
-    if skill_id <= 0:
-        return 0
-    return hot.SKILLS[skill_id][SKILL_ENERGY]
-
-
-def _ability_slot_priority(actor: PetState, slot_idx: int) -> int:
-    ability_id = hot.PETS[actor.pet_id][PET_ABILITY]
-    if ability_id <= 0 or ability_id >= len(hot.ABILITY_EFFECT_RANGES):
-        return 0
-    start, end = hot.ABILITY_EFFECT_RANGES[ability_id]
-    priority = 0
-    for idx in range(start, end):
-        row = hot.ABILITY_EFFECT_ROWS[idx]
-        if row[0] == H_SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
-            priority += row[6]
-    return priority
-
-
-def _borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> int:
-    start, end = hot.SKILL_EFFECT_RANGES[skill_id]
-    has_borrow = 0
-    for idx in range(start, end):
-        if hot.SKILL_EFFECT_ROWS[idx][0] == H_BORROW_TEAM_SKILL:
-            has_borrow = 1
-    if not has_borrow:
-        return 0
-    count = 0
-    fallback = 0
-    target_index = rng & 0xF
-    for slot, moves in enumerate(side_state.moves):
-        if slot == actor_slot:
-            continue
-        for candidate in moves:
-            if candidate <= 0:
-                continue
-            if count == target_index:
-                return candidate
-            fallback = candidate
-            count += 1
-    return fallback

@@ -1,10 +1,9 @@
 """Compiled effect primitives and trigger timings.
 
-The pak-prefix → debug-name table lives in :mod:`roco.generated.pak_ops`
-(regenerated from BUFF_CONF and engine ``op_meta`` declarations).  This
-module now only carries the small ``Timing`` enum (pak ``cast_moment`` plus
-compiler-owned pre-resolution timings) and the compiled dataclasses used by
-the data layer.
+The generated pak-prefix debug table is emitted from BUFF_CONF and engine
+``op_meta`` declarations.  This module now only carries the small ``Timing``
+enum (pak ``cast_moment`` plus compiler-owned pre-resolution timings) and the
+compiled dataclasses used by the data layer.
 
 The legacy ``PakOp`` enum has been retired: its prefix members were a
 hand-mirrored copy of pak schema that would drift on every pak update,

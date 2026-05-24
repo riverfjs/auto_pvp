@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from roco.generated import handler_indices as _hi
 from roco.common.buffbase import pack_buff_delta_from_base_ids
-from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.handler_registry import handler_indices as _hi, load_handler_indices
+from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 H_ANTI_HEAL = _hi.H_ANTI_HEAL
 H_BURN = _hi.H_BURN
@@ -42,7 +42,7 @@ _MARK_HANDLER_NAMES = {
 }
 _MARK_HANDLER_IDS = frozenset(
     value
-    for name, value in vars(_hi).items()
+    for name, value in load_handler_indices().items()
     if name.endswith("_MARK")
     and name.removeprefix("H_").removesuffix("_MARK") in _MARK_HANDLER_NAMES
 )

@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from roco.data.canonical import canonical_list
+from roco.compiler_v2.handler_registry import func_to_const, load_handler_indices
 from roco.compiler_v2.effect_families.paths import CATALOG_JSONL as EFFECT_FAMILIES_JSONL
 
 # Repo root: roco/compiler_v2/pak_schema_audit.py -> parents[2]
@@ -171,22 +172,8 @@ def _load_exact_rules() -> list[dict]:
     return []
 
 
-def _func_to_const(name: str) -> str:
-    if name == "_noop":
-        return "H_NOOP"
-    if name.startswith("op_"):
-        return "H_" + name[3:].upper()
-    return "H_" + name.upper()
-
-
 def _handler_indices() -> dict[str, int]:
-    from roco.generated import handler_indices as hi
-
-    return {
-        k: int(v)
-        for k, v in vars(hi).items()
-        if k.startswith("H_") and isinstance(v, int)
-    }
+    return load_handler_indices()
 
 
 def _load_handler_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[dict]]:
@@ -210,7 +197,7 @@ def _load_handler_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[d
         by_order[order] = {
             "buffbase_order": order,
             "buff_type": symbol,
-            "handler": _func_to_const(handler_name),
+            "handler": func_to_const(handler_name),
             "alias": alias,
             "source": "engine_op_meta",
         }
@@ -221,7 +208,7 @@ def _load_handler_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[d
         by_prefix[prefix] = {
             "prefix": prefix,
             "buff_type": symbol,
-            "handler": _func_to_const(handler_name),
+            "handler": func_to_const(handler_name),
             "alias": alias,
             "source": "engine_op_meta",
         }
@@ -230,7 +217,7 @@ def _load_handler_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[d
     for base_id, (handler_name, note) in resolved.raw.get("base_id", {}).items():
         overrides.append({
             "base_id": int(base_id),
-            "handler": _func_to_const(handler_name),
+            "handler": func_to_const(handler_name),
             "note": note,
             "source": "engine_op_meta",
         })

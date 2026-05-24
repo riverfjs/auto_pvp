@@ -10,11 +10,12 @@ from typing import Any
 
 from roco.common.enums import ELEMENT_NAMES, SkillCategory, normalize_element_name
 from roco.compiler_v2 import ability_flags as ability_flag_artifact
+from roco.compiler_v2.build import build_static_bundle
+from roco.compiler_v2.static_artifacts.bloodline_magic import build_bloodline_magic_tables
+from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
 from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
-from roco.generated.bloodline_magic import BLOODLINE_CATALOG_ROWS, BLOODLINE_MAGIC_CATALOG_ROWS
-from roco.generated.type_chart import TYPE_CHART_BPS as _PAK_TYPE_CHART_BPS
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
@@ -77,12 +78,13 @@ def _category_code(raw: object) -> int:
 def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ...]:
     """Return the pak-derived type-effectiveness table used by the kernel."""
 
-    if len(element_names) != len(_PAK_TYPE_CHART_BPS):
+    chart = build_type_chart_bps(build_static_bundle())
+    if len(element_names) != len(chart):
         raise RuntimeError(
             f"elements table has {len(element_names)} rows but pak type chart "
-            f"has {len(_PAK_TYPE_CHART_BPS)}; regenerate via gen_prefix_map"
+            f"has {len(chart)}; regenerate via gen_prefix_map"
         )
-    return _PAK_TYPE_CHART_BPS
+    return chart
 
 
 def _effect_row(row_tuple: Iterable[object], *, source_name: str) -> tuple[int, ...]:
@@ -378,6 +380,9 @@ def compile_catalogs(
         effect_to_flag=effect_to_flag,
         ability_flags=ability_flags,
     )
+    bloodline_tables = build_bloodline_magic_tables(build_static_bundle())
+    bloodline_catalog_rows = bloodline_tables["bloodline_catalog_rows"]
+    bloodline_magic_catalog_rows = bloodline_tables["supported_magic_catalog_rows"]
 
     source_hash = content_hash({
         "elements": tuple((idx, name) for idx, name in enumerate(elements)),
@@ -390,8 +395,8 @@ def compile_catalogs(
         "ability_effects": tuple(ability_effect_source_rows),
         "ability_effect_ids": tuple(ability_effect_id_rows),
         "ability_flags_from_effects_rules": ability_flag_artifact.normalized_payload(effect_to_flag),
-        "bloodlines": tuple(BLOODLINE_CATALOG_ROWS),
-        "bloodline_magics": tuple(BLOODLINE_MAGIC_CATALOG_ROWS),
+        "bloodlines": tuple(bloodline_catalog_rows),
+        "bloodline_magics": tuple(bloodline_magic_catalog_rows),
     })
     skipped_effect_stats: tuple[tuple[int, int], ...] = ()
 
@@ -430,8 +435,8 @@ def compile_catalogs(
         SKILL_IDS_BY_TEXT=skill_ids_by_text,
         LEADER_FORM_BY_PET=tuple(leader_form_by_pet),
         FORM_TRANSFORM_BY_PET=tuple(form_transform_by_pet),
-        BLOODLINE_IDS_BY_NAME={row[2]: row[0] for row in BLOODLINE_CATALOG_ROWS},
-        BLOODLINE_MAGIC_IDS_BY_NAME={row[2]: row[0] for row in BLOODLINE_MAGIC_CATALOG_ROWS},
+        BLOODLINE_IDS_BY_NAME={row[2]: row[0] for row in bloodline_catalog_rows},
+        BLOODLINE_MAGIC_IDS_BY_NAME={row[2]: row[0] for row in bloodline_magic_catalog_rows},
         SKIPPED_EFFECT_STATS=skipped_effect_stats,
     )
     hot_path.parent.mkdir(parents=True, exist_ok=True)

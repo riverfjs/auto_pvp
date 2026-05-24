@@ -92,13 +92,16 @@ to produce a diff.
 
 Runtime and data generated files live in `roco/generated/`:
 
+The stable handler registry source lives at
+`roco/compiler_v2/handler_registry.json`; `gen_prefix_map` emits
+`handler_indices.py`, `handler_order.py`, and `handler_table.py` from it.
+
 ```text
 catalog_hot.py              kernel runtime catalog
 catalog_debug.py            names and debug lookup tables
 handler_table.py            handler_idx -> op_* function table
 handler_indices.py          H_* constants
 handler_order.py            append-only handler order
-handler_registry.json       persisted handler registry
 prefix_handler_map.json     BUFF_CONF / BUFFBASE_CONF handler maps
 buffbase_params.py          BUFFBASE_CONF params
 pak_ops.py                  pak op/prefix metadata
@@ -112,14 +115,14 @@ mark_groups.py              mark cover groups
 natures.py                  nature stat modifiers
 canonical_adapters.py       pak -> canonical adapters
 static/lua_enums.py         Lua enum snapshot
-static/pak_axes.py          compiler-only effect/buff axes joined to enum names
+static/pak_axes.py          generated effect/buff axes joined to enum names
 static/manifest.py          source hashes
 audit/effect_families.jsonl generated machine-readable audit
 ```
 
-Top-level generated modules are runtime/data adapters. `static/pak_axes.py` is a
-compiler-only effect/buff axis snapshot and intentionally does not duplicate
-`battle_globals.py` or `skill_dam_types.py`.
+Top-level generated modules are runtime/data adapters. `static/pak_axes.py` is
+emitted for inspection and intentionally does not duplicate `battle_globals.py`
+or `skill_dam_types.py`.
 
 `roco/generated/audit/effect_families.jsonl` is not a rule file. It is generated
 audit data. Do not edit it by hand.

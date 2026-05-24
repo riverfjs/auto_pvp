@@ -7,7 +7,7 @@ keys are still effect ids, currently weather setters.
 
 from __future__ import annotations
 
-from roco.generated.weather_decoders import WEATHER_EFFECT_DECODERS
+from roco.compiler_v2.static_artifacts.weather import build_weather_effect_decoders
 
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 
@@ -15,7 +15,7 @@ from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 def _weather_outcomes() -> dict[int, EmitOutcome | tuple[EmitOutcome, int]]:
     """Adapt :data:`WEATHER_EFFECT_DECODERS` (tuples) to outcome form."""
     out: dict[int, EmitOutcome | tuple[EmitOutcome, int]] = {}
-    for eid, row in WEATHER_EFFECT_DECODERS.items():
+    for eid, row in build_weather_effect_decoders().items():
         h, p0, p1, p2, p3, timing_override = row
         outcome = EmitOutcome(h, p0, p1, p2, p3, 1)
         out[int(eid)] = (outcome, int(timing_override)) if timing_override else outcome

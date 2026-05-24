@@ -26,7 +26,7 @@ from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
     load_ability_flags_from_effects,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
-from roco.generated.weather_decoders import WEATHER_EFFECT_DECODERS
+from roco.compiler_v2.static_artifacts.weather import build_weather_effect_decoders
 
 from .classify import (
     _buff_family_key,
@@ -182,7 +182,7 @@ def build_families() -> list[dict]:
     pak = PakTables(PAK_DATA)
     desc_notes = _load_desc_notes()
     exact_emit_ids = _load_exact_rules()
-    weather_ids = set(WEATHER_EFFECT_DECODERS.keys())
+    weather_ids = set(build_weather_effect_decoders().keys())
     ability_flag_rules = load_ability_flags_from_effects(
         effect_conf=pak.effect_conf,
         buff_conf=pak.buff_conf,

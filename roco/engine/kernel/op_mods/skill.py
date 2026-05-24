@@ -5,6 +5,12 @@ from __future__ import annotations
 from roco.common.constants import BPS
 from roco.common.enums import Element
 from roco.common.packing import _add_element_nibble, _add_element_u8
+from roco.common.skill_mod_modes import (
+    ENTRY_MOD_COST_REDUCE,
+    ENTRY_MOD_POISON_STACKS,
+    ENTRY_MOD_POWER_BPS,
+    ENTRY_MOD_POWER_FLAT,
+)
 from roco.engine.kernel.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_meta import handles_buff
@@ -16,12 +22,6 @@ from roco.engine.kernel.op_rows import (
     ROW_TIMING,
     TIMING_BEFORE_MOVE,
 )
-
-ENTRY_MOD_POWER_BPS = 1
-ENTRY_MOD_POWER_FLAT = 2
-ENTRY_MOD_COST_REDUCE = 3
-ENTRY_MOD_POISON_STACKS = 4
-
 
 @handles_buff([
     ("BFT_INC_DAM_BY_ATTACK_FIRST", "PRIORITY"),

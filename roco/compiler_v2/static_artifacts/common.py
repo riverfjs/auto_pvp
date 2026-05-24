@@ -14,7 +14,7 @@ PAK_DATA = DEFAULT_PAK_DATA_DIR
 PAK_BIN = DEFAULT_PAK_DATA_DIR / "BinData"
 
 INIT_PATH = GEN_DIR / "__init__.py"
-REGISTRY_PATH = GEN_DIR / "handler_registry.json"
+REGISTRY_PATH = ROOT / "roco" / "compiler_v2" / "handler_registry.json"
 INDICES_PATH = GEN_DIR / "handler_indices.py"
 ORDER_PATH = GEN_DIR / "handler_order.py"
 TABLE_PATH = GEN_DIR / "handler_table.py"

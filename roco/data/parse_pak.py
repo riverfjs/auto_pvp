@@ -16,13 +16,14 @@ import json
 import os
 import re
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.effect_codegen import PakTables, build_ability_effect_rows, generate_effect_rows
-from roco.generated.canonical_adapters import CANONICAL_MARK_DEFS, MOVE_CATEGORY_TO_CN
+from roco.compiler_v2.static_artifacts.canonical_adapters import build_canonical_adapters
 from roco.data.utils import content_hash, with_canonical_hash, write_jsonl
-from roco.generated.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT_NAME
 
 
 DEFAULT_PAK_DATA_DIR = Path(
@@ -31,6 +32,17 @@ DEFAULT_PAK_DATA_DIR = Path(
         str(Path(__file__).resolve().parents[2] / "pak-public-kit" / "output" / "data"),
     )
 )
+
+
+@lru_cache(maxsize=4)
+def _canonical_adapters(pak_dir: str) -> dict[str, Any]:
+    root = Path(pak_dir)
+    return build_canonical_adapters(root, root / "BinData")
+
+
+@lru_cache(maxsize=4)
+def _skill_dam_type_to_element_name(pak_dir: str) -> dict[int, str]:
+    return build_static_bundle(pak_data_dir=Path(pak_dir)).skill_dam_type_to_element_name
 
 DESC_ID_RE = re.compile(r"<desc_id=(\d+)>(.*?)</>")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -132,7 +144,7 @@ def build_skills(data: PakData, desc_notes: dict[int, str], pak_tables: PakTable
         name = _skill_name(row, desc_notes)
         if not name or name in emitted_names:
             continue
-        record = _skill_record(row, desc_notes)
+        record = _skill_record(row, desc_notes, data.root)
         skill_row = data.skill_conf.get(str(sid), row)
         effect_rows, effect_gaps = generate_effect_rows(skill_row, pak_tables)
         record["effect_rows"] = effect_rows
@@ -276,7 +288,7 @@ def build_pets(
 
 def build_marks(data: PakData, desc_notes: dict[int, str]) -> list[dict]:
     rows: list[dict] = []
-    for desc_id, code, packed_index, polarity in CANONICAL_MARK_DEFS:
+    for desc_id, code, packed_index, polarity in _canonical_adapters(str(data.root))["canonical_mark_defs"]:
         raw = data.desc_note_conf.get(str(desc_id), {})
         name = str(raw.get("note", "")).strip()
         effect_text = _clean_desc(raw.get("desc", desc_notes.get(desc_id, "")), desc_notes)
@@ -317,11 +329,15 @@ def _skill_flags(row: dict[str, Any]) -> int:
     return flags
 
 
-def _skill_record(row: dict[str, Any], desc_notes: dict[int, str]) -> dict:
+def _skill_record(
+    row: dict[str, Any],
+    desc_notes: dict[int, str],
+    pak_dir: Path = DEFAULT_PAK_DATA_DIR,
+) -> dict:
     move = row.get("_move_record") or {}
     name, desc = _skill_text(row, desc_notes, fallback_name=True)
-    element = _skill_element(row, move)
-    category = _skill_category(row, move)
+    element = _skill_element(row, move, pak_dir)
+    category = _skill_category(row, move, pak_dir)
     power = _first_int(row.get("dam_para"), move.get("power") or 0)
     energy = _first_int(row.get("energy_cost"), move.get("energy_cost") or 0)
     return {
@@ -341,17 +357,17 @@ def _skill_record(row: dict[str, Any], desc_notes: dict[int, str]) -> dict:
     }
 
 
-def _skill_element(row: dict[str, Any], move: dict[str, Any]) -> str:
+def _skill_element(row: dict[str, Any], move: dict[str, Any], pak_dir: Path = DEFAULT_PAK_DATA_DIR) -> str:
     if move:
         zh = (((move.get("move_type") or {}).get("localized") or {}).get("zh") or "").strip()
         if zh and zh != "首领":
             return zh
-    return SKILL_DAM_TYPE_TO_ELEMENT_NAME.get(_int(row.get("skill_dam_type")), "普通")
+    return _skill_dam_type_to_element_name(str(pak_dir)).get(_int(row.get("skill_dam_type")), "普通")
 
 
-def _skill_category(row: dict[str, Any], move: dict[str, Any]) -> str:
+def _skill_category(row: dict[str, Any], move: dict[str, Any], pak_dir: Path = DEFAULT_PAK_DATA_DIR) -> str:
     if move:
-        category = MOVE_CATEGORY_TO_CN.get(str(move.get("move_category", "")))
+        category = _canonical_adapters(str(pak_dir))["move_category_to_cn"].get(str(move.get("move_category", "")))
         if category:
             return category
     stype = _int(row.get("Skill_Type"))

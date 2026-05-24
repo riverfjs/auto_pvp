@@ -41,10 +41,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Re-export every handler index so callers (and tests) can write
-# ``from roco.compiler_v2.effect_codegen import H_BURN`` without reaching into
-# ``roco.generated.handler_indices`` directly.
-from roco.generated.handler_indices import *  # noqa: F401,F403
+from roco.compiler_v2.handler_registry import load_handler_indices
 
 from roco.compiler_v2.effect_codegen.classify import (
     collect_buff_candidates,
@@ -61,7 +58,9 @@ from roco.compiler_v2.effect_codegen.outcomes import (
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.effect_codegen.params import is_status_or_mark_handler
 from roco.compiler_v2.effect_codegen.source_context import decode_source_context
-from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
+
+globals().update(load_handler_indices())
 
 __all__ = [
     "PakTables",

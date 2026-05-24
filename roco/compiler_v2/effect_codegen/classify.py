@@ -35,7 +35,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from roco.generated.handler_indices import H_DAMAGE
+from roco.compiler_v2.handler_registry import H_DAMAGE
 
 from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome, EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import (

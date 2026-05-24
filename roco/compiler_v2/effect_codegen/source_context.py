@@ -12,8 +12,8 @@ from typing import Any
 
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.engine.kernel.op_rows import TIMING_BEFORE_MOVE
-from roco.generated import handler_indices as hi
-from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.compiler_v2.handler_registry import handler_indices as hi
+from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 ET_INLAY = 83
 BFT_CONDITIONAL_GRANT = 91
