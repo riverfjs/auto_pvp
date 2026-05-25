@@ -3104,6 +3104,7 @@
         "roco/compiler_v2/static_artifacts/buffbase.py",
         "roco/compiler_v2/static_artifacts/marks.py",
         "roco/data/ability_flags_from_effects.py",
+        "roco/engine/artifacts/pak_ref_buffs.py",
         "roco/generated/buffbase_params.py",
         "roco/generated/static/manifest.py"
       ],
@@ -3144,6 +3145,7 @@
         "roco/compiler_v2/static_artifacts/immunity.py",
         "roco/compiler_v2/static_artifacts/marks.py",
         "roco/data/ability_flags_from_effects.py",
+        "roco/engine/artifacts/pak_ref_buffs.py",
         "roco/engine/artifacts/pak_ref_linker.py",
         "roco/engine/kernel/active_buffs.py",
         "roco/engine/kernel/residual/status_ticks.py",
@@ -3188,7 +3190,7 @@
       "category": "battle_candidate",
       "code_refs": [
         "roco/compiler_v2/static_artifacts/buffs.py",
-        "roco/engine/artifacts/pak_ref_linker.py",
+        "roco/engine/artifacts/pak_ref_common.py",
         "roco/generated/buff_defs.py",
         "roco/generated/static/lua_enums.py"
       ],
@@ -4033,6 +4035,8 @@
         "roco/compiler_v2/static_artifacts/weather.py",
         "roco/data/ability_flags_from_effects.py",
         "roco/data/parse_pak.py",
+        "roco/engine/artifacts/pak_ref_effect_entry.py",
+        "roco/engine/artifacts/pak_ref_effects.py",
         "roco/engine/artifacts/pak_ref_linker.py",
         "roco/generated/counter_skill_table.py",
         "roco/generated/effect_params.py",

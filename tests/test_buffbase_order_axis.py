@@ -438,6 +438,75 @@ def test_raw_zero_is_only_normal_through_skill_dam_type_mapping():
     assert pak_ref_linker._element_mask((0,), "element") == 0
 
 
+def test_direct_bft_damnum_change_links_damage_reduction_from_pak_shape():
+    raw = (buff_ref_key(20110310), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "嗜痛") == (
+        "op_damage_reduction",
+        11,
+        1,
+        10000,
+        2000,
+        0,
+        0,
+        0,
+    )
+
+    positive_amount = (buff_ref_key(20111550), pak_cast_moment_key(12), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(positive_amount, source_name="展翅")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_direct_bft_inc_dam_by_skill_links_unconditional_power_bonus():
+    raw = (buff_ref_key(20230354), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "威压") == (
+        "op_power_dynamic",
+        11,
+        1,
+        10000,
+        20000,
+        0,
+        0,
+        0,
+    )
+
+    conditional = (buff_ref_key(20230380), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(conditional, source_name="碰瓷")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_direct_bft_pet_transe_links_simple_switch_shapes():
+    self_switch = (buff_ref_key(20480031), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(self_switch, "普1") == (
+        "op_force_switch",
+        11,
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )
+
+    enemy_switch = (buff_ref_key(20480020), pak_cast_moment_key(12), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(enemy_switch, "应作如是观") == (
+        "op_force_enemy_switch",
+        12,
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )
+
+    conditional = (buff_ref_key(20500120), pak_cast_moment_key(7), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(conditional, source_name="巧变")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
 def test_runtime_linker_rejects_non_pak_ref_primitives():
     with pytest.raises(RuntimeError, match="only accepts effect_ref:\\* or buff_ref:\\* rows"):
         link_primitive_rows((

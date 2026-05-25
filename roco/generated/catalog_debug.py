@@ -2,7 +2,7 @@
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = 'kernel-v2'
-SOURCE_HASH = 'c46eff67fb1bef0e64e5701339fa6166300a970dde901af7b37e6ca3e10b4033'
+SOURCE_HASH = 'ceddf8d668d3e3e01186bebaedbc0df0b9d618d075ba8599fca548dfdc060676'
 ELEMENT_NAMES = ('普通', '草', '火', '水', '光', '地', '冰', '龙', '电', '毒', '虫', '武', '翼', '萌', '幽', '恶', '机械', '幻')
 PET_NAMES = ('',
  '喵喵',
@@ -9862,7 +9862,7 @@ BLOODLINE_IDS_BY_NAME = {'光': 5,
  '龙': 8}
 BLOODLINE_MAGIC_IDS_BY_NAME = {'愿力强化': 100002, '进化之力': 100007}
 SKIPPED_EFFECT_STATS = (('assign_condition_unsupported', 8),
- ('buff_shape_unsupported', 718),
+ ('buff_shape_unsupported', 597),
  ('effect_shape_unsupported', 61),
  ('effect_type_1_compound', 14),
  ('effect_type_1_no_buff', 29))

@@ -28,9 +28,6 @@ from roco.engine.kernel.op_rows import (
     TARGET_TEAM,
 )
 
-COUNT_FAINTED_ALLY = -1
-
-
 def op_self_buff(ctx: StageCtx, row: tuple[int, ...]) -> None:
     delta = pack_buff_delta_from_row(row, ROW_ARG0, ROW_ARG3 + 1)
     ctx.self_buff = _merge_buff_delta(ctx.self_buff, delta)
@@ -120,15 +117,19 @@ def op_team_synergy_bug_swarm_attack(ctx: StageCtx, row: tuple[int, ...]) -> Non
 
 def op_entry_self_buff_by_side_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
     selector = row[ROW_ARG0]
-    if selector == COUNT_FAINTED_ALLY:
-        count = ctx.side_fainted_count
-    else:
-        count = _unpack_skill_count(ctx.side_element_counts, Element(selector))
+    count = _unpack_skill_count(ctx.side_element_counts, Element(selector))
     if row[ROW_ARG2]:
         count = min(count, 1)
     ctx.self_buff = _merge_buff_delta(
         ctx.self_buff,
         scale_buff_delta(row[ROW_ARG1], count),
+    )
+
+
+def op_entry_self_buff_by_fainted_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    ctx.self_buff = _merge_buff_delta(
+        ctx.self_buff,
+        scale_buff_delta(row[ROW_ARG0], ctx.side_fainted_count),
     )
 
 
