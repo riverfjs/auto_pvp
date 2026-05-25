@@ -157,6 +157,9 @@ def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
     if status == StatusType.BURN:
         ctx.burn_stacks += 1
         return
+    if status == StatusType.FREEZE:
+        ctx.freeze_stacks += 1
+        return
     mark = _mark_type(ref_id)
     if mark == MarkIdx.METEOR:
         op_meteor_mark(ctx, (0, 0, target, 10000, 0, 1, 0, 0, 0))
@@ -193,6 +196,8 @@ def _status_type(buff_id: int) -> StatusType | None:
         return StatusType.POISON
     if any(order == _buff_type("BFT_DAM") and _param_int(params, 4) == 4 for _base_id, order, params in rows):
         return StatusType.BURN
+    if any(order == _buff_type("BFT_FREEZE") and tuple(params) == (1, 500, 0, 50) for _base_id, order, params in rows):
+        return StatusType.FREEZE
     return None
 
 

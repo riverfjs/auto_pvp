@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from roco.common.constants import BPS
 
-_DEFAULTS: tuple[tuple[str, int | float], ...] = (
+_DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("actor_side", 0),
     ("actor_slot", 0),
     ("target_side", 0),
@@ -142,6 +144,8 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("clear_enemy_marks", 0),
     ("devotion_random", 0),
     ("cancelled", 0),
+    ("pending_actions", ()),
+    ("extra_skill_queue", ()),
 )
 
 

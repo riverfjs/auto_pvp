@@ -4,6 +4,15 @@ from dataclasses import dataclass
 from typing import Any
 
 
+ACTION_KIND_OP_LIST = "op_list"
+ACTION_KIND_EXTRA_SKILL = "extra_skill"
+ACTION_KIND_RANDOM = "random"
+ACTION_KIND_CONDITIONAL = "conditional"
+ACTION_KIND_TRIGGER_REGISTER = "trigger_register"
+
+EXTRA_SKILL_POLICY_CONSERVATIVE = 1
+
+
 @dataclass(frozen=True)
 class LinkedOp:
     op_name: str
@@ -17,6 +26,24 @@ class LinkedOp:
 
     def runtime_args(self) -> tuple[int, int, int, int]:
         return (self.p0, self.p1, self.p2, self.p3)
+
+
+@dataclass(frozen=True)
+class LinkedAction:
+    """Pure-data runtime action produced by the engine linker.
+
+    This is an intermediate linker object.  Catalog compilation interns it into
+    generated integer-only action rows; runtime never receives this dataclass.
+    """
+
+    kind: str
+    timing: int
+    target: int
+    rate: int
+    payload: tuple[Any, ...]
+    source_ref: int = 0
+    source_skill_id: int = 0
+    source_buff_id: int = 0
 
 
 @dataclass(frozen=True)

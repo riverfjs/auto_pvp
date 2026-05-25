@@ -1,12 +1,35 @@
 """EFFECT_CONF pak ref dispatcher and direct effect matchers."""
 from __future__ import annotations
-from roco.engine.artifacts.linked_op import LinkedOp
-from roco.engine.artifacts.pak_ref_common import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _as_int_tuple, _buff_refs_from_params, _count_param_repeats, _gap, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, effect_type
+from roco.engine.artifacts.linked_op import (
+    ACTION_KIND_EXTRA_SKILL,
+    ACTION_KIND_OP_LIST,
+    ACTION_KIND_RANDOM,
+    EXTRA_SKILL_POLICY_CONSERVATIVE,
+    LinkInertError,
+    LinkedAction,
+    LinkedOp,
+)
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _as_int_tuple, _buff_refs_from_params, _count_param_repeats, _gap, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, effect_type
 from roco.engine.artifacts.pak_ref_effect_entry import _link_effect_buff_by_equip_skill_num, _link_effect_buff_by_pack_pet_num, _link_effect_buff_convert, _link_effect_entry_buff_if_energy, _link_effect_hero
 from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.generated.weather_table import PAK_WEATHER_DEFAULT_TURNS, PAK_WEATHER_TYPE_TO_KERNEL
 
-def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int, p1: int, p2: int, p3: int, *, source_name: str, link_buff_ref) -> tuple[LinkedOp, ...]:
+LinkedEffect = LinkedOp | LinkedAction
+
+_ET_RANDOM_ALLOWED_SHAPES = frozenset((
+    (1, 0),
+    (1, 1),
+    (1, 2),
+    (1, 299901),
+    (2, 1),
+    (2, 4),
+    (5, 4),
+    (10, 4),
+    (16, 0),
+))
+
+
+def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int, p1: int, p2: int, p3: int, *, source_name: str, link_buff_ref) -> tuple[LinkedEffect, ...]:
     order = EFFECT_ORDER.get(effect_id)
     if order is None:
         raise _gap(f'effect_ref:{effect_id}', 'effect_id_not_in_pak', source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id)
@@ -44,6 +67,22 @@ def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int
         linked = _link_effect_hit_count(effect_id, params, timing, target, rate)
         if linked is not None:
             return (linked,)
+    if order == effect_type('ET_SERIES_SKILL'):
+        linked_action = _link_effect_series_skill(effect_id, params, timing, target, rate)
+        if linked_action is not None:
+            return (linked_action,)
+    if order == effect_type('ET_RANDOM'):
+        linked_action = _link_effect_random(
+            effect_id,
+            params,
+            timing,
+            target,
+            rate,
+            source_name=source_name,
+            link_buff_ref=link_buff_ref,
+        )
+        if linked_action is not None:
+            return (linked_action,)
     if order == effect_type('ET_SKILL_CD'):
         turns = _param_int(params, 0)
         if turns > 0 and _param_int(params, 2) == 1 and (_param_int(params, 3) == 0):
@@ -93,9 +132,93 @@ def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int
         if len(buff_ids) == 1:
             stack_count = _count_param_repeats(params, buff_ids[0])
             return link_buff_ref(buff_ids[0], timing, target, rate, stack_count, 0, 0, 0, source_name=source_name)
+        if len(buff_ids) > 1:
+            ops: list[LinkedOp] = []
+            for buff_id in buff_ids:
+                stack_count = _count_param_repeats(params, buff_id)
+                try:
+                    linked = link_buff_ref(buff_id, timing, target, rate, stack_count, 0, 0, 0, source_name=source_name)
+                except LinkInertError:
+                    continue
+                if not all(isinstance(item, LinkedOp) for item in linked):
+                    break
+                ops.extend(linked)
+            else:
+                if ops:
+                    return (
+                        LinkedAction(
+                            ACTION_KIND_OP_LIST,
+                            timing,
+                            target,
+                            rate,
+                            tuple(ops),
+                            source_ref=effect_id,
+                        ),
+                    )
         reason = 'effect_type_1_compound' if len(buff_ids) > 1 else 'effect_type_1_no_buff'
         raise _gap(f'effect_ref:{effect_id}', reason, source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id, effect_order=order, effect_type=etype, buff_candidates=buff_ids, effect_params=params)
     raise _gap(f'effect_ref:{effect_id}', 'effect_shape_unsupported', source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id, effect_order=order, effect_type=etype, effect_params=params)
+
+
+def _link_effect_series_skill(effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedAction | None:
+    if len(params) < 2:
+        return None
+    mode = _param_int(params, 0)
+    skill_id = _param_int(params, 1)
+    if mode == 0 and skill_id > 0 and not any(_param_int(params, idx) for idx in range(2, len(params))):
+        return LinkedAction(
+            ACTION_KIND_EXTRA_SKILL,
+            timing,
+            target,
+            rate,
+            (skill_id, EXTRA_SKILL_POLICY_CONSERVATIVE),
+            source_ref=effect_id,
+        )
+    return None
+
+
+def _link_effect_random(effect_id: int, params: tuple, timing: int, target: int, rate: int, *, source_name: str, link_buff_ref) -> LinkedAction | None:
+    if len(params) < 10:
+        return None
+    count = _param_int(params, 0)
+    scope = _param_int(params, 9)
+    if (count, scope) not in _ET_RANDOM_ALLOWED_SHAPES:
+        return None
+    refs = tuple(ref_id for ref_id in (_param_int(params, idx) for idx in range(1, 9)) if ref_id > 0)
+    if not refs:
+        return None
+    choices: list[tuple[int, LinkedAction]] = []
+    for ref_id in refs:
+        choices.append((
+            1,
+            _child_ref_action(ref_id, timing, target, rate, source_name=source_name, link_buff_ref=link_buff_ref),
+        ))
+    return LinkedAction(
+        ACTION_KIND_RANDOM,
+        timing,
+        target,
+        rate,
+        (count, tuple(choices)),
+        source_ref=effect_id,
+    )
+
+
+def _child_ref_action(ref_id: int, timing: int, target: int, rate: int, *, source_name: str, link_buff_ref) -> LinkedAction:
+    if ref_id in EFFECT_ORDER:
+        linked = link_effect_ref(ref_id, timing, target, rate, 0, 0, 0, 0, source_name=source_name, link_buff_ref=link_buff_ref)
+    elif ref_id in BUFF_BASE_IDS:
+        try:
+            linked = link_buff_ref(ref_id, timing, target, rate, 0, 0, 0, 0, source_name=source_name)
+        except LinkInertError:
+            return LinkedAction(ACTION_KIND_OP_LIST, timing, target, rate, (), source_ref=ref_id)
+    else:
+        raise _gap(f"effect_ref:{ref_id}", "child_ref_not_in_pak", source_name=source_name, timing=timing, target=target, rate=rate, effect_id=ref_id)
+    if len(linked) == 1 and isinstance(linked[0], LinkedAction):
+        return linked[0]
+    ops = tuple(item for item in linked if isinstance(item, LinkedOp))
+    if len(ops) != len(linked) or not ops:
+        raise _gap(f"effect_ref:{ref_id}", "child_ref_action_unsupported", source_name=source_name, timing=timing, target=target, rate=rate, effect_id=ref_id)
+    return LinkedAction(ACTION_KIND_OP_LIST, timing, target, rate, ops, source_ref=ref_id)
 
 def _link_effect_purify(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
     if _param_int(params, 0) == 1 and _param_int(params, 1) == 2 and (_param_int(params, 2) == 99) and (_param_int(params, 3) == 99) and (_param_int(params, 4) == 0):

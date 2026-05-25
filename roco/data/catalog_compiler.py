@@ -15,10 +15,19 @@ from roco.data import ability_flags as ability_flag_artifact
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.static_artifacts.bloodline_magic import build_bloodline_magic_tables
 from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
+from roco.data.action_table import (
+    ACTION_CONDITIONAL,
+    ACTION_EXTRA_SKILL,
+    ACTION_NONE,
+    ACTION_OP_LIST,
+    ACTION_RANDOM,
+    ACTION_TRIGGER_REGISTER,
+    ActionInterner,
+)
 from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
-from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
+from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError, LinkedAction, LinkedOp
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
 from roco.generated.handler_order import op_index
 
@@ -26,6 +35,7 @@ CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
 HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
 DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
+ACTION_PATH = ROOT / "roco" / "generated" / "catalog_actions.py"
 ENGINE_LINK_GAPS_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_gaps.jsonl"
 ENGINE_LINK_INERT_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_inert.jsonl"
 
@@ -98,6 +108,7 @@ def _effect_rows(
     row_tuple: Iterable[object],
     *,
     source_name: str,
+    actions: ActionInterner,
     link_gaps: list[dict[str, Any]],
     link_inert: list[dict[str, Any]],
 ) -> tuple[tuple[int, ...], ...]:
@@ -111,18 +122,34 @@ def _effect_rows(
         link_inert.append(exc.inert.as_record())
         return ()
     for linked in linked_rows:
-        p0, p1, p2, p3 = linked.runtime_args()
-        rows.append((
-            op_index(linked.op_name),
-            linked.timing,
-            linked.target,
-            0,
-            0,
-            p0,
-            p1,
-            p2,
-            p3,
-        ))
+        if isinstance(linked, LinkedOp):
+            p0, p1, p2, p3 = linked.runtime_args()
+            rows.append((
+                op_index(linked.op_name),
+                linked.timing,
+                linked.target,
+                0,
+                0,
+                p0,
+                p1,
+                p2,
+                p3,
+            ))
+            continue
+        if isinstance(linked, LinkedAction):
+            rows.append((
+                op_index("op_queue_action"),
+                linked.timing,
+                linked.target,
+                0,
+                0,
+                actions.intern(linked),
+                0,
+                0,
+                0,
+            ))
+            continue
+        raise RuntimeError(f"{source_name!r} linked unsupported row object {linked!r}")
     return tuple(rows)
 
 
@@ -243,11 +270,14 @@ def compile_catalogs(
     *,
     hot_path: Path = HOT_PATH,
     debug_path: Path = DEBUG_PATH,
+    action_path: Path = ACTION_PATH,
     engine_link_gaps_path: Path = ENGINE_LINK_GAPS_PATH,
     engine_link_inert_path: Path | None = None,
 ) -> tuple[Path, Path]:
     if engine_link_inert_path is None:
         engine_link_inert_path = engine_link_gaps_path.with_name("engine_link_inert.jsonl")
+    if action_path == ACTION_PATH and hot_path != HOT_PATH:
+        action_path = hot_path.with_name("catalog_actions.py")
     canonical = load_canonical_records(pak_dir or DEFAULT_PAK_DATA_DIR)
     skill_records = _records(canonical["skills"], "skill")
     ability_records = _records(canonical["abilities"], "ability")
@@ -319,6 +349,7 @@ def compile_catalogs(
     skill_effect_source_rows: list[tuple[Any, ...]] = []
     engine_link_gaps: list[dict[str, Any]] = []
     engine_link_inert: list[dict[str, Any]] = []
+    action_interner = ActionInterner()
     for skill_id, row in enumerate(skill_records, start=1):
         name = str(row["name"])
         element_id = _element_id(row.get("element", "普通"))
@@ -352,6 +383,7 @@ def compile_catalogs(
             for effect in _effect_rows(
                 raw_effect,
                 source_name=name,
+                actions=action_interner,
                 link_gaps=engine_link_gaps,
                 link_inert=engine_link_inert,
             ):
@@ -379,6 +411,7 @@ def compile_catalogs(
             for effect in _effect_rows(
                 raw_effect,
                 source_name=name,
+                actions=action_interner,
                 link_gaps=engine_link_gaps,
                 link_inert=engine_link_inert,
             ):
@@ -425,6 +458,7 @@ def compile_catalogs(
     bloodline_tables = build_bloodline_magic_tables(build_static_bundle())
     bloodline_catalog_rows = bloodline_tables["bloodline_catalog_rows"]
     bloodline_magic_catalog_rows = bloodline_tables["supported_magic_catalog_rows"]
+    action_rows = action_interner.rows()
 
     source_hash = content_hash({
         "elements": tuple((idx, name) for idx, name in enumerate(elements)),
@@ -439,6 +473,7 @@ def compile_catalogs(
         "ability_flags_from_effects_rules": ability_flag_artifact.normalized_payload(effect_to_flag),
         "bloodlines": tuple(bloodline_catalog_rows),
         "bloodline_magics": tuple(bloodline_magic_catalog_rows),
+        "actions": action_rows,
     })
     skipped_effect_stats = tuple(sorted(Counter(str(row["reason"]) for row in engine_link_gaps).items()))
 
@@ -483,10 +518,23 @@ def compile_catalogs(
     )
     hot_path.parent.mkdir(parents=True, exist_ok=True)
     debug_path.parent.mkdir(parents=True, exist_ok=True)
+    action_path.parent.mkdir(parents=True, exist_ok=True)
     engine_link_gaps_path.parent.mkdir(parents=True, exist_ok=True)
     engine_link_inert_path.parent.mkdir(parents=True, exist_ok=True)
     hot_path.write_text(hot, encoding="utf-8")
     debug_path.write_text(debug, encoding="utf-8")
+    action_path.write_text(
+        _format_module(
+            ACTION_NONE=ACTION_NONE,
+            ACTION_OP_LIST=ACTION_OP_LIST,
+            ACTION_EXTRA_SKILL=ACTION_EXTRA_SKILL,
+            ACTION_RANDOM=ACTION_RANDOM,
+            ACTION_CONDITIONAL=ACTION_CONDITIONAL,
+            ACTION_TRIGGER_REGISTER=ACTION_TRIGGER_REGISTER,
+            ACTIONS=action_rows,
+        ),
+        encoding="utf-8",
+    )
     engine_link_gaps_path.write_text(
         "".join(
             json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"

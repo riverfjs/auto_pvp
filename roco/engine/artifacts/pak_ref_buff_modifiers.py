@@ -173,6 +173,15 @@ def _link_after_attack_status_buff(buff_id: int, timing: int, target: int, rate:
         return _op('op_after_attack_status', TIMING_PAK_BEFORE_HURT, TARGET_ENEMY, rate, int(StatusType.BURN), stacks)
     return None
 
+def _link_freeze_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_FREEZE'):
+        return None
+    _base_id, _order, params = rows[0]
+    if tuple(params) != (1, 500, 0, 50):
+        return None
+    return _op('op_freeze', timing, target, rate, 1)
+
 def _link_after_attack_response_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     if not after_attack_response_supported(buff_id):
         return None

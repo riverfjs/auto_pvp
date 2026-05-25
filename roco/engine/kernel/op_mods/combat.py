@@ -174,3 +174,10 @@ def op_energy_drain_by_cost_diff(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 def op_devotion_grant_random(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.devotion_random += row[ROW_ARG0]
+
+
+def op_queue_action(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    action_id = row[ROW_ARG0]
+    if action_id <= 0:
+        raise RuntimeError(f"queued action row has invalid action_id {action_id}")
+    ctx.pending_actions = tuple(ctx.pending_actions) + (int(action_id),)

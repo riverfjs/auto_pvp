@@ -85,6 +85,7 @@ def test_static_catalog_compiles_from_canonical_records(tmp_path: Path, monkeypa
     )
     hot_text = hot_path.read_text(encoding="utf-8")
     debug_text = debug_path.read_text(encoding="utf-8")
+    action_text = (tmp_path / "catalog_actions.py").read_text(encoding="utf-8")
 
     assert "CATALOG_VERSION = 1" in hot_text
     assert "SCHEMA_VERSION = 'kernel-v2'" in hot_text
@@ -95,6 +96,7 @@ def test_static_catalog_compiles_from_canonical_records(tmp_path: Path, monkeypa
     assert "PET_NAMES =" in debug_text
     assert "SKILL_DESCRIPTIONS =" in debug_text
     assert "ABILITY_DESCRIPTIONS =" in debug_text
+    assert "ACTIONS =" in action_text
     assert "造成魔伤" in debug_text
     assert "力竭不扣MP" in debug_text
 

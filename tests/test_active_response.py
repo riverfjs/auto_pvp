@@ -99,6 +99,22 @@ def test_after_attack_active_response_applies_hit_delta_to_attacker():
     assert side(new_state, SIDE_A).pets[0].hit_delta == -3
 
 
+def test_after_attack_active_response_applies_freeze_to_attacker():
+    assert after_attack_response_supported(20190070)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190070)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.PHYSICAL.value,
+        damage_dealt=10,
+    )
+    assert status_stack(side(new_state, SIDE_A).pets[0], StatusType.FREEZE) == 2
+
+
 def test_after_attack_active_response_tail_flag_applies_self_stat_delta():
     assert after_attack_response_supported(20190190)
     state = make_state((1, 2, 3), (4, 5, 6))

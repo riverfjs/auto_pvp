@@ -49,10 +49,12 @@ from roco.engine.kernel.catalog import (
     PET_SECONDARY,
     validate_catalog,
 )
+from roco.engine.kernel.action_runner import drain_pending_actions
 from roco.engine.kernel.counter import fire_counter_skill
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.active_response import trigger_after_attack_active_buffs
 from roco.engine.kernel.damage import damage, marked_skill_cost
+from roco.engine.kernel.extra_skill import drain_extra_skill_queue
 from roco.engine.kernel.op_rows import (
     TIMING_PAK_BEFORE_HURT,
     TIMING_HOOK_BEFORE_MOVE,
@@ -236,6 +238,7 @@ def _execute(
         ctx.hit_count += _unpack_devotion(actor_side.devotion, DevotionIdx.CHONGQUN)
     _run_ability_timing(actor, TIMING_HOOK_BEFORE_MOVE, ctx)
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_HOOK_BEFORE_MOVE, ctx)
+    state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_HOOK_BEFORE_MOVE)
     cost = max(0, cost - ctx.cost_delta if actor.ability_flags & int(AbilityFlag.COST_INVERT) else cost + ctx.cost_delta)
     if choice.action_code == ACTION_MAGIC and ctx.counter_success:
         ctx.power_bps = ctx.power_bps * WILLPOWER_COUNTER_STATUS_BPS // BPS
@@ -260,11 +263,13 @@ def _execute(
     # (焚烧烙印 / 1042008) to ``cast_moment=6`` on non-attack skills, and
     # gating them behind ``is_attack`` would just silently drop them.
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_PAK_ROUND_CALC_START, ctx)
+    state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_PAK_ROUND_CALC_START)
     if is_attack:
         dealt = damage(actor, target, skill, ctx, state.weather, actor_side.marks, target_side.marks, first_strike)
         ctx.damage_dealt = dealt
         if dealt > 0:
             _run_ability_timing(target, TIMING_HOOK_TAKE_DAMAGE, ctx)
+            state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_HOOK_TAKE_DAMAGE)
         next_hp = target.current_hp - dealt
         if next_hp <= 0 and target.ability_flags & int(AbilityFlag.CUTE_LETHAL_SHIELD):
             target = target._replace(current_hp=1, cute=target.cute + 1)
@@ -343,8 +348,10 @@ def _execute(
     ctx.actor_energy = actor.current_energy
     run_skill_timing(hot.SKILL_EFFECT_ROWS, hot.SKILL_EFFECT_RANGES[skill_id], TIMING_PAK_BEFORE_HURT, ctx)
     _run_ability_timing(actor, TIMING_PAK_BEFORE_HURT, ctx)
+    state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_PAK_BEFORE_HURT)
     ctx.poison_stacks += _unpack_skill_count(actor.element_poison_stacks, Element(skill[SKILL_ELEMENT]))
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
+    state = drain_extra_skill_queue(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, first_strike)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)
     return state, dealt
 
@@ -354,3 +361,28 @@ def _run_ability_timing(actor: PetState, timing: int, ctx: StageCtx) -> None:
     if ability_id <= 0 or ability_id >= len(hot.ABILITY_EFFECT_RANGES):
         return
     run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], timing, ctx)
+
+
+def _drain_action_group(
+    state: KernelState,
+    ctx: StageCtx,
+    actor_side_id: int,
+    actor_slot: int,
+    target_side_id: int,
+    target_slot: int,
+    skill_id: int,
+    trigger_event: int,
+) -> KernelState:
+    if not ctx.pending_actions:
+        return state
+    return drain_pending_actions(
+        state,
+        ctx,
+        actor_side=actor_side_id,
+        actor_slot=actor_slot,
+        target_side=target_side_id,
+        target_slot=target_slot,
+        source_skill_id=skill_id,
+        trigger_event=trigger_event,
+        allow_extra_queue=True,
+    )
