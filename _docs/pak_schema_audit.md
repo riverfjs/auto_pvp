@@ -30,11 +30,11 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t1:o22` | 1 | 22 | 3 | 5:3 | 0/1 | `pak_ref` | 蜂鸣 |
 | `effect_conf:t1:o23` | 1 | 23 | 4 | 9:4 | 0/0 | `pak_ref` |  |
 | `effect_conf:t1:o27` | 1 | 27 | 5 | 2:5 | 3/0 | `pak_ref` |  |
-| `effect_conf:t1:o31` | 1 | 31 | 40 | 6:1, 8:39 | 24/0 | `pak_ref` |  |
-| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 54/0 | `pak_ref` |  |
+| `effect_conf:t1:o31` | 1 | 31 | 40 | 6:1, 8:39 | 25/0 | `pak_ref` |  |
+| `effect_conf:t1:o32` | 1 | 32 | 12 | 3:12 | 55/0 | `pak_ref` |  |
 | `effect_conf:t1:o33` | 1 | 33 | 3 | 2:3 | 3/0 | `pak_ref` |  |
 | `effect_conf:t1:o34` | 1 | 34 | 10 | 8:10 | 0/2 | `pak_ref` | 焰胆, 状态接力, 聚能, … (+1) |
-| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 12/0 | `pak_ref` |  |
+| `effect_conf:t1:o35` | 1 | 35 | 50 | 2:50 | 11/0 | `pak_ref` |  |
 | `effect_conf:t1:o36` | 1 | 36 | 4 | 2:4 | 6/0 | `pak_ref` |  |
 | `effect_conf:t1:o42` | 1 | 42 | 17 | 5:17 | 6/2 | `pak_ref` | 蚀刻 |
 | `effect_conf:t1:o50` | 1 | 50 | 14 | 7:14 | 3/0 | `pak_ref` | 嫁祸, 贪吃 |
@@ -50,7 +50,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t2:o6` | 2 | 6 | 3 | 1:3 | 0/0 | `pak_ref` |  |
 | `effect_conf:t2:o7` | 2 | 7 | 1 | 0:1 | 0/0 | `pak_ref` |  |
 | `effect_conf:t2:o18` | 2 | 18 | 12 | 1:12 | 1/1 | `pak_ref` |  |
-| `effect_conf:t2:o31` | 2 | 31 | 106 | 8:106 | 84/0 | `pak_ref` |  |
+| `effect_conf:t2:o31` | 2 | 31 | 106 | 8:106 | 86/0 | `pak_ref` |  |
 | `effect_conf:t2:o53` | 2 | 53 | 13 | 3:13 | 2/0 | `pak_ref` |  |
 | `effect_conf:t2:o55` | 2 | 55 | 1 | 5:1 | 0/0 | `pak_ref` |  |
 | `effect_conf:t3:o1` | 3 | 1 | 5 | 7:5 | 4/0 | `pak_ref` |  |
@@ -62,7 +62,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o14` | 3 | 14 | 1 | 1:1 | 0/0 | `pak_ref` |  |
 | `effect_conf:t3:o16` | 3 | 16 | 20 | 10:20 | 3/1 | `pak_ref` | 振奋虫心 |
 | `effect_conf:t3:o17` | 3 | 17 | 1 | 3:1 | 0/0 | `pak_ref` |  |
-| `effect_conf:t3:o19` | 3 | 19 | 52 | 3:52 | 62/1 | `pak_ref` | 得寸进尺, 快充, 惊吓, … (+5) |
+| `effect_conf:t3:o19` | 3 | 19 | 52 | 3:52 | 65/1 | `pak_ref` | 得寸进尺, 快充, 惊吓, … (+5) |
 | `effect_conf:t3:o22` | 3 | 22 | 12 | 5:12 | 0/5 | `pak_ref` | 仁心, 虫群突袭, 虫群鼓舞 |
 | `effect_conf:t3:o23` | 3 | 23 | 49 | 9:49 | 0/0 | `pak_ref` | 嫉妒 |
 | `effect_conf:t3:o25` | 3 | 25 | 7 | 1:7 | 4/0 | `pak_ref` |  |
@@ -72,7 +72,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o31` | 3 | 31 | 64 | 8:64 | 36/0 | `pak_ref` |  |
 | `effect_conf:t3:o34` | 3 | 34 | 14 | 8:14 | 0/10 | `pak_ref` | 低风阻队形, 渗透, 蒸汽膨胀, … (+1) |
 | `effect_conf:t3:o36` | 3 | 36 | 1 | 2:1 | 0/0 | `pak_ref` | 化茧 |
-| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 97/0 | `pak_ref` |  |
+| `effect_conf:t3:o37` | 3 | 37 | 3 | 4:3 | 99/0 | `pak_ref` |  |
 | `effect_conf:t3:o38` | 3 | 38 | 20 | 7:20 | 6/0 | `pak_ref` |  |
 | `effect_conf:t3:o39` | 3 | 39 | 2 | 2:1, 4:1 | 1/0 | `pak_ref` |  |
 | `effect_conf:t3:o40` | 3 | 40 | 1 | 1:1 | 1/0 | `pak_ref` |  |

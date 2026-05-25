@@ -12,23 +12,23 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
-- count: **55** | coverage: `pak_ref` | used_consumer_count: 43
+- count: **55** | coverage: `pak_ref` | used_consumer_count: 42
 - editor_names: 三鼓作气, 专注力, 保卫, 先知, 全属性, 全神贯注, 减速印记, 受伤, 吟游之弦, 哨兵
 - source_descriptions: 双攻+40%, 双攻、双防、速度属性+<span color="#FF4250">10%</>, 双攻、双防和速度+10%, 双攻和双防+20%, 双攻和双防永久+20%
 - example_source_ids: [20010010, 20010014, 20010015, 20010020, 20010030]
 - coverage_breakdown: {'pak_ref_count': 55, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7001140` 星链 — 2连击，每次连击赋予1层星陨
     - `7100201` “啊，龙也会流血。”龙舔了舔爪子——向小洛克示意这是可可果的汁液。 — <desc_id=1007>蓄力</>，造成物伤并吸血50%。
+    - `7200007` 叠加态 — S3星云旅者B
+    - `7200006` 虚径 — S3离心舞者A
+    - `7150120` 回旋踢 — S3稻草守护者B
     - `7300009` 打喷嚏 — S3雪影娃娃·春日A
-    - `7990020` buff93 — 你的攻击技能获得迸发：以触发过的随机一种迸发，回合末返场
-    - `7000342` 熵增 — 全属性增加50%，使用后回复400绩点。
 - sample_ability_consumers:
     - `280014` 全神贯注 — 入场时，获得物攻+100%，每次行动后-20%。
     - `200149` 专注力 — 入场首回合，获得物攻+100%。
     - `7800506` 将噬爪缩 — 受到伤害后，随机获得回复20%最大生命，物防+20%，获得4能量中的一个效果。
-    - `7800507` 每回合为敌方添加一种随机印记效果 — 执子定谋
     - `200264` 半朽蜜果灵 — 敌方失去能量时，自身回复等量能量
+    - `200169` 蓄电池 — 每入场1次，永久获得双攻+30%。
 - pak_evidence:
     - BUFF_CONF.json: 20010010 buff_base_ids=[2001001] name='物攻等级提升' desc='物攻+<span color="#73c715">10%</>。'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -109,20 +109,20 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2007` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `pak_ref` | used_consumer_count: 5
+- count: **6** | coverage: `pak_ref` | used_consumer_count: 6
 - editor_names: 中毒, 中毒印记, 灼烧, 黑魔法诅咒
 - source_descriptions: 印记，回合结束受到3%生命的毒系伤害。, 回合结束受到3%生命的毒系伤害。（毒系精灵免疫此效果）, 回合结束时，造成2%生命的火系伤害，并衰减一半层数。（火系精灵免疫此效果）, 该精灵的生命力正在被转移至恶魔狼。
 - example_source_ids: [20010702, 20070010, 20070011, 20070012, 20070020]
 - coverage_breakdown: {'pak_ref_count': 6, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7120080` 通电 — S3雷神之子A
     - `7040290` 天火 — 使敌方身上的灼烧翻倍，并触发1次灼烧伤害。
     - `7120240` 溃烂触碰 — 对敌方精灵造成物理伤害。
     - `7040380` 炙热波动 — 对敌方精灵造成物理伤害。
     - `7040400` 烈焰风暴 — 对敌方精灵造成物理伤害。
-    - `7040291` 敌方获得10层<desc_id=1002>灼烧</>，<desc_id=1017>应对防御</>：改为获得30层。 — 应对！天火
 - sample_ability_consumers:
     - `7800506` 将噬爪缩 — 受到伤害后，随机获得回复20%最大生命，物防+20%，获得4能量中的一个效果。
-    - `7800507` 每回合为敌方添加一种随机印记效果 — 执子定谋
+    - `7800507` 执子定谋 — 每回合为敌方添加一种随机印记效果
 - pak_evidence:
     - BUFF_CONF.json: 20010702 buff_base_ids=[2007003] name='黑魔法诅咒' desc='该精灵的生命力正在被转移至恶魔狼。'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -147,17 +147,17 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2011` — BUFF_CONF_DIRECT
 
-- count: **21** | coverage: `pak_ref` | used_consumer_count: 46
+- count: **21** | coverage: `pak_ref` | used_consumer_count: 49
 - editor_names: 绝对秩序, 逐魂鸟, 防御, 黑暗气息
 - source_descriptions: 减伤, 吸收, 身上散发着黑暗的力量，试试<span color="#73c715">光系精灵</>吧！
 - example_source_ids: [20110010, 20110030, 20110110, 20110120, 20110130]
 - coverage_breakdown: {'pak_ref_count': 21, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090350` 冰捆缚 — 2连击，每次连击敌方获得全技能能耗+1。
+    - `7120301` 松脂 — S3徘徊爪爪A
     - `7030520` 纤维化 — 为场下每个精灵回复3能量。
     - `7070271` 减压阀 — 主动：​本技​能​被​动永久额​外​+20​威力，​被动：​两​侧​技​能​威力​+10，​传动1。
     - `7170151` 背袭 — 从家里带来的午餐盒，学长说帮我用炼金釜加热一下，就变成这样了……
-    - `7110421` 感电 — 使敌方精灵<desc_id=1024>返场</>。
 - sample_ability_consumers:
     - `200268` 绝对秩序 — 受到非敌方系别的技能攻击时伤害-50%。
     - `200127` 展翅 — 在场时，自己携带的普通系技能变为翼系技能，若后于对手行动，自己受到的伤害+25%。
@@ -186,16 +186,16 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2017` — BUFF_CONF_DIRECT
 
-- count: **52** | coverage: `mixed` | used_consumer_count: 26
+- count: **51** | coverage: `mixed` | used_consumer_count: 26
 - editor_names: GM, 光合印记, 恢复能量, 治疗印记, 能量衰退
 - source_descriptions: 会恢复能量。, 回合末获得1能量。, 回合结束回复大量生命, 回合结束，获得能量。, 拥有印记的精灵，每回合恢复<span color="#73c715">5%</>最大生命。
-- example_source_ids: [20170010, 20170011, 20170012, 20170090, 20170130]
-- coverage_breakdown: {'pak_ref_count': 51, 'gap_count': 0, 'ability_flag_count': 1}
+- example_source_ids: [20170010, 20170011, 20170090, 20170130, 20170170]
+- coverage_breakdown: {'pak_ref_count': 50, 'gap_count': 0, 'ability_flag_count': 1}
 - sample_skill_consumers:
     - `7130110` 毒线针 — S3壳栗丝鼠B
-    - `7110421` 感电 — 使敌方精灵<desc_id=1024>返场</>。
-    - `7030300` 不算逃跑。 — 光合作用
-    - `7110461` 电1 — 减伤70%，<desc_id=1016>应对攻击</>：下回合所选技能使用次数+1。
+    - `7030300` 光合作用 — 不算逃跑。
+    - `7110421` 感电 — 使敌方精灵返场。
+    - `7110461` 电1 — 减伤70%，应对攻击：下回合所选技能使用次数+1。
     - `7110360` 球状闪电 — 对敌方精灵造成物理伤害。
 - sample_ability_consumers:
     - `7000353` 怨恨#7000353 — 入场和回合结束扣除敌人100绩点
@@ -230,12 +230,13 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2021` — BUFF_CONF_DIRECT
 
-- count: **3** | coverage: `pak_ref` | used_consumer_count: 2
+- count: **4** | coverage: `pak_ref` | used_consumer_count: 2
 - editor_names: 破空, 顺风, 风起印记
 - source_descriptions: 印记，先手攻击时，本次技能威力+20%。
-- example_source_ids: [20210040, 20210050, 20210070]
-- coverage_breakdown: {'pak_ref_count': 3, 'gap_count': 0, 'ability_flag_count': 0}
+- example_source_ids: [20210040, 20210050, 20210051, 20210070]
+- coverage_breakdown: {'pak_ref_count': 4, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7150060` 武1 — 对战课的某个老师，认为精灵对战中存在一种流体力学，感受空气中魔法的流动，能预测和防御对手的招式。
     - `7150130` 啄击 — 造成物伤，若敌方本回合更换精灵，本次技能威力翻倍。
 - sample_ability_consumers:
     - `200124` 顺风 — 若先于敌方攻击，本次技能威力+50%。
@@ -246,7 +247,7 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2023` — BUFF_CONF_DIRECT
 
-- count: **27** | coverage: `pak_ref` | used_consumer_count: 43
+- count: **27** | coverage: `pak_ref` | used_consumer_count: 46
 - editor_names: 伤害增加, 伤害降低, 噩梦之力, 威力提升, 攻击印记, 涂鸦, 灵魂灼伤, 热身, 生命戏法, 碰瓷
 - source_descriptions: 下次攻击威力变为4倍, 下次攻击威力翻倍, 下次行动威力翻倍, 使用攻击技能时消耗当前50%生命且威力+100%。, 光系技能威力永久+10%
 - example_source_ids: [20190360, 20230010, 20230020, 20230270, 20230350]
@@ -255,8 +256,8 @@ Total families: **186**
     - `7100201` “啊，龙也会流血。”龙舔了舔爪子——向小洛克示意这是可可果的汁液。 — <desc_id=1007>蓄力</>，造成物伤并吸血50%。
     - `7170101` 萌发 — S3克莱因龙B
     - `7140071` 虫云 — S3卯山咪钥B
+    - `7030570` 丛花陷阱 — S3雪影娃娃·春日B
     - `7000347` 威压 — 下一次攻击技能威力翻倍
-    - `7020700` 伺机而动 — 下一次攻击时，技能威力+70。
 - sample_ability_consumers:
     - `200065` 生命戏法 — 使用攻击技能后会消耗当前50%生命且提升100%威力。
     - `200217` 穹顶之下 — 使用攻击技能时，敌方所有印记变为星陨。
@@ -302,11 +303,11 @@ Total families: **186**
 - example_source_ids: [20210060, 20210061, 20320010, 20320040, 20320070]
 - coverage_breakdown: {'pak_ref_count': 17, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7090171` 冰冻光线 — “雪人里面怎么有人啊！”
     - `7050240` 蓄水 — 下次使用的技能能耗-6。
     - `7050421` 潮汐 — 减伤60%，应对攻击：自己获得1层湿润印记。
     - `7050281` 水环 — 减伤60%，应对攻击：自己获得全技能能耗-2。
     - `7001191` 应对！潮汐 — 减伤60%，应对攻击：获得1层湿润印记。
-    - `7180191` 灾厄 — 对自己造成物伤，应对状态：改为对敌方造成物伤，且本次技能威力+120。
 - sample_ability_consumers:
     - `200280` 冲浪 — 入场时，随机一个技能能耗-3。
     - `200188` 盲从 — 可以携带多个复写/借用/取念技能，非幻系技能能耗-2。
@@ -355,11 +356,13 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2037` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `pak_ref` | used_consumer_count: 4
-- editor_names: 加个雪球, 营养液泡
+- count: **7** | coverage: `pak_ref` | used_consumer_count: 4
+- editor_names: 加个雪球, 萌芽印记, 营养液泡
+- source_descriptions: 获得的增益层数+1
 - example_source_ids: [20370010, 20370030, 20370040, 20370060, 20370070]
-- coverage_breakdown: {'pak_ref_count': 6, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'pak_ref_count': 7, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7160380` 萌1 — “它只是一个柔弱无害的小小精灵罢了！”
     - `7001150` 超新星馈赠 — 赋予敌方2层星陨，每使用一次，本技能赋予星陨层数永久+1。
     - `7130210` 虫击 — 造成物伤，应对状态：本次技能威力变为2倍，无视敌方系别抵抗。
     - `7190310` 四维降解 — 造成魔伤，敌方每有1层印记，本技能能耗-1。
@@ -473,30 +476,29 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2048` — BUFF_CONF_DIRECT
 
-- count: **12** | coverage: `pak_ref` | used_consumer_count: 4
+- count: **13** | coverage: `pak_ref` | used_consumer_count: 6
 - example_source_ids: [20480020, 20480030, 20480031, 20480032, 20480034]
-- coverage_breakdown: {'pak_ref_count': 12, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'pak_ref_count': 13, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050261` 应作如是观。 — 减伤80%，<desc_id=1016>应对攻击</>：自己<desc_id=1003>脱离</>。
     - `7080251` 应对！硬化 — 减伤90%，若上次使用攻击技则本技能能耗-2，应对攻击。
     - `7080250` 硬化 — 减伤90%，若上次使用攻击技则本技能能耗-2，应对攻击。
+    - `7110220` 导电撞击 — 对敌方精灵造成物理伤害。
     - `7110370` 磁干扰 — 对敌方精灵造成魔法伤害。
-    - `7150270` 鹰爪 — 对敌方精灵造成魔法伤害。
 - pak_evidence:
     - BUFF_CONF.json: 20480020 buff_base_ids=[2048002] name='' desc=''
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
 
 ## `buff_conf_direct:prefix_2049` — BUFF_CONF_DIRECT
 
-- count: **5** | coverage: `pak_ref` | used_consumer_count: 4
+- count: **4** | coverage: `pak_ref` | used_consumer_count: 3
 - editor_names: 棘刺印记, 降灵印记
 - source_descriptions: 场上的精灵离场后，更换入场的精灵失去6%生命。, 换上场的精灵会失去1点能量。
-- example_source_ids: [20490020, 20490021, 20490030, 20490040, 20490320]
-- coverage_breakdown: {'pak_ref_count': 5, 'gap_count': 0, 'ability_flag_count': 0}
+- example_source_ids: [20490020, 20490030, 20490040, 20490320]
+- coverage_breakdown: {'pak_ref_count': 4, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7110270` 造成物伤，2连击，自己<desc_id=1003>脱离</>。 — 战术撤退，让敌方和己方都措手不及。
     - `7020740` 棘刺 — 敌方获得1层棘刺印记。
-    - `7001050` 降灵 — 赋予敌方1层降灵印记。
     - `7170140` 惊吓盒子 — 造成魔伤，自己回复1能量。
     - `7110281` 雷暴 — 造成魔伤，迸发：本技能获得所有生效过的迸发，每获得1种，本技能能耗+1，威力+10。
 - pak_evidence:
@@ -505,13 +507,14 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2050` — BUFF_CONF_DIRECT
 
-- count: **1** | coverage: `pak_ref` | used_consumer_count: 0
-- example_source_ids: [20500120]
-- coverage_breakdown: {'pak_ref_count': 1, 'gap_count': 0, 'ability_flag_count': 0}
+- count: **2** | coverage: `pak_ref` | used_consumer_count: 0
+- example_source_ids: [20500110, 20500120]
+- coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7110050` S3克莱因龙A — 应对！震慑
     - `7050150` 驱散​自己​所有<desc_id=3010>印记</>，​每驱散1层，获得物攻+50%。​<desc_id=3011>巧变</>：​火系​攻击​技​能​。 — 火系部族的一种战术——烧掉自己身上的一切，包括名字和旗帜，直到只剩下战意。
 - pak_evidence:
-    - BUFF_CONF.json: 20500120 buff_base_ids=[2050012] name='' desc=''
+    - BUFF_CONF.json: 20500110 buff_base_ids=[2050011] name='' desc=''
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
 
 ## `buff_conf_direct:prefix_2052` — BUFF_CONF_DIRECT
@@ -624,17 +627,17 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2064` — BUFF_CONF_DIRECT
 
-- count: **34** | coverage: `pak_ref` | used_consumer_count: 11
-- editor_names: buff64, 三鼓作气, 嫉妒, 换碟, 毒腺, 游弋, 鼓气, 龙噬印记
-- source_descriptions: cs攻击技能的基础能耗变为随机值, 使用3能耗的技能后，双攻+30%
+- count: **33** | coverage: `pak_ref` | used_consumer_count: 13
+- editor_names: 三鼓作气, 嫉妒, 换碟, 毒腺, 游弋, 鼓气, 龙噬印记
+- source_descriptions: 使用3能耗的技能后，双攻+30%
 - example_source_ids: [20231210, 20530050, 20530070, 20530080, 20530090]
-- coverage_breakdown: {'pak_ref_count': 34, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'pak_ref_count': 33, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070271` 减压阀 — 主动：​本技​能​被​动永久额​外​+20​威力，​被动：​两​侧​技​能​威力​+10，​传动1。
     - `7070071` 成为王国的左膀右臂，诸君将为王国的兴衰而动。 — 主动：本技能被动永久额外-1能耗，被动：两侧技能能耗-1，<desc_id=1033>传动</>1。
+    - `7070081` 能量守恒 — 使用后两侧技能的威力永久+20，应对防御：变为威力永久+30。
     - `7900020` 暂时被遮蔽了，找回名字以揭示该技能。 — 噩梦的话语接连不断地冲进脑海，这实在是太吵了，吵到无论如何也想不起来任何事情。
     - `7150320` 闪击 — 对敌方精灵造成物理伤害。
-    - `7100240` 龙息环爆 — 对敌方精灵造成物理伤害。
 - sample_ability_consumers:
     - `200228` 向心力 — 1号和2号位技能获得传动1和威力+30。
     - `280020` 三鼓作气 — 使用能耗为3的技能后，获得攻防永久+20%。
@@ -703,12 +706,12 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2073` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `pak_ref` | used_consumer_count: 5
+- count: **6** | coverage: `pak_ref` | used_consumer_count: 6
 - editor_names: 虚假宝箱
 - example_source_ids: [20730070, 20730110, 20730120, 20730130, 20730160]
 - coverage_breakdown: {'pak_ref_count': 6, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7110380` 精灵对决中常发生的怪异现象，突然，指南针开始指北。 — 离子火花
+    - `7110380` 离子火花 — 精灵对决中常发生的怪异现象，突然，指南针开始指北。
     - `7110400` 双联脉冲 — 造成魔伤，自己获得速度+30。
 - sample_ability_consumers:
     - `200230` 不朽 — 力竭4回合后复活。
@@ -872,7 +875,7 @@ Total families: **186**
 - example_source_ids: [20910010, 20910020, 20910030]
 - coverage_breakdown: {'pak_ref_count': 3, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7190260` S3夜游魔B — 凝望
+    - `7190260` 凝望 — S3邪眼巨魔A
 - sample_ability_consumers:
     - `200204` 侵蚀 — 敌方每有1层中毒效果，自己获得连击数+1。
     - `200183` 自由飘 — 自己每有1层萌化，获得连击数+2。
@@ -905,10 +908,10 @@ Total families: **186**
 - example_source_ids: [20930030, 20930040, 20930050, 20930060, 20930070]
 - coverage_breakdown: {'pak_ref_count': 12, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7110180` 撕扯 — S3克莱因龙A
     - `7110210` 应对！守护咒 — 减​伤90%，​应对攻击。​​​巧变：龙系​状态技能。
     - `7110200` 老龙给幼崽念的睡前故事，谁都无法打扰它们的好梦。 — 减​伤90%，​应对攻击。​​​巧变：龙系​状态技能。
     - `7110350` 电流 — 对敌方精灵造成魔法伤害。
-    - `7110180` S3克莱因龙A — 撕扯
     - `7110240` 电弧 — 造成物伤，迸发：本次技能威力+40。
 - sample_ability_consumers:
     - `280014` 全神贯注 — 入场时，获得物攻+100%，每次行动后-20%。
@@ -922,17 +925,17 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2094` — BUFF_CONF_DIRECT
 
-- count: **2** | coverage: `pak_ref` | used_consumer_count: 6
+- count: **2** | coverage: `pak_ref` | used_consumer_count: 4
 - editor_names: 星陨印记
 - source_descriptions: 受到非幻系技能攻击时，消耗全部星陨层数，受到额外的幻系伤害。
 - example_source_ids: [20940010, 20940011]
 - coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7001140` 星链 — 2连击，每次连击赋予1层星陨
     - `7190290` 曾有洛克企图用愿力重塑现实，但他毕竟只是凡人。 — 对敌方精灵造成物理伤害。
     - `7190220` 造成魔伤，<desc_id=1015>应对状态</>：自身立即使用一次被应对技能 — 应对！小光恶1
     - `7001170` 二律背反 — 敌方获得3层星陨，应对防御：额外使敌方星陨层数翻倍。
     - `7001171` 应对！二律背反 — 敌方获得3层星陨，应对防御：额外使敌方星陨层数翻倍。
+    - `7190280` 假冒 — 自己的生命比例变为与敌方生命比例相同，巧变：恶系攻击技能。
 - pak_evidence:
     - BUFF_CONF.json: 20940010 buff_base_ids=[2094001] name='星陨印记' desc='受到非幻系技能攻击时，消耗全部星陨层数，受到额外的幻系伤害。'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -970,11 +973,11 @@ Total families: **186**
 - example_source_ids: [21020040, 21020100]
 - coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7160140` 失衡 — S3友爱星飞A
+    - `7160170` 速降 — S3夜游魔A
     - `7160310` 撒娇 — 对敌方精灵造成物理伤害。
     - `7160311` 爆米花爆破 — 对敌方精灵造成物理伤害。
     - `7160180` S3夜游魔A — 应对！速降
-    - `7020770` 退化 — 敌方获得1层萌化。
-    - `7160250` 示弱 — 自己获得萌化：速度永久+150。
 - pak_evidence:
     - BUFF_CONF.json: 21020040 buff_base_ids=[2102004] name='萌化' desc='退化到上一阶，种族资质相应降低。'
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -1020,12 +1023,12 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2106` — BUFF_CONF_DIRECT
 
-- count: **2** | coverage: `pak_ref` | used_consumer_count: 0
+- count: **2** | coverage: `pak_ref` | used_consumer_count: 1
 - editor_names: 机械变式
 - example_source_ids: [21060010, 21060020]
 - coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7070020` 战斗学科的某位老师，望着彩虹思索配队的时候，领悟到不同系别魔法穿过空气的速率是不一样的。 — 械斗
+    - `7070020` 械斗 — 战斗学科的某位老师，望着彩虹思索配队的时候，领悟到不同系别魔法穿过空气的速率是不一样的。
 - sample_ability_consumers:
     - `200197` 机械变式 — 若回合内自己携带的技能位置发生变化，该技能能耗永久-1。
 - pak_evidence:
@@ -1034,15 +1037,15 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2107` — BUFF_CONF_DIRECT
 
-- count: **9** | coverage: `pak_ref` | used_consumer_count: 4
+- count: **9** | coverage: `pak_ref` | used_consumer_count: 5
 - example_source_ids: [21070010, 21070020, 21070030, 21070040, 21070050]
 - coverage_breakdown: {'pak_ref_count': 9, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7030610` 针刺射击 — S3森巨人B
     - `7140280` 气波 — 减伤60%，应对攻击：对敌方造成武系物理伤害，威力与被应对技能相等。
     - `7170230` 应对！报复 — 减伤70%，应对攻击：敌方失去3能量。
     - `7140310` 一拳 — 对敌方精灵造成物理伤害。
     - `7170240` 恐吓 — 对敌方精灵造成魔法伤害。
-    - `7130350` 造成物伤，驱散敌方所有<desc_id=3010>印记</>，<desc_id=1015>应对状态</>：改为偷取<desc_id=3010>印记</>。 — 应对！翅刃
 - pak_evidence:
     - BUFF_CONF.json: 21070010 buff_base_ids=[2107001] name='' desc=''
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -1133,7 +1136,7 @@ Total families: **186**
 - sample_skill_consumers:
     - `7070120` 拆卸 — 对敌方精灵造成物理伤害。
     - `7070150` 啊——是谁在指甲抓挠钢板？ — 对敌方精灵造成魔法伤害。
-    - `7070060` 机械原本没有意志，所行善恶来自造物者的欲望。 — 杠杆置换
+    - `7070060` 杠杆置换 — 自己回复2能量，交换两侧技能位置。
     - `7070190` 啮合传递 — 自己获得速度+30，本技能位于1号或3号位时额外获得物攻+80%，传动1。
     - `7070250` 铁蒺藜 — 造成​魔伤，应对状态：​本​次​伤害翻倍。
 - pak_evidence:
@@ -1142,9 +1145,9 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2117` — BUFF_CONF_DIRECT
 
-- count: **8** | coverage: `pak_ref` | used_consumer_count: 1
-- example_source_ids: [21170010, 21170030, 21170090, 21170100, 21170110]
-- coverage_breakdown: {'pak_ref_count': 8, 'gap_count': 0, 'ability_flag_count': 0}
+- count: **9** | coverage: `pak_ref` | used_consumer_count: 1
+- example_source_ids: [21170010, 21170030, 21170070, 21170090, 21170100]
+- coverage_breakdown: {'pak_ref_count': 9, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7070120` 拆卸 — 对敌方精灵造成物理伤害。
     - `7070150` 啊——是谁在指甲抓挠钢板？ — 对敌方精灵造成魔法伤害。
@@ -1183,7 +1186,7 @@ Total families: **186**
 - example_source_ids: [21200010, 21200020]
 - coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7070060` 机械原本没有意志，所行善恶来自造物者的欲望。 — 杠杆置换
+    - `7070060` 杠杆置换 — 自己回复2能量，交换两侧技能位置。
     - `7070250` 铁蒺藜 — 造成​魔伤，应对状态：​本​次​伤害翻倍。
 - pak_evidence:
     - BUFF_CONF.json: 21200010 buff_base_ids=[2120001] name='' desc=''
@@ -1282,7 +1285,7 @@ Total families: **186**
 - example_source_ids: [21380010, 21380020, 21380030, 21380040, 21380050]
 - coverage_breakdown: {'pak_ref_count': 5, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7030600` S3森巨人A — 凝翠
+    - `7030600` 凝翠 — S3森巨人A
     - `7030551` 造成物伤，<desc_id=1015>应对状态</>：本次攻击受攻击属性增益影响翻倍 — 应对！空灵斗士草1
     - `7050471` 水星水1 — 造成魔伤，应对状态：本次伤害不受自身属性减益和敌方属性增益影响
 - sample_ability_consumers:
@@ -1304,18 +1307,19 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2142` — BUFF_CONF_DIRECT
 
-- count: **6** | coverage: `pak_ref` | used_consumer_count: 2
-- example_source_ids: [21420020, 21420030, 21420040, 21420050, 21420060]
-- coverage_breakdown: {'pak_ref_count': 6, 'gap_count': 0, 'ability_flag_count': 0}
+- count: **7** | coverage: `pak_ref` | used_consumer_count: 2
+- example_source_ids: [21420010, 21420020, 21420030, 21420040, 21420050]
+- coverage_breakdown: {'pak_ref_count': 7, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7160140` 失衡 — S3友爱星飞A
+    - `7160170` 速降 — S3夜游魔A
     - `7160180` S3夜游魔A — 应对！速降
     - `7160250` 示弱 — 自己获得萌化：速度永久+150。
-    - `7160170` S3火羽B — 速降
     - `7160200` 俯冲 — 造成物伤，先手+1。
 - sample_ability_consumers:
     - `200195` 化茧 — 受到致命伤害时，获得1层萌化，并免疫此次伤害。（最多触发2次）
 - pak_evidence:
-    - BUFF_CONF.json: 21420020 buff_base_ids=[2142002] name='' desc=''
+    - BUFF_CONF.json: 21420010 buff_base_ids=[2142001] name='' desc=''
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
 
 ## `buff_conf_direct:prefix_2143` — BUFF_CONF_DIRECT
@@ -1349,10 +1353,10 @@ Total families: **186**
 - coverage_breakdown: {'pak_ref_count': 10, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050510` 升华 — S3友爱星飞B
+    - `7120301` 松脂 — S3徘徊爪爪A
+    - `7040680` 焚尽 — S3火巨人B
     - `7150380` 疾风连袭 — 减伤70%，应对攻击：自己获得连击数+2。
     - `7190430` 星云漩涡 — 对敌方精灵造成物理伤害。
-    - `7100321` 降低敌方50%防御，<desc_id=1017>应对防御</>：下次技能无需<desc_id=1007>蓄力</>。 — 应对！龙3
-    - `7120301` S3徘徊爪爪A — 松脂
 - pak_evidence:
     - BUFF_CONF.json: 21460200 buff_base_ids=[2146020] name='' desc=''
     - BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)
@@ -1466,30 +1470,30 @@ Total families: **186**
 
 ## `effect_conf:t1:o31` — EFFECT_CONF
 
-- count: **40** | coverage: `pak_ref` | used_consumer_count: 13
+- count: **40** | coverage: `pak_ref` | used_consumer_count: 16
 - example_source_ids: [1031001, 1031002, 1031003, 1031004, 1031005]
 - coverage_breakdown: {'pak_ref_count': 40, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7150110` 驱赶 — S3深渊蛙B
     - `7020810` 无畏之心 — 减伤100%，应对攻击：减免的伤害变为回复自己生命，且本技能能耗永久+2。
     - `7120290` 老师千叮咛万嘱咐，给精灵使用毒系秘药的时候，记得带好口罩手套。 — 减伤50%，敌方每有1层中毒效果，本技能减伤+10%，应对攻击。
     - `7020800` 血气 — 减伤60%，应对攻击：本回合受到致命伤害时，保留1生命值。
     - `7080240` “可我们不是那种棋子。”——棋棋 — 减伤70%，应对攻击：敌方获得物攻-70%。
-    - `7020790` 防反 — 减伤70%，应对攻击：自己获得物攻和魔攻+70%。
 - pak_evidence:
     - EFFECT_CONF.json: 1031001 type=1 effect_order=31 add_des='' effect_param=[[7020071], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
 
 ## `effect_conf:t1:o32` — EFFECT_CONF
 
-- count: **12** | coverage: `pak_ref` | used_consumer_count: 25
+- count: **12** | coverage: `pak_ref` | used_consumer_count: 27
 - example_source_ids: [1032001, 1032002, 1032003, 1032004, 1032005]
 - coverage_breakdown: {'pak_ref_count': 12, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己获得魔攻+60%。
-    - `7001140` 星链 — 2连击，每次连击赋予1层星陨
     - `7180110` 镜影 — S3半朽蜜果灵A
     - `7140071` 虫云 — S3卯山咪钥B
-    - `7110210` 应对！守护咒 — 减​伤90%，​应对攻击。​​​巧变：龙系​状态技能。
+    - `7190260` 凝望 — S3邪眼巨魔A
+    - `7120080` 通电 — S3雷神之子A
 - pak_evidence:
     - EFFECT_CONF.json: 1032001 type=1 effect_order=32 add_des='' effect_param=[[1], [0], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1522,15 +1526,15 @@ Total families: **186**
 
 ## `effect_conf:t1:o35` — EFFECT_CONF
 
-- count: **50** | coverage: `pak_ref` | used_consumer_count: 0
+- count: **50** | coverage: `pak_ref` | used_consumer_count: 1
 - example_source_ids: [1035001, 1035002, 1035003, 1035004, 1035005]
 - coverage_breakdown: {'pak_ref_count': 50, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7800552` 黑魔法诅咒——减速 — 减少速度，每回合使用
+    - `7800554` 结晶水 — 初始能量为0，入场前其他精灵每放1次冰系技能，获得3能量。
+    - `7180371` 暗箱操作 — 只要你还能找到下一个倒霉蛋。
     - `7800555` 奇思妙想 — 奇思妙想：每次萌化攻防提升30%
     - `7800553` 恶魔叮 — 恶魔狼在背包时，持续获得生命回复与全能力强化
-    - `7180371` 只要你还能找到下一个倒霉蛋。 — 暗箱操作
-    - `7800557` 噩梦 — 生命值低于50%时，全属性提升30%
 - pak_evidence:
     - EFFECT_CONF.json: 1035001 type=1 effect_order=35 add_des='' effect_param=[[1], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1578,8 +1582,8 @@ Total families: **186**
 - example_source_ids: [1042001, 1042002, 1042003, 1042004, 1042005]
 - coverage_breakdown: {'pak_ref_count': 17, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7040680` S3火巨人B — 焚尽
-    - `7040470` “都结束了，敌人燃尽了，我们也燃尽了。” — 焚毁
+    - `7040680` 焚尽 — S3火巨人B
+    - `7040470` 焚毁 — “都结束了，敌人燃尽了，我们也燃尽了。”
     - `7120130` 黑市里淘来的毒系技能石，摸起来总是黏糊糊的，建议戴着手套触摸。 — 造成物伤，敌方获得2层中毒，应对状态：改为获得6层。
     - `7040500` 焚烧烙印 — 造成魔伤，驱散敌方所有印记，每驱散1层，获得物攻+20%。
 - sample_ability_consumers:
@@ -1591,14 +1595,14 @@ Total families: **186**
 
 ## `effect_conf:t1:o5` — EFFECT_CONF
 
-- count: **29** | coverage: `pak_ref` | used_consumer_count: 6
+- count: **29** | coverage: `pak_ref` | used_consumer_count: 7
 - editor_names: 适者生存, 饱腹感
 - source_descriptions: 恢复
 - example_source_ids: [1005001, 1005002, 1005003, 1005005, 1005008]
 - coverage_breakdown: {'pak_ref_count': 29, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己获得魔攻+60%。
-    - `7030570` S3雪影娃娃·春日B — 丛花陷阱
+    - `7030570` 丛花陷阱 — S3雪影娃娃·春日B
     - `7000340` 疗愈 — 回复100%生命和能量
     - `7000343` 聚变 — 回复40%生命值和200绩点。
     - `7800260` 范围地震 — 对全体目标，对对手造成物理伤害。
@@ -1626,11 +1630,11 @@ Total families: **186**
 - example_source_ids: [1051001, 1051002, 1051003]
 - coverage_breakdown: {'pak_ref_count': 3, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7150110` 驱赶 — S3深渊蛙B
     - `7150111` S3稻草守护者B — 应对！驱赶
     - `7150300` 风矢 — 造成物伤，应对状态：回合结束使敌方紧急脱离。
     - `7150260` 鸣叫 — 造成物伤，无法主动使用，在使用3次翼系技能后会自动使用此技能。
     - `7150080` 格斗小七2 — 造成魔伤，若敌方本回合替换精灵，提高自身50%魔攻。
-    - `7150150` 疾风刺 — 造成魔伤，迅捷。
 - pak_evidence:
     - EFFECT_CONF.json: 1051001 type=1 effect_order=51 add_des='' effect_param=[[0], [0], [1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1642,11 +1646,11 @@ Total families: **186**
 - example_source_ids: [1052001, 1052002, 1052003, 1052004, 1052005]
 - coverage_breakdown: {'pak_ref_count': 9, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7160160` 风刃 — S3星云旅者A
     - `7080201` 越挣扎，时间反而流走得越快。 — 敌方3回合无法更换精灵，<desc_id=1017>应对防御</>：敌方获得双防-60%。
     - `7120160` 毒祭司们将草药学与生物学知识活用，得到了这种技能。 — 敌方获得5层中毒。
     - `7090141` 冰雹 — 造成物伤，敌方获得全技能能耗+1。
     - `7140321` 提气 — 造成魔伤，2连击，每成功应对1次，本技能连击数永久+2。
-    - `7160160` S3星云旅者A — 风刃
 - pak_evidence:
     - EFFECT_CONF.json: 1052001 type=1 effect_order=52 add_des='' effect_param=[[0], [20070010], [0], [1]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1658,10 +1662,10 @@ Total families: **186**
 - example_source_ids: [1053001, 1053002, 1053004, 1053005, 1053007]
 - coverage_breakdown: {'pak_ref_count': 17, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7040470` 焚毁 — “都结束了，敌人燃尽了，我们也燃尽了。”
     - `7040280` 充分燃烧 — 下一次攻击技能威力翻倍，应对防御：改为威力变为4倍。
     - `7120230` 毒泡泡 — 对敌方精灵造成魔法伤害。
     - `7001171` 应对！二律背反 — 敌方获得3层星陨，应对防御：额外使敌方星陨层数翻倍。
-    - `7040470` “都结束了，敌人燃尽了，我们也燃尽了。” — 焚毁
     - `7190331` 错乱 — 造成魔伤，应对状态：敌方获得3层星陨印记。
 - pak_evidence:
     - EFFECT_CONF.json: 1053001 type=1 effect_order=53 add_des='' effect_param=[[20070010], [20010011], [299901]]
@@ -1706,14 +1710,14 @@ Total families: **186**
 
 ## `effect_conf:t2:o1` — EFFECT_CONF
 
-- count: **18** | coverage: `pak_ref` | used_consumer_count: 3
+- count: **18** | coverage: `pak_ref` | used_consumer_count: 4
 - source_descriptions: 噩梦
 - example_source_ids: [1001001, 1001002, 1001003, 1001004, 1001005]
 - coverage_breakdown: {'pak_ref_count': 18, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7040280` 充分燃烧 — 下一次攻击技能威力翻倍，应对防御：改为威力变为4倍。
     - `7999998` 加尔临时用 — 对全体精灵造成物理伤害。
-    - `7999999` 造成物伤，获得1能量。 — 恶念交换
+    - `7999999` 恶念交换 — 造成物伤，获得1能量。
     - `7021060` 彗星 — 造成魔伤，每失去5%生命，本次技能威力-10，使用后消耗全部生命。
 - sample_ability_consumers:
     - `200223` 铃兰晚钟 — 首次入场时，失去自己一半的当前生命。
@@ -1737,47 +1741,47 @@ Total families: **186**
 
 ## `effect_conf:t2:o3` — EFFECT_CONF
 
-- count: **2** | coverage: `pak_ref` | used_consumer_count: 5
+- count: **2** | coverage: `pak_ref` | used_consumer_count: 6
 - source_descriptions: 打断！
 - example_source_ids: [1003001, 1003003]
 - coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7030600` 凝翠 — S3森巨人A
     - `7080421` 应对！淤泥表皮 — 减伤80%，应对攻击：敌方获得连击数-3。
-    - `7030600` S3森巨人A — 凝翠
+    - `7180371` 暗箱操作 — 只要你还能找到下一个倒霉蛋。
     - `7080131` 扬沙 — 对敌方精灵造成物理伤害。
     - `7110431` 造成魔伤，<desc_id=1015>应对状态</>：回合结束时使敌方精灵<desc_id=1024>返场</>。 — 应对！强制重启
-    - `7030551` 造成物伤，<desc_id=1015>应对状态</>：本次攻击受攻击属性增益影响翻倍 — 应对！空灵斗士草1
 - pak_evidence:
     - EFFECT_CONF.json: 1003001 type=2 effect_order=3 add_des='打断！' effect_param=[[1], [1004055], [3]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
 
 ## `effect_conf:t2:o31` — EFFECT_CONF
 
-- count: **106** | coverage: `pak_ref` | used_consumer_count: 32
+- count: **106** | coverage: `pak_ref` | used_consumer_count: 36
 - example_source_ids: [1031065, 1031066, 1031074, 1031076, 1031077]
 - coverage_breakdown: {'pak_ref_count': 106, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090350` 冰捆缚 — 2连击，每次连击敌方获得全技能能耗+1。
+    - `7030580` 花瓣群舞 — S3半朽蜜果灵B
+    - `7030590` 硕果 — S3炮米花B
     - `7190270` 晃攻 — S3障眼魔A
     - `7700001` 天狼 — S3饮雪狂兽A
-    - `7700002` 碎雪 — S3饮雪狂兽B
-    - `7030520` 纤维化 — 为场下每个精灵回复3能量。
 - pak_evidence:
     - EFFECT_CONF.json: 1031065 type=2 effect_order=31 add_des='' effect_param=[[7080161], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
 
 ## `effect_conf:t2:o4` — EFFECT_CONF
 
-- count: **65** | coverage: `pak_ref` | used_consumer_count: 5
+- count: **65** | coverage: `pak_ref` | used_consumer_count: 6
 - source_descriptions: 驱散
 - example_source_ids: [1004003, 1004008, 1004009, 1004010, 1004011]
 - coverage_breakdown: {'pak_ref_count': 65, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
+    - `7160160` 风刃 — S3星云旅者A
     - `7130310` 蛰针 — 减伤70%，紧急脱离，应对攻击：下个入场精灵获得减伤。
+    - `7130290` 贮藏 — 奉献吧！为了虫群的崇高意志！
     - `7180180` 造成物伤，<desc_id=1029>吸血</>50%，<desc_id=1015>应对状态</>：本次技能威力翻倍。 — 应对！暗突袭
-    - `7130290` 奉献吧！为了虫群的崇高意志！ — 贮藏
     - `7150260` 鸣叫 — 造成物伤，无法主动使用，在使用3次翼系技能后会自动使用此技能。
-    - `7050441` 水1 — 造成魔伤，应对状态：驱散敌方增益
 - sample_ability_consumers:
     - `280017` 宝剑王牌 — 仅可使用1号和3号位技能。
     - `280008` 高浓生物碱 — 使用技能时，敌方获得2层中毒。
@@ -1836,7 +1840,7 @@ Total families: **186**
     - `7000290` 轻伤 — 精灵受了点轻伤
     - `7000300` 受伤 — 精灵处于受伤状态
     - `7000310` 虚弱 — 精灵处于虚弱状态
-    - `7030350` 奇怪的种子弹 — 造成魔伤，并<desc_id=1029>吸血</>100%。
+    - `7030350` 奇怪的种子弹 — 造成魔伤，并吸血100%。
 - pak_evidence:
     - EFFECT_CONF.json: 1001007 type=3 effect_order=1 add_des='' effect_param=[[1], [4], [0], [150], [0], [1], [10000]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -1880,7 +1884,7 @@ Total families: **186**
 - sample_skill_consumers:
     - `7130321` 噬心 — 对敌方精灵造成物理伤害。
     - `7190430` 星云漩涡 — 对敌方精灵造成物理伤害。
-    - `7130200` 即使圣城坠毁，虫群也不会灭绝。 — 虫网
+    - `7130200` 虫网 — 造成魔伤，自己回复1能量。
 - sample_ability_consumers:
     - `280012` 抓到你了 — 自己入场时敌方获得2层冻结，使敌方获得冻结时，也会使其获得全技能能耗+1。
 - pak_evidence:
@@ -1898,17 +1902,17 @@ Total families: **186**
 
 ## `effect_conf:t3:o19` — EFFECT_CONF
 
-- count: **52** | coverage: `pak_ref` | used_consumer_count: 17
+- count: **52** | coverage: `pak_ref` | used_consumer_count: 19
 - editor_names: 得寸进尺, 快充, 惊吓, 打雪仗, 搜刮, 撞倒, 毒蘑菇, 深度睡眠, 灵魂灼伤, 石天平
 - source_descriptions: 失去能量, 振奋, 清空能量, 滋养, 获得能量
 - example_source_ids: [1019001, 1019002, 1019003, 1019004, 1019005]
 - coverage_breakdown: {'pak_ref_count': 52, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7170101` 萌发 — S3克莱因龙B
+    - `7190250` 暗影波 — S3卡拉波斯B
+    - `7170090` 心盾 — S3徘徊爪爪B
     - `7090100` 飞沙 — S3蝎子王A
-    - `7040170` 火苗 — “前锋听令——扬焚旗之矛，贯敌方于焦土，火族永不燃尽。”
-    - `7030570` S3雪影娃娃·春日B — 丛花陷阱
-    - `7070071` 成为王国的左膀右臂，诸君将为王国的兴衰而动。 — 主动：本技能被动永久额外-1能耗，被动：两侧技能能耗-1，<desc_id=1033>传动</>1。
+    - `7030570` 丛花陷阱 — S3雪影娃娃·春日B
 - sample_ability_consumers:
     - `280007` 地脉馈赠 — 突破能量上限并立即回复10能量，入场前己方精灵每放1次地系技能，回复3能量。
 - pak_evidence:
@@ -2007,10 +2011,10 @@ Total families: **186**
 - coverage_breakdown: {'pak_ref_count': 64, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7140080` 横剪 — S3邪眼巨魔B
+    - `7040220` 持续高温 — 传说以心脏为代价，可以和流星签订契约，使用流星的力量。
     - `7180100` 幽1 — 使双方失去8能量，应对防御：自身不失去能量。
     - `7080130` 过山车 — 使己方队伍中的所有精灵携带的技能跨精灵向下移动1个位置，巧变：机械系技能。
     - `7040290` 天火 — 使敌方身上的灼烧翻倍，并触发1次灼烧伤害。
-    - `7070080` 联动装置 — 使用后两侧技能的威力永久+20，应对防御：变为威力永久+30。
 - pak_evidence:
     - EFFECT_CONF.json: 1031021 type=3 effect_order=31 add_des='' effect_param=[[7050131], [0], [2], [0], [0], [0], [1], [2]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2043,15 +2047,15 @@ Total families: **186**
 
 ## `effect_conf:t3:o37` — EFFECT_CONF
 
-- count: **3** | coverage: `pak_ref` | used_consumer_count: 45
+- count: **3** | coverage: `pak_ref` | used_consumer_count: 48
 - example_source_ids: [1037001, 1037002, 1099037]
 - coverage_breakdown: {'pak_ref_count': 3, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7090350` 冰捆缚 — 2连击，每次连击敌方获得全技能能耗+1。
+    - `7120301` 松脂 — S3徘徊爪爪A
     - `7030520` 纤维化 — 为场下每个精灵回复3能量。
     - `7070271` 减压阀 — 主动：​本技​能​被​动永久额​外​+20​威力，​被动：​两​侧​技​能​威力​+10，​传动1。
     - `7170151` 背袭 — 从家里带来的午餐盒，学长说帮我用炼金釜加热一下，就变成这样了……
-    - `7110421` 感电 — 使敌方精灵<desc_id=1024>返场</>。
 - pak_evidence:
     - EFFECT_CONF.json: 1037001 type=3 effect_order=37 add_des='' effect_param=[[3], [0], [1], [0]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2135,7 +2139,7 @@ Total families: **186**
 - coverage_breakdown: {'pak_ref_count': 8, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180110` 镜影 — S3半朽蜜果灵A
-    - `7180130` 如果在学院里看到野生的枕头，不要躺上去，它会闯入你的梦里借走一夜安眠。 — 魔爪
+    - `7180130` 魔爪 — 造成物伤，自己回复1能量。
 - pak_evidence:
     - EFFECT_CONF.json: 1043001 type=3 effect_order=43 add_des='' effect_param=[[5000], [20070010], [299904], [20010011], [299902]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
@@ -2447,11 +2451,11 @@ Total families: **186**
 
 ## `effect_conf:t3:o81` — EFFECT_CONF
 
-- count: **4** | coverage: `pak_ref` | used_consumer_count: 0
+- count: **4** | coverage: `pak_ref` | used_consumer_count: 1
 - example_source_ids: [1081001, 1081002, 1081003, 1081004]
 - coverage_breakdown: {'pak_ref_count': 4, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
-    - `7030510` 调配炼金药剂也讲究缘分，盐多加水，水多加盐。 — 富养化
+    - `7030510` 富养化 — 调配炼金药剂也讲究缘分，盐多加水，水多加盐。
 - pak_evidence:
     - EFFECT_CONF.json: 1081001 type=3 effect_order=81 add_des='' effect_param=[[1001]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)
