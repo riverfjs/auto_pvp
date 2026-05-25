@@ -5,7 +5,7 @@ from __future__ import annotations
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.generated.pak import battle_events as _battle_events
 
-ROW_TAG = 0
+ROW_HANDLER_IDX = 0
 ROW_TIMING = 1
 ROW_TARGET = 2
 ROW_FLAGS = 3

@@ -12,7 +12,7 @@ from __future__ import annotations
 from roco.engine.common.rng import next_rng
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.core.dispatch import HANDLERS, HANDLER_COUNT
-from roco.engine.kernel.core.rows import ROW_TAG
+from roco.engine.kernel.core.rows import ROW_HANDLER_IDX
 from roco.engine.kernel.model.state import KernelState
 from roco.engine.artifacts.linked_op import EXTRA_SKILL_POLICY_CONSERVATIVE
 from roco.generated.catalog import actions as catalog_actions
@@ -128,7 +128,7 @@ def execute_action(
 
 def _execute_op_rows(ctx: StageCtx, rows: tuple[tuple[int, ...], ...]) -> None:
     for row in rows:
-        handler_idx = row[ROW_TAG]
+        handler_idx = row[ROW_HANDLER_IDX]
         if 0 < handler_idx < HANDLER_COUNT:
             HANDLERS[handler_idx](ctx, row)
 

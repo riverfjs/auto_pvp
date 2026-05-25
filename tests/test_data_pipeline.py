@@ -400,7 +400,7 @@ def test_no_legacy_mark_engineering_name_guard():
     assert offenders == []
 
 
-def test_skill_effect_rows_have_no_tag_code_zero():
+def test_skill_effect_rows_have_nonempty_primitive_key():
     if not (parse_pak.DEFAULT_PAK_DATA_DIR / "BinData" / "EFFECT_CONF.json").exists():
         pytest.skip("pak data not extracted")
 
@@ -410,7 +410,7 @@ def test_skill_effect_rows_have_no_tag_code_zero():
         for collection in ("skills", "abilities")
         for record in canonical[collection]
         for row in record.get("effect_rows", ()) or ()
-        if row[0] == 0
+        if not row[0]
     ]
     assert offenders == []
 

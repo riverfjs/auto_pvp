@@ -27,9 +27,9 @@ EMPTY_PARAMS = MappingProxyType({})
 
 @dataclass(slots=True)
 class EffectSpec:
-    """One compiled effect row keyed by primitive tag."""
+    """One compiler effect row keyed by pak-derived primitive key."""
 
-    tag: int                                    # kernel handler index
+    primitive_key: str
     timing: str
     params: MappingProxyType[str, Any] = EMPTY_PARAMS
     chance: float = 1.0

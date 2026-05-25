@@ -8,7 +8,7 @@ Handler indices are engine-owned runtime artifacts.  To add a new handler:
 from __future__ import annotations
 
 from roco.engine.kernel.core.ctx import StageCtx
-from roco.engine.kernel.core.rows import ROW_TAG, ROW_TIMING, ROW_COND, condition_matches
+from roco.engine.kernel.core.rows import ROW_HANDLER_IDX, ROW_TIMING, ROW_COND, condition_matches
 
 from roco.engine.kernel.core.rows import (  # noqa: F401
     TIMING_PAK_BEFORE_HURT, TIMING_PAK_HP_CHANGED, TIMING_HOOK_BEFORE_MOVE,
@@ -33,6 +33,6 @@ def run_skill_timing(
     for idx in range(start, end):
         row = effect_rows[idx]
         if row[ROW_TIMING] == timing and condition_matches(row[ROW_COND], ctx):
-            handler_idx = row[ROW_TAG]
+            handler_idx = row[ROW_HANDLER_IDX]
             if 0 < handler_idx < HANDLER_COUNT:
                 HANDLERS[handler_idx](ctx, row)
