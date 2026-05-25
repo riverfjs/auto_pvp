@@ -31,6 +31,7 @@ class PetState(NamedTuple):
     lifedrain_bps: int
     hit_delta: int
     global_cost_delta: int
+    attack_cost_delta: int
     global_power_bonus: int
     anti_heal_multiplier: int
     first_action_done: int
@@ -188,6 +189,7 @@ def _pet_state(pet_id: int) -> PetState:
         lifedrain_bps=0,
         hit_delta=0,
         global_cost_delta=0,
+        attack_cost_delta=0,
         global_power_bonus=0,
         anti_heal_multiplier=0,
         first_action_done=0,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.common.enums import Element
+from roco.common.enums import Element, SkillCategory, StatusType
 from roco.common.packing import (
     BUFF_ATK_MAG,
     BUFF_ATK_PHYS,
@@ -55,6 +55,21 @@ def op_apply_active_buff(ctx: StageCtx, row: tuple[int, ...]) -> None:
         _set_active_buff_request(ctx, "enemy", buff_id, duration)
     else:
         raise RuntimeError(f"active buff row has unsupported target_type {target}")
+
+
+def op_after_attack_status(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.skill_category not in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
+        return
+    stacks = row[ROW_ARG1]
+    if stacks <= 0:
+        return
+    status = row[ROW_ARG0]
+    if status == int(StatusType.POISON):
+        ctx.poison_stacks += stacks
+    elif status == int(StatusType.BURN):
+        ctx.burn_stacks += stacks
+    else:
+        raise RuntimeError(f"after-attack status row has unsupported status {status}")
 
 
 def op_permanent_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -138,6 +153,20 @@ def op_global_cost_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.self_global_cost_delta += row[ROW_ARG0]
     else:
         ctx.enemy_global_cost_delta += row[ROW_ARG0]
+
+
+def op_attack_cost_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.self_attack_cost_delta += row[ROW_ARG0]
+    else:
+        ctx.enemy_attack_cost_delta += row[ROW_ARG0]
+
+
+def op_global_power_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.self_global_power_delta += row[ROW_ARG0]
+    else:
+        ctx.enemy_global_power_delta += row[ROW_ARG0]
 
 
 def op_entry_self_buff_by_used_skill_count(ctx: StageCtx, row: tuple[int, ...]) -> None:

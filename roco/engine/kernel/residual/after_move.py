@@ -170,6 +170,14 @@ def _apply_buff_and_cleanse_deltas(
         actor = actor._replace(global_cost_delta=max(-15, min(15, actor.global_cost_delta + ctx.self_global_cost_delta)))
     if ctx.enemy_global_cost_delta:
         target = target._replace(global_cost_delta=max(-15, min(15, target.global_cost_delta + ctx.enemy_global_cost_delta)))
+    if ctx.self_attack_cost_delta:
+        actor = actor._replace(attack_cost_delta=max(-15, min(15, actor.attack_cost_delta + ctx.self_attack_cost_delta)))
+    if ctx.enemy_attack_cost_delta:
+        target = target._replace(attack_cost_delta=max(-15, min(15, target.attack_cost_delta + ctx.enemy_attack_cost_delta)))
+    if ctx.self_global_power_delta:
+        actor = actor._replace(global_power_bonus=max(-255, min(255, actor.global_power_bonus + ctx.self_global_power_delta)))
+    if ctx.enemy_global_power_delta:
+        target = target._replace(global_power_bonus=max(-255, min(255, target.global_power_bonus + ctx.enemy_global_power_delta)))
     if ctx.self_active_buff_id:
         actor = actor._replace(active_buffs=add_active_buff(
             actor.active_buffs,

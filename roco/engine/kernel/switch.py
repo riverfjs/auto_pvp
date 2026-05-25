@@ -156,8 +156,12 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
         pet = pet._replace(global_cost_delta=max(-15, min(15, pet.global_cost_delta + ctx.entry_cost_delta)))
     if ctx.self_global_cost_delta:
         pet = pet._replace(global_cost_delta=max(-15, min(15, pet.global_cost_delta + ctx.self_global_cost_delta)))
+    if ctx.self_attack_cost_delta:
+        pet = pet._replace(attack_cost_delta=max(-15, min(15, pet.attack_cost_delta + ctx.self_attack_cost_delta)))
     if ctx.entry_power_bonus:
         pet = pet._replace(global_power_bonus=max(-255, min(255, pet.global_power_bonus + ctx.entry_power_bonus)))
+    if ctx.self_global_power_delta:
+        pet = pet._replace(global_power_bonus=max(-255, min(255, pet.global_power_bonus + ctx.self_global_power_delta)))
     if ctx.entry_element_power_flat:
         pet = pet._replace(element_power_flat=_merge_element_u8(pet.element_power_flat, ctx.entry_element_power_flat))
     if ctx.entry_element_power_bps:
@@ -227,6 +231,11 @@ def apply_enemy_switch_reactions(state: KernelState, reactor_side_id: int, switc
         reactor = reactor._replace(global_cost_delta=max(-15, min(15, reactor.global_cost_delta + ctx.entry_cost_delta)))
     if ctx.self_global_cost_delta:
         reactor = reactor._replace(global_cost_delta=max(-15, min(15, reactor.global_cost_delta + ctx.self_global_cost_delta)))
+    if ctx.self_attack_cost_delta:
+        reactor = reactor._replace(attack_cost_delta=max(-15, min(15, reactor.attack_cost_delta + ctx.self_attack_cost_delta)))
+    if ctx.self_global_power_delta:
+        reactor = reactor._replace(global_power_bonus=max(-255, min(255, reactor.global_power_bonus + ctx.self_global_power_delta)))
+    if ctx.self_global_cost_delta or ctx.self_attack_cost_delta or ctx.self_global_power_delta:
         reactor_side = replace_pet(reactor_side, reactor_slot, reactor)
         state = replace_side(state, reactor_side_id, reactor_side)
     if ctx.enemy_lose_energy:

@@ -180,6 +180,8 @@ def _execute(
     if weather_type(state.weather) == WeatherType.SANDSTORM.value and skill[SKILL_ELEMENT] == ELEMENT_GROUND:
         cost //= 2
     cost += actor.global_cost_delta
+    if skill[SKILL_CATEGORY] in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
+        cost += actor.attack_cost_delta
     cost -= _unpack_skill_count(actor.element_cost_reduce, Element(skill[SKILL_ELEMENT]))
     cost += cost_mod_amount(actor_side.cost_mods, choice.data if choice.action_code == ACTION_MOVE else -1, skill[SKILL_CATEGORY])
     dealt = 0

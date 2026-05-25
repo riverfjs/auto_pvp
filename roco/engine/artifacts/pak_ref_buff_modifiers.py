@@ -2,8 +2,9 @@
 from __future__ import annotations
 from roco.common.constants import BPS
 from roco.engine.artifacts.linked_op import LinkedOp
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _gap, _grant_refs_are_hit_count_effects, _op, _param, _param_int, _single_int, buff_type, effect_type
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_SDT
+from roco.common.enums import StatusType
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
+from roco.engine.kernel.op_rows import TARGET_ENEMY, TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 
 def _link_team_skill_hit_count_buff(buff_id: int, timing: int, target: int, rate: int, stack_count: int, *, source_name: str) -> LinkedOp | None:
     rows = _base_rows(buff_id)
@@ -109,6 +110,66 @@ def _link_global_cost_delta_buff(buff_id: int, timing: int, target: int, rate: i
     if total == 0:
         return None
     return _op('op_global_cost_delta', timing, target, rate, total)
+
+def _link_attack_cost_delta_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if not rows or any((row[1] != buff_type('BFT_CHANGE_SKILL_ENERGY_COST') for row in rows)):
+        return None
+    total = 0
+    for _base_id, _order, params in rows:
+        if len(params) < 7:
+            return None
+        if _as_int_tuple(params[0]) != (0,) or set(_as_int_tuple(params[1])) != {2, 3}:
+            return None
+        if not _all_zero(params[2:3]) or not _all_zero(params[4:]):
+            return None
+        amount = _param_int(params, 3)
+        if amount == 0:
+            return None
+        total += amount
+    if total == 0:
+        return None
+    return _op('op_attack_cost_delta', timing, target, rate, total)
+
+def _link_after_attack_status_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_BUFF_AFTER_SKILL'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 7:
+        return None
+    if not _all_zero(params[:4]) or _param_int(params, 5) != 3:
+        return None
+    ref_ids = _as_int_tuple(params[4])
+    if len(ref_ids) != 1:
+        return None
+    ref_id = ref_ids[0]
+    stacks = _param_int(params, 6)
+    if stacks <= 0:
+        return None
+    if _is_poison_status(ref_id):
+        return _op('op_after_attack_status', TIMING_PAK_BEFORE_HURT, TARGET_ENEMY, rate, int(StatusType.POISON), stacks)
+    if _is_burn_status(ref_id):
+        return _op('op_after_attack_status', TIMING_PAK_BEFORE_HURT, TARGET_ENEMY, rate, int(StatusType.BURN), stacks)
+    return None
+
+def _link_global_power_delta_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_INC_DAM_BY_SKILL'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 12:
+        return None
+    if _as_int_tuple(params[0]) != (0,) or _as_int_tuple(params[1]) != (0,):
+        return None
+    if not _all_zero(params[2:4]) or not _all_zero(params[6:10]):
+        return None
+    if _param_int(params, 4) != 2 or _param_int(params, 10) != 1 or _param_int(params, 11) != 0:
+        return None
+    amount = _param_int(params, 5)
+    if amount == 0:
+        return None
+    return _op('op_global_power_delta', timing, target, rate, amount)
 
 def _link_damage_reduction_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)

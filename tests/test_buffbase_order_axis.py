@@ -25,7 +25,7 @@ from roco.common.primitive_keys import (
     effect_ref_key,
 )
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
-from roco.common.enums import AbilityFlag, Element
+from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
 from roco.data.ability_flags_from_effects import load_ability_flags_from_effects
@@ -37,9 +37,9 @@ from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primiti
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.linked_op import LinkGapError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_SDT
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.buffs import op_global_cost_delta
+from roco.engine.kernel.op_mods.buffs import op_after_attack_status, op_attack_cost_delta, op_global_cost_delta, op_global_power_delta
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -516,9 +516,28 @@ def test_direct_bft_change_skill_energy_cost_links_global_cost_delta():
     )
 
     scoped = (buff_ref_key(20320010), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
-    with pytest.raises(LinkGapError) as exc_info:
-        link_primitive_rows(scoped, source_name="聒噪")
-    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+    assert _linked_tuple(scoped, "聒噪") == (
+        "op_attack_cost_delta",
+        11,
+        2,
+        10000,
+        2,
+        0,
+        0,
+        0,
+    )
+
+    repeated_scoped = (buff_ref_key(20320400), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(repeated_scoped, "灾厄") == (
+        "op_attack_cost_delta",
+        11,
+        2,
+        10000,
+        4,
+        0,
+        0,
+        0,
+    )
 
 
 def test_global_cost_delta_op_routes_by_target():
@@ -527,6 +546,72 @@ def test_global_cost_delta_op_routes_by_target():
     op_global_cost_delta(ctx, (0, 11, 2, 10000, 0, 2, 0, 0, 0))
     assert ctx.self_global_cost_delta == -1
     assert ctx.enemy_global_cost_delta == 2
+
+
+def test_attack_cost_delta_op_routes_by_target():
+    ctx = StageCtx()
+    op_attack_cost_delta(ctx, (0, 11, 1, 10000, 0, -1, 0, 0, 0))
+    op_attack_cost_delta(ctx, (0, 11, 2, 10000, 0, 2, 0, 0, 0))
+    assert ctx.self_attack_cost_delta == -1
+    assert ctx.enemy_attack_cost_delta == 2
+
+
+def test_direct_bft_inc_dam_by_skill_links_global_power_delta():
+    raw = (buff_ref_key(20230440), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "伤害增加") == (
+        "op_global_power_delta",
+        11,
+        1,
+        10000,
+        10,
+        0,
+        0,
+        0,
+    )
+
+    slotted = (buff_ref_key(20231120), pak_cast_moment_key(6), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(slotted, source_name="机械1")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_global_power_delta_op_routes_by_target():
+    ctx = StageCtx()
+    op_global_power_delta(ctx, (0, 11, 1, 10000, 0, 10, 0, 0, 0))
+    op_global_power_delta(ctx, (0, 11, 2, 10000, 0, -20, 0, 0, 0))
+    assert ctx.self_global_power_delta == 10
+    assert ctx.enemy_global_power_delta == -20
+
+
+def test_direct_bft_buff_after_skill_links_attack_status():
+    raw = (buff_ref_key(20350830), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "传染") == (
+        "op_after_attack_status",
+        TIMING_PAK_BEFORE_HURT,
+        2,
+        10000,
+        int(StatusType.POISON),
+        1,
+        0,
+        0,
+    )
+
+    unsupported_ref = (buff_ref_key(20350760), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(unsupported_ref, source_name="化劲")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_after_attack_status_op_gates_on_attack_category():
+    ctx = StageCtx()
+    ctx.skill_category = SkillCategory.PHYSICAL.value
+    op_after_attack_status(ctx, (0, TIMING_PAK_BEFORE_HURT, 2, 10000, 0, int(StatusType.POISON), 2, 0, 0))
+    assert ctx.poison_stacks == 2
+
+    ctx = StageCtx()
+    ctx.skill_category = SkillCategory.STATUS.value
+    op_after_attack_status(ctx, (0, TIMING_PAK_BEFORE_HURT, 2, 10000, 0, int(StatusType.POISON), 2, 0, 0))
+    assert ctx.poison_stacks == 0
 
 
 def test_direct_bft_pet_transe_links_simple_switch_shapes():
