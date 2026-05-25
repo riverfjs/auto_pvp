@@ -8,7 +8,7 @@ from roco.compiler_v2.effect_codegen.params import extract_int_list, safe_int
 from roco.compiler_v2.effect_codegen.family_axis_decoders.common import (
     COUNTER_INSTALL_TIMING,
     emit_effect_order,
-    emit_effect_order_variant,
+    emit_effect_ref,
     params,
 )
 
@@ -58,12 +58,7 @@ def decode_hit_count_delta(rec: dict) -> EmitOutcome | None:
     per_same_skill = safe_int(params_raw, 1)
     skill_id = safe_int(params_raw, 2)
     if delta == -1 and per_same_skill > 0 and skill_id >= 100000:
-        return emit_effect_order_variant(
-            "ET_MULTIPLE",
-            "team_skill_count",
-            per_same_skill,
-            skill_id,
-        )
+        return emit_effect_ref(int(rec["id"]))
     return None
 
 
@@ -85,9 +80,9 @@ def decode_priority_next(rec: dict) -> EmitOutcome | None:
 def decode_exchange_ratio_or_state(rec: dict) -> EmitOutcome | None:
     mode = safe_int(params(rec), 0)
     if mode == 1:
-        return emit_effect_order_variant("ET_SWAP_STAT", "hp_ratio", 0)
+        return emit_effect_ref(int(rec["id"]), 0)
     if mode == 3:
-        return emit_effect_order_variant("ET_SWAP_STAT", "transfer_mods", 0)
+        return emit_effect_ref(int(rec["id"]), 0)
     return None
 
 

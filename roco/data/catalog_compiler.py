@@ -17,6 +17,7 @@ from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
+from roco.generated.handler_order import op_index
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
@@ -90,9 +91,19 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
 
 def _effect_rows(row_tuple: Iterable[object], *, source_name: str) -> tuple[tuple[int, ...], ...]:
     rows: list[tuple[int, ...]] = []
-    for values in link_primitive_rows(row_tuple, source_name=source_name):
-        handler_idx, timing, target, _rate, p0, p1, p2, p3 = values
-        rows.append((handler_idx, timing, target, 0, 0, p0, p1, p2, p3))
+    for linked in link_primitive_rows(row_tuple, source_name=source_name):
+        p0, p1, p2, p3 = linked.runtime_args()
+        rows.append((
+            op_index(linked.op_name),
+            linked.timing,
+            linked.target,
+            0,
+            0,
+            p0,
+            p1,
+            p2,
+            p3,
+        ))
     return tuple(rows)
 
 

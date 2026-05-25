@@ -8,7 +8,7 @@ import pytest
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
 from roco.data import catalog_compiler
-from roco.compiler_v2.static_artifacts.marks import mark_note_by_idx
+from roco.compiler_v2.static_artifacts.marks import mark_desc_by_idx
 from roco.data.utils import load_jsonl, write_jsonl
 
 
@@ -177,7 +177,7 @@ def test_parse_pak_generates_canonical_from_extracted_tables(tmp_path: Path, mon
             "note": note,
             "desc": f"{idx.name.lower()} effect",
         }
-        for idx, note in mark_note_by_idx().items()
+        for idx, note in mark_desc_by_idx().items()
     })
     (pak / "moves.json").write_text(
         '[{"id":7020880,"name":"拍击","move_type":{"localized":{"zh":"普通"}},"move_category":"Magic Attack","energy_cost":1,"power":65,"description":"造成魔伤。"}]',

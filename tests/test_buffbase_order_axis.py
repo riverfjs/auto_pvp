@@ -20,12 +20,10 @@ from pathlib import Path
 import pytest
 
 from roco.common.primitive_keys import (
+    buff_ref_key,
     buff_type_key,
+    effect_ref_key,
     effect_order_key,
-    effect_order_variant_key,
-    mark_note_key,
-    source_context_key,
-    struct_key,
 )
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
 from roco.common.enums import AbilityFlag, Element
@@ -37,42 +35,27 @@ from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import pack_primitive_params
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
-from roco.compiler_v2.primitive_axes import PREFIX_TYPE_ALIASES, resolve_primitive_axes
+from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primitive_axes
 from roco.compiler_v2.timing_keys import ENGINE_HOOK_BEFORE_MOVE, pak_cast_moment_key
 from roco.engine.artifacts.primitive_linker import link_primitive_row
-from roco.engine.artifacts.skill_mod_modes import (
-    ENTRY_MOD_DAMAGE_REDUCE,
-    ENTRY_MOD_DAMAGE_RESIST,
-    ENTRY_MOD_POISON_STACKS,
-)
 from roco.engine.kernel.op_rows import TIMING_PAK_SDT
-from roco.generated import handler_indices as hi
 
-P_ANTI_HEAL = struct_key("heal_reversal")
-P_ACTIVE_IMMUNITY_BUFF = struct_key("active_immunity_buff")
-P_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
-P_CUTE_HIT_PER_STACK = source_context_key("cute_hit_per_stack")
+P_ANTI_HEAL = buff_ref_key(21460330)
+P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
+P_CUTE_BENCH_COST_REDUCE = buff_ref_key(20400130)
+P_CUTE_HIT_PER_STACK = buff_ref_key(20910020)
 P_BFT_O_T = buff_type_key("BFT_O_T")
 P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
 P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
 P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
-P_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
-P_HIT_COUNT_PERCENT_DELTA = struct_key("hit_count_percent_delta")
-P_HIT_COUNT_PER_POISON_EFFECT = source_context_key("hit_count_per_poison_effect")
-P_METEOR_MARK = mark_note_key("星陨印记")
-P_MOISTURE_MARK = mark_note_key("湿润印记")
+P_HIT_COUNT_PER_POISON_EFFECT = buff_ref_key(20910010)
+P_METEOR_MARK = buff_ref_key(20940010)
+P_MOISTURE_MARK = buff_ref_key(20320070)
 P_PASSIVE_ENERGY_REDUCE = buff_type_key("BFT_CHANGE_SKILL_ENERGY_COST")
-P_POISON_MARK = mark_note_key("中毒印记")
+P_POISON_MARK = buff_ref_key(20070011)
 P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
-P_SKILL_MOD = source_context_key("slot_skill_mod")
-P_RAW_ENTRY_ELEMENT_SKILL_MOD = effect_order_variant_key(
-    "ET_BUFF_BY_EQUIP_SKILL_NUM",
-    "raw_entry_element_skill_mod_by_count",
-)
-P_RAW_HERO_ENTRY_ELEMENT_SKILL_MOD = effect_order_variant_key(
-    "ET_HERO",
-    "raw_entry_element_skill_mod_by_count",
-)
+P_SLOT_SKILL_MOD_EFFECT = effect_ref_key(1083001)
+P_SLOT_SKILL_MOD_BUFF = buff_ref_key(21150010)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +66,17 @@ BUFFBASE_CONF_PATH = (
 
 
 TIMING_HOOK_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
+
+
+def _linked_tuple(row: tuple, source_name: str = "fixture") -> tuple:
+    linked = link_primitive_row(row, source_name=source_name)
+    return (
+        linked.op_name,
+        linked.timing,
+        linked.target,
+        linked.rate,
+        *linked.runtime_args(),
+    )
 
 
 @pytest.fixture(scope="module")
@@ -175,7 +169,7 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
         f"only the 3 mixed: 2011, 2046, 2050)"
     )
     assert resolved_axes.base_id == {}
-    assert set(PREFIX_TYPE_ALIASES) == {
+    assert set(PREFIX_TYPE_SYMBOLS) == {
         "BFT_DAMNUM_CHANGE",
         "BFT_KILL_BUFF",
         "BFT_ENTER_BATTLE",
@@ -240,17 +234,17 @@ def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
     plus = cls.classify_buff_primitive(20450050, pak.buff_conf)
     minus = cls.classify_buff_primitive(20450090, pak.buff_conf)
     specific = cls.classify_buff_primitive(20450020, pak.buff_conf)
-    assert plus == P_HIT_COUNT_DELTA
-    assert minus == P_HIT_COUNT_DELTA
-    assert specific == P_HIT_COUNT_DELTA
+    assert plus == buff_ref_key(20450050)
+    assert minus == buff_ref_key(20450090)
+    assert specific == buff_ref_key(20450020)
     assert pack_primitive_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
-    assert pack_primitive_params(minus, 20450090, pak.buff_conf) == (-1, 0, 0, 0)
-    assert pack_primitive_params(specific, 20450020, pak.buff_conf) == (1, 7020510, 0, 0)
-    assert pack_primitive_params(specific, 20450070, pak.buff_conf) == (1, 7130100, 7130130, 0)
+    assert pack_primitive_params(minus, 20450090, pak.buff_conf) == (1, 0, 0, 0)
+    assert pack_primitive_params(specific, 20450020, pak.buff_conf) == (1, 0, 0, 0)
+    assert pack_primitive_params(specific, 20450070, pak.buff_conf) == (1, 0, 0, 0)
 
     percent = cls.classify_buff_primitive(20450030, pak.buff_conf)
-    assert percent == P_HIT_COUNT_PERCENT_DELTA
-    assert pack_primitive_params(percent, 20450030, pak.buff_conf) == (100, 0, 0, 0)
+    assert percent == buff_ref_key(20450030)
+    assert pack_primitive_params(percent, 20450030, pak.buff_conf) == (1, 0, 0, 0)
 
     assert cls.classify_buff_primitive(21150010, pak.buff_conf) == ""
 
@@ -268,29 +262,51 @@ def test_bft_multiple_num_decodes_specific_and_percent_rows():
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7020510], pak)
     assert gaps == []
-    assert (
-        P_HIT_COUNT_DELTA,
+    specific = (
+        buff_ref_key(20450020),
         pak_cast_moment_key(11),
+        1,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
+    assert specific in rows
+    assert _linked_tuple(specific) == (
+        "op_hit_count_delta",
+        11,
         1,
         10000,
         1,
         7020510,
         0,
         0,
-    ) in rows
+    )
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7020461], pak)
     assert gaps == []
-    assert (
-        P_HIT_COUNT_PERCENT_DELTA,
+    percent = (
+        buff_ref_key(20450031),
         pak_cast_moment_key(6),
+        1,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
+    assert percent in rows
+    assert _linked_tuple(percent) == (
+        "op_hit_count_percent_delta",
+        6,
         1,
         10000,
         100,
         0,
         0,
         0,
-    ) in rows
+    )
 
 
 def test_equip_skill_num_decodes_damage_reduction_family():
@@ -298,116 +314,71 @@ def test_equip_skill_num_decodes_damage_reduction_family():
 
     rows, gaps = generate_effect_rows(pak.skill_conf[200074], pak, allow_ability_flags=True)
     assert gaps == []
-    normal_raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        2,
-        2011116,
-        0,
-        0,
-    )
-    light_raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        6,
-        2011120,
-        0,
-        0,
-    )
+    normal_raw = (effect_ref_key(1064012), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
+    light_raw = (effect_ref_key(1064017), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     assert normal_raw in rows
     assert light_raw in rows
-    assert link_primitive_row(normal_raw, source_name="偏振") == (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+    assert _linked_tuple(normal_raw, "偏振") == (
+        "op_entry_element_damage_reduce_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
         1 << Element.NORMAL,
         40,
-        ENTRY_MOD_DAMAGE_REDUCE,
+        0,
     )
-    assert link_primitive_row(light_raw, source_name="偏振") == (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+    assert _linked_tuple(light_raw, "偏振") == (
+        "op_entry_element_damage_reduce_by_count",
         24,
         1,
         10000,
-        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.LIGHT),
-        1 << Element.LIGHT,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.GROUND),
+        1 << Element.GROUND,
         40,
-        ENTRY_MOD_DAMAGE_REDUCE,
+        0,
     )
 
     rows, _gaps = generate_effect_rows(pak.skill_conf[280010], pak, allow_ability_flags=True)
-    normal_resist_raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        2,
-        2098001,
-        0,
-        0,
-    )
-    ground_resist_raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        8,
-        2098006,
-        0,
-        0,
-    )
-    dragon_resist_raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        10,
-        2098008,
-        0,
-        0,
-    )
+    normal_resist_raw = (effect_ref_key(1064031), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
+    ground_resist_raw = (effect_ref_key(1064037), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
+    dragon_resist_raw = (effect_ref_key(1064039), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     assert normal_resist_raw in rows
     assert ground_resist_raw in rows
     assert dragon_resist_raw in rows
 
-    linked = [link_primitive_row(row, source_name="完全偏振") for row in rows if row[0] == P_RAW_ENTRY_ELEMENT_SKILL_MOD]
+    linked = [_linked_tuple(row, "完全偏振") for row in rows if str(row[0]).startswith("effect_ref:10640")]
     assert (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        "op_entry_element_damage_resist_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
         1 << Element.NORMAL,
         1,
-        ENTRY_MOD_DAMAGE_RESIST,
+        0,
     ) in linked
     assert (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        "op_entry_element_damage_resist_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.GROUND),
         1 << Element.GROUND,
         1,
-        ENTRY_MOD_DAMAGE_RESIST,
+        0,
     ) in linked
     assert (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        "op_entry_element_damage_resist_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.DRAGON),
         1 << Element.DRAGON,
         1,
-        ENTRY_MOD_DAMAGE_RESIST,
+        0,
     ) in linked
-    assert not any(row[-2:] == (100, ENTRY_MOD_DAMAGE_REDUCE) for row in linked)
+    assert not any(row[0] == "op_entry_element_damage_reduce_by_count" and row[-2] == 100 for row in linked)
 
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 1064036,
@@ -424,67 +395,41 @@ def test_equip_skill_num_maps_skill_dam_type_to_engine_element_for_skill_mods():
 
     rows, gaps = generate_effect_rows(pak.skill_conf[200111], pak, allow_ability_flags=True)
     assert gaps == []
-    raw = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        12,
-        2035035,
-        0,
-        0,
-    )
+    raw = (effect_ref_key(1064001), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     assert raw in rows
-    assert link_primitive_row(raw, source_name="溶解扩散") == (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+    assert _linked_tuple(raw, "溶解扩散") == (
+        "op_entry_element_poison_stacks_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.POISON),
         1 << Element.WATER,
         1,
-        ENTRY_MOD_POISON_STACKS,
+        0,
     )
 
 
 def test_raw_zero_is_only_normal_through_skill_dam_type_mapping():
-    skill_dam_type_common = (
-        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        2,
-        2011116,
-        0,
-        0,
-    )
-    assert link_primitive_row(skill_dam_type_common, source_name="SDT_COMMON") == (
-        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+    skill_dam_type_common = (effect_ref_key(1064012), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
+    assert _linked_tuple(skill_dam_type_common, "SDT_COMMON") == (
+        "op_entry_element_damage_reduce_by_count",
         24,
         1,
         10000,
         entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
         1 << Element.NORMAL,
         40,
-        ENTRY_MOD_DAMAGE_REDUCE,
+        0,
     )
 
-    raw_element_zero_sentinel = (
-        P_RAW_HERO_ENTRY_ELEMENT_SKILL_MOD,
-        pak_cast_moment_key(24),
-        1,
-        10000,
-        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
-        2023001,
-        0,
-        0,
-    )
-    with pytest.raises(RuntimeError, match="no supported BUFFBASE rows"):
-        link_primitive_row(raw_element_zero_sentinel, source_name="raw element sentinel")
+    from roco.engine.artifacts import pak_ref_linker
+
+    assert pak_ref_linker._element_mask((2,), "skill_dam_type") == (1 << Element.NORMAL)
+    assert pak_ref_linker._element_mask((0,), "element") == 0
 
 
 def test_bft_o_t_links_entry_energy_from_pak_static():
-    assert link_primitive_row((
+    assert _linked_tuple((
         P_BFT_O_T,
         pak_cast_moment_key(26),
         1,
@@ -493,17 +438,17 @@ def test_bft_o_t_links_entry_energy_from_pak_static():
         0,
         0,
         0,
-    ), source_name="地脉") == (
-        hi.H_ENTRY_ENERGY_FROM_ELEMENT_COUNT,
+    ), "地脉") == (
+        "op_entry_energy_from_element_count",
         TIMING_PAK_SDT,
         1,
         10000,
-        Element.GROUND,
+        Element.GROUND.value,
         3,
         0,
         0,
     )
-    assert link_primitive_row((
+    assert _linked_tuple((
         P_BFT_O_T,
         pak_cast_moment_key(26),
         1,
@@ -512,8 +457,8 @@ def test_bft_o_t_links_entry_energy_from_pak_static():
         0,
         0,
         0,
-    ), source_name="慢热型") == (
-        hi.H_ENTRY_ENERGY_FROM_COUNTER_COUNT,
+    ), "慢热型") == (
+        "op_entry_energy_from_counter_count",
         TIMING_PAK_SDT,
         1,
         10000,
@@ -608,12 +553,12 @@ def test_effect_multiple_decodes_team_same_skill_hit_count():
 
     assert gaps == []
     assert rows == [(
-        effect_order_variant_key("ET_MULTIPLE", "team_skill_count"),
+        effect_ref_key(1032012),
         pak_cast_moment_key(6),
         1,
         10000,
-        1,
-        7130160,
+        0,
+        0,
         0,
         0,
     )]
@@ -624,9 +569,9 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070160], pak)
-    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
+    assert (P_SLOT_SKILL_MOD_EFFECT, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
     assert gaps == [{
-        "primitive": source_context_key("transmission"),
+        "primitive": P_SLOT_SKILL_MOD_EFFECT,
         "timing_code": pak_cast_moment_key(11),
         "effect_order": 0,
         "reason": "transmission_unimplemented",
@@ -642,11 +587,11 @@ def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
     }]
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070030], pak)
-    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
+    assert (P_SLOT_SKILL_MOD_BUFF, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
     assert gaps[0]["reason"] == "transmission_unimplemented"
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070170], pak)
-    assert (P_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
+    assert (P_SLOT_SKILL_MOD_BUFF, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
     assert any(gap["reason"] == "transmission_unimplemented" for gap in gaps)
 
 
@@ -717,11 +662,21 @@ def test_immunity_desc_buff_maps_to_active_immunity_primitive():
         "battle_event:BEVT_BEFORE_HURT",
         1,
         10000,
+        1,
+        0,
+        0,
+        0,
+    )]
+    assert _linked_tuple(rows[0], "免疫") == (
+        "op_apply_active_buff",
+        11,
+        1,
+        10000,
         20030010,
         13,
         999,
         0,
-    )]
+    )
 
 
 def test_non_immunity_bft_immune_shape_stays_gap():

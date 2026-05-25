@@ -24,8 +24,8 @@ from pathlib import Path
 import pytest
 
 from roco.common.primitive_keys import (
+    effect_ref_key,
     effect_order_key,
-    effect_order_variant_key,
 )
 from roco.compiler_v2.effect_codegen import family_axes
 from roco.compiler_v2.effect_codegen.family_axes import (
@@ -41,24 +41,15 @@ from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.timing_keys import pak_battle_event_key
 
 P_DISPEL_DEBUFFS = effect_order_key("ET_PURIFY")
-P_DISPEL_MARKS = effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks")
-P_DISPEL_MARKS_TO_BURN = effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks_to_burn")
-P_ENTRY_SELF_BUFF_BY_SOURCE_COUNT = effect_order_variant_key(
-    "ET_HERO",
-    "entry_self_buff_by_source_count",
-)
-P_EXCHANGE_HP_RATIO = effect_order_variant_key("ET_SWAP_STAT", "hp_ratio")
 P_EXCHANGE_MOVES = effect_order_key("ET_SWAP_SKILLS")
 P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
 P_HEAL_HP = effect_order_key("ET_RECOVER")
 P_HIT_COUNT_DELTA = effect_order_key("ET_MULTIPLE")
-P_TEAM_SKILL_HIT_COUNT = effect_order_variant_key("ET_MULTIPLE", "team_skill_count")
 P_INSTALL_COUNTER = effect_order_key("ET_COUNTER")
 P_LIFE_DRAIN = effect_order_key("ET_SUCKBLOOD")
 P_MIRROR_ENEMY_BUFFS = effect_order_key("ET_COPY_BUFF")
 P_PRIORITY_NEXT_DELTA = effect_order_key("ET_FAST_SKILL")
 P_SET_SELF_COOLDOWN = effect_order_key("ET_SKILL_CD")
-P_TRANSFER_MODS = effect_order_variant_key("ET_SWAP_STAT", "transfer_mods")
 
 
 PAK_DATA_DIR = Path(__file__).resolve().parents[1] / "pak-public-kit" / "output" / "data"
@@ -121,10 +112,10 @@ def test_decode_team_skill_count_hit_family(pak):
     """ET_MULTIPLE [-1, N, skill_id] adds N hits per carried copy of that skill."""
     outcome = decode_family_axes(1032012, pak.effect_conf, pak.buff_conf)
     assert isinstance(outcome, EmitOutcome)
-    assert outcome.primitive == P_TEAM_SKILL_HIT_COUNT
+    assert outcome.primitive == effect_ref_key(1032012)
     assert (outcome.p0, outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (
-        1,
-        7130160,
+        0,
+        0,
         0,
         0,
         1,
@@ -145,16 +136,14 @@ def test_decode_hero_event_count_buff_families(pak, effect_id):
     assert isinstance(outcome, tuple)
     emit, timing = outcome
     assert isinstance(emit, EmitOutcome)
-    assert emit.primitive == P_ENTRY_SELF_BUFF_BY_SOURCE_COUNT
-    assert emit.p0 > 0
-    assert emit.p1 > 0
-    assert (emit.p2, emit.p3, emit.stacks) == (0, 0, 1)
+    assert emit.primitive == effect_ref_key(effect_id)
+    assert (emit.p0, emit.p1, emit.p2, emit.p3, emit.stacks) == (0, 0, 0, 0, 1)
     assert timing == pak_battle_event_key("BEVT_SDT")
 
 
 @pytest.mark.parametrize("effect_id, handler", [
-    (1044001, P_EXCHANGE_HP_RATIO),
-    (1044002, P_TRANSFER_MODS),
+    (1044001, effect_ref_key(1044001)),
+    (1044002, effect_ref_key(1044002)),
     (1047002, P_EXCHANGE_MOVES),
 ])
 def test_decode_mode_based_exchange_families(pak, effect_id, handler):
@@ -167,8 +156,8 @@ def test_decode_mode_based_exchange_families(pak, effect_id, handler):
 @pytest.mark.parametrize("effect_id, handler, p0", [
     (1004002, P_DISPEL_DEBUFFS, 0),
     (1004065, P_DISPEL_DEBUFFS, 0),
-    (1042008, P_DISPEL_MARKS, 0),
-    (1042014, P_DISPEL_MARKS_TO_BURN, 5),
+    (1042008, effect_ref_key(1042008), 0),
+    (1042014, effect_ref_key(1042014), 0),
     (1050012, P_MIRROR_ENEMY_BUFFS, 0),
 ])
 def test_decode_composite_effect_families_from_pak_shape(pak, effect_id, handler, p0):

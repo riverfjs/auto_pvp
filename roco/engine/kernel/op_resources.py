@@ -20,18 +20,18 @@ from roco.engine.kernel.state import COST_SCOPE_ALL
 
 
 @handles_buff([
-    ("BFT_BUFF_BY_HEAL", "NUTRITION"),
-    ("BFT_SKILL_ACTUAL_REDUSE_COST", "HEAL_MOD"),
-    ("BFT_SEVENTY_ONE", "DARK_HEAL"),
-    ("BFT_O_NINE", "OVERFLOW_HEAL"),
+    "BFT_BUFF_BY_HEAL",
+    "BFT_SKILL_ACTUAL_REDUSE_COST",
+    "BFT_SEVENTY_ONE",
+    "BFT_O_NINE",
 ])
 def op_heal_hp(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.heal_hp_bps += row[ROW_ARG0]
 
 
 @handles_buff([
-    ("BFT_CURRENT_ENERGY", "ENERGY_GAIN"),
-    ("BFT_EIGHTY_SEVEN", "ENERGY_HEAL"),
+    "BFT_CURRENT_ENERGY",
+    "BFT_EIGHTY_SEVEN",
 ])
 def op_heal_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.heal_energy += row[ROW_ARG0]
@@ -45,7 +45,7 @@ def op_enemy_lose_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.enemy_lose_energy += row[ROW_ARG0]
 
 
-@handles_buff([("BFT_BLOOD", "DRAIN")])
+@handles_buff(["BFT_BLOOD"])
 def op_life_drain(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.drain_bps += row[ROW_ARG0]
 
@@ -105,8 +105,8 @@ def op_skill_cost_reduction_type(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 @handles_buff([
-    ("BFT_CHANGE_SKILL_ENERGY_COST", "COST_MOD"),
-    ("BFT_BUFF_LAYER_CHANGE", "EFFICIENCY"),
+    "BFT_CHANGE_SKILL_ENERGY_COST",
+    "BFT_BUFF_LAYER_CHANGE",
 ])
 def op_passive_energy_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.cost_delta -= row[ROW_ARG0]

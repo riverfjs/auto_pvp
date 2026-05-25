@@ -23,7 +23,7 @@ from roco.compiler_v2.effect_codegen.family_axis_decoders.common import (
     COUNT_FAINTED_ALLY,
     SWITCH_IN_TIMING,
     emit_effect_order,
-    emit_effect_order_variant,
+    emit_effect_ref,
     params,
 )
 
@@ -34,20 +34,10 @@ def decode_buff_by_pack_pet_num(rec: dict, buff_conf: dict[int, dict]) -> tuple[
     if packed == 0:
         return None
     if safe_int(params_raw, 1) == 2:
-        return emit_effect_order_variant(
-            "ET_BUFF_BY_PACK_PET_NUM",
-            "entry_self_buff_by_side_count",
-            COUNT_FAINTED_ALLY,
-            packed,
-        ), SWITCH_IN_TIMING
+        return emit_effect_ref(int(rec["id"])), SWITCH_IN_TIMING
     element = safe_int(params_raw, 0, -1)
     if element >= 0:
-        return emit_effect_order_variant(
-            "ET_BUFF_BY_PACK_PET_NUM",
-            "entry_self_buff_by_side_count",
-            element,
-            packed,
-        ), SWITCH_IN_TIMING
+        return emit_effect_ref(int(rec["id"])), SWITCH_IN_TIMING
     return None
 
 
@@ -66,29 +56,24 @@ def decode_entry_buff_if_energy(rec: dict, buff_conf: dict[int, dict]) -> tuple[
     packed = pack_buff_delta_from_buff_ids(extract_int_list(params_raw, 3), buff_conf)
     if packed == 0:
         return None
-    return emit_effect_order_variant(
-        "ET_LIMIT_FIGHT_BY_HP",
-        "entry_self_buff_if_energy",
-        selector,
-        safe_int(params_raw, 1),
-        packed,
-    ), SWITCH_IN_TIMING
+    return emit_effect_ref(int(rec["id"])), SWITCH_IN_TIMING
 
 
 def decode_hero_entry(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, str] | None:
     params_raw = params(rec)
-    event_count_buff = _decode_hero_event_count_buff(params_raw, buff_conf)
+    effect_id = int(rec["id"])
+    event_count_buff = _decode_hero_event_count_buff(effect_id, params_raw, buff_conf)
     if event_count_buff is not None:
         return event_count_buff
     if safe_int(params_raw, 3) != 1:
         return None
-    skill_count_mod = _decode_entry_buff_per_used_skill_count(params_raw, buff_conf)
+    skill_count_mod = _decode_entry_buff_per_used_skill_count(effect_id, params_raw, buff_conf)
     if skill_count_mod is not None:
         return skill_count_mod
     source = _hero_count_source(params_raw)
     if source is not None:
         element_mod = _emit_raw_entry_element_mod(
-            "ET_HERO",
+            effect_id,
             source,
             _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
         )
@@ -99,12 +84,7 @@ def decode_hero_entry(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcom
         return None
     element = safe_int(params_raw, 0, -1)
     if element > 0:
-        return emit_effect_order_variant(
-            "ET_HERO",
-            "entry_self_buff_by_used_skill_count",
-            element,
-            packed,
-        ), SWITCH_IN_TIMING
+        return emit_effect_ref(effect_id), SWITCH_IN_TIMING
     return None
 
 
@@ -112,31 +92,24 @@ def decode_buff_by_equip_skill_num(rec: dict, buff_conf: dict[int, dict]) -> tup
     params_raw = params(rec)
     source_skill_dam_type = safe_int(params_raw, 0, -1)
     return _emit_raw_entry_element_mod(
-        "ET_BUFF_BY_EQUIP_SKILL_NUM",
+        int(rec["id"]),
         source_skill_dam_type,
         _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
     )
 
 
 def _emit_raw_entry_element_mod(
-    effect_order_symbol: str,
+    effect_id: int,
     source_code: int,
     base_ids: list[int],
 ) -> tuple[EmitOutcome, str] | None:
     if not base_ids or len(base_ids) > 3:
         return None
-    padded = (base_ids + [0, 0, 0])[:3]
-    return emit_effect_order_variant(
-        effect_order_symbol,
-        "raw_entry_element_skill_mod_by_count",
-        source_code,
-        padded[0],
-        padded[1],
-        padded[2],
-    ), SWITCH_IN_TIMING
+    return emit_effect_ref(effect_id), SWITCH_IN_TIMING
 
 
 def _decode_hero_event_count_buff(
+    effect_id: int,
     params_raw: list,
     buff_conf: dict[int, dict],
 ) -> tuple[EmitOutcome, str] | None:
@@ -147,23 +120,14 @@ def _decode_hero_event_count_buff(
         return None
     skill_dam_type = safe_int(params_raw, 0)
     if skill_dam_type > 0:
-        return emit_effect_order_variant(
-            "ET_HERO",
-            "entry_self_buff_by_source_count",
-            entry_source_code(ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE, skill_dam_type),
-            packed,
-        ), SWITCH_IN_TIMING
+        return emit_effect_ref(effect_id), SWITCH_IN_TIMING
     if safe_int(params_raw, 7) == 3:
-        return emit_effect_order_variant(
-            "ET_HERO",
-            "entry_self_buff_by_source_count",
-            entry_source_code(ENTRY_SOURCE_ENEMY_SWITCH),
-            packed,
-        ), SWITCH_IN_TIMING
+        return emit_effect_ref(effect_id), SWITCH_IN_TIMING
     return None
 
 
 def _decode_entry_buff_per_used_skill_count(
+    effect_id: int,
     params_raw: list,
     buff_conf: dict[int, dict],
 ) -> tuple[EmitOutcome, str] | None:
@@ -179,25 +143,13 @@ def _decode_entry_buff_per_used_skill_count(
     if order == 32 and len(base_params) >= 4:
         cost_delta = _param_int(base_params, 3)
         if cost_delta < 0:
-            return emit_effect_order_variant(
-                "ET_HERO",
-                "entry_buff_per_skill_count",
-                element,
-                1,
-                abs(cost_delta),
-            ), SWITCH_IN_TIMING
+            return emit_effect_ref(effect_id), SWITCH_IN_TIMING
     if order == 23 and len(base_params) >= 6:
         affected = base_params[0]
         mode = _param_int(base_params, 4)
         amount = _param_int(base_params, 5)
         if affected == 0 and mode == 2 and amount > 0:
-            return emit_effect_order_variant(
-                "ET_HERO",
-                "entry_buff_per_skill_count",
-                element,
-                2,
-                amount,
-            ), SWITCH_IN_TIMING
+            return emit_effect_ref(effect_id), SWITCH_IN_TIMING
     return None
 
 

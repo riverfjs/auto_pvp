@@ -186,33 +186,33 @@ def _load_primitive_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list
     buff_type_enum = bundle.lua_enums["BuffType"]
 
     by_order: dict[int, dict] = {}
-    for symbol, (primitive, alias) in resolved.raw["buff_type"].items():
+    for symbol, primitive in resolved.raw["buff_type"].items():
         order = int(buff_type_enum[str(symbol)])
         by_order[order] = {
             "buffbase_order": order,
             "buff_type": symbol,
             "primitive": primitive,
-            "alias": alias,
+            "alias": symbol,
             "source": "compiler_primitive_axis",
         }
 
     by_prefix: dict[int, dict] = {}
-    for symbol, (primitive, alias) in resolved.raw["prefix_type"].items():
+    for symbol, primitive in resolved.raw["prefix_type"].items():
         prefix = 2000 + int(buff_type_enum[str(symbol)])
         by_prefix[prefix] = {
             "prefix": prefix,
             "buff_type": symbol,
             "primitive": primitive,
-            "alias": alias,
+            "alias": symbol,
             "source": "compiler_primitive_axis",
         }
 
     overrides: list[dict] = []
-    for base_id, (primitive, note) in resolved.raw.get("base_id", {}).items():
+    for base_id, primitive in resolved.raw.get("base_id", {}).items():
         overrides.append({
             "base_id": int(base_id),
             "primitive": primitive,
-            "note": note,
+            "note": primitive,
             "source": "compiler_primitive_axis",
         })
     return by_order, by_prefix, sorted(overrides, key=lambda r: r["base_id"])

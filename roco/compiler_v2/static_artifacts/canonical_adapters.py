@@ -7,7 +7,7 @@ from typing import Any
 from roco.common.mark_indices import MarkIdx
 
 from .common import CANONICAL_ADAPTERS_PATH, PAK_BIN, PAK_DATA, _assign, _load_json_table, _maybe_int
-from .marks import mark_note_by_idx
+from .marks import mark_desc_by_idx
 
 
 def _canonical_skill_category_from_pak(row: dict[str, Any]) -> str:
@@ -58,8 +58,8 @@ def build_canonical_adapters(pak_data: Path = PAK_DATA, pak_bin: Path = PAK_BIN)
             desc_id_by_note[note] = desc_id
 
     mark_defs: list[tuple[int, str, int, str]] = []
-    for idx, note in mark_note_by_idx().items():
-        desc_id = desc_id_by_note.get(note)
+    for idx, desc in mark_desc_by_idx().items():
+        desc_id = desc_id_by_note.get(desc)
         if desc_id is None:
             continue
         polarity = "positive" if idx.value <= MarkIdx.ATTACK.value or idx == MarkIdx.SLUGGISH else "negative"

@@ -123,113 +123,113 @@ Total `buffbase_order` families: **137**.  `buffbase_order rule` is the primitiv
 
 | order | count | param slots | trigger_types | buffbase_order rule | prefix rule | refs | editor_name samples |
 |---:|---:|---|---|---|---|---:|---|
-| **1** | 160 | 3:160 | 23:1 | `buff_type:BFT_ATTR_CHANGE` (STAT_MOD) | `2011`→`buff_type:BFT_DAMNUM_CHANGE` (8/160) | 298 |  |
+| **1** | 160 | 3:160 | 23:1 | `buff_type:BFT_ATTR_CHANGE` (BFT_ATTR_CHANGE) | `2011`→`buff_type:BFT_DAMNUM_CHANGE` (8/160) | 298 |  |
 | **3** | 47 | 2:47 | — | — | — | 54 |  |
-| **4** | 3 | 1:3 | — | `buff_type:BFT_BAN` (LOCK_SWITCH) | — | 15 |  |
-| **5** | 2 | 5:2 | 7:2 | `buff_type:BFT_ABSORB` (LEECH) | — | 1 |  |
-| **6** | 10 | 4:10 | — | `buff_type:BFT_SKILL_BAN` (BOSS_STUN) | — | 17 |  |
-| **7** | 8 | 4:1, 8:7 | 7:6 | `buff_type:BFT_DAM` (STATUS_CONDITION) | `2011`→`buff_type:BFT_DAMNUM_CHANGE` (1/8) | 9 |  |
+| **4** | 3 | 1:3 | — | `buff_type:BFT_BAN` (BFT_BAN) | — | 15 |  |
+| **5** | 2 | 5:2 | 7:2 | `buff_type:BFT_ABSORB` (BFT_ABSORB) | — | 1 |  |
+| **6** | 10 | 4:10 | — | `buff_type:BFT_SKILL_BAN` (BFT_SKILL_BAN) | — | 17 |  |
+| **7** | 8 | 4:1, 8:7 | 7:6 | `buff_type:BFT_DAM` (BFT_DAM) | `2011`→`buff_type:BFT_DAMNUM_CHANGE` (1/8) | 9 |  |
 | **9** | 1 | 2:1 | — | — | — | 1 |  |
-| **10** | 10 | 7:10 | 7:1 | `buff_type:BFT_RELAY` (NEXT_PET) | — | 12 |  |
+| **10** | 10 | 7:10 | 7:1 | `buff_type:BFT_RELAY` (BFT_RELAY) | — | 12 |  |
 | **11** | 101 | 11:1, 12:100 | — | — | `2011`→`buff_type:BFT_DAMNUM_CHANGE` (101/101) | 108 |  |
 | **13** | 3 | 3:3 | — | — | — | 2 |  |
-| **15** | 8 | 9:8 | — | `buff_type:BFT_CAST_REPEAT_SKILL` (DOUBLE_ACTION) | — | 10 |  |
+| **15** | 8 | 9:8 | — | `buff_type:BFT_CAST_REPEAT_SKILL` (BFT_CAST_REPEAT_SKILL) | — | 10 |  |
 | **16** | 2 | 8:2 | — | — | — | 0 |  |
 | **17** | 304 | 4:304 | 7:131, 50:4, 60:2 | — | — | 302 |  |
-| **19** | 49 | 8:2, 9:47 | — | `buff_type:BFT_CAST_SKILL_AFTER_ATTACK` (ON_HIT_REACTION) | — | 44 |  |
-| **21** | 10 | 7:10 | 12:4 | `buff_type:BFT_INC_DAM_BY_ATTACK_FIRST` (PRIORITY) | — | 12 |  |
-| **22** | 2 | 2:2 | — | `buff_type:BFT_BUFF_BY_HEAL` (NUTRITION) | — | 2 |  |
-| **23** | 116 | 12:116 | 7:1, 12:55 | `buff_type:BFT_INC_DAM_BY_SKILL` (POWER_MOD) | — | 122 |  |
-| **24** | 5 | 7:5 | — | `buff_type:BFT_BLOOD_TO_ENERGY` (EARTH_HEART) | — | 6 |  |
-| **25** | 10 | 5:10 | 12:10 | `buff_type:BFT_INC_DAM_BY_BUFF` (ELEMENT_VULN) | — | 5 |  |
-| **27** | 4 | 3:4 | — | `buff_type:BFT_NOT_GET_HIT` (MOMENTUM) | — | 4 |  |
-| **28** | 1 | 6:1 | — | `buff_type:BFT_RECORD_CAST_SKILL` (TEST_28) | — | 1 |  |
-| **29** | 6 | 4:6 | 12:6 | `buff_type:BFT_INC_DAM_BY_TARGET_HP_THRES` (FIRE_RAGE) | — | 3 |  |
+| **19** | 49 | 8:2, 9:47 | — | `buff_type:BFT_CAST_SKILL_AFTER_ATTACK` (BFT_CAST_SKILL_AFTER_ATTACK) | — | 44 |  |
+| **21** | 10 | 7:10 | 12:4 | `buff_type:BFT_INC_DAM_BY_ATTACK_FIRST` (BFT_INC_DAM_BY_ATTACK_FIRST) | — | 12 |  |
+| **22** | 2 | 2:2 | — | `buff_type:BFT_BUFF_BY_HEAL` (BFT_BUFF_BY_HEAL) | — | 2 |  |
+| **23** | 116 | 12:116 | 7:1, 12:55 | `buff_type:BFT_INC_DAM_BY_SKILL` (BFT_INC_DAM_BY_SKILL) | — | 122 |  |
+| **24** | 5 | 7:5 | — | `buff_type:BFT_BLOOD_TO_ENERGY` (BFT_BLOOD_TO_ENERGY) | — | 6 |  |
+| **25** | 10 | 5:10 | 12:10 | `buff_type:BFT_INC_DAM_BY_BUFF` (BFT_INC_DAM_BY_BUFF) | — | 5 |  |
+| **27** | 4 | 3:4 | — | `buff_type:BFT_NOT_GET_HIT` (BFT_NOT_GET_HIT) | — | 4 |  |
+| **28** | 1 | 6:1 | — | `buff_type:BFT_RECORD_CAST_SKILL` (BFT_RECORD_CAST_SKILL) | — | 1 |  |
+| **29** | 6 | 4:6 | 12:6 | `buff_type:BFT_INC_DAM_BY_TARGET_HP_THRES` (BFT_INC_DAM_BY_TARGET_HP_THRES) | — | 3 |  |
 | **30** | 2 | 6:1, 11:1 | 12:2 | — | — | 1 |  |
 | **31** | 2 | 8:2 | 12:2 | — | — | 1 |  |
-| **32** | 92 | 7:92 | — | `buff_type:BFT_CHANGE_SKILL_ENERGY_COST` (COST_MOD) | — | 74 |  |
-| **33** | 2 | 1:2 | — | `buff_type:BFT_CHANGE_CATCH_VALUE` (ENTRY_AMBUSH) | — | 4 |  |
-| **34** | 9 | 3:9 | — | `buff_type:BFT_CHANGE_GAIN_ENERGY_EFFECIENCY` (OVERLOAD) | — | 9 |  |
-| **35** | 88 | 7:88 | 7:3, 12:42 | `buff_type:BFT_BUFF_AFTER_SKILL` (ELEMENT_TRIGGER) | — | 89 |  |
-| **37** | 22 | 9:22 | — | `buff_type:BFT_BUFF_LAYER_CHANGE` (EFFICIENCY) | — | 19 |  |
-| **38** | 18 | 6:18 | — | `buff_type:BFT_FIELD_UP_CHANGE` (SURVIVAL) | — | 19 |  |
-| **39** | 1 | 5:1 | — | `buff_type:BFT_FIELD_REDUSE_COST` (DUCK) | — | 1 |  |
+| **32** | 92 | 7:92 | — | `buff_type:BFT_CHANGE_SKILL_ENERGY_COST` (BFT_CHANGE_SKILL_ENERGY_COST) | — | 74 |  |
+| **33** | 2 | 1:2 | — | `buff_type:BFT_CHANGE_CATCH_VALUE` (BFT_CHANGE_CATCH_VALUE) | — | 4 |  |
+| **34** | 9 | 3:9 | — | `buff_type:BFT_CHANGE_GAIN_ENERGY_EFFECIENCY` (BFT_CHANGE_GAIN_ENERGY_EFFECIENCY) | — | 9 |  |
+| **35** | 88 | 7:88 | 7:3, 12:42 | `buff_type:BFT_BUFF_AFTER_SKILL` (BFT_BUFF_AFTER_SKILL) | — | 89 |  |
+| **37** | 22 | 9:22 | — | `buff_type:BFT_BUFF_LAYER_CHANGE` (BFT_BUFF_LAYER_CHANGE) | — | 19 |  |
+| **38** | 18 | 6:18 | — | `buff_type:BFT_FIELD_UP_CHANGE` (BFT_FIELD_UP_CHANGE) | — | 19 |  |
+| **39** | 1 | 5:1 | — | `buff_type:BFT_FIELD_REDUSE_COST` (BFT_FIELD_REDUSE_COST) | — | 1 |  |
 | **40** | 75 | 6:75 | — | — | — | 45 |  |
-| **41** | 9 | 4:9 | — | `buff_type:BFT_CHECK_HP` (HP_CONDITIONAL) | — | 9 |  |
-| **42** | 15 | 4:15 | — | `buff_type:BFT_CHANGE_SDT_RATIO` (NON_SE_REDUCE) | — | 18 |  |
-| **43** | 9 | 7:9 | — | `buff_type:BFT_ASSIGN_ATTACK_FIRST` (QUICK_START) | — | 10 |  |
+| **41** | 9 | 4:9 | — | `buff_type:BFT_CHECK_HP` (BFT_CHECK_HP) | — | 9 |  |
+| **42** | 15 | 4:15 | — | `buff_type:BFT_CHANGE_SDT_RATIO` (BFT_CHANGE_SDT_RATIO) | — | 18 |  |
+| **43** | 9 | 7:9 | — | `buff_type:BFT_ASSIGN_ATTACK_FIRST` (BFT_ASSIGN_ATTACK_FIRST) | — | 10 |  |
 | **45** | 16 | 4:16 | 12:11 | — | — | 22 |  |
 | **46** | 23 | 6:23 | — | — | `2046`→`buff_type:BFT_KILL_BUFF` (23/23) | 23 |  |
-| **48** | 15 | 7:15 | 7:1 | `buff_type:BFT_PET_TRANSE` (FORCE_SWITCH) | `2050`→`buff_type:BFT_ENTER_BATTLE` (2/15) | 38 |  |
-| **49** | 36 | 5:36 | — | `buff_type:BFT_SPIKES` (TURN_END_TRANSFORM) | — | 32 |  |
+| **48** | 15 | 7:15 | 7:1 | `buff_type:BFT_PET_TRANSE` (BFT_PET_TRANSE) | `2050`→`buff_type:BFT_ENTER_BATTLE` (2/15) | 38 |  |
+| **49** | 36 | 5:36 | — | `buff_type:BFT_SPIKES` (BFT_SPIKES) | — | 32 |  |
 | **50** | 10 | 4:10 | 7:10 | — | `2050`→`buff_type:BFT_ENTER_BATTLE` (10/10) | 16 |  |
-| **51** | 6 | 8:6 | 12:1 | `buff_type:BFT_DETECT_ENEMY_SKILLS` (DREAM) | — | 7 |  |
-| **52** | 17 | 6:17 | 7:3 | `buff_type:BFT_CURRENT_ENERGY` (ENERGY_GAIN) | — | 17 |  |
-| **53** | 15 | 6:15 | — | `buff_type:BFT_SKILL_ACTUAL_REDUSE_COST` (HEAL_MOD) | — | 13 |  |
-| **54** | 3 | 5:3 | — | `buff_type:BFT_BLOOD` (DRAIN) | — | 7 |  |
+| **51** | 6 | 8:6 | 12:1 | `buff_type:BFT_DETECT_ENEMY_SKILLS` (BFT_DETECT_ENEMY_SKILLS) | — | 7 |  |
+| **52** | 17 | 6:17 | 7:3 | `buff_type:BFT_CURRENT_ENERGY` (BFT_CURRENT_ENERGY) | — | 17 |  |
+| **53** | 15 | 6:15 | — | `buff_type:BFT_SKILL_ACTUAL_REDUSE_COST` (BFT_SKILL_ACTUAL_REDUSE_COST) | — | 13 |  |
+| **54** | 3 | 5:3 | — | `buff_type:BFT_BLOOD` (BFT_BLOOD) | — | 7 |  |
 | **55** | 5 | 5:2, 7:3 | — | — | — | 5 |  |
-| **56** | 94 | 6:94 | 7:2 | `buff_type:BFT_SKILL_CHANGE` (SKILL_COPY) | — | 72 |  |
+| **56** | 94 | 6:94 | 7:2 | `buff_type:BFT_SKILL_CHANGE` (BFT_SKILL_CHANGE) | — | 72 |  |
 | **57** | 1 | 1:1 | — | — | — | 2 |  |
-| **58** | 1 | 4:1 | — | `buff_type:BFT_FREEZE` (FREEZE_STATUS) | — | 1 |  |
+| **58** | 1 | 4:1 | — | `buff_type:BFT_FREEZE` (BFT_FREEZE) | — | 1 |  |
 | **60** | 1 | 2:1 | — | — | — | 1 |  |
 | **62** | 5 | 2:5 | — | — | — | 6 |  |
-| **63** | 21 | 11:21 | — | `buff_type:BFT_TARGET_HAS_BUFF` (CHAR_SPECIFIC_A) | — | 20 |  |
-| **64** | 141 | 8:141 | — | `buff_type:BFT_STRENGTHEN_THE_SKILL` (CONDITIONAL_TRIGGER) | — | 130 |  |
+| **63** | 21 | 11:21 | — | `buff_type:BFT_TARGET_HAS_BUFF` (BFT_TARGET_HAS_BUFF) | — | 20 |  |
+| **64** | 141 | 8:141 | — | `buff_type:BFT_STRENGTHEN_THE_SKILL` (BFT_STRENGTHEN_THE_SKILL) | — | 130 |  |
 | **65** | 1 | 0:1 | — | — | — | 1 |  |
 | **66** | 3 | 4:3 | — | — | — | 3 |  |
-| **67** | 30 | 4:30 | — | `buff_type:BFT_SIXTY_SEVEN` (COUNTER_REWARD) | — | 28 |  |
-| **68** | 16 | 6:16 | — | `buff_type:BFT_SIXTY_EIGHT` (POISON_FANG) | — | 16 |  |
+| **67** | 30 | 4:30 | — | `buff_type:BFT_SIXTY_SEVEN` (BFT_SIXTY_SEVEN) | — | 28 |  |
+| **68** | 16 | 6:16 | — | `buff_type:BFT_SIXTY_EIGHT` (BFT_SIXTY_EIGHT) | — | 16 |  |
 | **69** | 1 | 5:1 | — | — | — | 1 |  |
 | **70** | 2 | 3:2 | — | — | — | 2 |  |
-| **71** | 3 | 2:3 | — | `buff_type:BFT_SEVENTY_ONE` (DARK_HEAL) | — | 3 |  |
-| **72** | 61 | 4:61 | — | `buff_type:BFT_SEVENTY_TWO` (OTTER) | — | 61 |  |
-| **73** | 24 | 3:24 | — | `buff_type:BFT_SEVENTY_THREE` (TEAM_ON_DEATH) | — | 23 |  |
+| **71** | 3 | 2:3 | — | `buff_type:BFT_SEVENTY_ONE` (BFT_SEVENTY_ONE) | — | 3 |  |
+| **72** | 61 | 4:61 | — | `buff_type:BFT_SEVENTY_TWO` (BFT_SEVENTY_TWO) | — | 61 |  |
+| **73** | 24 | 3:24 | — | `buff_type:BFT_SEVENTY_THREE` (BFT_SEVENTY_THREE) | — | 23 |  |
 | **74** | 1 | 5:1 | — | — | — | 1 |  |
-| **75** | 5 | 2:5 | — | `buff_type:BFT_SEVENTY_FIVE` (DOUBLE_TRIGGER) | — | 5 |  |
-| **76** | 5 | 6:5 | — | `buff_type:BFT_SEVENTY_SIX` (SLEEPWALK) | — | 5 |  |
-| **77** | 19 | 10:19 | 50:4 | `buff_type:BFT_SEVENTY_SEVEN` (SLOT_PRIORITY) | — | 18 |  |
+| **75** | 5 | 2:5 | — | `buff_type:BFT_SEVENTY_FIVE` (BFT_SEVENTY_FIVE) | — | 5 |  |
+| **76** | 5 | 6:5 | — | `buff_type:BFT_SEVENTY_SIX` (BFT_SEVENTY_SIX) | — | 5 |  |
+| **77** | 19 | 10:19 | 50:4 | `buff_type:BFT_SEVENTY_SEVEN` (BFT_SEVENTY_SEVEN) | — | 18 |  |
 | **78** | 2 | 1:2 | — | — | — | 2 |  |
-| **79** | 1 | 1:1 | — | `buff_type:BFT_SEVENTY_NINE` (LANTERN) | — | 2 |  |
-| **80** | 1 | 1:1 | 7:1 | `buff_type:BFT_EIGHTY` (CYCLOPS) | — | 1 |  |
-| **83** | 2 | 6:2 | — | `buff_type:BFT_EIGHTY_THREE` (MIRROR_PRIORITY) | — | 1 |  |
-| **84** | 6 | 7:6 | — | `buff_type:BFT_EIGHTY_FOUR` (FEYNMAN) | — | 4 |  |
+| **79** | 1 | 1:1 | — | `buff_type:BFT_SEVENTY_NINE` (BFT_SEVENTY_NINE) | — | 2 |  |
+| **80** | 1 | 1:1 | 7:1 | `buff_type:BFT_EIGHTY` (BFT_EIGHTY) | — | 1 |  |
+| **83** | 2 | 6:2 | — | `buff_type:BFT_EIGHTY_THREE` (BFT_EIGHTY_THREE) | — | 1 |  |
+| **84** | 6 | 7:6 | — | `buff_type:BFT_EIGHTY_FOUR` (BFT_EIGHTY_FOUR) | — | 4 |  |
 | **85** | 1 | 17:1 | — | — | — | 1 |  |
-| **86** | 10 | 6:1, 7:9 | — | `buff_type:BFT_EIGHTY_SIX` (CHAR_SPECIFIC_B) | — | 8 |  |
-| **87** | 1 | 2:1 | — | `buff_type:BFT_EIGHTY_SEVEN` (ENERGY_HEAL) | — | 1 |  |
-| **88** | 2 | 3:2 | — | `buff_type:BFT_EIGHTY_EIGHT` (CHARGE) | — | 2 |  |
-| **89** | 11 | 13:1, 25:10 | — | `buff_type:BFT_EIGHTY_NINE` (REFRACT) | — | 11 |  |
+| **86** | 10 | 6:1, 7:9 | — | `buff_type:BFT_EIGHTY_SIX` (BFT_EIGHTY_SIX) | — | 8 |  |
+| **87** | 1 | 2:1 | — | `buff_type:BFT_EIGHTY_SEVEN` (BFT_EIGHTY_SEVEN) | — | 1 |  |
+| **88** | 2 | 3:2 | — | `buff_type:BFT_EIGHTY_EIGHT` (BFT_EIGHTY_EIGHT) | — | 2 |  |
+| **89** | 11 | 13:1, 25:10 | — | `buff_type:BFT_EIGHTY_NINE` (BFT_EIGHTY_NINE) | — | 11 |  |
 | **90** | 2 | 5:2 | — | — | — | 2 |  |
 | **91** | 11 | 5:11 | — | — | — | 9 |  |
-| **92** | 20 | 2:20 | — | `buff_type:BFT_NINETY_TWO` (FREEZE_LOCK) | — | 20 |  |
-| **93** | 16 | 13:16 | — | `buff_type:BFT_NINETY_THREE` (ENTRY_FIRST_TURN) | — | 17 |  |
-| **94** | 2 | 1:1, 4:1 | — | `buff_type:BFT_NINETY_FOUR` (MARK_METEOR) | — | 3 |  |
+| **92** | 20 | 2:20 | — | `buff_type:BFT_NINETY_TWO` (BFT_NINETY_TWO) | — | 20 |  |
+| **93** | 16 | 13:16 | — | `buff_type:BFT_NINETY_THREE` (BFT_NINETY_THREE) | — | 17 |  |
+| **94** | 2 | 1:1, 4:1 | — | `buff_type:BFT_NINETY_FOUR` (BFT_NINETY_FOUR) | — | 3 |  |
 | **95** | 2 | 3:2 | — | — | — | 2 |  |
 | **96** | 2 | 4:2 | — | — | — | 3 |  |
 | **97** | 1 | 3:1 | — | — | — | 1 |  |
 | **98** | 18 | 2:18 | — | — | — | 19 |  |
 | **99** | 2 | 1:2 | — | — | — | 2 |  |
-| **100** | 10 | 8:10 | — | `buff_type:BFT_O_T` (ELEMENT_ENERGY) | — | 6 |  |
-| **101** | 1 | 3:1 | — | `buff_type:BFT_O_ONE` (EXTEND_ENTRY) | — | 1 |  |
-| **102** | 10 | 5:10 | — | `buff_type:BFT_O_TWO` (CUTE_SPEED) | — | 10 |  |
-| **103** | 3 | 5:3 | — | `buff_type:BFT_O_THREE` (DIFF_SKILL_COST) | — | 3 |  |
-| **104** | 1 | 1:1 | — | `buff_type:BFT_O_FOUR` (MAGIC_KILLER) | — | 3 |  |
-| **105** | 2 | 8:2 | — | `buff_type:BFT_O_FIVE` (SKILL_CHECK) | — | 2 |  |
-| **106** | 2 | 2:2 | — | `buff_type:BFT_O_SIX` (POSITION_COST) | — | 2 |  |
-| **107** | 10 | 2:10 | — | `buff_type:BFT_O_SEVEN` (COND_POWER) | — | 10 |  |
-| **108** | 23 | 4:23 | — | `buff_type:BFT_O_EIGHT` (FLAT_POWER) | — | 37 |  |
-| **109** | 2 | 5:2 | — | `buff_type:BFT_O_NINE` (OVERFLOW_HEAL) | — | 2 |  |
-| **110** | 1 | 1:1 | — | `buff_type:BFT_O_TEN` (MARK_NO_DECAY) | — | 3 |  |
-| **111** | 2 | 3:2 | — | `buff_type:BFT_O_ELEVEN` (BURN_REVERSE) | — | 2 |  |
-| **112** | 1 | 1:1 | — | `buff_type:BFT_O_TWELVE` (COVER) | — | 1 |  |
+| **100** | 10 | 8:10 | — | `buff_type:BFT_O_T` (BFT_O_T) | — | 6 |  |
+| **101** | 1 | 3:1 | — | `buff_type:BFT_O_ONE` (BFT_O_ONE) | — | 1 |  |
+| **102** | 10 | 5:10 | — | `buff_type:BFT_O_TWO` (BFT_O_TWO) | — | 10 |  |
+| **103** | 3 | 5:3 | — | `buff_type:BFT_O_THREE` (BFT_O_THREE) | — | 3 |  |
+| **104** | 1 | 1:1 | — | `buff_type:BFT_O_FOUR` (BFT_O_FOUR) | — | 3 |  |
+| **105** | 2 | 8:2 | — | `buff_type:BFT_O_FIVE` (BFT_O_FIVE) | — | 2 |  |
+| **106** | 2 | 2:2 | — | `buff_type:BFT_O_SIX` (BFT_O_SIX) | — | 2 |  |
+| **107** | 10 | 2:10 | — | `buff_type:BFT_O_SEVEN` (BFT_O_SEVEN) | — | 10 |  |
+| **108** | 23 | 4:23 | — | `buff_type:BFT_O_EIGHT` (BFT_O_EIGHT) | — | 37 |  |
+| **109** | 2 | 5:2 | — | `buff_type:BFT_O_NINE` (BFT_O_NINE) | — | 2 |  |
+| **110** | 1 | 1:1 | — | `buff_type:BFT_O_TEN` (BFT_O_TEN) | — | 3 |  |
+| **111** | 2 | 3:2 | — | `buff_type:BFT_O_ELEVEN` (BFT_O_ELEVEN) | — | 2 |  |
+| **112** | 1 | 1:1 | — | `buff_type:BFT_O_TWELVE` (BFT_O_TWELVE) | — | 1 |  |
 | **113** | 1 | 3:1 | — | — | — | 1 |  |
-| **114** | 2 | 2:2 | — | `buff_type:BFT_O_FOURTEEN` (CAP_RAISE) | — | 4 |  |
+| **114** | 2 | 2:2 | — | `buff_type:BFT_O_FOURTEEN` (BFT_O_FOURTEEN) | — | 4 |  |
 | **115** | 1 | 0:1 | — | — | — | 1 |  |
 | **116** | 1 | 0:1 | — | — | — | 1 |  |
-| **117** | 14 | 2:14 | — | `buff_type:BFT_O_SEVENTEEN` (SLOT_MOD) | — | 11 |  |
-| **118** | 1 | 1:1 | — | `buff_type:BFT_O_EIGHTEEN` (RETURN) | — | 1 |  |
-| **119** | 2 | 2:2 | — | `buff_type:BFT_O_NINETEEN` (FIRST_USE_POWER) | — | 2 |  |
-| **120** | 2 | 1:2 | — | `buff_type:BFT_O_TWENTY` (SIDE_COST) | — | 2 |  |
-| **121** | 9 | 5:2, 6:7 | — | `buff_type:BFT_O_TWENTYONE` (TEST) | — | 8 |  |
+| **117** | 14 | 2:14 | — | `buff_type:BFT_O_SEVENTEEN` (BFT_O_SEVENTEEN) | — | 11 |  |
+| **118** | 1 | 1:1 | — | `buff_type:BFT_O_EIGHTEEN` (BFT_O_EIGHTEEN) | — | 1 |  |
+| **119** | 2 | 2:2 | — | `buff_type:BFT_O_NINETEEN` (BFT_O_NINETEEN) | — | 2 |  |
+| **120** | 2 | 1:2 | — | `buff_type:BFT_O_TWENTY` (BFT_O_TWENTY) | — | 2 |  |
+| **121** | 9 | 5:2, 6:7 | — | `buff_type:BFT_O_TWENTYONE` (BFT_O_TWENTYONE) | — | 8 |  |
 | **122** | 2 | 3:2 | — | — | — | 2 |  |
 | **123** | 1 | 2:1 | — | — | — | 1 |  |
 | **124** | 1 | 1:1 | — | — | — | 1 |  |
@@ -238,18 +238,18 @@ Total `buffbase_order` families: **137**.  `buffbase_order rule` is the primitiv
 | **127** | 1 | 1:1 | — | — | — | 2 |  |
 | **128** | 1 | 1:1 | — | — | — | 1 |  |
 | **129** | 1 | 0:1 | — | — | — | 1 |  |
-| **130** | 3 | 1:3 | — | `buff_type:BFT_O_THIRTY` (ALERT) | — | 3 |  |
+| **130** | 3 | 1:3 | — | `buff_type:BFT_O_THIRTY` (BFT_O_THIRTY) | — | 3 |  |
 | **131** | 1 | 3:1 | — | — | — | 1 |  |
-| **132** | 3 | 7:3 | — | `buff_type:BFT_O_THIRTYTWO` (BORROW) | — | 3 |  |
+| **132** | 3 | 7:3 | — | `buff_type:BFT_O_THIRTYTWO` (BFT_O_THIRTYTWO) | — | 3 |  |
 | **133** | 2 | 2:2 | — | — | — | 1 |  |
 | **134** | 1 | 3:1 | — | — | — | 1 |  |
 | **135** | 1 | 2:1 | — | — | — | 1 |  |
-| **136** | 2 | 1:2 | — | `buff_type:BFT_O_THIRTYSIX` (CUTE_NO_CAP) | — | 4 |  |
+| **136** | 2 | 1:2 | — | `buff_type:BFT_O_THIRTYSIX` (BFT_O_THIRTYSIX) | — | 4 |  |
 | **138** | 5 | 3:5 | — | — | — | 5 |  |
 | **139** | 1 | 2:1 | — | — | — | 1 |  |
 | **140** | 1 | 0:1 | — | — | — | 1 |  |
 | **141** | 1 | 3:1 | — | — | — | 1 |  |
-| **142** | 8 | 1:8 | — | `buff_type:BFT_O_FORTYTWO` (CUTE_CHAIN) | — | 8 |  |
+| **142** | 8 | 1:8 | — | `buff_type:BFT_O_FORTYTWO` (BFT_O_FORTYTWO) | — | 8 |  |
 | **143** | 13 | 7:13 | — | — | — | 12 |  |
 | **144** | 1 | 4:1 | — | — | — | 1 |  |
 | **145** | 2 | 7:2 | — | — | — | 2 |  |
@@ -277,8 +277,8 @@ Per prefix: the dominant `buffbase_order` (the schema axis underlying the prefix
 
 | prefix | primitive | alias | dominant order | concentration | identity? | clean rewrite? |
 |---:|---|---|---:|---:|:---:|:---:|
-| 2011 | `buff_type:BFT_DAMNUM_CHANGE` | DAMAGE_REDUCE | 11 | 91.8% | ✓ | — |
-| 2046 | `buff_type:BFT_KILL_BUFF` | ON_KILL | 46 | 95.8% | ✓ | — |
-| 2050 | `buff_type:BFT_ENTER_BATTLE` | ENTRY_STATUS | 50 | 83.3% | ✓ | — |
+| 2011 | `buff_type:BFT_DAMNUM_CHANGE` | BFT_DAMNUM_CHANGE | 11 | 91.8% | ✓ | — |
+| 2046 | `buff_type:BFT_KILL_BUFF` | BFT_KILL_BUFF | 46 | 95.8% | ✓ | — |
+| 2050 | `buff_type:BFT_ENTER_BATTLE` | BFT_ENTER_BATTLE | 50 | 83.3% | ✓ | — |
 
 _0 of 3 prefix rules are clean rewrites (100% concentration); 3 satisfy the `prefix - 2000 == buffbase_order` identity._

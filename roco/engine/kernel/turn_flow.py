@@ -26,7 +26,10 @@ from roco.engine.kernel.state import (
     side,
 )
 from roco.generated import catalog_hot as hot
-from roco.generated.handler_indices import H_BORROW_TEAM_SKILL, H_SKILL_MOD
+from roco.generated.handler_order import op_index
+
+OP_BORROW_TEAM_SKILL = op_index("op_borrow_team_skill")
+OP_SKILL_MOD = op_index("op_skill_mod")
 
 
 def choice_to_skill_id(state: KernelState, side_id: int, choice: Choice) -> int:
@@ -92,7 +95,7 @@ def borrowed_skill_id(side_state, actor_slot: int, skill_id: int, rng: int) -> i
     start, end = hot.SKILL_EFFECT_RANGES[skill_id]
     has_borrow = 0
     for idx in range(start, end):
-        if hot.SKILL_EFFECT_ROWS[idx][0] == H_BORROW_TEAM_SKILL:
+        if hot.SKILL_EFFECT_ROWS[idx][0] == OP_BORROW_TEAM_SKILL:
             has_borrow = 1
     if not has_borrow:
         return 0
@@ -157,7 +160,7 @@ def _ability_slot_priority(actor: PetState, slot_idx: int) -> int:
     priority = 0
     for idx in range(start, end):
         row = hot.ABILITY_EFFECT_ROWS[idx]
-        if row[0] == H_SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
+        if row[0] == OP_SKILL_MOD and row[1] == 0 and row[5] & (1 << slot_idx):
             priority += row[6]
     return priority
 

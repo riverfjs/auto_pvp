@@ -12,19 +12,19 @@ def op_burn(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 @handles_buff([
-    ("BFT_DAM", "STATUS_CONDITION"),
-    ("BFT_SIXTY_EIGHT", "POISON_FANG"),
+    "BFT_DAM",
+    "BFT_SIXTY_EIGHT",
 ])
 def op_poison(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.poison_stacks += row[ROW_ARG0]
 
 
-@handles_buff([("BFT_FREEZE", "FREEZE_STATUS")])
+@handles_buff(["BFT_FREEZE"])
 def op_freeze(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.freeze_stacks += row[ROW_ARG0]
 
 
-@handles_buff([("BFT_ABSORB", "LEECH")])
+@handles_buff(["BFT_ABSORB"])
 def op_leech(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.leech_stacks += row[ROW_ARG0]
 

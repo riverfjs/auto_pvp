@@ -5,14 +5,6 @@ from __future__ import annotations
 from roco.common.constants import BPS
 from roco.common.enums import Element
 from roco.common.packing import _add_element_nibble, _add_element_u8, _max_element_u8
-from roco.engine.artifacts.skill_mod_modes import (
-    ENTRY_MOD_COST_REDUCE,
-    ENTRY_MOD_DAMAGE_REDUCE,
-    ENTRY_MOD_DAMAGE_RESIST,
-    ENTRY_MOD_POISON_STACKS,
-    ENTRY_MOD_POWER_BPS,
-    ENTRY_MOD_POWER_FLAT,
-)
 from roco.engine.kernel.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_meta import handles_buff
@@ -26,14 +18,14 @@ from roco.engine.kernel.op_rows import (
 )
 
 @handles_buff([
-    ("BFT_INC_DAM_BY_ATTACK_FIRST", "PRIORITY"),
-    ("BFT_INC_DAM_BY_SKILL", "POWER_MOD"),
-    ("BFT_BLOOD_TO_ENERGY", "EARTH_HEART"),
-    ("BFT_NOT_GET_HIT", "MOMENTUM"),
-    ("BFT_INC_DAM_BY_TARGET_HP_THRES", "FIRE_RAGE"),
-    ("BFT_CHANGE_GAIN_ENERGY_EFFECIENCY", "OVERLOAD"),
-    ("BFT_O_SEVEN", "COND_POWER"),
-    ("BFT_O_EIGHT", "FLAT_POWER"),
+    "BFT_INC_DAM_BY_ATTACK_FIRST",
+    "BFT_INC_DAM_BY_SKILL",
+    "BFT_BLOOD_TO_ENERGY",
+    "BFT_NOT_GET_HIT",
+    "BFT_INC_DAM_BY_TARGET_HP_THRES",
+    "BFT_CHANGE_GAIN_ENERGY_EFFECIENCY",
+    "BFT_O_SEVEN",
+    "BFT_O_EIGHT",
 ])
 def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:
@@ -74,47 +66,65 @@ def op_carry_skill_power_bonus(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.power_bps = ctx.power_bps * row[ROW_ARG2] // BPS
 
 
-def op_entry_element_skill_mod_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+def _entry_element_amounts(ctx: StageCtx, row: tuple[int, ...]):
     count = entry_source_count(ctx, row[ROW_ARG0])
     if count <= 0:
         return
     amount = row[ROW_ARG2] * count
-    mode = row[ROW_ARG3]
     for element in Element:
         if not (row[ROW_ARG1] & (1 << element.value)):
             continue
-        if mode == ENTRY_MOD_POWER_BPS:
-            ctx.entry_element_power_bps = _add_element_u8(
-                ctx.entry_element_power_bps,
-                element,
-                amount // 100,
-            )
-        elif mode == ENTRY_MOD_POWER_FLAT:
-            ctx.entry_element_power_flat = _add_element_u8(
-                ctx.entry_element_power_flat,
-                element,
-                amount,
-            )
-        elif mode == ENTRY_MOD_COST_REDUCE:
-            ctx.entry_element_cost_reduce = _add_element_nibble(
-                ctx.entry_element_cost_reduce,
-                element,
-                amount,
-            )
-        elif mode == ENTRY_MOD_POISON_STACKS:
-            ctx.entry_element_poison_stacks = _add_element_nibble(
-                ctx.entry_element_poison_stacks,
-                element,
-                amount,
-            )
-        elif mode == ENTRY_MOD_DAMAGE_REDUCE:
-            ctx.entry_element_damage_reduce = _max_element_u8(
-                ctx.entry_element_damage_reduce,
-                element,
-                min(100, amount),
-            )
-        elif mode == ENTRY_MOD_DAMAGE_RESIST:
-            ctx.entry_element_damage_resist |= 1 << element.value
+        yield element, amount
+
+
+def op_entry_element_power_bps_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_power_bps = _add_element_u8(
+            ctx.entry_element_power_bps,
+            element,
+            amount // 100,
+        )
+
+
+def op_entry_element_power_flat_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_power_flat = _add_element_u8(
+            ctx.entry_element_power_flat,
+            element,
+            amount,
+        )
+
+
+def op_entry_element_cost_reduce_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_cost_reduce = _add_element_nibble(
+            ctx.entry_element_cost_reduce,
+            element,
+            amount,
+        )
+
+
+def op_entry_element_poison_stacks_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_poison_stacks = _add_element_nibble(
+            ctx.entry_element_poison_stacks,
+            element,
+            amount,
+        )
+
+
+def op_entry_element_damage_reduce_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_damage_reduce = _max_element_u8(
+            ctx.entry_element_damage_reduce,
+            element,
+            min(100, amount),
+        )
+
+
+def op_entry_element_damage_resist_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    for element, _amount in _entry_element_amounts(ctx, row) or ():
+        ctx.entry_element_damage_resist |= 1 << element.value
 
 
 def op_transfer_mods(ctx: StageCtx, row: tuple[int, ...]) -> None:

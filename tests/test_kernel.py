@@ -9,7 +9,6 @@ from roco.generated import catalog_hot as hot
 from roco.data.scalar_damage import calc_attack_damage
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusFlag, StatusType, WeatherType
-from roco.engine.artifacts.skill_mod_modes import ENTRY_MOD_DAMAGE_REDUCE, ENTRY_MOD_DAMAGE_RESIST
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
 from roco.engine.kernel.catalog import (
@@ -37,7 +36,7 @@ from roco.engine.kernel.op_rows import (
 )
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
-from roco.generated import handler_indices as hi
+from roco.generated.handler_order import op_index
 from roco.common.packing import (
     DevotionIdx,
     MarkIdx,
@@ -231,8 +230,8 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     run_skill_timing(
         (
-            (hi.H_DAMAGE, TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 37, 3, 0, 0),
-            (hi.H_DAMAGE_REDUCTION, TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 8000, 0, 0, 0),
+            (op_index("op_damage"), TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 37, 3, 0, 0),
+            (op_index("op_damage_reduction"), TIMING_PAK_ROUND_CALC_START, 0, 0, 0, 8000, 0, 0, 0),
         ),
         (0, 2),
         TIMING_PAK_ROUND_CALC_START,
@@ -268,8 +267,8 @@ def test_before_move_primitives_from_source_context():
 
     run_skill_timing(
         (
-            (hi.H_HIT_COUNT_PER_POISON_EFFECT, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 2, 0, 0, 0),
-            (hi.H_SKILL_MOD, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 0b0101, 2, 30, 1),
+            (op_index("op_hit_count_per_poison_effect"), TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 2, 0, 0, 0),
+            (op_index("op_skill_mod"), TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0, 0b0101, 2, 30, 1),
         ),
         (0, 2),
         TIMING_HOOK_BEFORE_MOVE,
@@ -288,8 +287,8 @@ def test_hit_count_delta_filters_skill_and_persists_after_move():
 
     run_skill_timing(
         (
-            (hi.H_HIT_COUNT_DELTA, TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7020510, 0, 0),
-            (hi.H_HIT_COUNT_DELTA, TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7030450, 0, 0),
+            (op_index("op_hit_count_delta"), TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7020510, 0, 0),
+            (op_index("op_hit_count_delta"), TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7030450, 0, 0),
         ),
         (0, 2),
         TIMING_PAK_BEFORE_HURT,
@@ -307,7 +306,7 @@ def test_hit_count_percent_delta_scales_current_hit_count():
 
     run_skill_timing(
         (
-            (hi.H_HIT_COUNT_PERCENT_DELTA, TIMING_PAK_ROUND_CALC_START, 1, 10000, 0, 100, 0, 0, 0),
+            (op_index("op_hit_count_percent_delta"), TIMING_PAK_ROUND_CALC_START, 1, 10000, 0, 100, 0, 0, 0),
         ),
         (0, 1),
         TIMING_PAK_ROUND_CALC_START,
@@ -325,7 +324,7 @@ def test_entry_element_damage_reduce_persists_and_affects_damage():
     run_skill_timing(
         (
             (
-                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                op_index("op_entry_element_damage_reduce_by_count"),
                 TIMING_PAK_SDT,
                 1,
                 10000,
@@ -333,7 +332,7 @@ def test_entry_element_damage_reduce_persists_and_affects_damage():
                 entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
                 1 << Element.FIRE,
                 40,
-                ENTRY_MOD_DAMAGE_REDUCE,
+                0,
             ),
         ),
         (0, 1),
@@ -371,7 +370,7 @@ def test_entry_element_damage_resist_uses_pak_resist_bps_without_stacking():
     run_skill_timing(
         (
             (
-                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                op_index("op_entry_element_damage_resist_by_count"),
                 TIMING_PAK_SDT,
                 1,
                 10000,
@@ -379,10 +378,10 @@ def test_entry_element_damage_resist_uses_pak_resist_bps_without_stacking():
                 entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
                 1 << Element.FIRE,
                 1,
-                ENTRY_MOD_DAMAGE_RESIST,
+                0,
             ),
             (
-                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                op_index("op_entry_element_damage_reduce_by_count"),
                 TIMING_PAK_SDT,
                 1,
                 10000,
@@ -390,7 +389,7 @@ def test_entry_element_damage_resist_uses_pak_resist_bps_without_stacking():
                 entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
                 1 << Element.FIRE,
                 40,
-                ENTRY_MOD_DAMAGE_REDUCE,
+                0,
             ),
         ),
         (0, 2),
@@ -436,8 +435,8 @@ def test_kernel_after_move_status_and_status_ticks():
     water = _pet_id("水蓝蓝")
     burn_skill = _skill_id("焚烧烙印")
     poison_skill, poison_row = _skill_with_handler(
-        hi.H_POISON,
-        without=(hi.H_DAMAGE,),
+        op_index("op_poison"),
+        without=(op_index("op_damage"),),
         predicate=lambda skill_id, row: row[1] == 11 and hot.SKILLS[skill_id][SKILL_POWER] == 0,
     )
 
@@ -577,7 +576,7 @@ def test_kernel_mark_primitives_and_same_polarity_replacement():
     fire = _pet_id("火花")
     water = _pet_id("水蓝蓝")
     moisture = _skill_id("打湿")
-    wind, _ = _skill_with_handler(hi.H_WIND_MARK)
+    wind, _ = _skill_with_handler(op_index("op_wind_mark"))
 
     wet_state = update(
         make_state((fire,), (water,), team_a_moves=((moisture,),), team_b_moves=((0,),)),

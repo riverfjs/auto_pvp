@@ -6,8 +6,8 @@ failure in one cannot corrupt the next:
     1. roco.compiler_v2.gen_prefix_map  -> roco/generated/static, battle globals,
                                         skill damage adapters, primitive maps, etc.
     2. roco.engine.kernel.gen_runtime_artifacts
-                                     -> roco/generated/handler_indices.py
-                                        + handler_order.py + handler_table.py
+                                     -> roco/generated/handler_order.py
+                                        + handler_table.py
     3. roco.data.catalog_compiler
                                      -> roco/generated/catalog_hot.py
                                         + catalog_debug.py

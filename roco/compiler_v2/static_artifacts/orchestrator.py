@@ -7,6 +7,7 @@ from roco.compiler_v2.emit import write_static_files
 
 from .battle_events import write_battle_events
 from .bloodline_magic import write_bloodline_magic
+from .buffs import write_buff_defs
 from .buffbase import write_buffbase_params
 from .canonical_adapters import write_canonical_adapters
 from .common import GEN_DIR, INIT_PATH, STATIC_DIR
@@ -40,6 +41,7 @@ def write_all() -> dict[str, Any]:
     immunity_count = write_buff_immunity_table()
     bloodline_magic_counts = write_bloodline_magic(bundle)
     buffbase_count = write_buffbase_params()
+    buff_count = write_buff_defs()
     effect_count = write_effect_params()
     nature_count = write_natures()
     canonical_adapter_counts = write_canonical_adapters()
@@ -60,6 +62,7 @@ def write_all() -> dict[str, Any]:
         "immunity_count": immunity_count,
         "bloodline_magic_counts": bloodline_magic_counts,
         "buffbase_count": buffbase_count,
+        "buff_count": buff_count,
         "effect_count": effect_count,
         "nature_count": nature_count,
         "canonical_adapter_counts": canonical_adapter_counts,

@@ -6,11 +6,10 @@ from pathlib import Path
 import pytest
 
 from roco.common.primitive_keys import (
+    buff_ref_key,
     buff_type_key,
+    effect_ref_key,
     effect_kind_key,
-    effect_order_variant_key,
-    status_note_key,
-    struct_key,
 )
 from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
 from roco.compiler_v2.effect_codegen import (
@@ -21,9 +20,9 @@ from roco.compiler_v2.effect_codegen import (
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 
 P_DAMAGE = effect_kind_key(2)
-P_DISPEL_MARKS_TO_BURN = effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks_to_burn")
-P_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
-P_POISON = status_note_key("中毒")
+P_DISPEL_MARKS_TO_BURN = effect_ref_key(1042014)
+P_HIT_COUNT_DELTA = buff_ref_key(20450050)
+P_POISON = buff_ref_key(20070010)
 P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
 
 
@@ -89,8 +88,8 @@ def test_pak_op_prefix_table_covers_major_families():
     # PAK_PREFIX_NAMES is generated from BUFF_CONF + Python semantic bindings;
     # the legacy ``PakOp`` enum is retired.  Confirm the table still names
     # the most-used families and exports the synthetic EFFECT_CONF markers.
-    assert PAK_PREFIX_NAMES[2001] == "STAT_MOD"
-    assert PAK_PREFIX_NAMES[2023] == "POWER_MOD"
+    assert PAK_PREFIX_NAMES[2001] == "BFT_ATTR_CHANGE"
+    assert PAK_PREFIX_NAMES[2023] == "BFT_INC_DAM_BY_SKILL"
     # Unhandled prefixes now keep their pak/Lua enum identity instead of
     # falling back to an opaque JSONL-era ``PREFIX_<n>`` label.
     assert PAK_PREFIX_NAMES[2003] == "BFT_IMMUNE"
@@ -400,4 +399,4 @@ def test_former_exact_burn_mark_row_uses_family_decoder(pak):
     entry = decode_family_axes(1042014, pak.effect_conf, pak.buff_conf)
     assert entry is not None
     assert entry.primitive == P_DISPEL_MARKS_TO_BURN
-    assert entry.p0 == 5
+    assert entry.p0 == 0

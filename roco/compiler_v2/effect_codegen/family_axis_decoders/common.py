@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from roco.common.primitive_keys import effect_order_key, effect_order_variant_key
+from roco.common.primitive_keys import effect_order_key, effect_ref_key
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 from roco.compiler_v2.effect_codegen.params import safe_int
 from roco.compiler_v2.sources import LuaEnumSource
@@ -62,16 +62,14 @@ def emit_effect_order(
     return emit(effect_order_key(effect_order_symbol), p0, p1, p2, p3)
 
 
-def emit_effect_order_variant(
-    effect_order_symbol: str,
-    variant: str,
-    p0: int,
+def emit_effect_ref(
+    effect_id: int,
+    p0: int = 0,
     p1: int = 0,
     p2: int = 0,
     p3: int = 0,
 ) -> EmitOutcome:
-    _effect_type(effect_order_symbol)
-    return emit(effect_order_variant_key(effect_order_symbol, variant), p0, p1, p2, p3)
+    return emit(effect_ref_key(effect_id), p0, p1, p2, p3)
 
 
 def emit_from_param(rec: dict, primitive: str, slot: int) -> EmitOutcome | None:

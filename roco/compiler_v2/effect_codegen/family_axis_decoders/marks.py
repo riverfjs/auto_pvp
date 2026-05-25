@@ -9,7 +9,7 @@ from roco.compiler_v2.effect_codegen.params import extract_int_list, safe_int
 from roco.compiler_v2.sources import PakSource
 
 from roco.compiler_v2.effect_codegen.family_axis_decoders.common import (
-    emit_effect_order_variant,
+    emit_effect_ref,
     params,
 )
 
@@ -27,7 +27,7 @@ def decode_buff_convert(rec: dict, buff_conf: dict[int, dict]) -> EmitOutcome | 
         and len(target_ids) == 1
         and _is_internal_mark_sentinel(target_ids[0], buff_conf)
     ):
-        return emit_effect_order_variant("ET_BUFF_CONVERT", "dispel_marks", 0)
+        return emit_effect_ref(int(rec["id"]), 0)
 
     if (
         len(source_ids) == 1
@@ -36,7 +36,7 @@ def decode_buff_convert(rec: dict, buff_conf: dict[int, dict]) -> EmitOutcome | 
         and len(set(target_ids)) == 1
         and _is_burn_family(target_ids[0], buff_conf)
     ):
-        return emit_effect_order_variant("ET_BUFF_CONVERT", "dispel_marks_to_burn", len(target_ids))
+        return emit_effect_ref(int(rec["id"]), 0)
     return None
 
 

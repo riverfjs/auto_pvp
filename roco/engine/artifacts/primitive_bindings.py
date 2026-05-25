@@ -1,4 +1,4 @@
-"""Engine-owned binding from pak-derived primitive keys to handler constants."""
+"""Engine-owned binding from pak-derived primitive keys to runtime op names."""
 
 from __future__ import annotations
 
@@ -9,69 +9,29 @@ from roco.common.primitive_keys import (
     buff_type_key,
     effect_kind_key,
     effect_order_key,
-    effect_order_variant_key,
-    mark_note_key,
-    source_context_key,
-    status_note_key,
-    struct_key,
 )
-from roco.engine.kernel.handler_manifest import OP_MODULES, func_to_const
+from roco.engine.kernel.handler_manifest import OP_MODULES
 from roco.engine.kernel.op_meta import (
     HANDLES_BUFF_ATTR,
-    HANDLES_MARK_ATTR,
     HANDLES_PREFIX_ATTR,
 )
-from roco.generated import handler_indices as hi
+from roco.generated.handler_order import OP_INDEX
 
 
 EXACT_PRIMITIVE_BINDINGS: dict[str, str] = {
-    effect_kind_key(2): "H_DAMAGE",
-    effect_order_key("ET_PURIFY"): "H_DISPEL_DEBUFFS",
-    effect_order_key("ET_RECOVER"): "H_HEAL_HP",
-    effect_order_key("ET_SUCKBLOOD"): "H_LIFE_DRAIN",
-    effect_order_key("ET_CHANGE_ENERGY"): "H_HEAL_ENERGY",
-    effect_order_key("ET_COUNTER"): "H_INSTALL_COUNTER",
-    effect_order_key("ET_MULTIPLE"): "H_HIT_COUNT_DELTA",
-    effect_order_variant_key("ET_MULTIPLE", "team_skill_count"):
-        "H_HIT_COUNT_BY_TEAM_SKILL_COUNT",
-    effect_order_key("ET_SKILL_CD"): "H_SET_SELF_COOLDOWN",
-    effect_order_key("ET_FAST_SKILL"): "H_PRIORITY_NEXT_DELTA",
-    effect_order_key("ET_SWAP_SKILLS"): "H_EXCHANGE_MOVES",
-    effect_order_key("ET_COPY_BUFF"): "H_MIRROR_ENEMY_BUFFS",
-    effect_order_key("ET_CHANGE_WEATHER"): "H_WEATHER",
-    effect_order_key("ET_BUFF_BY_CHANGE_TIMES"): "H_SELF_BUFF",
-    effect_order_variant_key("ET_BUFF_BY_PACK_PET_NUM", "entry_self_buff_by_side_count"):
-        "H_ENTRY_SELF_BUFF_BY_SIDE_COUNT",
-    effect_order_variant_key("ET_LIMIT_FIGHT_BY_HP", "entry_self_buff_if_energy"):
-        "H_ENTRY_SELF_BUFF_IF_ENERGY",
-    effect_order_variant_key("ET_HERO", "entry_self_buff_by_source_count"):
-        "H_ENTRY_SELF_BUFF_BY_SOURCE_COUNT",
-    effect_order_variant_key("ET_HERO", "entry_self_buff_by_used_skill_count"):
-        "H_ENTRY_SELF_BUFF_BY_USED_SKILL_COUNT",
-    effect_order_variant_key("ET_HERO", "entry_buff_per_skill_count"):
-        "H_ENTRY_BUFF_PER_SKILL_COUNT",
-    effect_order_variant_key("ET_HERO", "entry_element_skill_mod_by_count"):
-        "H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT",
-    effect_order_variant_key("ET_BUFF_BY_EQUIP_SKILL_NUM", "entry_element_skill_mod_by_count"):
-        "H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT",
-    effect_order_variant_key("ET_SWAP_STAT", "hp_ratio"): "H_EXCHANGE_HP_RATIO",
-    effect_order_variant_key("ET_SWAP_STAT", "transfer_mods"): "H_TRANSFER_MODS",
-    effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks"): "H_DISPEL_MARKS",
-    effect_order_variant_key("ET_BUFF_CONVERT", "dispel_marks_to_burn"):
-        "H_DISPEL_MARKS_TO_BURN",
-    source_context_key("hit_count_per_poison_effect"): "H_HIT_COUNT_PER_POISON_EFFECT",
-    source_context_key("cute_hit_per_stack"): "H_CUTE_HIT_PER_STACK",
-    source_context_key("slot_skill_mod"): "H_SKILL_MOD",
-    status_note_key("中毒"): "H_POISON",
-    status_note_key("灼烧"): "H_BURN",
-    status_note_key("寄生"): "H_LEECH",
-    struct_key("active_immunity_buff"): "H_APPLY_ACTIVE_BUFF",
-    struct_key("zero_energy_auto_switch"): "H_AUTO_SWITCH_ON_ZERO_ENERGY",
-    struct_key("team_skill_hit_count"): "H_HIT_COUNT_BY_TEAM_SKILL_COUNT",
-    struct_key("flat_hit_count_delta"): "H_HIT_COUNT_DELTA",
-    struct_key("hit_count_percent_delta"): "H_HIT_COUNT_PERCENT_DELTA",
-    struct_key("heal_reversal"): "H_ANTI_HEAL",
-    struct_key("cute_bench_cost_reduce"): "H_CUTE_BENCH_COST_REDUCE",
+    effect_kind_key(2): "op_damage",
+    effect_order_key("ET_PURIFY"): "op_dispel_debuffs",
+    effect_order_key("ET_RECOVER"): "op_heal_hp",
+    effect_order_key("ET_SUCKBLOOD"): "op_life_drain",
+    effect_order_key("ET_CHANGE_ENERGY"): "op_heal_energy",
+    effect_order_key("ET_COUNTER"): "op_install_counter",
+    effect_order_key("ET_MULTIPLE"): "op_hit_count_delta",
+    effect_order_key("ET_SKILL_CD"): "op_set_self_cooldown",
+    effect_order_key("ET_FAST_SKILL"): "op_priority_next_delta",
+    effect_order_key("ET_SWAP_SKILLS"): "op_exchange_moves",
+    effect_order_key("ET_COPY_BUFF"): "op_mirror_enemy_buffs",
+    effect_order_key("ET_CHANGE_WEATHER"): "op_weather",
+    effect_order_key("ET_BUFF_BY_CHANGE_TIMES"): "op_self_buff",
 }
 
 
@@ -84,18 +44,15 @@ def primitive_bindings() -> dict[str, str]:
             if not name.startswith("op_"):
                 continue
             func = getattr(module, name)
-            const = func_to_const(name)
-            for symbol, _alias in getattr(func, HANDLES_BUFF_ATTR, ()):
-                _put_binding(bindings, buff_type_key(str(symbol)), const)
-            for symbol, _alias in getattr(func, HANDLES_PREFIX_ATTR, ()):
-                _put_binding(bindings, buff_type_key(str(symbol)), const)
-            for note, _mark_name in getattr(func, HANDLES_MARK_ATTR, ()):
-                _put_binding(bindings, mark_note_key(str(note)), const)
-    _validate_handler_constants(bindings)
+            for symbol in getattr(func, HANDLES_BUFF_ATTR, ()):
+                _put_binding(bindings, buff_type_key(str(symbol)), name)
+            for symbol in getattr(func, HANDLES_PREFIX_ATTR, ()):
+                _put_binding(bindings, buff_type_key(str(symbol)), name)
+    _validate_op_names(bindings)
     return bindings
 
 
-def handler_const_from_primitive(primitive: str) -> str:
+def op_name_from_primitive(primitive: str) -> str:
     try:
         return primitive_bindings()[primitive]
     except KeyError as exc:
@@ -109,7 +66,7 @@ def _put_binding(bindings: dict[str, str], primitive: str, const: str) -> None:
     bindings[primitive] = const
 
 
-def _validate_handler_constants(bindings: dict[str, str]) -> None:
-    missing = sorted({const for const in bindings.values() if not hasattr(hi, const)})
+def _validate_op_names(bindings: dict[str, str]) -> None:
+    missing = sorted({name for name in bindings.values() if name not in OP_INDEX})
     if missing:
-        raise RuntimeError(f"primitive bindings reference missing handlers: {', '.join(missing)}")
+        raise RuntimeError(f"primitive bindings reference missing ops: {', '.join(missing)}")

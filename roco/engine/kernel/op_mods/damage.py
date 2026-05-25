@@ -17,10 +17,10 @@ def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.hit_count = row[ROW_ARG1]
 
 
-@handles_prefix([("BFT_DAMNUM_CHANGE", "DAMAGE_REDUCE")])
+@handles_prefix(["BFT_DAMNUM_CHANGE"])
 @handles_buff([
-    ("BFT_FIELD_UP_CHANGE", "SURVIVAL"),
-    ("BFT_CHANGE_SDT_RATIO", "NON_SE_REDUCE"),
+    "BFT_FIELD_UP_CHANGE",
+    "BFT_CHANGE_SDT_RATIO",
 ])
 def op_damage_reduction(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:

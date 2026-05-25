@@ -7,22 +7,28 @@ these keys in static rows; the engine owns the binding from key to op.
 from __future__ import annotations
 
 BATTLE_EVENT_PREFIX = "battle_event:"
+BUFF_REF_PREFIX = "buff_ref:"
 BUFF_TYPE_PREFIX = "buff_type:"
+EFFECT_REF_PREFIX = "effect_ref:"
 EFFECT_KIND_PREFIX = "effect_kind:"
 EFFECT_ORDER_PREFIX = "effect_order:"
 ENGINE_HOOK_PREFIX = "engine_hook:"
-MARK_NOTE_PREFIX = "mark_note:"
-SOURCE_CONTEXT_PREFIX = "source_context:"
-STATUS_NOTE_PREFIX = "status_note:"
-STRUCT_PREFIX = "struct:"
 
 
 def battle_event_key(symbol: str) -> str:
     return _key(BATTLE_EVENT_PREFIX, symbol)
 
 
+def buff_ref_key(buff_id: int) -> str:
+    return f"{BUFF_REF_PREFIX}{int(buff_id)}"
+
+
 def buff_type_key(symbol: str) -> str:
     return _key(BUFF_TYPE_PREFIX, symbol)
+
+
+def effect_ref_key(effect_id: int) -> str:
+    return f"{EFFECT_REF_PREFIX}{int(effect_id)}"
 
 
 def effect_kind_key(kind: int) -> str:
@@ -33,28 +39,8 @@ def effect_order_key(symbol: str) -> str:
     return _key(EFFECT_ORDER_PREFIX, symbol)
 
 
-def effect_order_variant_key(symbol: str, variant: str) -> str:
-    return f"{effect_order_key(symbol)}/{_clean(variant)}"
-
-
 def engine_hook_key(name: str) -> str:
     return _key(ENGINE_HOOK_PREFIX, name)
-
-
-def mark_note_key(note: str) -> str:
-    return _key(MARK_NOTE_PREFIX, note)
-
-
-def source_context_key(name: str) -> str:
-    return _key(SOURCE_CONTEXT_PREFIX, name)
-
-
-def status_note_key(note: str) -> str:
-    return _key(STATUS_NOTE_PREFIX, note)
-
-
-def struct_key(name: str) -> str:
-    return _key(STRUCT_PREFIX, name)
 
 
 def strip_prefix(value: str, prefix: str) -> str | None:

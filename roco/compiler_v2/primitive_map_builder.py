@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from roco.compiler_v2.buff_immunity_decoders import load_buff_immunity_table
-from roco.common.primitive_keys import status_note_key, struct_key
+from roco.common.primitive_keys import buff_ref_key
 from roco.compiler_v2.model import StaticBundle
 from roco.compiler_v2.primitive_axes import resolve_primitive_axes
 from roco.compiler_v2.sources import DEFAULT_PAK_DATA_DIR, PakSource
@@ -19,7 +18,6 @@ def build_primitive_map(
     buffbase_rows = pak.table("BUFFBASE_CONF")
     buff_rows = pak.table("BUFF_CONF")
     skill_rows = pak.table("SKILL_CONF")
-    desc_rows = pak.table("DESC_NOTE_CONF")
 
     axes = resolve_primitive_axes(bundle.lua_enums)
     order_seed = axes.buffbase_order
@@ -63,7 +61,6 @@ def build_primitive_map(
         buff_rows,
         buffbase_rows,
         skill_rows,
-        desc_rows,
         axes.raw,
     )
 
@@ -89,34 +86,16 @@ def _build_buff_id_primitive_map(
     buff_rows: dict[int | str, dict],
     buffbase_rows: dict[int | str, dict],
     skill_rows: dict[int | str, dict],
-    desc_rows: dict[int | str, dict],
-    raw_axes: dict[str, dict[int | str, tuple[str, str]]],
+    raw_axes: dict[str, dict[int | str, str]],
 ) -> dict[int, str]:
     """Derive exact BUFF_CONF.id primitives from pak structures.
 
-    Some mark buffs reuse generic BUFFBASE rows (for example poison or
+    Some type-4 mark buffs reuse generic BUFFBASE rows (for example poison or
     skill-cost rows).  A base_id-only dispatch would therefore compile the
-    mark as the generic status/cost primitive.  The pak record itself carries
-    the stable mark name, so this generated exact layer is keyed by
-    ``BUFF_CONF.id`` and wins before base_id/order dispatch.
-
-    The same exact layer handles status rows whose semantic is carried by
-    ``BUFF_CONF.type/name/add_des``, plus structural outliers such as
-    星地善良 where ``SKILL_CONF.skill_result`` chains an order-52 condition
-    buff to an order-3 guard buff.  Those joins are compiler-owned static
-    extraction; the engine does not carry pak names or ids.
+    mark as a generic status/cost primitive.  This exact layer is keyed by
+    ``BUFF_CONF.id`` and is derived from pak type/order/params only.
     """
 
-    bgs_area = bundle.lua_enums.get("BuffGroupSign", {}).get("BGS_AREA")
-    desc_notes = _desc_notes_by_id(desc_rows)
-    mark_name_to_primitive = _mark_note_to_primitive(raw_axes, desc_notes)
-
-    status_name_to_primitive = {
-        desc_notes[note_id]: status_note_key(desc_notes[note_id])
-        for note_id in (1001, 1002, 1008)
-        if note_id in desc_notes
-    }
-    active_immunity_buff_ids = set(load_buff_immunity_table(buff_conf=buff_rows))
     auto_switch_buff_ids = _derive_zero_energy_auto_switch_buff_ids(
         skill_rows,
         buff_rows,
@@ -127,55 +106,34 @@ def _build_buff_id_primitive_map(
     for buff_id, rec in buff_rows.items():
         if not isinstance(buff_id, int):
             continue
-        name = str(rec.get("name") or "").strip()
-        primitive = mark_name_to_primitive.get(name)
-        if primitive is not None:
-            groups = {
-                int(sign)
-                for sign in rec.get("buff_groupsigns") or []
-                if _maybe_int(sign) is not None
-            }
-            # Some pak rows omit BGS_AREA despite carrying the canonical mark
-            # name.  The name is the semantic anchor; BGS_AREA only verifies the
-            # common cover-group shape when present.
-            if bgs_area is not None and groups and bgs_area not in groups:
-                continue
-            _put_exact_buff_primitive(out, buff_id, primitive, f"mark name={name!r}")
+        if _is_supported_mark_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(out, buff_id, buff_ref_key(buff_id), "BUFF_CONF.type=4 structural mark")
             continue
 
-        labels = {
-            str(rec.get(field) or "").strip()
-            for field in ("name", "add_des")
-            if str(rec.get(field) or "").strip()
-        }
-        if int(rec.get("type") or 0) == 2:
-            for label in sorted(labels):
-                primitive = status_name_to_primitive.get(label)
-                if primitive is not None:
-                    _put_exact_buff_primitive(out, buff_id, primitive, f"status label={label!r}")
-                    break
+        if _is_supported_status_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(out, buff_id, buff_ref_key(buff_id), "BUFF_CONF.type=2 structural status")
 
         if buff_id in auto_switch_buff_ids:
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("zero_energy_auto_switch"),
+                buff_ref_key(buff_id),
                 "SKILL_CONF order-52 zero-energy condition chain",
             )
 
-        if buff_id in active_immunity_buff_ids:
+        if _is_active_immunity_buff(rec, buffbase_rows):
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("active_immunity_buff"),
-                "BUFF_CONF.desc immunity phrase",
+                buff_ref_key(buff_id),
+                "BUFF_CONF reduce rule + BFT_IMMUNE",
             )
 
         if _is_team_skill_hit_count_buff(rec, buffbase_rows):
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("team_skill_hit_count"),
+                buff_ref_key(buff_id),
                 "BUFFBASE_CONF order-3 team skill count hit modifier",
             )
 
@@ -183,7 +141,7 @@ def _build_buff_id_primitive_map(
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("flat_hit_count_delta"),
+                buff_ref_key(buff_id),
                 "BUFFBASE_CONF order-45 flat hit-count delta",
             )
 
@@ -191,7 +149,7 @@ def _build_buff_id_primitive_map(
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("hit_count_percent_delta"),
+                buff_ref_key(buff_id),
                 "BUFFBASE_CONF order-45 percent hit-count delta",
             )
 
@@ -199,7 +157,7 @@ def _build_buff_id_primitive_map(
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("heal_reversal"),
+                buff_ref_key(buff_id),
                 "BUFFBASE_CONF order-146 heal reversal trigger",
             )
 
@@ -207,7 +165,7 @@ def _build_buff_id_primitive_map(
             _put_exact_buff_primitive(
                 out,
                 buff_id,
-                struct_key("cute_bench_cost_reduce"),
+                buff_ref_key(buff_id),
                 "BUFFBASE_CONF order-40 cute-stack trigger to all-skill cost reduction",
             )
     return out
@@ -322,6 +280,89 @@ def _all_skill_cost_reduce_amount(
     delta = slots[3][0]
     return abs(delta) if delta < 0 else 0
 
+def _is_supported_status_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    if int(rec.get("type") or 0) != 2:
+        return False
+    rows = _buff_base_order_slots(rec, buffbase_rows)
+    return (
+        _has_order_params(rows, 7, lambda slots: _slot_scalar(slots, 4) in {4, 12})
+        or _has_order_params(rows, 5, lambda _slots: True)
+    )
+
+def _is_supported_mark_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    if int(rec.get("type") or 0) != 4:
+        return False
+    rows = _buff_base_order_slots(rec, buffbase_rows)
+    if _has_order_params(rows, 7, lambda slots: _slot_scalar(slots, 4) == 12):
+        return True
+    if _has_order_params(rows, 32, lambda slots: _slot_scalar(slots, 3) in {-1, 1}):
+        return True
+    if _has_order_params(rows, 94, lambda _slots: True):
+        return True
+    if _has_order_params(rows, 1, lambda slots: _slot_scalar(slots, 0) == 6 and (_slot_scalar(slots, 2) or 0) < 0):
+        return True
+    if _has_order_params(rows, 17, lambda slots: _slot_scalar(slots, 0) == 1019001):
+        return True
+    if _has_order_params(rows, 21, lambda slots: (_slot_scalar(slots, 3) or 0) > 0):
+        return True
+    if _has_order_params(rows, 93, lambda slots: _slot_scalar(slots, 4) == 1 and _slot_scalar(slots, 5) == 10):
+        return True
+    if _has_order_params(rows, 49, lambda slots: _slot_scalar(slots, 0) in {1001005, 1019011}):
+        return True
+    if _has_order_params(rows, 64, lambda slots: _slot_scalar(slots, 0) == 6):
+        return True
+    if _has_order_params(rows, 23, lambda slots: _slot_scalar(slots, 4) == 1 and (_slot_scalar(slots, 5) or 0) > 0):
+        return True
+    return False
+
+def _is_active_immunity_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    rules = rec.get("buff_group_reduce") or []
+    if len(rules) != 1 or not isinstance(rules[0], dict):
+        return False
+    rule = rules[0]
+    params_raw = rule.get("reduce_param") or []
+    if int(rule.get("reduce_type") or 0) != 13:
+        return False
+    if len(params_raw) < 1 or int(params_raw[0] or 0) != 999:
+        return False
+    return any(order == 3 for _base_id, order, _slots in _iter_rec_base_slots(rec, buffbase_rows))
+
+def _buff_base_order_slots(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> tuple[tuple[int, tuple[tuple[int, ...], ...]], ...]:
+    return tuple((order, slots) for _base_id, order, slots in _iter_rec_base_slots(rec, buffbase_rows))
+
+def _iter_rec_base_slots(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> list[tuple[int, int, tuple[tuple[int, ...], ...]]]:
+    out: list[tuple[int, int, tuple[tuple[int, ...], ...]]] = []
+    for raw_base_id in rec.get("buff_base_ids") or []:
+        base_id = _maybe_int(raw_base_id)
+        if base_id is None:
+            continue
+        base = buffbase_rows.get(base_id) or {}
+        order = _maybe_int(base.get("buffbase_order")) or 0
+        out.append((base_id, order, _base_param_slots(base)))
+    return out
+
+def _has_order_params(
+    rows: tuple[tuple[int, tuple[tuple[int, ...], ...]], ...],
+    order: int,
+    predicate,
+) -> bool:
+    return any(row_order == order and predicate(slots) for row_order, slots in rows)
+
 def _put_exact_buff_primitive(
     out: dict[int, str],
     buff_id: int,
@@ -334,28 +375,6 @@ def _put_exact_buff_primitive(
             f"BUFF_CONF[{buff_id}] exact primitive conflict: {existing} vs {primitive} ({context})"
         )
     out[buff_id] = primitive
-
-def _desc_notes_by_id(rows: dict[int | str, dict]) -> dict[int, str]:
-    return {
-        note_id: str(rec.get("note") or "").strip()
-        for note_id, rec in rows.items()
-        if isinstance(note_id, int) and str(rec.get("note") or "").strip()
-    }
-
-
-def _mark_note_to_primitive(
-    raw_axes: dict[str, dict[int | str, tuple[str, str]]],
-    desc_notes: dict[int, str],
-) -> dict[str, str]:
-    valid_notes = set(desc_notes.values())
-    out: dict[str, str] = {}
-    for note, (primitive, mark_name) in raw_axes.get("mark_note", {}).items():
-        if note not in valid_notes:
-            raise RuntimeError(f"DESC_NOTE_CONF missing mark note {note!r}")
-        if not mark_name:
-            raise RuntimeError(f"mark primitive for note {note!r} has empty mark name")
-        out[str(note)] = primitive
-    return out
 
 def _base_param_slots(rec: dict) -> tuple[tuple[int, ...], ...]:
     slots: list[tuple[int, ...]] = []

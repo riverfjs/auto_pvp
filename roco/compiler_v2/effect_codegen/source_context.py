@@ -11,7 +11,7 @@ import re
 from functools import lru_cache
 from typing import Any
 
-from roco.common.primitive_keys import source_context_key
+from roco.common.primitive_keys import buff_ref_key, effect_ref_key
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
 from roco.compiler_v2.sources import LuaEnumSource
@@ -52,11 +52,11 @@ def decode_source_context(
     if ref_id in pak_data.buff_conf:
         buff_rec = pak_data.buff_conf[ref_id]
         if _is_conditional_grant_buff(buff_rec):
-            hit_outcome = _decode_conditional_hit_count(buff_rec, pak_data.buff_conf, text)
+            hit_outcome = _decode_conditional_hit_count(ref_id, buff_rec, pak_data.buff_conf, text)
             if hit_outcome is not None:
                 return [(hit_outcome, TIMING_HOOK_BEFORE_MOVE)]
         if _is_transmission_buff(buff_rec):
-            outcomes = _decode_slot_skill_mod(text)
+            outcomes = _decode_slot_skill_mod(text, buff_ref_key(ref_id))
             _append_transmission_gap(
                 outcomes,
                 ref_id=ref_id,
@@ -71,7 +71,7 @@ def decode_source_context(
     if effect_rec is None:
         return None
     if int(effect_rec.get("effect_order", 0) or 0) == ET_INLAY:
-        outcomes = _decode_slot_skill_mod(text)
+        outcomes = _decode_slot_skill_mod(text, effect_ref_key(ref_id))
         if _transmission_amount(text) is not None:
             _append_transmission_gap(
                 outcomes,
@@ -145,6 +145,7 @@ def _conditional_refs_and_grants(buff_rec: dict) -> tuple[tuple[int, ...], tuple
 
 
 def _decode_conditional_hit_count(
+    buff_id: int,
     buff_rec: dict,
     buff_conf: dict[int, dict],
     text: str,
@@ -157,9 +158,9 @@ def _decode_conditional_hit_count(
         return None
 
     if "中毒效果" in text and _condition_refs_are_poison_effects(condition_refs, buff_conf):
-        return EmitOutcome(source_context_key("hit_count_per_poison_effect"), amount, 0, 0, 0, 1)
+        return EmitOutcome(buff_ref_key(buff_id), amount, 0, 0, 0, 1)
     if "萌化" in text and _condition_refs_are_cute_effects(condition_refs, buff_conf):
-        return EmitOutcome(source_context_key("cute_hit_per_stack"), amount, 0, 0, 0, 1)
+        return EmitOutcome(buff_ref_key(buff_id), amount, 0, 0, 0, 1)
     return None
 
 
@@ -242,7 +243,10 @@ def _is_transmission_buff(buff_rec: dict) -> bool:
     )
 
 
-def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, str | None]]:
+def _decode_slot_skill_mod(
+    text: str,
+    primitive: str,
+) -> list[tuple[EmitOutcome | GapOutcome, str | None]]:
     for match in _SLOT_CLAUSE_RE.finditer(text):
         mask = _slot_mask(match.group("slots"))
         if mask == 0:
@@ -255,7 +259,7 @@ def _decode_slot_skill_mod(text: str) -> list[tuple[EmitOutcome | GapOutcome, st
             continue
         return [(
             EmitOutcome(
-                source_context_key("slot_skill_mod"),
+                primitive,
                 mask,
                 cost_reduce or 0,
                 power_bonus or 0,
@@ -292,7 +296,7 @@ def _append_transmission_gap(
     amount = _transmission_amount(text) or 1
     outcomes.append((
         GapOutcome(
-            primitive=source_context_key("transmission"),
+            primitive=buff_ref_key(buff_id) if buff_id is not None else effect_ref_key(effect_id or ref_id),
             effect_id=effect_id,
             buff_id=buff_id,
             reason="transmission_unimplemented",

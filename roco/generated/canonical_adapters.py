@@ -13,5 +13,4 @@ CANONICAL_MARK_DEFS = ((1022, 'moisture', 0, 'positive'),
  (1032, 'slow', 7, 'negative'),
  (1028, 'spirit', 8, 'negative'),
  (1035, 'meteor', 9, 'negative'),
- (1014, 'poison', 10, 'negative'),
- (1019, 'thorn', 11, 'negative'))
+ (1014, 'poison', 10, 'negative'))

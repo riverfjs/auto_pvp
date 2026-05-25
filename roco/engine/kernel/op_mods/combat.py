@@ -130,7 +130,7 @@ def _skill_filter_matches(ctx: StageCtx, row: tuple[int, ...]) -> bool:
 
 # ── forced switches ──────────────────────────────────────────────────────
 
-@handles_buff([("BFT_PET_TRANSE", "FORCE_SWITCH")])
+@handles_buff(["BFT_PET_TRANSE"])
 def op_force_switch(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.force_switch = 1
 

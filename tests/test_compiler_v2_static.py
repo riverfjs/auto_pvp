@@ -134,6 +134,36 @@ def test_compiler_v2_effect_codegen_does_not_emit_engine_entry_modes():
     assert offenders == []
 
 
+def test_retired_semantic_primitive_tags_are_gone():
+    root = Path(__file__).resolve().parents[1]
+    search_roots = (
+        root / "roco" / "common",
+        root / "roco" / "compiler_v2",
+        root / "roco" / "engine",
+        root / "roco" / "generated",
+    )
+    forbidden = (
+        "status_" + "note_key",
+        "mark_" + "note_key",
+        "struct_" + "key",
+        "source_" + "context_key",
+        "status_" + "note:",
+        "mark_" + "note:",
+        "struct:",
+        "source_" + "context:",
+        "handles_" + "mark",
+    )
+    offenders: list[str] = []
+    for base in search_roots:
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix not in {".py", ".json", ".jsonl"}:
+                continue
+            text = path.read_text(encoding="utf-8")
+            if any(term in text for term in forbidden):
+                offenders.append(path.relative_to(root).as_posix())
+    assert offenders == []
+
+
 def _import_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None

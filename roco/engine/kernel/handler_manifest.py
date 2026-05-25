@@ -26,14 +26,6 @@ OP_MODULES: tuple[str, ...] = (
 )
 
 
-def func_to_const(name: str) -> str:
-    if name == "_noop":
-        return "H_NOOP"
-    if name.startswith("op_"):
-        return "H_" + name[3:].upper()
-    return "H_" + name.upper()
-
-
 @lru_cache(maxsize=1)
 def module_functions() -> dict[str, tuple[str, ...]]:
     result: dict[str, tuple[str, ...]] = {}
@@ -55,12 +47,4 @@ def load_handler_order() -> tuple[str, ...]:
         for name in names
     }
     return ("_noop", *tuple(sorted(discovered)))
-
-
-@lru_cache(maxsize=1)
-def load_handler_indices() -> dict[str, int]:
-    return {
-        func_to_const(name): idx
-        for idx, name in enumerate(load_handler_order())
-    }
 
