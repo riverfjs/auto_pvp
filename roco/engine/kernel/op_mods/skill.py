@@ -7,7 +7,6 @@ from roco.common.enums import Element
 from roco.common.packing import _add_element_nibble, _add_element_u8, _max_element_u8
 from roco.engine.kernel.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import (
     ROW_ARG0,
     ROW_ARG1,
@@ -17,16 +16,6 @@ from roco.engine.kernel.op_rows import (
     TIMING_HOOK_BEFORE_MOVE,
 )
 
-@handles_buff([
-    "BFT_INC_DAM_BY_ATTACK_FIRST",
-    "BFT_INC_DAM_BY_SKILL",
-    "BFT_BLOOD_TO_ENERGY",
-    "BFT_NOT_GET_HIT",
-    "BFT_INC_DAM_BY_TARGET_HP_THRES",
-    "BFT_CHANGE_GAIN_ENERGY_EFFECIENCY",
-    "BFT_O_SEVEN",
-    "BFT_O_EIGHT",
-])
 def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:
         ctx.power_bps = (ctx.power_bps * row[ROW_ARG0]) // BPS

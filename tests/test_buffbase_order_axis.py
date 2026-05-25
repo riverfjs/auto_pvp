@@ -1,12 +1,12 @@
-"""Tests for the BUFFBASE_CONF.buffbase_order axis of primitive dispatch.
+"""Tests for the BUFFBASE_CONF.buffbase_order axis audit artifact.
 
-The buffbase_order axis is the pak-native primary lookup for direct
-BUFF_CONF references.  The current compiler does not read JSONL seeds or
-Python order tables; it resolves primitive-axis ``Enum.BuffType`` symbols
-through generated Lua data.
+The buffbase_order axis is a pak-native audit view for direct BUFF_CONF
+references.  The current compiler does not read JSONL seeds or Python order
+tables; it resolves primitive-axis ``Enum.BuffType`` symbols through generated
+Lua data.
 
 * The codegen join with BUFFBASE_CONF produces a base_id → primitive map
-  that the runtime classifier picks up before mixed-prefix dispatch.
+  for reviewing generated pak coverage before mixed-prefix dispatch.
 * The 3 mixed prefixes left on the prefix axis are not
   silently shadowed by an over-broad buffbase_order rule.
 * No compiler-owned ``buffbase_order -> handler`` table comes back.
@@ -183,12 +183,12 @@ def test_engine_prefix_axis_shrunk_to_mixed_only(resolved_axes):
     }
 
 
-# ── runtime classifier integration ────────────────────────────────────────
+# ── audit classifier integration ──────────────────────────────────────────
 
 
-def test_runtime_classifier_routes_clean_prefix_via_via_order(buffbase_conf):
+def test_audit_classifier_routes_clean_prefix_via_via_order(buffbase_conf):
     """A buff_id whose ``buff_base_ids[0]`` is in a clean prefix range
-    (e.g. 2001xxx → STAT_MOD/H_SELF_BUFF) must resolve through the
+    (e.g. 2001xxx → BFT_ATTR_CHANGE) must resolve through the
     ``BASE_ID_VIA_ORDER_MAP``, not the mixed-prefix map.  This is the
     central post-migration contract.
     """
@@ -220,20 +220,20 @@ def test_runtime_classifier_routes_named_mark_buff_before_shared_base_id():
     assert 2032007 not in cls.BASE_ID_PRIMITIVE_MAP
 
 
-def test_runtime_classifier_routes_heal_reversal_exact_buff():
+def test_audit_classifier_routes_heal_reversal_exact_buff():
     """Order-146 heal reversal is an exact structural BUFF_CONF row, not a whole-prefix rule."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
     assert cls.classify_buff_primitive(21460330, pak.buff_conf) == P_ANTI_HEAL
 
 
-def test_runtime_classifier_routes_cute_bench_cost_reduce_exact_buff():
+def test_audit_classifier_routes_cute_bench_cost_reduce_exact_buff():
     """Order-40 cute-stack trigger stays an exact pak buff ref in the audit axis."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
     handler = cls.classify_buff_primitive(20400130, pak.buff_conf)
     assert handler == P_CUTE_BENCH_COST_REDUCE
 
 
-def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
+def test_audit_classifier_routes_only_flat_hit_count_exact_buffs():
     """Order-45 hit-count rows are exact pak refs, not a whole-order rule."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
@@ -438,45 +438,18 @@ def test_raw_zero_is_only_normal_through_skill_dam_type_mapping():
     assert pak_ref_linker._element_mask((0,), "element") == 0
 
 
-def test_bft_o_t_links_entry_energy_from_pak_static():
-    assert _linked_tuple((
-        P_BFT_O_T,
-        pak_cast_moment_key(26),
-        1,
-        10000,
-        2100001,
-        0,
-        0,
-        0,
-    ), "地脉") == (
-        "op_entry_energy_from_element_count",
-        TIMING_PAK_SDT,
-        1,
-        10000,
-        Element.GROUND.value,
-        3,
-        0,
-        0,
-    )
-    assert _linked_tuple((
-        P_BFT_O_T,
-        pak_cast_moment_key(26),
-        1,
-        10000,
-        2100002,
-        0,
-        0,
-        0,
-    ), "慢热型") == (
-        "op_entry_energy_from_counter_count",
-        TIMING_PAK_SDT,
-        1,
-        10000,
-        5,
-        0,
-        0,
-        0,
-    )
+def test_runtime_linker_rejects_non_pak_ref_primitives():
+    with pytest.raises(RuntimeError, match="only accepts effect_ref:\\* or buff_ref:\\* rows"):
+        link_primitive_rows((
+            P_BFT_O_T,
+            pak_cast_moment_key(26),
+            1,
+            10000,
+            2100001,
+            0,
+            0,
+            0,
+        ), source_name="地脉")
 
 
 def test_bft_assign_expands_unconditional_refs_with_target_override():
@@ -677,10 +650,10 @@ def test_bft_assign_keeps_condition_and_nested_flag_as_gaps():
     assert exc_info.value.gap.effect_id == 1066001
 
 
-def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
+def test_audit_classifier_uses_prefix_axis_for_mixed(buffbase_conf):
     """Dominant base_ids in mixed prefixes (e.g. 2011's order=11 group)
-    have NO buffbase_order entry — they fall through to the mixed
-    prefix layer and resolve via PREFIX_HANDLER_MAP[2011]."""
+    have NO buffbase_order entry, so the audit map uses the mixed prefix
+    layer and resolves via PREFIX_PRIMITIVE_MAP[2011]."""
     # Find a 2011 base_id with order==11 (the dominant order, which is
     # NOT in the seed because 2011 is the mixed prefix).
     target_bid = next(
@@ -694,11 +667,11 @@ def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
     assert 2011 in cls.PREFIX_PRIMITIVE_MAP
 
 
-def test_runtime_classifier_outlier_routes_to_via_order_handler(buffbase_conf):
+def test_audit_classifier_outlier_routes_to_via_order_handler(buffbase_conf):
     """Outliers in mixed prefixes (e.g. base_id 2050011 with order=48)
-    now resolve via the buffbase_order axis to H_FORCE_SWITCH — fixing
+    now resolve via the buffbase_order axis to BFT_PET_TRANSE, fixing
     a pre-7C silent miscompile where prefix 2050 was returning
-    H_SELF_BUFF for a force-switch primitive.
+    BFT_ATTR_CHANGE for a force-switch primitive.
     """
     # base_id 2050011: editor_name='闪电步吹飞自己', buffbase_order=48
     target_bid = 2050011

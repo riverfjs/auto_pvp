@@ -5,7 +5,6 @@ from __future__ import annotations
 from roco.common.constants import BLOODLINE_LEADER, BLOODLINE_POLLUTANT, BPS
 from roco.engine.kernel.catalog import ELEMENT_LIGHT
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff, handles_prefix
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1
 from roco.generated import catalog_hot as hot
 
@@ -17,11 +16,6 @@ def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.hit_count = row[ROW_ARG1]
 
 
-@handles_prefix(["BFT_DAMNUM_CHANGE"])
-@handles_buff([
-    "BFT_FIELD_UP_CHANGE",
-    "BFT_CHANGE_SDT_RATIO",
-])
 def op_damage_reduction(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:
         ctx.damage_reduction_bps = min(ctx.damage_reduction_bps, row[ROW_ARG0])

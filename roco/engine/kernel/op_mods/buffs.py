@@ -16,7 +16,6 @@ from roco.common.packing import (
 from roco.common.buffbase import pack_buff_delta_from_row, scale_buff_delta
 from roco.engine.kernel.conditions import entry_source_count
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff, handles_prefix
 from roco.engine.kernel.op_rows import (
     ROW_ARG0,
     ROW_ARG1,
@@ -32,63 +31,6 @@ from roco.engine.kernel.op_rows import (
 COUNT_FAINTED_ALLY = -1
 
 
-@handles_prefix([
-    "BFT_KILL_BUFF",
-    "BFT_ENTER_BATTLE",
-])
-@handles_buff([
-    "BFT_ATTR_CHANGE",
-    "BFT_BAN",
-    "BFT_SKILL_BAN",
-    "BFT_RELAY",
-    "BFT_CAST_REPEAT_SKILL",
-    "BFT_CAST_SKILL_AFTER_ATTACK",
-    "BFT_INC_DAM_BY_BUFF",
-    "BFT_RECORD_CAST_SKILL",
-    "BFT_CHANGE_CATCH_VALUE",
-    "BFT_BUFF_AFTER_SKILL",
-    "BFT_FIELD_REDUSE_COST",
-    "BFT_CHECK_HP",
-    "BFT_ASSIGN_ATTACK_FIRST",
-    "BFT_SPIKES",
-    "BFT_DETECT_ENEMY_SKILLS",
-    "BFT_SKILL_CHANGE",
-    "BFT_TARGET_HAS_BUFF",
-    "BFT_STRENGTHEN_THE_SKILL",
-    "BFT_SIXTY_SEVEN",
-    "BFT_SEVENTY_TWO",
-    "BFT_SEVENTY_THREE",
-    "BFT_SEVENTY_FIVE",
-    "BFT_SEVENTY_SIX",
-    "BFT_SEVENTY_SEVEN",
-    "BFT_SEVENTY_NINE",
-    "BFT_EIGHTY",
-    "BFT_EIGHTY_THREE",
-    "BFT_EIGHTY_FOUR",
-    "BFT_EIGHTY_SIX",
-    "BFT_EIGHTY_EIGHT",
-    "BFT_EIGHTY_NINE",
-    "BFT_NINETY_TWO",
-    "BFT_NINETY_THREE",
-    "BFT_O_ONE",
-    "BFT_O_THREE",
-    "BFT_O_FOUR",
-    "BFT_O_FIVE",
-    "BFT_O_SIX",
-    "BFT_O_TEN",
-    "BFT_O_ELEVEN",
-    "BFT_O_TWELVE",
-    "BFT_O_FOURTEEN",
-    "BFT_O_SEVENTEEN",
-    "BFT_O_EIGHTEEN",
-    "BFT_O_NINETEEN",
-    "BFT_O_TWENTY",
-    "BFT_O_TWENTYONE",
-    "BFT_O_THIRTY",
-    "BFT_O_THIRTYTWO",
-    "BFT_O_THIRTYSIX",
-    "BFT_O_FORTYTWO",
-])
 def op_self_buff(ctx: StageCtx, row: tuple[int, ...]) -> None:
     delta = pack_buff_delta_from_row(row, ROW_ARG0, ROW_ARG3 + 1)
     ctx.self_buff = _merge_buff_delta(ctx.self_buff, delta)

@@ -175,8 +175,9 @@ def _load_exact_rules() -> list[dict]:
 def _load_primitive_axis_rules() -> tuple[dict[int, dict], dict[int, dict], list[dict]]:
     """Return (buffbase_order_rules, prefix_rules, legacy_base_id_overrides).
 
-    The active source is compiler primitive-axis metadata.  ``BuffType``
-    symbols are resolved through the current Lua static bundle.
+    The active source is generated audit primitive-axis metadata.  ``BuffType``
+    symbols are resolved through the current Lua static bundle.  Runtime
+    catalog linking does not consume these axis rules.
     """
 
     from roco.compiler_v2.build import build_static_bundle
@@ -302,8 +303,8 @@ def buffbase_families(
     distribution of ``trigger_type`` (numeric) and which prefix bucket
     each base_id lives in.  Cross-references both rule files:
 
-    * ``covering_buffbase_order_rule`` — the primary engine
-      ``handles_buff`` axis resolved through ``Enum.BuffType``.
+    * ``covering_buffbase_order_rule`` — the pak ``buffbase_order`` axis
+      resolved through ``Enum.BuffType`` for audit coverage.
     * ``covering_prefix_rule`` — the mixed-prefix engine axis; reports
       the dominant prefix that nominally covers this order.
     """
@@ -549,9 +550,9 @@ def render_markdown(
     lines.append("")
     lines.append(
         f"Total `buffbase_order` families: **{len(buffbase_fams)}**.  "
-        "`buffbase_order rule` is the primitive axis "
+        "`buffbase_order rule` is the generated audit primitive axis "
         "resolved through `Enum.BuffType`; `prefix rule` is the "
-        "mixed-prefix axis kept only for the 3 prefixes whose "
+        "mixed-prefix audit axis kept only for the 3 prefixes whose "
         "buffbase_order distribution is not 100% concentrated."
     )
     lines.append("")

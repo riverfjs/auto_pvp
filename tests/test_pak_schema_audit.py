@@ -200,7 +200,7 @@ def test_prefix_rule_debt_only_mixed_remain(buffbase_conf):
     clean = [r for r in debt if r["clean_rewrite"]]
     assert clean == [], (
         f"engine prefix axis has {len(clean)} 100%-clean prefix(es) — "
-        f"these should migrate to handles_buff declarations: "
+        f"these should migrate to pak buffbase_order audit coverage: "
         f"{[r['prefix'] for r in clean]}"
     )
     # The 3 known-mixed prefixes are the entire post-7C set.

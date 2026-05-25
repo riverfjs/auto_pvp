@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1
 
 
@@ -11,20 +10,14 @@ def op_burn(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.burn_stacks += row[ROW_ARG0]
 
 
-@handles_buff([
-    "BFT_DAM",
-    "BFT_SIXTY_EIGHT",
-])
 def op_poison(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.poison_stacks += row[ROW_ARG0]
 
 
-@handles_buff(["BFT_FREEZE"])
 def op_freeze(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.freeze_stacks += row[ROW_ARG0]
 
 
-@handles_buff(["BFT_ABSORB"])
 def op_leech(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.leech_stacks += row[ROW_ARG0]
 

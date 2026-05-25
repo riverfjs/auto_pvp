@@ -173,6 +173,23 @@ def test_retired_semantic_primitive_tags_are_gone():
     assert offenders == []
 
 
+def test_engine_runtime_linker_has_no_primitive_fallback_registry():
+    root = Path(__file__).resolve().parents[1]
+    assert not (root / "roco" / "engine" / "artifacts" / "primitive_bindings.py").exists()
+
+    linker = root / "roco" / "engine" / "artifacts" / "primitive_linker.py"
+    text = linker.read_text(encoding="utf-8")
+    forbidden = (
+        "op_name_from_primitive",
+        "primitive_to_op_name",
+        "_link_bft_o_t_entry_energy",
+        "buff_type_key",
+        "effect_order_key",
+        "effect_kind_key",
+    )
+    assert [term for term in forbidden if term in text] == []
+
+
 def _import_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None

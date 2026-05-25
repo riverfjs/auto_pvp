@@ -119,7 +119,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 
 ## 3. BUFFBASE_CONF families
 
-Total `buffbase_order` families: **137**.  `buffbase_order rule` is the primitive axis resolved through `Enum.BuffType`; `prefix rule` is the mixed-prefix axis kept only for the 3 prefixes whose buffbase_order distribution is not 100% concentrated.
+Total `buffbase_order` families: **137**.  `buffbase_order rule` is the generated audit primitive axis resolved through `Enum.BuffType`; `prefix rule` is the mixed-prefix audit axis kept only for the 3 prefixes whose buffbase_order distribution is not 100% concentrated.
 
 | order | count | param slots | trigger_types | buffbase_order rule | prefix rule | refs | editor_name samples |
 |---:|---:|---|---|---|---|---:|---|

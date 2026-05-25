@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from roco.engine.kernel.catalog import SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_meta import handles_buff
 from roco.engine.kernel.op_rows import (
     ROW_ARG0,
     ROW_ARG1,
@@ -130,7 +129,6 @@ def _skill_filter_matches(ctx: StageCtx, row: tuple[int, ...]) -> bool:
 
 # ── forced switches ──────────────────────────────────────────────────────
 
-@handles_buff(["BFT_PET_TRANSE"])
 def op_force_switch(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.force_switch = 1
 

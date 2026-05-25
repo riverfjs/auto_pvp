@@ -1,8 +1,9 @@
-"""Resolve pak axes to compiler primitive keys.
+"""Resolve pak axes to generated audit primitive keys.
 
 This module is intentionally independent of ``roco.engine``.  It translates
-pak/Lua axis symbols into pak-derived primitive keys; the engine later binds
-those keys to concrete kernel handlers.
+pak/Lua axis symbols into pak-derived primitive keys for generated audit
+artifacts.  Runtime catalog rows are linked from exact ``effect_ref`` /
+``buff_ref`` values instead of this axis map.
 """
 
 from __future__ import annotations

@@ -3189,7 +3189,6 @@
       "code_refs": [
         "roco/compiler_v2/static_artifacts/buffs.py",
         "roco/engine/artifacts/pak_ref_linker.py",
-        "roco/engine/artifacts/primitive_linker.py",
         "roco/generated/buff_defs.py",
         "roco/generated/static/lua_enums.py"
       ],
