@@ -59,6 +59,8 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("consume_enemy_marks_heal_bps", 0),
     ("entry_self_damage_bps", 0),
     ("entry_cost_delta", 0),
+    ("self_global_cost_delta", 0),
+    ("enemy_global_cost_delta", 0),
     ("entry_power_bonus", 0),
     ("entry_element_power_flat", 0),
     ("entry_element_power_bps", 0),

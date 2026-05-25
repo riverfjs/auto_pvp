@@ -38,6 +38,8 @@ from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.linked_op import LinkGapError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
 from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_SDT
+from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_mods.buffs import op_global_cost_delta
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -474,6 +476,57 @@ def test_direct_bft_inc_dam_by_skill_links_unconditional_power_bonus():
     with pytest.raises(LinkGapError) as exc_info:
         link_primitive_rows(conditional, source_name="碰瓷")
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_direct_bft_change_skill_energy_cost_links_global_cost_delta():
+    increase = (buff_ref_key(20320240), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(increase, "骑士突袭") == (
+        "op_global_cost_delta",
+        11,
+        2,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
+
+    reduce = (buff_ref_key(20320220), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(reduce, "水环") == (
+        "op_global_cost_delta",
+        11,
+        1,
+        10000,
+        -1,
+        0,
+        0,
+        0,
+    )
+
+    repeated = (buff_ref_key(20320270), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(repeated, "水3") == (
+        "op_global_cost_delta",
+        11,
+        1,
+        10000,
+        -6,
+        0,
+        0,
+        0,
+    )
+
+    scoped = (buff_ref_key(20320010), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(scoped, source_name="聒噪")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_global_cost_delta_op_routes_by_target():
+    ctx = StageCtx()
+    op_global_cost_delta(ctx, (0, 11, 1, 10000, 0, -1, 0, 0, 0))
+    op_global_cost_delta(ctx, (0, 11, 2, 10000, 0, 2, 0, 0, 0))
+    assert ctx.self_global_cost_delta == -1
+    assert ctx.enemy_global_cost_delta == 2
 
 
 def test_direct_bft_pet_transe_links_simple_switch_shapes():

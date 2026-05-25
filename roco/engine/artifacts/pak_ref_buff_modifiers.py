@@ -90,6 +90,26 @@ def _link_transmission_buff(buff_id: int, timing: int, target: int, rate: int, p
         return _op('op_skill_mod', timing, target, rate, p0, p1, p2, p3)
     return None
 
+def _link_global_cost_delta_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if not rows or any((row[1] != buff_type('BFT_CHANGE_SKILL_ENERGY_COST') for row in rows)):
+        return None
+    total = 0
+    for _base_id, _order, params in rows:
+        if len(params) < 7:
+            return None
+        if _as_int_tuple(params[0]) != (0,):
+            return None
+        if not _all_zero(params[1:3]) or not _all_zero(params[4:]):
+            return None
+        amount = _param_int(params, 3)
+        if amount == 0:
+            return None
+        total += amount
+    if total == 0:
+        return None
+    return _op('op_global_cost_delta', timing, target, rate, total)
+
 def _link_damage_reduction_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)
     if len(rows) != 1 or rows[0][1] != buff_type('BFT_DAMNUM_CHANGE'):

@@ -133,6 +133,13 @@ def op_entry_self_buff_by_fainted_count(ctx: StageCtx, row: tuple[int, ...]) -> 
     )
 
 
+def op_global_cost_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.self_global_cost_delta += row[ROW_ARG0]
+    else:
+        ctx.enemy_global_cost_delta += row[ROW_ARG0]
+
+
 def op_entry_self_buff_by_used_skill_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
     count = _unpack_skill_count(ctx.side_skill_counts, Element(row[ROW_ARG0]))
     ctx.self_buff = _merge_buff_delta(
