@@ -59,6 +59,10 @@ def _load_ability_flag_table() -> dict[int, AbilityFlagOutcome]:
 ABILITY_FLAG_OUTCOMES: dict[int, AbilityFlagOutcome] = _load_ability_flag_table()
 
 
+def ability_flag_outcome(ref_id: int) -> AbilityFlagOutcome | None:
+    return ABILITY_FLAG_OUTCOMES.get(ref_id)
+
+
 def count_buff_repeats(params_raw: list, buff_id: int) -> int:
     """Count how many times ``buff_id`` appears in any single ``effect_param`` slot.
 

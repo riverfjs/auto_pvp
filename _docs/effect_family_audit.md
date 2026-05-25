@@ -7,8 +7,9 @@ Total families: **186**
 ## Coverage status
 
 - `ability_flag`: 4
+- `ability_flag_partial`: 1
 - `auto_structural`: 91
-- `gap`: 70
+- `gap`: 69
 - `generated_weather`: 1
 - `mixed`: 20
 
@@ -192,7 +193,7 @@ Total families: **186**
 - editor_names: GM, 光合印记, 恢复能量, 治疗印记, 能量衰退
 - source_descriptions: 会恢复能量。, 回合末获得1能量。, 回合结束回复大量生命, 回合结束，获得能量。, 拥有印记的精灵，每回合恢复<span color="#73c715">5%</>最大生命。
 - example_source_ids: [20170010, 20170011, 20170012, 20170090, 20170130]
-- coverage_breakdown: {'auto_structural_count': 45, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 44, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 7, 'ability_flag_count': 1}
 - sample_skill_consumers:
     - `7130110` 毒线针 — S3壳栗丝鼠B
     - `7110421` 感电 — 使敌方精灵<desc_id=1024>返场</>。
@@ -2278,10 +2279,10 @@ Total families: **186**
 
 ## `effect_conf:t3:o63` — EFFECT_CONF
 
-- count: **3** | coverage: `gap` | used_consumer_count: 0
+- count: **3** | coverage: `ability_flag_partial` | used_consumer_count: 0
 - editor_names: 非再生能源
 - example_source_ids: [1063001, 1063002, 1099063]
-- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 0, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 2, 'ability_flag_count': 1}
 - pak_evidence:
     - EFFECT_CONF.json: 1063001 type=3 effect_order=63 add_des='' effect_param=[[20]]
     - EFFECT_CONF.lua:L4-44 confirms field schema (id/type/effect_order/effect_param)

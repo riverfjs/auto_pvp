@@ -7,6 +7,7 @@ from typing import Iterable
 from roco.common.primitive_keys import (
     BATTLE_EVENT_PREFIX,
     ENGINE_HOOK_PREFIX,
+    buff_type_key,
     effect_order_variant_key,
     strip_prefix,
 )
@@ -21,12 +22,13 @@ from roco.engine.artifacts.skill_mod_modes import (
     ENTRY_MOD_POWER_FLAT,
 )
 from roco.engine.artifacts.primitive_bindings import handler_const_from_primitive
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_SDT
 from roco.generated import handler_indices as hi
 from roco.generated.battle_events import BATTLE_EVENT_VALUES
 from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.generated.effect_params import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE
 from roco.generated.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT
-from roco.generated.static.lua_enums import BUFF_TYPE
+from roco.generated.static.lua_enums import BUFF_TYPE, EFFECT_TYPE as EFFECT_TYPE_ENUM
 
 
 PrimitiveRow = tuple[str, str, int, int, int, int, int, int]
@@ -48,12 +50,15 @@ P_EQUIP_ELEMENT_MOD = effect_order_variant_key(
     ENTRY_ELEMENT_MOD_VARIANT,
 )
 P_HERO_ELEMENT_MOD = effect_order_variant_key("ET_HERO", ENTRY_ELEMENT_MOD_VARIANT)
+P_BFT_O_T = buff_type_key("BFT_O_T")
 
 BFT_DAMNUM_CHANGE = int(BUFF_TYPE["BFT_DAMNUM_CHANGE"])
 BFT_CHANGE_SKILL_ENERGY_COST = int(BUFF_TYPE["BFT_CHANGE_SKILL_ENERGY_COST"])
 BFT_BUFF_AFTER_SKILL = int(BUFF_TYPE["BFT_BUFF_AFTER_SKILL"])
 BFT_INC_DAM_BY_SKILL = int(BUFF_TYPE["BFT_INC_DAM_BY_SKILL"])
 BFT_NINETY_EIGHT = int(BUFF_TYPE["BFT_NINETY_EIGHT"])
+BFT_O_T = int(BUFF_TYPE["BFT_O_T"])
+ET_CHANGE_ENERGY = int(EFFECT_TYPE_ENUM["ET_CHANGE_ENERGY"])
 
 
 def primitive_to_handler_idx(primitive: str) -> int:
@@ -106,6 +111,15 @@ def link_primitive_rows(row: Iterable[object], *, source_name: str) -> tuple[Run
     )
     if raw_entry_mod is not None:
         return (raw_entry_mod,)
+    entry_energy = _link_bft_o_t_entry_energy(
+        primitive,
+        int(target or 0),
+        int(rate or 0),
+        int(p0 or 0),
+        source_name=source_name,
+    )
+    if entry_energy is not None:
+        return (entry_energy,)
     return ((
         primitive_to_handler_idx(primitive),
         timing,
@@ -116,6 +130,74 @@ def link_primitive_rows(row: Iterable[object], *, source_name: str) -> tuple[Run
         int(p2 or 0),
         int(p3 or 0),
     ),)
+
+
+def _link_bft_o_t_entry_energy(
+    primitive: str,
+    target: int,
+    rate: int,
+    base_id: int,
+    *,
+    source_name: str,
+) -> RuntimeEffectRow | None:
+    if primitive != P_BFT_O_T:
+        return None
+    if BUFFBASE_ORDER.get(base_id) != BFT_O_T:
+        raise RuntimeError(f"{source_name!r} BFT_O_T row references non-BFT_O_T base_id {base_id}")
+    base_params = BUFFBASE_PARAMS.get(base_id) or ()
+    if len(base_params) < 7:
+        raise RuntimeError(f"{source_name!r} BFT_O_T base_id {base_id} has short params {base_params!r}")
+    amount = _energy_amount_from_effect_refs(_as_int_tuple(base_params[4]), source_name=source_name)
+    source_kind = _param_int(base_params, 6)
+    if source_kind == 0:
+        skill_dam_type = _param_int(base_params, 0)
+        element = _skill_dam_type_to_element(skill_dam_type, source_name=source_name)
+        return (
+            hi.H_ENTRY_ENERGY_FROM_ELEMENT_COUNT,
+            TIMING_PAK_SDT,
+            target,
+            rate,
+            element,
+            amount,
+            0,
+            0,
+        )
+    if source_kind == 1 and _param_int(base_params, 0) == 0:
+        return (
+            hi.H_ENTRY_ENERGY_FROM_COUNTER_COUNT,
+            TIMING_PAK_SDT,
+            target,
+            rate,
+            amount,
+            0,
+            0,
+            0,
+        )
+    raise RuntimeError(
+        f"{source_name!r} BFT_O_T base_id {base_id} has unsupported source shape {base_params!r}"
+    )
+
+
+def _energy_amount_from_effect_refs(
+    effect_refs: tuple[int, ...],
+    *,
+    source_name: str,
+) -> int:
+    amounts: set[int] = set()
+    for effect_id in effect_refs:
+        if EFFECT_ORDER.get(effect_id) != ET_CHANGE_ENERGY or EFFECT_TYPE.get(effect_id) != 3:
+            raise RuntimeError(
+                f"{source_name!r} BFT_O_T references non-ET_CHANGE_ENERGY effect {effect_id}"
+            )
+        amount = _param_int(EFFECT_PARAMS.get(effect_id) or (), 0)
+        if amount <= 0:
+            raise RuntimeError(
+                f"{source_name!r} BFT_O_T references non-positive energy effect {effect_id}"
+            )
+        amounts.add(amount)
+    if len(amounts) != 1:
+        raise RuntimeError(f"{source_name!r} BFT_O_T has mixed energy amounts {sorted(amounts)!r}")
+    return amounts.pop()
 
 
 def _link_raw_entry_element_mod(

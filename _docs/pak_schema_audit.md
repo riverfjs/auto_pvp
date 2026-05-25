@@ -92,7 +92,7 @@ Total `(type, effect_order)` families: **95**. `coverage` is sourced from `roco/
 | `effect_conf:t3:o60` | 3 | 60 | 1 | 6:1 | 0/0 | `gap` |  |
 | `effect_conf:t3:o61` | 3 | 61 | 4 | 2:4 | 0/2 | `mixed` | 奔波命, 超级电池 |
 | `effect_conf:t3:o62` | 3 | 62 | 2 | 0:1, 1:1 | 0/0 | `gap` | 怯场 |
-| `effect_conf:t3:o63` | 3 | 63 | 3 | 1:3 | 0/0 | `gap` | 非再生能源 |
+| `effect_conf:t3:o63` | 3 | 63 | 3 | 1:3 | 0/0 | `ability_flag_partial` | 非再生能源 |
 | `effect_conf:t3:o64` | 3 | 64 | 50 | 6:50 | 0/4 | `mixed` | 暴食, 最好的伙伴, 溶解扩散, … (+1) |
 | `effect_conf:t3:o65` | 3 | 65 | 3 | 4:1, 5:2 | 0/0 | `gap` | 高蛋白纤维 |
 | `effect_conf:t3:o66` | 3 | 66 | 2 | 0:1, 1:1 | 0/1 | `ability_flag` |  |

@@ -4032,9 +4032,11 @@
         "roco/compiler_v2/pak_schema_audit.py",
         "roco/compiler_v2/static_artifacts/bloodline_magic.py",
         "roco/compiler_v2/static_artifacts/counter_skill.py",
+        "roco/compiler_v2/static_artifacts/effects.py",
         "roco/compiler_v2/static_artifacts/weather.py",
         "roco/data/parse_pak.py",
         "roco/generated/counter_skill_table.py",
+        "roco/generated/effect_params.py",
         "roco/generated/static/manifest.py",
         "roco/generated/weather_decoders.py"
       ],

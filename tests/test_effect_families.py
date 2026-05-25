@@ -231,7 +231,8 @@ def test_effect_families_counts_bft_assign_dispatcher_coverage(by_key):
     """BFT_ASSIGN rows are structural dispatchers, not a runtime family."""
     family = by_key["buff_conf_direct:prefix_2017"]
     assert family["coverage_status"] == "mixed"
-    assert family["coverage_breakdown"]["auto_structural_count"] == 45
+    assert family["coverage_breakdown"]["ability_flag_count"] == 1
+    assert family["coverage_breakdown"]["auto_structural_count"] == 44
     assert family["coverage_breakdown"]["gap_count"] == 7
 
 

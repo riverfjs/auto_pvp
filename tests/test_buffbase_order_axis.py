@@ -28,9 +28,10 @@ from roco.common.primitive_keys import (
     struct_key,
 )
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
-from roco.common.enums import Element
+from roco.common.enums import AbilityFlag, Element
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
+from roco.compiler_v2.effect_codegen.ability_flags_from_effects import load_ability_flags_from_effects
 from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
 from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import pack_primitive_params
@@ -44,11 +45,13 @@ from roco.engine.artifacts.skill_mod_modes import (
     ENTRY_MOD_DAMAGE_RESIST,
     ENTRY_MOD_POISON_STACKS,
 )
+from roco.engine.kernel.op_rows import TIMING_PAK_SDT
 from roco.generated import handler_indices as hi
 
 P_ANTI_HEAL = struct_key("heal_reversal")
 P_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
 P_CUTE_HIT_PER_STACK = source_context_key("cute_hit_per_stack")
+P_BFT_O_T = buff_type_key("BFT_O_T")
 P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
 P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
 P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
@@ -479,6 +482,47 @@ def test_raw_zero_is_only_normal_through_skill_dam_type_mapping():
         link_primitive_row(raw_element_zero_sentinel, source_name="raw element sentinel")
 
 
+def test_bft_o_t_links_entry_energy_from_pak_static():
+    assert link_primitive_row((
+        P_BFT_O_T,
+        pak_cast_moment_key(26),
+        1,
+        10000,
+        2100001,
+        0,
+        0,
+        0,
+    ), source_name="地脉") == (
+        hi.H_ENTRY_ENERGY_FROM_ELEMENT_COUNT,
+        TIMING_PAK_SDT,
+        1,
+        10000,
+        Element.GROUND,
+        3,
+        0,
+        0,
+    )
+    assert link_primitive_row((
+        P_BFT_O_T,
+        pak_cast_moment_key(26),
+        1,
+        10000,
+        2100002,
+        0,
+        0,
+        0,
+    ), source_name="慢热型") == (
+        hi.H_ENTRY_ENERGY_FROM_COUNTER_COUNT,
+        TIMING_PAK_SDT,
+        1,
+        10000,
+        5,
+        0,
+        0,
+        0,
+    )
+
+
 def test_bft_assign_expands_unconditional_refs_with_target_override():
     """BFT_ASSIGN is a structural dispatcher, not a runtime hit-count op."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
@@ -503,6 +547,22 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
         (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
     ]
+
+
+def test_bft_assign_set_energy_zero_is_ability_flag_not_gap():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    table = load_ability_flags_from_effects(
+        effect_conf=pak.effect_conf,
+        buff_conf=pak.buff_conf,
+        skill_conf=pak.skill_conf,
+    )
+    assert table[20170610].flag_name == AbilityFlag.START_ZERO_ENERGY.name
+    assert table[1063002].flag_name == AbilityFlag.START_ZERO_ENERGY.name
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[200102], pak, allow_ability_flags=True)
+    assert gaps == []
+    assert rows == [(P_BFT_O_T, pak_cast_moment_key(26), 1, 10000, 2100001, 0, 0, 0)]
 
 
 def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():

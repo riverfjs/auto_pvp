@@ -96,10 +96,20 @@ def test_ability_flag_bits_are_power_of_two():
 
 
 def test_loader_accepts_real_pak_derivation():
-    """Real pak derives the current ability flag skill_result ids."""
+    """Real pak derives the current ability flag ids and assigned flag refs."""
     table = load_ability_flags_from_effects()
-    assert set(table.keys()) == {1066001, 20400410, 21430010, 21540010, 21540040}
+    assert set(table.keys()) == {
+        1063002,
+        1066001,
+        20170610,
+        20400410,
+        21430010,
+        21540010,
+        21540040,
+    }
+    assert table[1063002].flag_name == "START_ZERO_ENERGY"
     assert table[1066001].flag_name == "SHUFFLE_SKILLS_REDUCE_LAST"
+    assert table[20170610].flag_name == "START_ZERO_ENERGY"
     assert table[20400410].flag_name == "FREEZE_COUNTS_AS_METEOR"
     assert table[21540010].flag_name == "HEAL_ON_POISON_DAMAGE"
     assert table[21540040].flag_name == "HEAL_ON_BURN_DAMAGE"

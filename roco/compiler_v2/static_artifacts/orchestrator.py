@@ -12,6 +12,7 @@ from .canonical_adapters import write_canonical_adapters
 from .common import GEN_DIR, INIT_PATH, STATIC_DIR
 from .core import write_battle_globals, write_pak_ops, write_skill_dam_types, write_type_chart
 from .counter_skill import write_counter_skill_table
+from .effects import write_effect_params
 from .immunity import write_buff_immunity_table
 from .marks import write_mark_groups
 from .natures import write_natures
@@ -39,6 +40,7 @@ def write_all() -> dict[str, Any]:
     immunity_count = write_buff_immunity_table()
     bloodline_magic_counts = write_bloodline_magic(bundle)
     buffbase_count = write_buffbase_params()
+    effect_count = write_effect_params()
     nature_count = write_natures()
     canonical_adapter_counts = write_canonical_adapters()
 
@@ -58,6 +60,7 @@ def write_all() -> dict[str, Any]:
         "immunity_count": immunity_count,
         "bloodline_magic_counts": bloodline_magic_counts,
         "buffbase_count": buffbase_count,
+        "effect_count": effect_count,
         "nature_count": nature_count,
         "canonical_adapter_counts": canonical_adapter_counts,
     }

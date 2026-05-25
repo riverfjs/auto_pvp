@@ -32,7 +32,6 @@ def op_heal_hp(ctx: StageCtx, row: tuple[int, ...]) -> None:
 @handles_buff([
     ("BFT_CURRENT_ENERGY", "ENERGY_GAIN"),
     ("BFT_EIGHTY_SEVEN", "ENERGY_HEAL"),
-    ("BFT_O_T", "ELEMENT_ENERGY"),
 ])
 def op_heal_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.heal_energy += row[ROW_ARG0]

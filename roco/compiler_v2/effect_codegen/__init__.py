@@ -44,6 +44,7 @@ from roco.compiler_v2.effect_codegen.assign import (
     single_assign_buff_from_effect,
 )
 from roco.compiler_v2.effect_codegen.classify import (
+    ability_flag_outcome,
     collect_buff_candidates,
     decode_buff_direct,
     decode_effect,
@@ -226,7 +227,10 @@ def _decode_reference_rows(
         elif isinstance(outcome, GapOutcome):
             gaps.append(_gap_dict(outcome, row_timing, effect_order, target_type, success_rate))
         elif isinstance(outcome, AbilityFlagOutcome):
-            if allow_ability_flags and outcome.effect_id == root_ref_id:
+            if allow_ability_flags and (
+                outcome.effect_id == root_ref_id
+                or ability_flag_outcome(root_ref_id) is not None
+            ):
                 continue
             gaps.append(_gap_dict(
                 GapOutcome(

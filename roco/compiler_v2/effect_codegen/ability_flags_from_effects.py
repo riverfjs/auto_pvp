@@ -77,6 +77,8 @@ def _enum_value(enum_name: str, symbol: str) -> int:
 ABILITY_SKILL_TYPE = _enum_value("SkillActiveType", "SAT_FEATURE")
 EFFECT_ORDER_SHUFFLE_SKILLS_REDUCE_LAST = _enum_value("EffectType", "ET_SHUFFLE_SKILLS")
 EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE = _enum_value("EffectType", "ET_DOT_SUCK")
+EFFECT_ORDER_SET_ENERGY = _enum_value("EffectType", "ET_SET_ENERGY")
+BUFFBASE_ORDER_ASSIGN = _enum_value("BuffType", "BFT_ASSIGN")
 BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = _enum_value("BuffType", "BFT_O_FORTYTHREE")
 BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = _enum_value("BuffType", "BFT_O_FIFTYFOUR")
 BUFFBASE_ORDER_ATTR_CHANGE = _enum_value("BuffType", "BFT_ATTR_CHANGE")
@@ -320,10 +322,11 @@ def _derive_ability_flags(
     desc_refs = _desc_refs(desc_notes)
 
     for effect_id, rec in sorted(effect_conf.items()):
-        if ability_consumers is not None and effect_id not in ability_consumers:
-            continue
         flag = _flag_from_effect_row(rec, buff_conf, desc_notes, desc_refs)
         if flag is not None:
+            if ability_consumers is not None and effect_id not in ability_consumers:
+                if flag != "START_ZERO_ENERGY":
+                    continue
             _put_flag(out, effect_id, flag, "EFFECT_CONF")
 
     for buff_id, rec in sorted(buff_conf.items()):
@@ -331,6 +334,7 @@ def _derive_ability_flags(
             continue
         flag = _flag_from_buff_row(
             rec,
+            effect_conf,
             buff_conf,
             buffbase_conf,
             desc_notes,
@@ -394,6 +398,10 @@ def _flag_from_effect_row(
         if isinstance(params, list) and len(params) <= 1 and _slot_int_values(params, 0) in ((), (0,)):
             return "SHUFFLE_SKILLS_REDUCE_LAST"
         return None
+    if order == EFFECT_ORDER_SET_ENERGY:
+        if isinstance(params, list) and _slot_int_values(params, 0) == (0,):
+            return "START_ZERO_ENERGY"
+        return None
     if order != EFFECT_ORDER_HEAL_ON_STATUS_DAMAGE:
         return None
     if not isinstance(params, list) or len(params) != 2:
@@ -405,6 +413,7 @@ def _flag_from_effect_row(
 
 def _flag_from_buff_row(
     rec: dict,
+    effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
     buffbase_conf: dict[int, dict],
     desc_notes: dict[int, str],
@@ -441,10 +450,37 @@ def _flag_from_buff_row(
     ):
         return "MARK_STACK_NO_REPLACE"
 
+    assigned_refs = _assigned_refs_for_base_ids(base_ids, buffbase_conf)
+    if assigned_refs:
+        assigned_flags = {
+            flag
+            for ref in assigned_refs
+            for flag in (_flag_from_effect_row(effect_conf.get(ref, {}), buff_conf, desc_notes, desc_refs),)
+            if flag
+        }
+        if assigned_flags == {"START_ZERO_ENERGY"}:
+            return "START_ZERO_ENERGY"
+
     if _is_freeze_counts_as_meteor(rec, buff_conf, buffbase_conf, desc_notes, desc_refs, ability_rows):
         return "FREEZE_COUNTS_AS_METEOR"
 
     return None
+
+
+def _assigned_refs_for_base_ids(
+    base_ids: tuple[int, ...],
+    buffbase_conf: dict[int, dict],
+) -> tuple[int, ...]:
+    refs: list[int] = []
+    for base_id in base_ids:
+        base = buffbase_conf.get(base_id)
+        if not isinstance(base, dict) or int(base.get("buffbase_order") or 0) != BUFFBASE_ORDER_ASSIGN:
+            continue
+        params = base.get("buffbase_param")
+        if not isinstance(params, list):
+            continue
+        refs.extend(_slot_values(params, 0))
+    return tuple(refs)
 
 
 def _is_freeze_counts_as_meteor(

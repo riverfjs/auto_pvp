@@ -35,6 +35,7 @@ def main() -> None:
         f"({bloodline['supported_magic_count']} engine-supported)"
     )
     print(f"buffbase_params.py: {stats['buffbase_count']} base ids")
+    print(f"effect_params.py: {stats['effect_count']} effect ids")
     print(f"natures.py: {stats['nature_count']} player natures")
     adapters = stats["canonical_adapter_counts"]
     print(
