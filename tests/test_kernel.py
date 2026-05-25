@@ -3,11 +3,13 @@ import re
 
 import pytest
 
-from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY
+from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY, TYPE_RESIST_BPS
 from roco.generated import catalog_debug as debug
 from roco.generated import catalog_hot as hot
 from roco.data.scalar_damage import calc_attack_damage
-from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
+from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
+from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusFlag, StatusType, WeatherType
+from roco.engine.artifacts.skill_mod_modes import ENTRY_MOD_DAMAGE_REDUCE, ENTRY_MOD_DAMAGE_RESIST
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
 from roco.engine.kernel.catalog import (
@@ -27,11 +29,23 @@ from roco.engine.kernel.damage import (
 from roco.engine.kernel.mechanics import update
 from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_ROUND_CALC_START
+from roco.engine.kernel.op_rows import (
+    TIMING_HOOK_BEFORE_MOVE,
+    TIMING_PAK_BEFORE_HURT,
+    TIMING_PAK_ROUND_CALC_START,
+    TIMING_PAK_SDT,
+)
 from roco.engine.kernel.state import copy_state, make_state
 from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
 from roco.generated import handler_indices as hi
-from roco.common.packing import DevotionIdx, MarkIdx, _set_mark, _unpack_mark
+from roco.common.packing import (
+    DevotionIdx,
+    MarkIdx,
+    _inc_skill_count,
+    _set_mark,
+    _unpack_element_u8,
+    _unpack_mark,
+)
 
 def _pet_id(name: str) -> int:
     return debug.PET_IDS_BY_NAME[name]
@@ -265,6 +279,156 @@ def test_before_move_primitives_from_source_context():
     assert ctx.hit_count == 8
     assert ctx.power == 80
     assert ctx.cost_delta == -2
+
+
+def test_hit_count_delta_filters_skill_and_persists_after_move():
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 7020510)
+    ctx.hit_count = 1
+
+    run_skill_timing(
+        (
+            (hi.H_HIT_COUNT_DELTA, TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7020510, 0, 0),
+            (hi.H_HIT_COUNT_DELTA, TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1, 7030450, 0, 0),
+        ),
+        (0, 2),
+        TIMING_PAK_BEFORE_HURT,
+        ctx,
+    )
+
+    assert ctx.hit_count == 1
+    assert ctx.actor_hit_delta == 1
+
+
+def test_hit_count_percent_delta_scales_current_hit_count():
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 7020461)
+    ctx.hit_count = 2
+
+    run_skill_timing(
+        (
+            (hi.H_HIT_COUNT_PERCENT_DELTA, TIMING_PAK_ROUND_CALC_START, 1, 10000, 0, 100, 0, 0, 0),
+        ),
+        (0, 1),
+        TIMING_PAK_ROUND_CALC_START,
+        ctx,
+    )
+
+    assert ctx.hit_count == 4
+
+
+def test_entry_element_damage_reduce_persists_and_affects_damage():
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.side_equipped_skill_counts = _inc_skill_count(0, Element.FIRE)
+
+    run_skill_timing(
+        (
+            (
+                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                TIMING_PAK_SDT,
+                1,
+                10000,
+                0,
+                entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
+                1 << Element.FIRE,
+                40,
+                ENTRY_MOD_DAMAGE_REDUCE,
+            ),
+        ),
+        (0, 1),
+        TIMING_PAK_SDT,
+        ctx,
+    )
+
+    assert _unpack_element_u8(ctx.entry_element_damage_reduce, Element.FIRE) == 40
+
+    fire = _pet_id("火花")
+    water = _pet_id("水蓝蓝")
+    state = make_state((fire,), (water,))
+    actor = state.side_a.pets[0]
+    target = state.side_b.pets[0]
+    skill = (999, Element.FIRE.value, SkillCategory.PHYSICAL.value, 0, 50, 0, 1, 0)
+
+    base_ctx = StageCtx()
+    base_ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    base_ctx.power = 50
+    base_damage = _damage(actor, target, skill, base_ctx)
+
+    reduced_ctx = StageCtx()
+    reduced_ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    reduced_ctx.power = 50
+    reduced_target = target._replace(element_damage_reduce=ctx.entry_element_damage_reduce)
+    assert _damage(actor, reduced_target, skill, reduced_ctx) == base_damage * 6000 // BPS
+    assert reduced_ctx.damage_reduction_bps == 6000
+
+
+def test_entry_element_damage_resist_uses_pak_resist_bps_without_stacking():
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.side_equipped_skill_counts = _inc_skill_count(0, Element.FIRE)
+
+    run_skill_timing(
+        (
+            (
+                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                TIMING_PAK_SDT,
+                1,
+                10000,
+                0,
+                entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
+                1 << Element.FIRE,
+                1,
+                ENTRY_MOD_DAMAGE_RESIST,
+            ),
+            (
+                hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+                TIMING_PAK_SDT,
+                1,
+                10000,
+                0,
+                entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.FIRE),
+                1 << Element.FIRE,
+                40,
+                ENTRY_MOD_DAMAGE_REDUCE,
+            ),
+        ),
+        (0, 2),
+        TIMING_PAK_SDT,
+        ctx,
+    )
+
+    assert ctx.entry_element_damage_resist == 1 << Element.FIRE
+    assert _unpack_element_u8(ctx.entry_element_damage_reduce, Element.FIRE) == 40
+
+    fire = _pet_id("火花")
+    water = _pet_id("水蓝蓝")
+    state = make_state((fire,), (water,))
+    actor = state.side_a.pets[0]
+    target = state.side_b.pets[0]
+    skill = (999, Element.FIRE.value, SkillCategory.PHYSICAL.value, 0, 50, 0, 1, 0)
+
+    base_ctx = StageCtx()
+    base_ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    base_ctx.power = 50
+    base_damage = _damage(actor, target, skill, base_ctx)
+
+    resist_ctx = StageCtx()
+    resist_ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    resist_ctx.power = 50
+    resist_target = target._replace(element_damage_resist=ctx.entry_element_damage_resist)
+    assert _damage(actor, resist_target, skill, resist_ctx) == base_damage * TYPE_RESIST_BPS // BPS
+    assert resist_ctx.damage_reduction_bps == TYPE_RESIST_BPS
+
+    combined_ctx = StageCtx()
+    combined_ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
+    combined_ctx.power = 50
+    combined_target = target._replace(
+        element_damage_reduce=ctx.entry_element_damage_reduce,
+        element_damage_resist=ctx.entry_element_damage_resist,
+    )
+    assert _damage(actor, combined_target, skill, combined_ctx) == base_damage * TYPE_RESIST_BPS // BPS
+    assert combined_ctx.damage_reduction_bps == TYPE_RESIST_BPS
 
 
 def test_kernel_after_move_status_and_status_ticks():

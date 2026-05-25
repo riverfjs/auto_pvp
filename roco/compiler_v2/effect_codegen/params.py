@@ -91,6 +91,7 @@ _STAT_DELTA_BUFF_TYPES = frozenset(
 
 _TEAM_SKILL_HIT_COUNT = struct_key("team_skill_hit_count")
 _FLAT_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
+_HIT_COUNT_PERCENT_DELTA = struct_key("hit_count_percent_delta")
 _HEAL_REVERSAL = struct_key("heal_reversal")
 _CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
 _ET_MULTIPLE = effect_order_key("ET_MULTIPLE")
@@ -172,10 +173,16 @@ def pack_primitive_params(
     if primitive == _TEAM_SKILL_HIT_COUNT:
         return (max(1, stack_count), 0, 0, 0)
     if primitive == _FLAT_HIT_COUNT_DELTA:
-        delta = _flat_hit_count_delta_amount(base_ids)
+        delta, skill_ids = _flat_hit_count_delta(base_ids)
         if delta == 0:
             raise RuntimeError(f"cannot derive flat hit-count delta from buff {buff_id}")
-        return (delta, 0, 0, 0)
+        padded = (skill_ids + (0, 0, 0))[:3]
+        return (delta, padded[0], padded[1], padded[2])
+    if primitive == _HIT_COUNT_PERCENT_DELTA:
+        amount = _hit_count_percent_delta_amount(base_ids)
+        if amount == 0:
+            raise RuntimeError(f"cannot derive percent hit-count delta from buff {buff_id}")
+        return (amount, 0, 0, 0)
     if primitive == _HEAL_REVERSAL:
         multiplier = 2
         if base_ids:
@@ -210,7 +217,26 @@ def _single_int(value: Any) -> int | None:
     return values[0] if len(values) == 1 else None
 
 
-def _flat_hit_count_delta_amount(base_ids: list[int]) -> int:
+def _flat_hit_count_delta(base_ids: list[int]) -> tuple[int, tuple[int, ...]]:
+    if len(base_ids) != 1:
+        return 0, ()
+    base_id = int(base_ids[0])
+    if BUFFBASE_ORDER.get(base_id) != 45:
+        return 0, ()
+    base_params = BUFFBASE_PARAMS.get(base_id) or ()
+    if len(base_params) < 3:
+        return 0, ()
+    delta = _single_int(base_params[0])
+    mode = _single_int(base_params[2])
+    if delta is None or delta == 0 or mode != 0:
+        return 0, ()
+    skill_ids = tuple(v for v in _as_int_tuple(base_params[1]) if v > 0)
+    if len(skill_ids) > 3:
+        return 0, ()
+    return delta, skill_ids
+
+
+def _hit_count_percent_delta_amount(base_ids: list[int]) -> int:
     if len(base_ids) != 1:
         return 0
     base_id = int(base_ids[0])
@@ -219,12 +245,11 @@ def _flat_hit_count_delta_amount(base_ids: list[int]) -> int:
     base_params = BUFFBASE_PARAMS.get(base_id) or ()
     if len(base_params) < 3:
         return 0
-    delta = _single_int(base_params[0])
-    skill_id = _single_int(base_params[1])
+    amount = _single_int(base_params[0])
     mode = _single_int(base_params[2])
-    if delta is None or delta == 0 or skill_id != 0 or mode != 0:
+    if amount is None or amount == 0 or mode != 1:
         return 0
-    return delta
+    return amount
 
 
 def _cute_bench_cost_reduce_amount(base_ids: list[int], buff_conf: dict[int, dict]) -> int:

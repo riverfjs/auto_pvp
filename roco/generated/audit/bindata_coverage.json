@@ -3186,6 +3186,7 @@
     {
       "category": "battle_candidate",
       "code_refs": [
+        "roco/engine/artifacts/primitive_linker.py",
         "roco/generated/static/lua_enums.py"
       ],
       "combat_candidate": true,
@@ -4023,6 +4024,7 @@
         "roco/compiler_v2/effect_codegen/ability_flags_from_effects.py",
         "roco/compiler_v2/effect_codegen/classify.py",
         "roco/compiler_v2/effect_codegen/pak.py",
+        "roco/compiler_v2/effect_families/classify.py",
         "roco/compiler_v2/effect_families/family_builder.py",
         "roco/compiler_v2/effect_families/params.py",
         "roco/compiler_v2/effect_families/refs.py",

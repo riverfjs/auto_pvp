@@ -39,9 +39,10 @@ Rate = ``success_rate`` raw (10000 = 100%).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import lru_cache
-
+from roco.compiler_v2.effect_codegen.assign import (
+    assign_refs,
+    single_assign_buff_from_effect,
+)
 from roco.compiler_v2.effect_codegen.classify import (
     collect_buff_candidates,
     decode_buff_direct,
@@ -60,8 +61,6 @@ from roco.compiler_v2.effect_codegen.params import (
     is_status_or_mark_primitive,
 )
 from roco.compiler_v2.effect_codegen.source_context import decode_source_context
-from roco.compiler_v2.effect_codegen.buffbase_source import BUFFBASE_ORDER, BUFFBASE_PARAMS
-from roco.compiler_v2.sources import LuaEnumSource
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 
 __all__ = [
@@ -69,47 +68,6 @@ __all__ = [
     "generate_effect_rows",
     "build_ability_effect_rows",
 ]
-
-
-@lru_cache(maxsize=1)
-def _buff_type_enum() -> dict[str, int]:
-    return LuaEnumSource().enums(("BuffType",))["BuffType"]
-
-
-def _buff_type(name: str) -> int:
-    return int(_buff_type_enum()[name])
-
-
-BFT_ASSIGN_ORDER = _buff_type("BFT_ASSIGN")
-
-
-@dataclass(frozen=True)
-class _AssignRef:
-    ref_id: int
-    target_type: int | None
-    success_rate: int
-    source_buff_id: int
-    source_base_id: int
-
-
-def _as_int_tuple(value: object) -> tuple[int, ...]:
-    if isinstance(value, tuple):
-        raw_values = value
-    elif isinstance(value, list):
-        raw_values = tuple(value)
-    elif value is None:
-        raw_values = ()
-    else:
-        raw_values = (value,)
-    out: list[int] = []
-    for raw in raw_values:
-        try:
-            item = int(raw)
-        except (TypeError, ValueError):
-            continue
-        if item:
-            out.append(item)
-    return tuple(out)
 
 
 def _emit_row(
@@ -151,85 +109,6 @@ def _emit_row(
         p2,
         p3,
     )
-
-
-def _assign_refs(
-    buff_id: int,
-    pak_data: PakTables,
-) -> tuple[list[_AssignRef], list[GapOutcome]] | None:
-    rec = pak_data.buff_conf.get(buff_id)
-    if rec is None:
-        return None
-    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
-    assign_base_ids = [
-        base_id for base_id in base_ids
-        if BUFFBASE_ORDER.get(base_id) == BFT_ASSIGN_ORDER
-    ]
-    if not assign_base_ids:
-        return None
-    refs: list[_AssignRef] = []
-    gaps: list[GapOutcome] = []
-    for base_id in assign_base_ids:
-        params = BUFFBASE_PARAMS.get(base_id) or ()
-        raw_refs = _as_int_tuple(params[0] if len(params) > 0 else ())
-        rate = int(params[1]) if len(params) > 1 and not isinstance(params[1], tuple) else 10000
-        target_code = int(params[2]) if len(params) > 2 and not isinstance(params[2], tuple) else 0
-        if not raw_refs:
-            gaps.append(GapOutcome(
-                primitive=f"assign_{base_id}",
-                effect_id=None,
-                buff_id=buff_id,
-                reason="assign_no_refs",
-                params={"buff_id": buff_id, "buff_base_id": base_id},
-            ))
-            continue
-        if rate <= 0:
-            gaps.append(GapOutcome(
-                primitive=f"assign_{base_id}",
-                effect_id=None,
-                buff_id=buff_id,
-                reason="assign_zero_rate",
-                params={"buff_id": buff_id, "buff_base_id": base_id, "rate": rate},
-            ))
-            continue
-        if target_code not in (0, 1, 2, 3, 4):
-            gaps.append(GapOutcome(
-                primitive=f"assign_condition_{target_code}",
-                effect_id=None,
-                buff_id=buff_id,
-                reason="assign_condition_unsupported",
-                params={
-                    "buff_id": buff_id,
-                    "buff_base_id": base_id,
-                    "assigned_refs": list(raw_refs),
-                    "assign_target_or_condition": target_code,
-                },
-            ))
-            continue
-        for ref_id in raw_refs:
-            refs.append(_AssignRef(
-                ref_id=ref_id,
-                target_type=target_code or None,
-                success_rate=rate,
-                source_buff_id=buff_id,
-                source_base_id=base_id,
-            ))
-    return refs, gaps
-
-
-def _single_assign_buff_from_effect(
-    effect_id: int,
-    pak_data: PakTables,
-) -> int:
-    rec = pak_data.effect_conf.get(effect_id)
-    if rec is None or int(rec.get("type", 0) or 0) != 1:
-        return 0
-    params_raw = rec.get("effect_param") or rec.get("params") or []
-    candidates = collect_buff_candidates(params_raw, pak_data.buff_conf)
-    if len(candidates) != 1:
-        return 0
-    buff_id = candidates[0]
-    return buff_id if _assign_refs(buff_id, pak_data) is not None else 0
 
 
 def _decode_reference_outcomes(
@@ -295,8 +174,13 @@ def _decode_reference_rows(
         return [], [_gap_dict(gap, timing, effect_order, target_type, success_rate)]
     next_visited = visited | {ref_id}
 
-    assign_buff_id = ref_id if ref_id in pak_data.buff_conf else _single_assign_buff_from_effect(ref_id, pak_data)
-    assigned = _assign_refs(assign_buff_id, pak_data) if assign_buff_id else None
+    assign_buff_id = ref_id if ref_id in pak_data.buff_conf else single_assign_buff_from_effect(
+        ref_id,
+        pak_data.effect_conf,
+        pak_data.buff_conf,
+        collect_buff_candidates,
+    )
+    assigned = assign_refs(assign_buff_id, pak_data.buff_conf) if assign_buff_id else None
     if assigned is not None:
         refs, assign_gaps = assigned
         rows: list[tuple[object, ...]] = []

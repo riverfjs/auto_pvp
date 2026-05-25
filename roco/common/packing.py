@@ -218,6 +218,12 @@ def _add_element_u8(packed: int, elem: Element, amount: int) -> int:
     return (packed & ~(0xFF << shift)) | (min(0xFF, cur + max(0, int(amount))) << shift)
 
 
+def _max_element_u8(packed: int, elem: Element, amount: int) -> int:
+    shift = elem.value * 8
+    cur = (packed >> shift) & 0xFF
+    return (packed & ~(0xFF << shift)) | (max(cur, min(0xFF, max(0, int(amount)))) << shift)
+
+
 def _merge_element_nibbles(packed: int, delta: int) -> int:
     for elem in Element:
         amount = _unpack_skill_count(delta, elem)
@@ -231,6 +237,14 @@ def _merge_element_u8(packed: int, delta: int) -> int:
         amount = _unpack_element_u8(delta, elem)
         if amount:
             packed = _add_element_u8(packed, elem, amount)
+    return packed
+
+
+def _merge_element_u8_max(packed: int, delta: int) -> int:
+    for elem in Element:
+        amount = _unpack_element_u8(delta, elem)
+        if amount:
+            packed = _max_element_u8(packed, elem, amount)
     return packed
 
 

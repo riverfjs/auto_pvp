@@ -22,10 +22,13 @@ import pytest
 from roco.common.primitive_keys import (
     buff_type_key,
     effect_order_key,
+    effect_order_variant_key,
     mark_note_key,
     source_context_key,
     struct_key,
 )
+from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
+from roco.common.enums import Element
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
 from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
@@ -35,6 +38,13 @@ from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.primitive_axes import PREFIX_TYPE_ALIASES, resolve_primitive_axes
 from roco.compiler_v2.timing_keys import ENGINE_HOOK_BEFORE_MOVE, pak_cast_moment_key
+from roco.engine.artifacts.primitive_linker import link_primitive_row
+from roco.engine.artifacts.skill_mod_modes import (
+    ENTRY_MOD_DAMAGE_REDUCE,
+    ENTRY_MOD_DAMAGE_RESIST,
+    ENTRY_MOD_POISON_STACKS,
+)
+from roco.generated import handler_indices as hi
 
 P_ANTI_HEAL = struct_key("heal_reversal")
 P_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
@@ -43,6 +53,7 @@ P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
 P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
 P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
 P_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
+P_HIT_COUNT_PERCENT_DELTA = struct_key("hit_count_percent_delta")
 P_HIT_COUNT_PER_POISON_EFFECT = source_context_key("hit_count_per_poison_effect")
 P_METEOR_MARK = mark_note_key("星陨印记")
 P_MOISTURE_MARK = mark_note_key("湿润印记")
@@ -50,6 +61,14 @@ P_PASSIVE_ENERGY_REDUCE = buff_type_key("BFT_CHANGE_SKILL_ENERGY_COST")
 P_POISON_MARK = mark_note_key("中毒印记")
 P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
 P_SKILL_MOD = source_context_key("slot_skill_mod")
+P_RAW_ENTRY_ELEMENT_SKILL_MOD = effect_order_variant_key(
+    "ET_BUFF_BY_EQUIP_SKILL_NUM",
+    "raw_entry_element_skill_mod_by_count",
+)
+P_RAW_HERO_ENTRY_ELEMENT_SKILL_MOD = effect_order_variant_key(
+    "ET_HERO",
+    "raw_entry_element_skill_mod_by_count",
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -216,13 +235,19 @@ def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
 
     plus = cls.classify_buff_primitive(20450050, pak.buff_conf)
     minus = cls.classify_buff_primitive(20450090, pak.buff_conf)
+    specific = cls.classify_buff_primitive(20450020, pak.buff_conf)
     assert plus == P_HIT_COUNT_DELTA
     assert minus == P_HIT_COUNT_DELTA
+    assert specific == P_HIT_COUNT_DELTA
     assert pack_primitive_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
     assert pack_primitive_params(minus, 20450090, pak.buff_conf) == (-1, 0, 0, 0)
+    assert pack_primitive_params(specific, 20450020, pak.buff_conf) == (1, 7020510, 0, 0)
+    assert pack_primitive_params(specific, 20450070, pak.buff_conf) == (1, 7130100, 7130130, 0)
 
-    assert cls.classify_buff_primitive(20450020, pak.buff_conf) == ""
-    assert cls.classify_buff_primitive(20450030, pak.buff_conf) == ""
+    percent = cls.classify_buff_primitive(20450030, pak.buff_conf)
+    assert percent == P_HIT_COUNT_PERCENT_DELTA
+    assert pack_primitive_params(percent, 20450030, pak.buff_conf) == (100, 0, 0, 0)
+
     assert cls.classify_buff_primitive(21150010, pak.buff_conf) == ""
 
     drive_outcome = decode_buff_direct(21150010, pak.buff_conf)[0]
@@ -232,6 +257,226 @@ def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
     hit_outcome = decode_buff_direct(20450050, pak.buff_conf)[0]
     assert isinstance(hit_outcome, EmitOutcome)
     assert hit_outcome.p0 == 1
+
+
+def test_bft_multiple_num_decodes_specific_and_percent_rows():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7020510], pak)
+    assert gaps == []
+    assert (
+        P_HIT_COUNT_DELTA,
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        1,
+        7020510,
+        0,
+        0,
+    ) in rows
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7020461], pak)
+    assert gaps == []
+    assert (
+        P_HIT_COUNT_PERCENT_DELTA,
+        pak_cast_moment_key(6),
+        1,
+        10000,
+        100,
+        0,
+        0,
+        0,
+    ) in rows
+
+
+def test_equip_skill_num_decodes_damage_reduction_family():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[200074], pak, allow_ability_flags=True)
+    assert gaps == []
+    normal_raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        2,
+        2011116,
+        0,
+        0,
+    )
+    light_raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        6,
+        2011120,
+        0,
+        0,
+    )
+    assert normal_raw in rows
+    assert light_raw in rows
+    assert link_primitive_row(normal_raw, source_name="偏振") == (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
+        1 << Element.NORMAL,
+        40,
+        ENTRY_MOD_DAMAGE_REDUCE,
+    )
+    assert link_primitive_row(light_raw, source_name="偏振") == (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.LIGHT),
+        1 << Element.LIGHT,
+        40,
+        ENTRY_MOD_DAMAGE_REDUCE,
+    )
+
+    rows, _gaps = generate_effect_rows(pak.skill_conf[280010], pak, allow_ability_flags=True)
+    normal_resist_raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        2,
+        2098001,
+        0,
+        0,
+    )
+    ground_resist_raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        8,
+        2098006,
+        0,
+        0,
+    )
+    dragon_resist_raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        10,
+        2098008,
+        0,
+        0,
+    )
+    assert normal_resist_raw in rows
+    assert ground_resist_raw in rows
+    assert dragon_resist_raw in rows
+
+    linked = [link_primitive_row(row, source_name="完全偏振") for row in rows if row[0] == P_RAW_ENTRY_ELEMENT_SKILL_MOD]
+    assert (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
+        1 << Element.NORMAL,
+        1,
+        ENTRY_MOD_DAMAGE_RESIST,
+    ) in linked
+    assert (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.GROUND),
+        1 << Element.GROUND,
+        1,
+        ENTRY_MOD_DAMAGE_RESIST,
+    ) in linked
+    assert (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.DRAGON),
+        1 << Element.DRAGON,
+        1,
+        ENTRY_MOD_DAMAGE_RESIST,
+    ) in linked
+    assert not any(row[-2:] == (100, ENTRY_MOD_DAMAGE_REDUCE) for row in linked)
+
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 1064036,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert rows == []
+    assert gaps[0]["primitive"] == "effect_1064036"
+
+
+def test_equip_skill_num_maps_skill_dam_type_to_engine_element_for_skill_mods():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[200111], pak, allow_ability_flags=True)
+    assert gaps == []
+    raw = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        12,
+        2035035,
+        0,
+        0,
+    )
+    assert raw in rows
+    assert link_primitive_row(raw, source_name="溶解扩散") == (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.POISON),
+        1 << Element.WATER,
+        1,
+        ENTRY_MOD_POISON_STACKS,
+    )
+
+
+def test_raw_zero_is_only_normal_through_skill_dam_type_mapping():
+    skill_dam_type_common = (
+        P_RAW_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        2,
+        2011116,
+        0,
+        0,
+    )
+    assert link_primitive_row(skill_dam_type_common, source_name="SDT_COMMON") == (
+        hi.H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT,
+        24,
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
+        1 << Element.NORMAL,
+        40,
+        ENTRY_MOD_DAMAGE_REDUCE,
+    )
+
+    raw_element_zero_sentinel = (
+        P_RAW_HERO_ENTRY_ELEMENT_SKILL_MOD,
+        pak_cast_moment_key(24),
+        1,
+        10000,
+        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, Element.NORMAL),
+        2023001,
+        0,
+        0,
+    )
+    with pytest.raises(RuntimeError, match="no supported BUFFBASE rows"):
+        link_primitive_row(raw_element_zero_sentinel, source_name="raw element sentinel")
 
 
 def test_bft_assign_expands_unconditional_refs_with_target_override():
@@ -293,6 +538,24 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
     rows, gaps = generate_effect_rows(pak.skill_conf[7190260], pak)
     assert any(row[0] == effect_order_key("ET_MULTIPLE") and row[4] == 1 for row in rows)
     assert any(gap["primitive"] == "prefix_2091" and gap["params"]["buff_id"] == 20910030 for gap in gaps)
+
+
+def test_effect_multiple_decodes_team_same_skill_hit_count():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+
+    rows, gaps = generate_effect_rows(pak.skill_conf[7130160], pak)
+
+    assert gaps == []
+    assert rows == [(
+        effect_order_variant_key("ET_MULTIPLE", "team_skill_count"),
+        pak_cast_moment_key(6),
+        1,
+        10000,
+        1,
+        7130160,
+        0,
+        0,
+    )]
 
 
 def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():

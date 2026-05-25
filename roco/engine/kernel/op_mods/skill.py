@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from roco.common.constants import BPS
 from roco.common.enums import Element
-from roco.common.packing import _add_element_nibble, _add_element_u8
-from roco.common.skill_mod_modes import (
+from roco.common.packing import _add_element_nibble, _add_element_u8, _max_element_u8
+from roco.engine.artifacts.skill_mod_modes import (
     ENTRY_MOD_COST_REDUCE,
+    ENTRY_MOD_DAMAGE_REDUCE,
+    ENTRY_MOD_DAMAGE_RESIST,
     ENTRY_MOD_POISON_STACKS,
     ENTRY_MOD_POWER_BPS,
     ENTRY_MOD_POWER_FLAT,
@@ -105,6 +107,14 @@ def op_entry_element_skill_mod_by_count(ctx: StageCtx, row: tuple[int, ...]) -> 
                 element,
                 amount,
             )
+        elif mode == ENTRY_MOD_DAMAGE_REDUCE:
+            ctx.entry_element_damage_reduce = _max_element_u8(
+                ctx.entry_element_damage_reduce,
+                element,
+                min(100, amount),
+            )
+        elif mode == ENTRY_MOD_DAMAGE_RESIST:
+            ctx.entry_element_damage_resist |= 1 << element.value
 
 
 def op_transfer_mods(ctx: StageCtx, row: tuple[int, ...]) -> None:

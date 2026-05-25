@@ -177,6 +177,14 @@ def _build_buff_id_primitive_map(
                 "BUFFBASE_CONF order-45 flat hit-count delta",
             )
 
+        if _is_hit_count_percent_delta_buff(rec, buffbase_rows):
+            _put_exact_buff_primitive(
+                out,
+                buff_id,
+                struct_key("hit_count_percent_delta"),
+                "BUFFBASE_CONF order-45 percent hit-count delta",
+            )
+
         if _is_heal_reversal_buff(rec, buffbase_rows):
             _put_exact_buff_primitive(
                 out,
@@ -221,9 +229,25 @@ def _is_flat_hit_count_delta_buff(
     if len(slots) < 3:
         return False
     delta = _slot_scalar(slots, 0)
-    skill_id = _slot_scalar(slots, 1)
     mode = _slot_scalar(slots, 2)
-    return delta is not None and delta != 0 and skill_id == 0 and mode == 0
+    return delta is not None and delta != 0 and mode == 0
+
+def _is_hit_count_percent_delta_buff(
+    rec: dict,
+    buffbase_rows: dict[int | str, dict],
+) -> bool:
+    base_ids = [int(v) for v in rec.get("buff_base_ids") or () if v]
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_rows.get(base_ids[0])
+    if base is None or int(base.get("buffbase_order") or 0) != 45:
+        return False
+    slots = _base_param_slots(base)
+    if len(slots) < 3:
+        return False
+    percent = _slot_scalar(slots, 0)
+    mode = _slot_scalar(slots, 2)
+    return percent is not None and percent != 0 and mode == 1
 
 def _is_heal_reversal_buff(
     rec: dict,

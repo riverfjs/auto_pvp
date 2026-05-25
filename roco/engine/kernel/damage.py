@@ -8,6 +8,7 @@ from roco.common.packing import (
     BUFF_DEF_MAG,
     BUFF_DEF_PHYS,
     MarkIdx,
+    _unpack_element_u8,
     _unpack_mark,
     _unpack_status,
     stat_ratio_bps,
@@ -35,8 +36,9 @@ from roco.common.constants import (
     TYPE_DOUBLE_RESIST_BPS,
     TYPE_DOUBLE_WEAK_BPS,
     TYPE_NEUTRAL_BPS,
+    TYPE_RESIST_BPS,
 )
-from roco.common.enums import AbilityFlag, SkillCategory, StatusFlag, StatusType, WeatherType
+from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.generated import catalog_hot as hot
 from roco.engine.kernel.catalog import (
     ELEMENT_FIRE,
@@ -98,6 +100,14 @@ def damage(
     weather_bps = weather_damage_bps(skill[SKILL_ELEMENT], weather)
     mark_bps = mark_attack_bps(actor_marks, first_strike, skill[SKILL_ENERGY])
     cute_bps = BPS + actor.cute * CUTE_DAMAGE_BPS_PER_STACK
+    element_reduce_pct = min(
+        100,
+        _unpack_element_u8(target.element_damage_reduce, Element(skill[SKILL_ELEMENT])),
+    )
+    if element_reduce_pct:
+        ctx.damage_reduction_bps = min(ctx.damage_reduction_bps, max(0, BPS - element_reduce_pct * 100))
+    if target.element_damage_resist & (1 << skill[SKILL_ELEMENT]):
+        ctx.damage_reduction_bps = min(ctx.damage_reduction_bps, TYPE_RESIST_BPS)
     total = (
         atk
         * stat_bps

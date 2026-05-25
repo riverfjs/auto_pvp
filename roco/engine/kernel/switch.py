@@ -10,6 +10,7 @@ from roco.common.packing import (
     _merge_buff_delta,
     _merge_element_nibbles,
     _merge_element_u8,
+    _merge_element_u8_max,
     _set_mark,
     _unpack_mark,
 )
@@ -167,6 +168,17 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
                 pet.element_poison_stacks,
                 ctx.entry_element_poison_stacks,
             )
+        )
+    if ctx.entry_element_damage_reduce:
+        pet = pet._replace(
+            element_damage_reduce=_merge_element_u8_max(
+                pet.element_damage_reduce,
+                ctx.entry_element_damage_reduce,
+            )
+        )
+    if ctx.entry_element_damage_resist:
+        pet = pet._replace(
+            element_damage_resist=pet.element_damage_resist | ctx.entry_element_damage_resist
         )
     if ctx.mirror_enemy_buffs and enemy_side is not None:
         pet = pet._replace(buff_stages=enemy_side.pets[enemy_side.active].buff_stages)

@@ -7,10 +7,10 @@ Total families: **186**
 ## Coverage status
 
 - `ability_flag`: 4
-- `auto_structural`: 90
+- `auto_structural`: 91
 - `gap`: 70
 - `generated_weather`: 1
-- `mixed`: 21
+- `mixed`: 20
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
@@ -192,7 +192,7 @@ Total families: **186**
 - editor_names: GM, 光合印记, 恢复能量, 治疗印记, 能量衰退
 - source_descriptions: 会恢复能量。, 回合末获得1能量。, 回合结束回复大量生命, 回合结束，获得能量。, 拥有印记的精灵，每回合恢复<span color="#73c715">5%</>最大生命。
 - example_source_ids: [20170010, 20170011, 20170012, 20170090, 20170130]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 50, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 45, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 7, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7130110` 毒线针 — S3壳栗丝鼠B
     - `7110421` 感电 — 使敌方精灵<desc_id=1024>返场</>。
@@ -438,11 +438,11 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2045` — BUFF_CONF_DIRECT
 
-- count: **7** | coverage: `mixed` | used_consumer_count: 7
+- count: **7** | coverage: `auto_structural` | used_consumer_count: 7
 - editor_names: 暴风眼, 连击
 - source_descriptions: 连击数+100%。, 连击次数+1, 连击次数-1
 - example_source_ids: [20450020, 20450030, 20450031, 20450050, 20450090]
-- coverage_breakdown: {'auto_structural_count': 2, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 5, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 7, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 0, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己获得魔攻+60%。
     - `7150311` 俯冲猛击 — 对敌方精灵造成魔法伤害。
@@ -1485,7 +1485,7 @@ Total families: **186**
 
 - count: **12** | coverage: `mixed` | used_consumer_count: 25
 - example_source_ids: [1032001, 1032002, 1032003, 1032004, 1032005]
-- coverage_breakdown: {'auto_structural_count': 10, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 11, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7030500` 聚盐 — 2连击，每次连击自己获得魔攻+60%。
     - `7001140` 星链 — 2连击，每次连击赋予1层星陨
@@ -1557,7 +1557,7 @@ Total families: **186**
 - count: **92** | coverage: `mixed` | used_consumer_count: 1
 - editor_names: 不朽, 戏耍, 拉拉队长
 - example_source_ids: [1004002, 1004005, 1004006, 1004046, 1004065]
-- coverage_breakdown: {'auto_structural_count': 72, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 20, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 78, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 14, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7050510` 升华 — S3友爱星飞B
     - `7180200` 应对！灾厄 — 对自己造成物伤，应对状态：改为对敌方造成物伤，且本次技能威力+120。
@@ -2291,7 +2291,7 @@ Total families: **186**
 - count: **50** | coverage: `mixed` | used_consumer_count: 3
 - editor_names: 暴食, 最好的伙伴, 溶解扩散, 溶解腐蚀
 - example_source_ids: [1064001, 1064002, 1064003, 1064004, 1064005]
-- coverage_breakdown: {'auto_structural_count': 6, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 44, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 48, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 2, 'ability_flag_count': 0}
 - sample_ability_consumers:
     - `200120` 冻土 — 每携带1个冰系技能进入战斗，地系技能威力+10%。
     - `200111` 溶解扩散 — 每携带1个毒系技能进入战斗，水系技能使敌方获得1层中毒。

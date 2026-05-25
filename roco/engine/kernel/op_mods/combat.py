@@ -5,7 +5,17 @@ from __future__ import annotations
 from roco.engine.kernel.catalog import SKILL_FLAG_CHARGE
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.op_meta import handles_buff
-from roco.engine.kernel.op_rows import ROW_ARG0, ROW_ARG1, ROW_ARG2, ROW_TARGET, TARGET_SELF
+from roco.engine.kernel.op_rows import (
+    ROW_ARG0,
+    ROW_ARG1,
+    ROW_ARG2,
+    ROW_ARG3,
+    ROW_TARGET,
+    ROW_TIMING,
+    TARGET_SELF,
+    TIMING_HOOK_BEFORE_MOVE,
+    TIMING_PAK_ROUND_CALC_START,
+)
 
 
 # ── counters / interrupts ────────────────────────────────────────────────
@@ -68,13 +78,26 @@ def op_counter_accumulate_transform(ctx: StageCtx, row: tuple[int, ...]) -> None
 # ── hit count adjustments ────────────────────────────────────────────────
 
 def op_hit_count_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if not _skill_filter_matches(ctx, row):
+        return
     if row[ROW_TARGET] == TARGET_SELF:
-        ctx.hit_count += row[ROW_ARG0]
+        if row[ROW_TIMING] in (TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_ROUND_CALC_START):
+            ctx.hit_count += row[ROW_ARG0]
+        else:
+            ctx.actor_hit_delta += row[ROW_ARG0]
     else:
         ctx.enemy_hit_delta += row[ROW_ARG0]
 
 
+def op_hit_count_percent_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if row[ROW_TARGET] == TARGET_SELF:
+        ctx.hit_count += ctx.hit_count * row[ROW_ARG0] // 100
+
+
 def op_hit_count_by_team_skill_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    skill_id = row[ROW_ARG1]
+    if skill_id and ctx.skill_id != skill_id:
+        return
     ctx.hit_count += ctx.side_same_skill_count * row[ROW_ARG0]
 
 
@@ -98,6 +121,11 @@ def op_stat_scale_hits_per_hp_lost(ctx: StageCtx, row: tuple[int, ...]) -> None:
 def op_on_skill_element_hit_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.skill_element == row[ROW_ARG0]:
         ctx.hit_count += row[ROW_ARG1]
+
+
+def _skill_filter_matches(ctx: StageCtx, row: tuple[int, ...]) -> bool:
+    skill_ids = (row[ROW_ARG1], row[ROW_ARG2], row[ROW_ARG3])
+    return not any(skill_ids) or ctx.skill_id in skill_ids
 
 
 # ── forced switches ──────────────────────────────────────────────────────

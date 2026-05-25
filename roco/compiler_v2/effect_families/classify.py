@@ -9,7 +9,12 @@ direct-BUFF_CONF reference to its family_key (reusing the gap-primitive's
 
 from __future__ import annotations
 
-from roco.compiler_v2.effect_codegen.classify import decode_buff_direct, decode_effect
+from roco.compiler_v2.effect_codegen.assign import assign_refs, single_assign_buff_from_effect
+from roco.compiler_v2.effect_codegen.classify import (
+    collect_buff_candidates,
+    decode_buff_direct,
+    decode_effect,
+)
 from roco.compiler_v2.effect_codegen.exact_decoders import decode_exact
 from roco.compiler_v2.effect_codegen.family_axes import decode_family_axes
 from roco.compiler_v2.effect_codegen.outcomes import (
@@ -58,6 +63,9 @@ def _classify_one_source_id(
         return "exact_semantic"
     if sid in ability_flag_ids:
         return "ability_flag"
+    assign_bucket = _classify_assign_source_id(sid, pak)
+    if assign_bucket is not None:
+        return assign_bucket
     # Defensive: decode_exact may still return something (e.g. compound),
     # though the two id sets above are derived from the same JSONL.
     override = decode_exact(sid)
@@ -93,6 +101,29 @@ def _classify_one_source_id(
     if has_emit and not has_gap:
         return "auto_structural"
     return "gap"
+
+
+def _classify_assign_source_id(sid: int, pak: PakTables) -> str | None:
+    """Classify BFT_ASSIGN rows as pak-structural dispatchers.
+
+    Child refs are audited by their own EFFECT_CONF / BUFF_CONF families; this
+    bucket only answers whether the assign dispatcher row itself is understood.
+    """
+    assign_buff_id = sid if sid in pak.buff_conf else single_assign_buff_from_effect(
+        sid,
+        pak.effect_conf,
+        pak.buff_conf,
+        collect_buff_candidates,
+    )
+    if not assign_buff_id:
+        return None
+    assigned = assign_refs(assign_buff_id, pak.buff_conf)
+    if assigned is None:
+        return None
+    refs, gaps = assigned
+    if gaps or not refs:
+        return "gap"
+    return "auto_structural"
 
 
 def _classify_with_source_context(

@@ -60,6 +60,7 @@ from roco.engine.kernel.op_mods.combat import (
     op_hit_count_delta,
     op_hit_count_per_poison,
     op_hit_count_per_poison_effect,
+    op_hit_count_percent_delta,
     op_install_counter,
     op_interrupt,
     op_on_interrupt_cooldown,
@@ -222,54 +223,55 @@ HANDLERS: tuple = (
     op_hit_count_delta,  # 72
     op_hit_count_per_poison,  # 73
     op_hit_count_per_poison_effect,  # 74
-    op_hp_for_energy,  # 75
-    op_install_counter,  # 76
-    op_interrupt,  # 77
-    op_leave_energy_refill,  # 78
-    op_leave_heal_ally,  # 79
-    op_leech,  # 80
-    op_life_drain,  # 81
-    op_low_cost_skill_power_bonus,  # 82
-    op_meteor_mark,  # 83
-    op_mirror_enemy_buffs,  # 84
-    op_moisture_mark,  # 85
-    op_momentum_mark,  # 86
-    op_next_attack_mod,  # 87
-    op_on_interrupt_cooldown,  # 88
-    op_on_skill_element_buff,  # 89
-    op_on_skill_element_burn,  # 90
-    op_on_skill_element_cost_reduce,  # 91
-    op_on_skill_element_enemy_energy,  # 92
-    op_on_skill_element_freeze,  # 93
-    op_on_skill_element_hit_count,  # 94
-    op_on_skill_element_poison,  # 95
-    op_on_super_effective_buff,  # 96
-    op_passive_energy_reduce,  # 97
-    op_permanent_mod,  # 98
-    op_poison,  # 99
-    op_poison_mark,  # 100
-    op_poison_on_skill_apply,  # 101
-    op_power_by_status_count_elements,  # 102
-    op_power_dynamic,  # 103
-    op_priority_next_delta,  # 104
-    op_self_buff,  # 105
-    op_self_debuff,  # 106
-    op_set_self_cooldown,  # 107
-    op_skill_cost_reduction_type,  # 108
-    op_skill_mod,  # 109
-    op_slow_mark,  # 110
-    op_sluggish_mark,  # 111
-    op_solar_mark,  # 112
-    op_specific_skill_power_bonus,  # 113
-    op_spirit_mark,  # 114
-    op_stat_scale_hits_per_hp_lost,  # 115
-    op_steal_all_enemy_energy,  # 116
-    op_steal_energy,  # 117
-    op_team_synergy_bug_swarm_attack,  # 118
-    op_thorn_mark,  # 119
-    op_transfer_mods,  # 120
-    op_weather,  # 121
-    op_wind_mark,  # 122
+    op_hit_count_percent_delta,  # 75
+    op_hp_for_energy,  # 76
+    op_install_counter,  # 77
+    op_interrupt,  # 78
+    op_leave_energy_refill,  # 79
+    op_leave_heal_ally,  # 80
+    op_leech,  # 81
+    op_life_drain,  # 82
+    op_low_cost_skill_power_bonus,  # 83
+    op_meteor_mark,  # 84
+    op_mirror_enemy_buffs,  # 85
+    op_moisture_mark,  # 86
+    op_momentum_mark,  # 87
+    op_next_attack_mod,  # 88
+    op_on_interrupt_cooldown,  # 89
+    op_on_skill_element_buff,  # 90
+    op_on_skill_element_burn,  # 91
+    op_on_skill_element_cost_reduce,  # 92
+    op_on_skill_element_enemy_energy,  # 93
+    op_on_skill_element_freeze,  # 94
+    op_on_skill_element_hit_count,  # 95
+    op_on_skill_element_poison,  # 96
+    op_on_super_effective_buff,  # 97
+    op_passive_energy_reduce,  # 98
+    op_permanent_mod,  # 99
+    op_poison,  # 100
+    op_poison_mark,  # 101
+    op_poison_on_skill_apply,  # 102
+    op_power_by_status_count_elements,  # 103
+    op_power_dynamic,  # 104
+    op_priority_next_delta,  # 105
+    op_self_buff,  # 106
+    op_self_debuff,  # 107
+    op_set_self_cooldown,  # 108
+    op_skill_cost_reduction_type,  # 109
+    op_skill_mod,  # 110
+    op_slow_mark,  # 111
+    op_sluggish_mark,  # 112
+    op_solar_mark,  # 113
+    op_specific_skill_power_bonus,  # 114
+    op_spirit_mark,  # 115
+    op_stat_scale_hits_per_hp_lost,  # 116
+    op_steal_all_enemy_energy,  # 117
+    op_steal_energy,  # 118
+    op_team_synergy_bug_swarm_attack,  # 119
+    op_thorn_mark,  # 120
+    op_transfer_mods,  # 121
+    op_weather,  # 122
+    op_wind_mark,  # 123
 )
 
 HANDLER_COUNT = len(HANDLERS)

@@ -49,6 +49,8 @@ class PetState(NamedTuple):
     element_power_bps: int = 0
     element_cost_reduce: int = 0
     element_poison_stacks: int = 0
+    element_damage_reduce: int = 0
+    element_damage_resist: int = 0
 
 
 class SideState(NamedTuple):
@@ -200,6 +202,8 @@ def _pet_state(pet_id: int) -> PetState:
         element_power_bps=0,
         element_cost_reduce=0,
         element_poison_stacks=0,
+        element_damage_reduce=0,
+        element_damage_resist=0,
     )
 
 

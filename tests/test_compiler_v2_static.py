@@ -112,6 +112,28 @@ def test_compiler_v2_has_no_generated_runtime_imports():
     assert offenders == []
 
 
+def test_compiler_v2_has_no_engine_imports():
+    root = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2"
+    offenders: list[str] = []
+    forbidden = ("from roco.engine", "import roco.engine")
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        if any(term in text for term in forbidden):
+            offenders.append(path.relative_to(root).as_posix())
+    assert offenders == []
+
+
+def test_compiler_v2_effect_codegen_does_not_emit_engine_entry_modes():
+    root = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "effect_codegen"
+    offenders: list[str] = []
+    forbidden = ("ENTRY_MOD_", "H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT")
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        if any(term in text for term in forbidden):
+            offenders.append(path.relative_to(root).as_posix())
+    assert offenders == []
+
+
 def _import_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None

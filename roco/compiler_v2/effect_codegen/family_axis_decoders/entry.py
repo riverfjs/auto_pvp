@@ -7,16 +7,9 @@ from roco.common.entry_sources import (
     ENTRY_SOURCE_DEFENSE,
     ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE,
     ENTRY_SOURCE_ENEMY_SWITCH,
-    ENTRY_SOURCE_EQUIPPED_ELEMENT,
     ENTRY_SOURCE_STATUS,
     ENTRY_SOURCE_USED_ELEMENT,
     entry_source_code,
-)
-from roco.common.skill_mod_modes import (
-    ENTRY_MOD_COST_REDUCE,
-    ENTRY_MOD_POISON_STACKS,
-    ENTRY_MOD_POWER_BPS,
-    ENTRY_MOD_POWER_FLAT,
 )
 from roco.compiler_v2.effect_codegen.buffbase_source import (
     BUFFBASE_ORDER,
@@ -94,10 +87,10 @@ def decode_hero_entry(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcom
         return skill_count_mod
     source = _hero_count_source(params_raw)
     if source is not None:
-        element_mod = _decode_entry_element_mod(
-            _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
-            source,
+        element_mod = _emit_raw_entry_element_mod(
             "ET_HERO",
+            source,
+            _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
         )
         if element_mod is not None:
             return element_mod
@@ -117,14 +110,30 @@ def decode_hero_entry(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcom
 
 def decode_buff_by_equip_skill_num(rec: dict, buff_conf: dict[int, dict]) -> tuple[EmitOutcome, str] | None:
     params_raw = params(rec)
-    source_element = safe_int(params_raw, 0, -1)
-    if source_element <= 0:
-        return None
-    return _decode_entry_element_mod(
-        _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
-        entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, source_element),
+    source_skill_dam_type = safe_int(params_raw, 0, -1)
+    return _emit_raw_entry_element_mod(
         "ET_BUFF_BY_EQUIP_SKILL_NUM",
+        source_skill_dam_type,
+        _base_ids_from_buff_ids(extract_int_list(params_raw, 4), buff_conf),
     )
+
+
+def _emit_raw_entry_element_mod(
+    effect_order_symbol: str,
+    source_code: int,
+    base_ids: list[int],
+) -> tuple[EmitOutcome, str] | None:
+    if not base_ids or len(base_ids) > 3:
+        return None
+    padded = (base_ids + [0, 0, 0])[:3]
+    return emit_effect_order_variant(
+        effect_order_symbol,
+        "raw_entry_element_skill_mod_by_count",
+        source_code,
+        padded[0],
+        padded[1],
+        padded[2],
+    ), SWITCH_IN_TIMING
 
 
 def _decode_hero_event_count_buff(
@@ -192,51 +201,6 @@ def _decode_entry_buff_per_used_skill_count(
     return None
 
 
-def _decode_entry_element_mod(
-    base_ids: list[int],
-    source_code: int,
-    effect_order_symbol: str,
-) -> tuple[EmitOutcome, str] | None:
-    parsed: list[tuple[int, int, int]] = []
-    for base_id in base_ids:
-        base_params = BUFFBASE_PARAMS.get(base_id) or ()
-        order = BUFFBASE_ORDER.get(base_id)
-        if order == 23 and len(base_params) >= 6:
-            mask = _element_mask(base_params[0])
-            mode = _param_int(base_params, 4)
-            amount = _param_int(base_params, 5)
-            if mask and mode in (ENTRY_MOD_POWER_BPS, ENTRY_MOD_POWER_FLAT) and amount > 0:
-                parsed.append((mask, amount, mode))
-        elif order == 32 and len(base_params) >= 4:
-            mask = _element_mask(base_params[0])
-            cost_delta = _param_int(base_params, 3)
-            if mask and cost_delta < 0:
-                parsed.append((mask, abs(cost_delta), ENTRY_MOD_COST_REDUCE))
-        elif order == 35 and len(base_params) >= 5:
-            mask = _element_mask(base_params[0])
-            if mask:
-                parsed.append((mask, 1, ENTRY_MOD_POISON_STACKS))
-    if not parsed:
-        return None
-    modes = {mode for _mask, _amount, mode in parsed}
-    amounts = {amount for _mask, amount, _mode in parsed}
-    if len(modes) != 1 or len(amounts) != 1:
-        return None
-    mask = 0
-    for item_mask, _amount, _mode in parsed:
-        mask |= item_mask
-    amount = parsed[0][1]
-    mode = parsed[0][2]
-    return emit_effect_order_variant(
-        effect_order_symbol,
-        "entry_element_skill_mod_by_count",
-        source_code,
-        mask,
-        amount,
-        mode,
-    ), SWITCH_IN_TIMING
-
-
 def _hero_count_source(params_raw: list) -> int | None:
     if safe_int(params_raw, 7) == 1:
         return entry_source_code(ENTRY_SOURCE_COUNTER)
@@ -249,19 +213,6 @@ def _hero_count_source(params_raw: list) -> int | None:
     if element > 0:
         return entry_source_code(ENTRY_SOURCE_USED_ELEMENT, element)
     return None
-
-
-def _element_mask(value: object) -> int:
-    values = value if isinstance(value, tuple) else (value,)
-    mask = 0
-    for raw in values:
-        try:
-            element = int(raw)
-        except (TypeError, ValueError):
-            continue
-        if element > 0:
-            mask |= 1 << element
-    return mask
 
 
 def _base_ids_from_buff_ids(buff_ids: list[int], buff_conf: dict[int, dict]) -> list[int]:

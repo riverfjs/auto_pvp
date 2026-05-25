@@ -239,6 +239,8 @@ def _apply_cooldown_and_counter_deltas(
 ) -> tuple[PetState, PetState]:
     if ctx.priority_next:
         actor = actor._replace(priority_boost=min(15, actor.priority_boost + ctx.priority_next))
+    if ctx.actor_hit_delta:
+        actor = actor._replace(hit_delta=max(-15, min(15, actor.hit_delta + ctx.actor_hit_delta)))
     if ctx.enemy_hit_delta:
         target = target._replace(hit_delta=max(-15, min(15, target.hit_delta + ctx.enemy_hit_delta)))
     if ctx.enemy_cooldown_turns and ctx.target_skill_slot >= 0:

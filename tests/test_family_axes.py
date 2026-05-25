@@ -52,6 +52,7 @@ P_EXCHANGE_MOVES = effect_order_key("ET_SWAP_SKILLS")
 P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
 P_HEAL_HP = effect_order_key("ET_RECOVER")
 P_HIT_COUNT_DELTA = effect_order_key("ET_MULTIPLE")
+P_TEAM_SKILL_HIT_COUNT = effect_order_variant_key("ET_MULTIPLE", "team_skill_count")
 P_INSTALL_COUNTER = effect_order_key("ET_COUNTER")
 P_LIFE_DRAIN = effect_order_key("ET_SUCKBLOOD")
 P_MIRROR_ENEMY_BUFFS = effect_order_key("ET_COPY_BUFF")
@@ -114,6 +115,20 @@ def test_decode_common_scalar_effect_families(pak, effect_id, handler, p0):
     assert outcome.primitive == handler
     assert outcome.p0 == p0
     assert (outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (0, 0, 0, 1)
+
+
+def test_decode_team_skill_count_hit_family(pak):
+    """ET_MULTIPLE [-1, N, skill_id] adds N hits per carried copy of that skill."""
+    outcome = decode_family_axes(1032012, pak.effect_conf, pak.buff_conf)
+    assert isinstance(outcome, EmitOutcome)
+    assert outcome.primitive == P_TEAM_SKILL_HIT_COUNT
+    assert (outcome.p0, outcome.p1, outcome.p2, outcome.p3, outcome.stacks) == (
+        1,
+        7130160,
+        0,
+        0,
+        1,
+    )
 
 
 def test_decode_zero_change_energy_is_explicit_energy_row(pak):

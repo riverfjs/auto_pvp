@@ -32,6 +32,8 @@ EXACT_PRIMITIVE_BINDINGS: dict[str, str] = {
     effect_order_key("ET_CHANGE_ENERGY"): "H_HEAL_ENERGY",
     effect_order_key("ET_COUNTER"): "H_INSTALL_COUNTER",
     effect_order_key("ET_MULTIPLE"): "H_HIT_COUNT_DELTA",
+    effect_order_variant_key("ET_MULTIPLE", "team_skill_count"):
+        "H_HIT_COUNT_BY_TEAM_SKILL_COUNT",
     effect_order_key("ET_SKILL_CD"): "H_SET_SELF_COOLDOWN",
     effect_order_key("ET_FAST_SKILL"): "H_PRIORITY_NEXT_DELTA",
     effect_order_key("ET_SWAP_SKILLS"): "H_EXCHANGE_MOVES",
@@ -66,6 +68,7 @@ EXACT_PRIMITIVE_BINDINGS: dict[str, str] = {
     struct_key("zero_energy_auto_switch"): "H_AUTO_SWITCH_ON_ZERO_ENERGY",
     struct_key("team_skill_hit_count"): "H_HIT_COUNT_BY_TEAM_SKILL_COUNT",
     struct_key("flat_hit_count_delta"): "H_HIT_COUNT_DELTA",
+    struct_key("hit_count_percent_delta"): "H_HIT_COUNT_PERCENT_DELTA",
     struct_key("heal_reversal"): "H_ANTI_HEAL",
     struct_key("cute_bench_cost_reduce"): "H_CUTE_BENCH_COST_REDUCE",
 }

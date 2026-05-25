@@ -76,6 +76,7 @@ HANDLER_ORDER: tuple[str, ...] = (
     'op_hit_count_delta',
     'op_hit_count_per_poison',
     'op_hit_count_per_poison_effect',
+    'op_hit_count_percent_delta',
     'op_hp_for_energy',
     'op_install_counter',
     'op_interrupt',

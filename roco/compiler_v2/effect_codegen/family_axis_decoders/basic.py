@@ -53,9 +53,18 @@ def decode_counter_install(rec: dict) -> tuple[EmitOutcome, str] | None:
 def decode_hit_count_delta(rec: dict) -> EmitOutcome | None:
     params_raw = params(rec)
     delta = safe_int(params_raw, 0)
-    if delta <= 0 or safe_int(params_raw, 1) != 0 or safe_int(params_raw, 2) != 0:
-        return None
-    return emit_effect_order("ET_MULTIPLE", delta)
+    if delta > 0 and safe_int(params_raw, 1) == 0 and safe_int(params_raw, 2) == 0:
+        return emit_effect_order("ET_MULTIPLE", delta)
+    per_same_skill = safe_int(params_raw, 1)
+    skill_id = safe_int(params_raw, 2)
+    if delta == -1 and per_same_skill > 0 and skill_id >= 100000:
+        return emit_effect_order_variant(
+            "ET_MULTIPLE",
+            "team_skill_count",
+            per_same_skill,
+            skill_id,
+        )
+    return None
 
 
 def decode_self_cooldown(rec: dict) -> EmitOutcome | None:

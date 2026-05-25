@@ -16,7 +16,7 @@ from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
 from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
-from roco.engine.artifacts.primitive_linker import link_primitive_row
+from roco.engine.artifacts.primitive_linker import link_primitive_rows
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
@@ -88,10 +88,12 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
     return chart
 
 
-def _effect_row(row_tuple: Iterable[object], *, source_name: str) -> tuple[int, ...]:
-    values = link_primitive_row(row_tuple, source_name=source_name)
-    handler_idx, timing, target, _rate, p0, p1, p2, p3 = values
-    return (handler_idx, timing, target, 0, 0, p0, p1, p2, p3)
+def _effect_rows(row_tuple: Iterable[object], *, source_name: str) -> tuple[tuple[int, ...], ...]:
+    rows: list[tuple[int, ...]] = []
+    for values in link_primitive_rows(row_tuple, source_name=source_name):
+        handler_idx, timing, target, _rate, p0, p1, p2, p3 = values
+        rows.append((handler_idx, timing, target, 0, 0, p0, p1, p2, p3))
+    return tuple(rows)
 
 
 def _ranges(max_id: int, keyed_rows: list[tuple[int, tuple[int, ...]]]) -> tuple[tuple[int, int], ...]:
@@ -311,9 +313,9 @@ def compile_catalogs(
             flavor_text,
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            effect = _effect_row(raw_effect, source_name=name)
-            skill_effect_keyed.append((skill_id, effect))
-            skill_effect_source_rows.append((skill_id, *effect, order))
+            for effect in _effect_rows(raw_effect, source_name=name):
+                skill_effect_keyed.append((skill_id, effect))
+                skill_effect_source_rows.append((skill_id, *effect, order))
 
     ability_names: list[str] = [""] * (max_ability_id + 1)
     ability_descriptions: list[str] = [""] * (max_ability_id + 1)
@@ -333,9 +335,9 @@ def compile_catalogs(
             str(row.get("source_version", "")),
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            effect = _effect_row(raw_effect, source_name=name)
-            ability_effect_keyed.append((ability_id, effect))
-            ability_effect_source_rows.append((ability_id, *effect, order))
+            for effect in _effect_rows(raw_effect, source_name=name):
+                ability_effect_keyed.append((ability_id, effect))
+                ability_effect_source_rows.append((ability_id, *effect, order))
 
     pet_skills: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (max_pet_id + 1)
     pet_skill_source_rows: list[tuple[int, int, int]] = []
