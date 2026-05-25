@@ -84,6 +84,11 @@ def op_heal_on_grass_skill(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.heal_hp_bps += row[ROW_ARG0]
 
 
+def op_on_skill_element_heal_hp(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.skill_element == row[ROW_ARG0]:
+        ctx.heal_hp_bps += row[ROW_ARG1]
+
+
 def op_skill_cost_reduction_type(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.skill_category == row[ROW_ARG0]:
         if row[ROW_TIMING] == TIMING_HOOK_BEFORE_MOVE:

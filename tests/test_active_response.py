@@ -99,6 +99,38 @@ def test_after_attack_active_response_applies_hit_delta_to_attacker():
     assert side(new_state, SIDE_A).pets[0].hit_delta == -3
 
 
+def test_after_attack_active_response_forces_attacker_switch():
+    assert after_attack_response_supported(20190210)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190210)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.PHYSICAL.value,
+        damage_dealt=10,
+    )
+    assert side(new_state, SIDE_A).active == 1
+
+
+def test_after_attack_active_response_drains_attacker_energy():
+    assert after_attack_response_supported(20190080)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190080)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.MAGICAL.value,
+        damage_dealt=10,
+    )
+    assert side(new_state, SIDE_A).pets[0].current_energy == 7
+
+
 def test_after_attack_active_response_applies_freeze_to_attacker():
     assert after_attack_response_supported(20190070)
     state = make_state((1, 2, 3), (4, 5, 6))

@@ -709,6 +709,80 @@ def test_direct_bft_buff_after_skill_links_attack_status():
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
 
+def test_direct_bft_buff_after_skill_links_element_child_refs():
+    heal = (buff_ref_key(20350030), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(heal, "氧循环") == (
+        "op_on_skill_element_heal_hp",
+        11,
+        1,
+        10000,
+        int(Element.GRASS),
+        1000,
+        0,
+        0,
+    )
+
+    poison = (buff_ref_key(20350270), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(poison, "生物碱") == (
+        "op_on_skill_element_poison",
+        11,
+        1,
+        10000,
+        int(Element.GRASS),
+        2,
+        0,
+        0,
+    )
+
+    cost = (buff_ref_key(20350050), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(cost, "浸润") == (
+        "op_on_skill_element_cost_reduce",
+        11,
+        1,
+        10000,
+        int(Element.WATER),
+        1,
+        0,
+        0,
+    )
+
+    freeze = (buff_ref_key(20230840), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(freeze, "灵魂灼伤") == (
+        "op_on_skill_element_freeze",
+        11,
+        1,
+        10000,
+        int(Element.FIRE),
+        2,
+        0,
+        0,
+    )
+
+    hit_count = (buff_ref_key(20350300), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(hit_count, "乘风连击") == (
+        "op_on_skill_element_hit_count",
+        11,
+        1,
+        10000,
+        int(Element.FLYING),
+        1,
+        0,
+        0,
+    )
+
+    stacked_cost = (buff_ref_key(20350450), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(stacked_cost, "浪潮") == (
+        "op_on_skill_element_cost_reduce",
+        11,
+        1,
+        10000,
+        int(Element.WATER),
+        2,
+        0,
+        0,
+    )
+
+
 def test_after_attack_status_op_gates_on_attack_category():
     ctx = StageCtx()
     ctx.skill_category = SkillCategory.PHYSICAL.value

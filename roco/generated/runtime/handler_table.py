@@ -104,6 +104,7 @@ from roco.engine.kernel.ops.resources import (
     op_low_cost_skill_power_bonus,
     op_on_skill_element_cost_reduce,
     op_on_skill_element_enemy_energy,
+    op_on_skill_element_heal_hp,
     op_passive_energy_reduce,
     op_skill_cost_reduction_type,
     op_steal_all_enemy_energy,
@@ -269,37 +270,38 @@ HANDLERS: tuple = (
     op_on_skill_element_cost_reduce,  # 104
     op_on_skill_element_enemy_energy,  # 105
     op_on_skill_element_freeze,  # 106
-    op_on_skill_element_hit_count,  # 107
-    op_on_skill_element_poison,  # 108
-    op_on_super_effective_buff,  # 109
-    op_passive_energy_reduce,  # 110
-    op_permanent_mod,  # 111
-    op_poison,  # 112
-    op_poison_mark,  # 113
-    op_poison_on_skill_apply,  # 114
-    op_power_by_status_count_elements,  # 115
-    op_power_dynamic,  # 116
-    op_power_dynamic_elements,  # 117
-    op_priority_next_delta,  # 118
-    op_queue_action,  # 119
-    op_self_buff,  # 120
-    op_self_debuff,  # 121
-    op_set_self_cooldown,  # 122
-    op_skill_cost_reduction_type,  # 123
-    op_skill_mod,  # 124
-    op_slow_mark,  # 125
-    op_sluggish_mark,  # 126
-    op_solar_mark,  # 127
-    op_specific_skill_power_bonus,  # 128
-    op_spirit_mark,  # 129
-    op_stat_scale_hits_per_hp_lost,  # 130
-    op_steal_all_enemy_energy,  # 131
-    op_steal_energy,  # 132
-    op_team_synergy_bug_swarm_attack,  # 133
-    op_thorn_mark,  # 134
-    op_transfer_mods,  # 135
-    op_weather,  # 136
-    op_wind_mark,  # 137
+    op_on_skill_element_heal_hp,  # 107
+    op_on_skill_element_hit_count,  # 108
+    op_on_skill_element_poison,  # 109
+    op_on_super_effective_buff,  # 110
+    op_passive_energy_reduce,  # 111
+    op_permanent_mod,  # 112
+    op_poison,  # 113
+    op_poison_mark,  # 114
+    op_poison_on_skill_apply,  # 115
+    op_power_by_status_count_elements,  # 116
+    op_power_dynamic,  # 117
+    op_power_dynamic_elements,  # 118
+    op_priority_next_delta,  # 119
+    op_queue_action,  # 120
+    op_self_buff,  # 121
+    op_self_debuff,  # 122
+    op_set_self_cooldown,  # 123
+    op_skill_cost_reduction_type,  # 124
+    op_skill_mod,  # 125
+    op_slow_mark,  # 126
+    op_sluggish_mark,  # 127
+    op_solar_mark,  # 128
+    op_specific_skill_power_bonus,  # 129
+    op_spirit_mark,  # 130
+    op_stat_scale_hits_per_hp_lost,  # 131
+    op_steal_all_enemy_energy,  # 132
+    op_steal_energy,  # 133
+    op_team_synergy_bug_swarm_attack,  # 134
+    op_thorn_mark,  # 135
+    op_transfer_mods,  # 136
+    op_weather,  # 137
+    op_wind_mark,  # 138
 )
 
 HANDLER_COUNT = len(HANDLERS)

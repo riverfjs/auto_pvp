@@ -3,7 +3,7 @@ from __future__ import annotations
 from roco.common.constants import BPS
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.common.enums import StatusType
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _element_mask, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _element_mask, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, _single_int, _skill_dam_type_to_element, buff_type, effect_type
 from roco.engine.kernel.effects.active_response import after_attack_response_duration_args, after_attack_response_supported
 from roco.engine.kernel.core.rows import TARGET_ENEMY, TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 
@@ -173,6 +173,117 @@ def _link_after_attack_status_buff(buff_id: int, timing: int, target: int, rate:
         return _op('op_after_attack_status', TIMING_PAK_BEFORE_HURT, TARGET_ENEMY, rate, int(StatusType.BURN), stacks)
     return None
 
+def _link_after_skill_element_child_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str) -> tuple[LinkedOp, ...] | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_BUFF_AFTER_SKILL'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 7:
+        return None
+    raw_skill_dam_types = tuple(raw for raw in _as_int_tuple(params[0]) if raw > 0)
+    if not raw_skill_dam_types:
+        return None
+    if not _all_zero(params[1:4]):
+        return None
+    elements = _skill_dam_type_elements(raw_skill_dam_types, source_name=source_name)
+    if not elements:
+        return None
+    refs = tuple(ref_id for ref_id in _as_int_tuple(params[4]) if ref_id > 0)
+    target_code = _param_int(params, 5)
+    tail = _param(params, 6)
+
+    if target_code == 0 and _all_zero((tail,)):
+        if len(refs) == 1 and EFFECT_ORDER.get(refs[0]) == effect_type('ET_RECOVER'):
+            amount = _param_int(EFFECT_PARAMS.get(refs[0]) or (), 1)
+            if amount > 0:
+                return tuple(
+                    _op('op_on_skill_element_heal_hp', timing, target, rate, element, amount)
+                    for element in elements
+                )
+        amount = _sum_all_skill_cost_reduce_amount(refs)
+        if amount > 0:
+            return tuple(
+                _op('op_on_skill_element_cost_reduce', timing, target, rate, element, amount)
+                for element in elements
+            )
+        hit_count = _sum_hit_count_delta_amount(refs)
+        if hit_count > 0:
+            return tuple(
+                _op('op_on_skill_element_hit_count', timing, target, rate, element, hit_count)
+                for element in elements
+            )
+        packed = _pack_buff_delta_from_buff_ids(refs)
+        if packed:
+            return tuple(
+                _op('op_on_skill_element_buff', timing, target, rate, element, packed)
+                for element in elements
+            )
+
+    if target_code == 2 and _all_zero((tail,)):
+        if refs and all(_is_poison_status(ref_id) for ref_id in refs):
+            return tuple(
+                _op('op_on_skill_element_poison', timing, target, rate, element, len(refs))
+                for element in elements
+            )
+        if refs and all(_is_burn_status(ref_id) for ref_id in refs):
+            return tuple(
+                _op('op_on_skill_element_burn', timing, target, rate, element, len(refs))
+                for element in elements
+            )
+        if refs and all(_is_freeze_status(ref_id) for ref_id in refs):
+            return tuple(
+                _op('op_on_skill_element_freeze', timing, target, rate, element, len(refs))
+                for element in elements
+            )
+    return None
+
+def _sum_all_skill_cost_reduce_amount(buff_ids: tuple[int, ...]) -> int:
+    if not buff_ids:
+        return 0
+    total = 0
+    for buff_id in buff_ids:
+        amount = _all_skill_cost_reduce_amount(buff_id)
+        if amount <= 0:
+            return 0
+        total += amount
+    return total
+
+def _skill_dam_type_elements(skill_dam_types: tuple[int, ...], *, source_name: str) -> tuple[int, ...]:
+    elements: list[int] = []
+    for skill_dam_type in skill_dam_types:
+        try:
+            element = _skill_dam_type_to_element(skill_dam_type, source_name=source_name)
+        except RuntimeError:
+            return ()
+        if element not in elements:
+            elements.append(element)
+    return tuple(elements)
+
+def _sum_hit_count_delta_amount(buff_ids: tuple[int, ...]) -> int:
+    if not buff_ids:
+        return 0
+    total = 0
+    for buff_id in buff_ids:
+        amount = _hit_count_delta_amount(buff_id)
+        if amount <= 0:
+            return 0
+        total += amount
+    return total
+
+def _hit_count_delta_amount(buff_id: int) -> int:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_MULTIPLE_NUM'):
+        return 0
+    params = rows[0][2]
+    if len(params) < 4:
+        return 0
+    amount = _single_int(params[0])
+    if amount is None or amount <= 0:
+        return 0
+    if not _all_zero(params[1:]):
+        return 0
+    return amount
+
 def _link_freeze_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)
     if len(rows) != 1 or rows[0][1] != buff_type('BFT_FREEZE'):
@@ -181,6 +292,10 @@ def _link_freeze_buff(buff_id: int, timing: int, target: int, rate: int) -> Link
     if tuple(params) != (1, 500, 0, 50):
         return None
     return _op('op_freeze', timing, target, rate, 1)
+
+def _is_freeze_status(buff_id: int) -> bool:
+    rows = _base_rows(buff_id)
+    return len(rows) == 1 and rows[0][1] == buff_type('BFT_FREEZE') and tuple(rows[0][2]) == (1, 500, 0, 50)
 
 def _link_after_attack_response_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     if not after_attack_response_supported(buff_id):

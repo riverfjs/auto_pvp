@@ -139,6 +139,10 @@ def _ref_supported(ref_id: int, target: int) -> bool:
         return True
     if _inert_response_ref(ref_id):
         return True
+    if _force_switch_ref(ref_id):
+        return True
+    if _energy_delta_supported(ref_id, target):
+        return True
     return bool(_buff_delta(ref_id))
 
 
@@ -182,6 +186,20 @@ def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
         return
     if _inert_response_ref(ref_id):
         return
+    if _force_switch_ref(ref_id):
+        if target == TARGET_SELF:
+            ctx.force_switch = 1
+        else:
+            ctx.force_enemy_switch = 1
+        return
+    energy_delta = _energy_delta(ref_id)
+    if energy_delta is not None:
+        if target == TARGET_SELF and energy_delta > 0:
+            ctx.heal_energy += energy_delta
+            return
+        if target == TARGET_ENEMY and energy_delta < 0:
+            ctx.enemy_lose_energy += abs(energy_delta)
+            return
     packed = _buff_delta(ref_id)
     if packed:
         if target == TARGET_SELF:
@@ -265,6 +283,31 @@ def _zero_delta_refs(ref_ids: tuple[int, ...]) -> bool:
 
 def _inert_response_ref(ref_id: int) -> bool:
     return _zero_stat_delta_buff(ref_id) or _buff_after_skill_purifies_zero_delta_sentinels(ref_id)
+
+
+def _force_switch_ref(buff_id: int) -> bool:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != _buff_type("BFT_PET_TRANSE"):
+        return False
+    _base_id, _order, params = rows[0]
+    return len(params) >= 2 and _param_int(params, 1) == 1 and _params_all_zero(params[2:])
+
+
+def _energy_delta_supported(effect_id: int, target: int) -> bool:
+    delta = _energy_delta(effect_id)
+    return (target == TARGET_SELF and delta is not None and delta > 0) or (
+        target == TARGET_ENEMY and delta is not None and delta < 0
+    )
+
+
+def _energy_delta(effect_id: int) -> int | None:
+    if EFFECT_ORDER.get(effect_id) != _effect_type("ET_CHANGE_ENERGY"):
+        return None
+    params = EFFECT_PARAMS.get(effect_id) or ()
+    if len(params) < 3 or not _params_all_zero(params[1:]):
+        return None
+    direct = _param_int(params, 0)
+    return direct if direct else None
 
 
 def _buff_after_skill_purifies_zero_delta_sentinels(buff_id: int) -> bool:
