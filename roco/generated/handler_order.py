@@ -3,6 +3,7 @@
 HANDLER_ORDER: tuple[str, ...] = (
     '_noop',
     'op_anti_heal',
+    'op_apply_active_buff',
     'op_attack_mark',
     'op_auto_switch_on_zero_energy',
     'op_bloodline_entry',

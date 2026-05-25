@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from roco.compiler_v2.buff_immunity_decoders import load_buff_immunity_table
 from roco.common.primitive_keys import status_note_key, struct_key
 from roco.compiler_v2.model import StaticBundle
 from roco.compiler_v2.primitive_axes import resolve_primitive_axes
@@ -115,6 +116,7 @@ def _build_buff_id_primitive_map(
         for note_id in (1001, 1002, 1008)
         if note_id in desc_notes
     }
+    active_immunity_buff_ids = set(load_buff_immunity_table(buff_conf=buff_rows))
     auto_switch_buff_ids = _derive_zero_energy_auto_switch_buff_ids(
         skill_rows,
         buff_rows,
@@ -159,6 +161,14 @@ def _build_buff_id_primitive_map(
                 buff_id,
                 struct_key("zero_energy_auto_switch"),
                 "SKILL_CONF order-52 zero-energy condition chain",
+            )
+
+        if buff_id in active_immunity_buff_ids:
+            _put_exact_buff_primitive(
+                out,
+                buff_id,
+                struct_key("active_immunity_buff"),
+                "BUFF_CONF.desc immunity phrase",
             )
 
         if _is_team_skill_hit_count_buff(rec, buffbase_rows):

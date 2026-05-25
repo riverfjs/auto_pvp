@@ -1,19 +1,16 @@
 """Phase 5B-mini: ledger-driven immunity consumer smoke tests.
 
-These tests manually seed ``PetState.active_buffs`` with the two pak buff
-ids Phase 2A registered in ``BUFF_IMMUNITY_TABLE`` (20030010 / 20030011)
-and verify that the runtime immunity consumers added in Phase 5B-mini
-honour the flags:
+These tests use the active-buff ledger with the pak buff ids registered in
+``BUFF_IMMUNITY_TABLE`` (for example 20030010 / 20030011) and verify that
+the runtime immunity consumers honour the flags:
 
 * ``apply_status_effect`` rejects poison / burn / freeze / leech when
   the target carries a matching IMMUNITY_* flag via its active buffs.
 * ``apply_after_move`` honours IMMUNITY_FORCE_SWITCH against
   ``ctx.force_enemy_switch`` (the "blow away" path).
 
-By design these tests do **not** exercise any code that *applies*
-20030010 / 20030011 to a pet — Phase 5B-mini ships zero buff-application
-runtime.  The buffs reach ``active_buffs`` only because the tests pack
-them into the ledger by hand.  No gap rows are affected by this phase.
+The manual seeding tests pin the ledger semantics, and the op test covers
+the runtime path that applies pak immunity buffs to ``active_buffs``.
 """
 
 from __future__ import annotations
@@ -21,10 +18,13 @@ from __future__ import annotations
 from roco.common.enums import StatusFlag, StatusType
 from roco.engine.common.choices import SIDE_A, SIDE_B
 from roco.engine.kernel.active_buffs import (
+    active_buff_id,
     effective_immunity_flags,
     pack_active_buff,
 )
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.op_mods.buffs import op_apply_active_buff
+from roco.engine.kernel.op_rows import TARGET_SELF
 from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.residual.status_ticks import apply_status_effect
 from roco.engine.kernel.state import (
@@ -89,6 +89,17 @@ def test_mixed_ledger_ors_contributions():
     flags = effective_immunity_flags(packed)
     # Should include every bit either buff contributes.
     assert flags == BUFF_IMMUNITY_TABLE[20030010] | BUFF_IMMUNITY_TABLE[20030011]
+
+
+def test_apply_active_immunity_buff_op_writes_ledger():
+    state = make_state((1, 2, 3), (4, 5, 6))
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    op_apply_active_buff(ctx, (0, 0, TARGET_SELF, 10000, 0, 20030010, 13, 999, 0))
+    new_state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
+    lane = side(new_state, SIDE_A).pets[0].active_buffs
+    assert active_buff_id(lane) == 20030010
+    assert effective_immunity_flags(lane) & IMMUNITY_FORCE_SWITCH
 
 
 # ── apply_status_effect honours ledger immunity ──────────────────────────

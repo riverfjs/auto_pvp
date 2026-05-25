@@ -24,6 +24,7 @@ from roco.engine.kernel.op_rows import (
     ROW_ARG3,
     ROW_TARGET,
     TARGET_ALLY,
+    TARGET_ENEMY,
     TARGET_SELF,
     TARGET_TEAM,
 )
@@ -101,6 +102,20 @@ def op_self_debuff(ctx: StageCtx, row: tuple[int, ...]) -> None:
 def op_enemy_debuff(ctx: StageCtx, row: tuple[int, ...]) -> None:
     delta = pack_buff_delta_from_row(row, ROW_ARG0, ROW_ARG3 + 1)
     ctx.enemy_buff = _merge_buff_delta(ctx.enemy_buff, delta)
+
+
+def op_apply_active_buff(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    buff_id = row[ROW_ARG0]
+    if buff_id <= 0:
+        raise RuntimeError(f"active buff row has invalid buff_id {buff_id}")
+    duration = _active_buff_duration_from_reduce(row[ROW_ARG1], row[ROW_ARG2], row[ROW_ARG3])
+    target = row[ROW_TARGET]
+    if target == TARGET_SELF:
+        _set_active_buff_request(ctx, "self", buff_id, duration)
+    elif target == TARGET_ENEMY:
+        _set_active_buff_request(ctx, "enemy", buff_id, duration)
+    else:
+        raise RuntimeError(f"active buff row has unsupported target_type {target}")
 
 
 def op_permanent_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
@@ -221,3 +236,26 @@ def op_dispel_debuffs(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.clear_self_debuffs = 1
     else:
         ctx.clear_enemy_debuffs = 1
+
+
+def _active_buff_duration_from_reduce(reduce_type: int, param0: int, param1: int) -> int:
+    if reduce_type == 13 and param0 == 999 and param1 == 0:
+        return 0
+    raise RuntimeError(
+        f"unsupported active buff reduce rule reduce_type={reduce_type} "
+        f"params=({param0}, {param1})"
+    )
+
+
+def _set_active_buff_request(ctx: StageCtx, target: str, buff_id: int, duration: int) -> None:
+    id_attr = f"{target}_active_buff_id"
+    duration_attr = f"{target}_active_buff_duration"
+    existing = getattr(ctx, id_attr)
+    existing_duration = getattr(ctx, duration_attr)
+    if existing and (existing != buff_id or existing_duration != duration):
+        raise RuntimeError(
+            f"multiple active buff requests for {target}: "
+            f"{existing}/{existing_duration} and {buff_id}/{duration}"
+        )
+    setattr(ctx, id_attr, buff_id)
+    setattr(ctx, duration_attr, duration)

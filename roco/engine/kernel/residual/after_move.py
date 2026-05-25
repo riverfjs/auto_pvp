@@ -24,7 +24,7 @@ from roco.common.packing import (
     _unpack_mark,
 )
 from roco.engine.common.rng import next_rng
-from roco.engine.kernel.active_buffs import effective_immunity_flags
+from roco.engine.kernel.active_buffs import add_active_buff, effective_immunity_flags
 from roco.engine.kernel.catalog import PET_ABILITY, STAT_HP
 from roco.engine.kernel.ctx import StageCtx
 from roco.engine.kernel.residual._shared import energy_cap
@@ -166,6 +166,22 @@ def _apply_buff_and_cleanse_deltas(
         actor = actor._replace(buff_stages=_merge_buff_delta(actor.buff_stages, self_buff))
     if ctx.enemy_buff:
         target = target._replace(buff_stages=_merge_buff_delta(target.buff_stages, ctx.enemy_buff))
+    if ctx.self_active_buff_id:
+        actor = actor._replace(active_buffs=add_active_buff(
+            actor.active_buffs,
+            ctx.self_active_buff_id,
+            ctx.actor_side,
+            ctx.actor_slot,
+            ctx.self_active_buff_duration,
+        ))
+    if ctx.enemy_active_buff_id:
+        target = target._replace(active_buffs=add_active_buff(
+            target.active_buffs,
+            ctx.enemy_active_buff_id,
+            ctx.actor_side,
+            ctx.actor_slot,
+            ctx.enemy_active_buff_duration,
+        ))
     if ctx.debuff_extra_layers:
         target = target._replace(buff_stages=_add_to_negative_buff_lanes(target.buff_stages, ctx.debuff_extra_layers))
     if ctx.swap_mods:

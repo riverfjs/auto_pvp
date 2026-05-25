@@ -42,7 +42,7 @@ Total families: **186**
 - editor_names: 免疫
 - source_descriptions: 免疫吹飞, 免疫吹飞，中毒，寄生，灼烧，冻结。
 - example_source_ids: [20030010, 20030011, 20030160, 20030220, 20030330]
-- coverage_breakdown: {'auto_structural_count': 3, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 3, 'ability_flag_count': 0}
+- coverage_breakdown: {'auto_structural_count': 5, 'exact_semantic_count': 0, 'generated_weather_count': 0, 'gap_count': 1, 'ability_flag_count': 0}
 - sample_skill_consumers:
     - `7180200` 应对！灾厄 — 对自己造成物伤，应对状态：改为对敌方造成物伤，且本次技能威力+120。
     - `7130221` 虫鸣 — 造成魔伤，队伍中的精灵每携带1个虫鸣，本次技能连击数+1。

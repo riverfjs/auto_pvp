@@ -94,6 +94,7 @@ _FLAT_HIT_COUNT_DELTA = struct_key("flat_hit_count_delta")
 _HIT_COUNT_PERCENT_DELTA = struct_key("hit_count_percent_delta")
 _HEAL_REVERSAL = struct_key("heal_reversal")
 _CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
+_ACTIVE_IMMUNITY_BUFF = struct_key("active_immunity_buff")
 _ET_MULTIPLE = effect_order_key("ET_MULTIPLE")
 
 
@@ -196,6 +197,9 @@ def pack_primitive_params(
         if amount <= 0:
             raise RuntimeError(f"cannot derive cute bench cost reduction from buff {buff_id}")
         return (amount, 0, 0, 0)
+    if primitive == _ACTIVE_IMMUNITY_BUFF:
+        reduce_type, reduce_param0, reduce_param1 = _single_reduce_rule(buff_id, buff_conf)
+        return (buff_id, reduce_type, reduce_param0, reduce_param1)
     if primitive in _STAT_DELTA_BUFF_TYPES:
         return (pack_buff_delta_from_base_ids(tuple(int(v) for v in base_ids)), 0, 0, 0)
     p = (base_ids + [0, 0, 0, 0])[:4]
@@ -277,3 +281,18 @@ def _cute_bench_cost_reduce_amount(base_ids: list[int], buff_conf: dict[int, dic
         if cost_delta is not None and cost_delta < 0:
             return abs(cost_delta)
     return 0
+
+
+def _single_reduce_rule(buff_id: int, buff_conf: dict[int, dict]) -> tuple[int, int, int]:
+    rec = buff_conf.get(buff_id) or {}
+    rules = rec.get("buff_group_reduce") or []
+    if len(rules) != 1 or not isinstance(rules[0], dict):
+        raise RuntimeError(f"active immunity buff {buff_id} must have one pak reduce rule")
+    rule = rules[0]
+    reduce_type = int(rule.get("reduce_type") or 0)
+    params = rule.get("reduce_param") or []
+    if not isinstance(params, list):
+        params = []
+    p0 = int(params[0]) if len(params) > 0 else 0
+    p1 = int(params[1]) if len(params) > 1 else 0
+    return reduce_type, p0, p1

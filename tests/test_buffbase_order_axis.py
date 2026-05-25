@@ -49,6 +49,7 @@ from roco.engine.kernel.op_rows import TIMING_PAK_SDT
 from roco.generated import handler_indices as hi
 
 P_ANTI_HEAL = struct_key("heal_reversal")
+P_ACTIVE_IMMUNITY_BUFF = struct_key("active_immunity_buff")
 P_CUTE_BENCH_COST_REDUCE = struct_key("cute_bench_cost_reduce")
 P_CUTE_HIT_PER_STACK = source_context_key("cute_hit_per_stack")
 P_BFT_O_T = buff_type_key("BFT_O_T")
@@ -700,3 +701,37 @@ def test_runtime_classifier_outlier_routes_to_via_order_handler(buffbase_conf):
     buff_conf_stub = {99999999: {"buff_base_ids": [target_bid]}}
     h = cls.classify_buff_primitive(99999999, buff_conf_stub)
     assert h == P_FORCE_SWITCH
+
+
+def test_immunity_desc_buff_maps_to_active_immunity_primitive():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20030010,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert gaps == []
+    assert rows == [(
+        P_ACTIVE_IMMUNITY_BUFF,
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        20030010,
+        13,
+        999,
+        0,
+    )]
+
+
+def test_non_immunity_bft_immune_shape_stays_gap():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20030220,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert rows == []
+    assert gaps[0]["primitive"] == "prefix_2003"
+    assert gaps[0]["params"]["buff_id"] == 20030220

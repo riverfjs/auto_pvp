@@ -65,6 +65,7 @@ EXACT_PRIMITIVE_BINDINGS: dict[str, str] = {
     status_note_key("中毒"): "H_POISON",
     status_note_key("灼烧"): "H_BURN",
     status_note_key("寄生"): "H_LEECH",
+    struct_key("active_immunity_buff"): "H_APPLY_ACTIVE_BUFF",
     struct_key("zero_energy_auto_switch"): "H_AUTO_SWITCH_ON_ZERO_ENERGY",
     struct_key("team_skill_hit_count"): "H_HIT_COUNT_BY_TEAM_SKILL_COUNT",
     struct_key("flat_hit_count_delta"): "H_HIT_COUNT_DELTA",

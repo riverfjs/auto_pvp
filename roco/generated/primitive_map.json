@@ -2,9 +2,15 @@
   "buff_id_map": {
     "20010090": "mark_note:减速印记",
     "20010092": "mark_note:减速印记",
+    "20030010": "struct:active_immunity_buff",
+    "20030011": "struct:active_immunity_buff",
+    "20030031": "struct:active_immunity_buff",
+    "20030041": "struct:active_immunity_buff",
+    "20030051": "struct:active_immunity_buff",
     "20030160": "struct:zero_energy_auto_switch",
     "20030190": "struct:team_skill_hit_count",
     "20030330": "struct:team_skill_hit_count",
+    "20030340": "struct:active_immunity_buff",
     "20030350": "struct:team_skill_hit_count",
     "20030390": "struct:team_skill_hit_count",
     "20050010": "status_note:寄生",
@@ -1434,7 +1440,7 @@
   "stats": {
     "total_base_ids": 1953,
     "total_prefixes": 136,
-    "buff_ids_exact": 55,
+    "buff_ids_exact": 61,
     "mixed_prefix_count": 3,
     "base_ids_via_order": 1367,
     "unmapped_prefixes": [
