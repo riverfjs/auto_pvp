@@ -51,6 +51,7 @@ from roco.engine.kernel.catalog import (
 )
 from roco.engine.kernel.counter import fire_counter_skill
 from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.active_response import trigger_after_attack_active_buffs
 from roco.engine.kernel.damage import damage, marked_skill_cost
 from roco.engine.kernel.op_rows import (
     TIMING_PAK_BEFORE_HURT,
@@ -288,6 +289,20 @@ def _execute(
                 actor = actor_side.pets[actor_slot]
                 target_side = side(state, target_side_id)
                 target = target_side.pets[target_slot]
+        if dealt > 0 and target.current_hp > 0:
+            state = trigger_after_attack_active_buffs(
+                state,
+                actor_side_id,
+                actor_slot,
+                target_side_id,
+                target_slot,
+                skill[SKILL_CATEGORY],
+                dealt,
+            )
+            actor_side = side(state, actor_side_id)
+            actor = actor_side.pets[actor_slot]
+            target_side = side(state, target_side_id)
+            target = target_side.pets[target_slot]
     if skill_id > 0:
         actor_side = side(state, actor_side_id)
         actor = actor_side.pets[actor_slot]

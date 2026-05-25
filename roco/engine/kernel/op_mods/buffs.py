@@ -220,6 +220,8 @@ def op_dispel_debuffs(ctx: StageCtx, row: tuple[int, ...]) -> None:
 def _active_buff_duration_from_reduce(reduce_type: int, param0: int, param1: int) -> int:
     if reduce_type == 13 and param0 == 999 and param1 == 0:
         return 0
+    if reduce_type == 2 and param0 > 0:
+        return param0
     raise RuntimeError(
         f"unsupported active buff reduce rule reduce_type={reduce_type} "
         f"params=({param0}, {param1})"

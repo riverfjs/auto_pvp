@@ -3148,6 +3148,7 @@
         "roco/engine/artifacts/pak_ref_buffs.py",
         "roco/engine/artifacts/pak_ref_linker.py",
         "roco/engine/kernel/active_buffs.py",
+        "roco/engine/kernel/active_response.py",
         "roco/engine/kernel/residual/status_ticks.py",
         "roco/generated/buff_defs.py",
         "roco/generated/buff_immunity_table.py",
@@ -3191,6 +3192,7 @@
       "code_refs": [
         "roco/compiler_v2/static_artifacts/buffs.py",
         "roco/engine/artifacts/pak_ref_common.py",
+        "roco/engine/kernel/active_response.py",
         "roco/generated/buff_defs.py",
         "roco/generated/static/lua_enums.py"
       ],
