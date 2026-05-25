@@ -75,7 +75,7 @@ def link_primitive_rows(row: Iterable[object], *, source_name: str) -> tuple[Lin
         source_name=source_name,
     )
     if pak_ref is not None:
-        return (pak_ref,)
+        return pak_ref
 
     entry_energy = _link_bft_o_t_entry_energy(
         primitive,

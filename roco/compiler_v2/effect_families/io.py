@@ -1,4 +1,4 @@
-"""pak / canonical record / compiler semantic loaders.
+"""pak / canonical record loaders.
 
 No behavioural reuse from :mod:`roco.data` — these helpers read directly
 from disk so the family catalog stays buildable as a static artifact.
@@ -30,14 +30,3 @@ def _load_desc_notes() -> dict[int, str]:
 
 def _load_canonical(name: str) -> list[dict]:
     return canonical_list(name)
-
-
-def _load_exact_rules() -> set[int]:
-    """Return exact_emit_ids.
-
-    Exact effect_id semantics have been migrated to pak family decoders;
-    the family catalog keeps this hook only for generated exact emitters
-    such as weather rows.
-    """
-
-    return set()

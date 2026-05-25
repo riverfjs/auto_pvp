@@ -6,14 +6,14 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from roco.common.enums import AbilityFlag
-from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
+from roco.data.ability_flags_from_effects import (
     load_ability_flags_from_effects,
     normalized_payload as _rules_normalized_payload,
 )
-from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome
+from roco.data.ability_flag_rules import AbilityFlagRule
 
 
-def load_effect_flag_table() -> dict[int, AbilityFlagOutcome]:
+def load_effect_flag_table() -> dict[int, AbilityFlagRule]:
     """Load the ability-flag semantic table using default pak paths."""
 
     return load_ability_flags_from_effects()
@@ -22,7 +22,7 @@ def load_effect_flag_table() -> dict[int, AbilityFlagOutcome]:
 def populate(
     ability_effect_ids: Iterable[tuple[int, int, int, int, int, int, int] | Mapping[str, Any]],
     *,
-    effect_to_flag: dict[int, AbilityFlagOutcome],
+    effect_to_flag: dict[int, AbilityFlagRule],
     ability_flags: list[int],
 ) -> int:
     """OR matched flag bits into ``ability_flags`` in place."""
@@ -52,7 +52,7 @@ def populate(
 
 
 def normalized_payload(
-    effect_to_flag: dict[int, AbilityFlagOutcome] | None = None,
+    effect_to_flag: dict[int, AbilityFlagRule] | None = None,
 ) -> tuple[tuple[int, str], ...]:
     """Stable ``(skill_result.effect_id, flag_name)`` tuple for source hashing."""
 

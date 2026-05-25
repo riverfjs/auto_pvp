@@ -23,22 +23,21 @@ from roco.common.primitive_keys import (
     buff_ref_key,
     buff_type_key,
     effect_ref_key,
-    effect_order_key,
 )
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
 from roco.common.enums import AbilityFlag, Element
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
-from roco.compiler_v2.effect_codegen.ability_flags_from_effects import load_ability_flags_from_effects
+from roco.data.ability_flags_from_effects import load_ability_flags_from_effects
 from roco.compiler_v2.effect_codegen.classify import decode_buff_direct
-from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
-from roco.compiler_v2.effect_codegen.params import pack_primitive_params
+from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome
 from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primitive_axes
-from roco.compiler_v2.timing_keys import ENGINE_HOOK_BEFORE_MOVE, pak_cast_moment_key
-from roco.engine.artifacts.primitive_linker import link_primitive_row
-from roco.engine.kernel.op_rows import TIMING_PAK_SDT
+from roco.compiler_v2.timing_keys import pak_cast_moment_key
+from roco.engine.artifacts.linked_op import LinkGapError
+from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_SDT
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -47,9 +46,7 @@ P_CUTE_HIT_PER_STACK = buff_ref_key(20910020)
 P_BFT_O_T = buff_type_key("BFT_O_T")
 P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
 P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
-P_HEAL_ENERGY = effect_order_key("ET_CHANGE_ENERGY")
 P_HIT_COUNT_PER_POISON_EFFECT = buff_ref_key(20910010)
-P_METEOR_MARK = buff_ref_key(20940010)
 P_MOISTURE_MARK = buff_ref_key(20320070)
 P_PASSIVE_ENERGY_REDUCE = buff_type_key("BFT_CHANGE_SKILL_ENERGY_COST")
 P_POISON_MARK = buff_ref_key(20070011)
@@ -65,9 +62,6 @@ BUFFBASE_CONF_PATH = (
 )
 
 
-TIMING_HOOK_BEFORE_MOVE = ENGINE_HOOK_BEFORE_MOVE
-
-
 def _linked_tuple(row: tuple, source_name: str = "fixture") -> tuple:
     linked = link_primitive_row(row, source_name=source_name)
     return (
@@ -77,6 +71,19 @@ def _linked_tuple(row: tuple, source_name: str = "fixture") -> tuple:
         linked.rate,
         *linked.runtime_args(),
     )
+
+
+def _linked_tuples(row: tuple, source_name: str = "fixture") -> list[tuple]:
+    return [
+        (
+            linked.op_name,
+            linked.timing,
+            linked.target,
+            linked.rate,
+            *linked.runtime_args(),
+        )
+        for linked in link_primitive_rows(row, source_name=source_name)
+    ]
 
 
 @pytest.fixture(scope="module")
@@ -220,15 +227,14 @@ def test_runtime_classifier_routes_heal_reversal_exact_buff():
 
 
 def test_runtime_classifier_routes_cute_bench_cost_reduce_exact_buff():
-    """Order-40 cute-stack trigger maps only the proved all-skill cost reducer."""
+    """Order-40 cute-stack trigger stays an exact pak buff ref in the audit axis."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
     handler = cls.classify_buff_primitive(20400130, pak.buff_conf)
     assert handler == P_CUTE_BENCH_COST_REDUCE
-    assert pack_primitive_params(handler, 20400130, pak.buff_conf) == (1, 0, 0, 0)
 
 
 def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
-    """Order-45 hit-count rows are exact structural rows, not a whole-order rule."""
+    """Order-45 hit-count rows are exact pak refs, not a whole-order rule."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     plus = cls.classify_buff_primitive(20450050, pak.buff_conf)
@@ -237,24 +243,20 @@ def test_runtime_classifier_routes_only_flat_hit_count_exact_buffs():
     assert plus == buff_ref_key(20450050)
     assert minus == buff_ref_key(20450090)
     assert specific == buff_ref_key(20450020)
-    assert pack_primitive_params(plus, 20450050, pak.buff_conf) == (1, 0, 0, 0)
-    assert pack_primitive_params(minus, 20450090, pak.buff_conf) == (1, 0, 0, 0)
-    assert pack_primitive_params(specific, 20450020, pak.buff_conf) == (1, 0, 0, 0)
-    assert pack_primitive_params(specific, 20450070, pak.buff_conf) == (1, 0, 0, 0)
 
     percent = cls.classify_buff_primitive(20450030, pak.buff_conf)
     assert percent == buff_ref_key(20450030)
-    assert pack_primitive_params(percent, 20450030, pak.buff_conf) == (1, 0, 0, 0)
 
     assert cls.classify_buff_primitive(21150010, pak.buff_conf) == ""
 
     drive_outcome = decode_buff_direct(21150010, pak.buff_conf)[0]
-    assert isinstance(drive_outcome, GapOutcome)
-    assert drive_outcome.primitive == "prefix_2115"
+    assert isinstance(drive_outcome, EmitOutcome)
+    assert drive_outcome.primitive == buff_ref_key(21150010)
 
     hit_outcome = decode_buff_direct(20450050, pak.buff_conf)[0]
     assert isinstance(hit_outcome, EmitOutcome)
-    assert hit_outcome.p0 == 1
+    assert hit_outcome.primitive == buff_ref_key(20450050)
+    assert hit_outcome.p0 == 0
 
 
 def test_bft_multiple_num_decodes_specific_and_percent_rows():
@@ -312,13 +314,12 @@ def test_bft_multiple_num_decodes_specific_and_percent_rows():
 def test_equip_skill_num_decodes_damage_reduction_family():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
-    rows, gaps = generate_effect_rows(pak.skill_conf[200074], pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(pak.skill_conf[200074], pak)
     assert gaps == []
-    normal_raw = (effect_ref_key(1064012), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
-    light_raw = (effect_ref_key(1064017), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
-    assert normal_raw in rows
-    assert light_raw in rows
-    assert _linked_tuple(normal_raw, "偏振") == (
+    assign_raw = (buff_ref_key(20171720), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert rows == [assign_raw]
+    linked = _linked_tuples(assign_raw, "偏振")
+    assert (
         "op_entry_element_damage_reduce_by_count",
         24,
         1,
@@ -327,8 +328,8 @@ def test_equip_skill_num_decodes_damage_reduction_family():
         1 << Element.NORMAL,
         40,
         0,
-    )
-    assert _linked_tuple(light_raw, "偏振") == (
+    ) in linked
+    assert (
         "op_entry_element_damage_reduce_by_count",
         24,
         1,
@@ -337,17 +338,24 @@ def test_equip_skill_num_decodes_damage_reduction_family():
         1 << Element.GROUND,
         40,
         0,
-    )
+    ) in linked
 
-    rows, _gaps = generate_effect_rows(pak.skill_conf[280010], pak, allow_ability_flags=True)
+    rows, _gaps = generate_effect_rows(pak.skill_conf[280010], pak)
+    assign_resist_raw = (buff_ref_key(20171820), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert assign_resist_raw in rows
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(assign_resist_raw, source_name="完全偏振")
+    assert exc_info.value.gap.effect_id == 1064036
+    assert exc_info.value.gap.reason == "effect_shape_unsupported"
+
     normal_resist_raw = (effect_ref_key(1064031), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     ground_resist_raw = (effect_ref_key(1064037), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     dragon_resist_raw = (effect_ref_key(1064039), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
-    assert normal_resist_raw in rows
-    assert ground_resist_raw in rows
-    assert dragon_resist_raw in rows
 
-    linked = [_linked_tuple(row, "完全偏振") for row in rows if str(row[0]).startswith("effect_ref:10640")]
+    linked = [
+        _linked_tuple(row, "完全偏振")
+        for row in (normal_resist_raw, ground_resist_raw, dragon_resist_raw)
+    ]
     assert (
         "op_entry_element_damage_resist_by_count",
         24,
@@ -386,16 +394,18 @@ def test_equip_skill_num_decodes_damage_reduction_family():
         "result_target_type": 1,
         "success_rate": 10000,
     }]}, pak)
-    assert rows == []
-    assert gaps[0]["primitive"] == "effect_1064036"
+    assert rows == [(effect_ref_key(1064036), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)]
+    assert gaps == []
+    with pytest.raises(LinkGapError):
+        link_primitive_rows(rows[0], source_name="完全偏振")
 
 
 def test_equip_skill_num_maps_skill_dam_type_to_engine_element_for_skill_mods():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
-    rows, gaps = generate_effect_rows(pak.skill_conf[200111], pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(pak.skill_conf[200111], pak)
     assert gaps == []
-    raw = (effect_ref_key(1064001), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
+    raw = (effect_ref_key(1064001), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)
     assert raw in rows
     assert _linked_tuple(raw, "溶解扩散") == (
         "op_entry_element_poison_stacks_by_count",
@@ -470,7 +480,7 @@ def test_bft_o_t_links_entry_energy_from_pak_static():
 
 
 def test_bft_assign_expands_unconditional_refs_with_target_override():
-    """BFT_ASSIGN is a structural dispatcher, not a runtime hit-count op."""
+    """BFT_ASSIGN remains a buff_ref in compiler and expands in engine linker."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     rows, gaps = generate_effect_rows({"skill_result": [{
@@ -480,7 +490,18 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         "success_rate": 10000,
     }]}, pak)
     assert gaps == []
-    assert rows == [(P_HEAL_ENERGY, pak_cast_moment_key(12), 1, 10000, 3, 0, 0, 0)]
+    raw = (buff_ref_key(20170090), pak_cast_moment_key(12), 1, 10000, 0, 0, 0, 0)
+    assert rows == [raw]
+    assert _linked_tuples(raw, "assign") == [(
+        "op_heal_energy",
+        12,
+        1,
+        10000,
+        3,
+        0,
+        0,
+        0,
+    )]
 
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20170830,  # -> two 星陨印记 refs, target override=2
@@ -489,9 +510,11 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         "success_rate": 10000,
     }]}, pak)
     assert gaps == []
-    assert rows == [
-        (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
-        (P_METEOR_MARK, pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0),
+    raw = (buff_ref_key(20170830), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)
+    assert rows == [raw]
+    assert _linked_tuples(raw, "assign") == [
+        ("op_meteor_mark", 11, 2, 10000, 1, 0, 0, 0),
+        ("op_meteor_mark", 11, 2, 10000, 1, 0, 0, 0),
     ]
 
 
@@ -506,20 +529,34 @@ def test_bft_assign_set_energy_zero_is_ability_flag_not_gap():
     assert table[20170610].flag_name == AbilityFlag.START_ZERO_ENERGY.name
     assert table[1063002].flag_name == AbilityFlag.START_ZERO_ENERGY.name
 
-    rows, gaps = generate_effect_rows(pak.skill_conf[200102], pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(pak.skill_conf[200102], pak)
     assert gaps == []
-    assert rows == [(P_BFT_O_T, pak_cast_moment_key(26), 1, 10000, 2100001, 0, 0, 0)]
+    entry_energy = (buff_ref_key(21000010), pak_cast_moment_key(26), 1, 10000, 1, 0, 0, 0)
+    start_zero = (buff_ref_key(20170610), pak_cast_moment_key(26), 1, 10000, 1, 0, 0, 0)
+    assert rows == [entry_energy, start_zero]
+    assert _linked_tuple(entry_energy, "地脉") == (
+        "op_entry_energy_from_element_count",
+        TIMING_PAK_SDT,
+        1,
+        10000,
+        Element.GROUND.value,
+        3,
+        0,
+        0,
+    )
+    with pytest.raises(LinkGapError):
+        link_primitive_rows(start_zero, source_name="地脉")
 
 
-def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
-    """Order-91 conditional grants need source text for the counted condition."""
+def test_conditional_hit_count_buffs_link_from_pak_shape_without_desc():
+    """Order-91 conditional grants are linked by pak refs, not source text."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
-    rows, gaps = generate_effect_rows(pak.skill_conf[200204], pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(pak.skill_conf[200204], pak)
     assert gaps == []
     assert rows == [(
         P_HIT_COUNT_PER_POISON_EFFECT,
-        TIMING_HOOK_BEFORE_MOVE,
+        pak_cast_moment_key(11),
         1,
         10000,
         1,
@@ -527,23 +564,47 @@ def test_source_context_decodes_2091_hit_count_buffs_from_params_and_desc():
         0,
         0,
     )]
+    assert _linked_tuple(rows[0], "侵蚀") == (
+        "op_hit_count_per_poison_effect",
+        TIMING_HOOK_BEFORE_MOVE,
+        1,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
 
-    rows, gaps = generate_effect_rows(pak.skill_conf[200183], pak, allow_ability_flags=True)
+    rows, gaps = generate_effect_rows(pak.skill_conf[200183], pak)
     assert gaps == []
     assert rows == [(
         P_CUTE_HIT_PER_STACK,
-        TIMING_HOOK_BEFORE_MOVE,
+        pak_cast_moment_key(11),
         1,
         10000,
-        2,
+        1,
         0,
         0,
         0,
     )]
+    assert _linked_tuple(rows[0], "自由飘") == (
+        "op_cute_hit_per_stack",
+        TIMING_HOOK_BEFORE_MOVE,
+        1,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7190260], pak)
-    assert any(row[0] == effect_order_key("ET_MULTIPLE") and row[4] == 1 for row in rows)
-    assert any(gap["primitive"] == "prefix_2091" and gap["params"]["buff_id"] == 20910030 for gap in gaps)
+    assert gaps == []
+    unsupported = (buff_ref_key(20910030), pak_cast_moment_key(6), 1, 10000, 1, 0, 0, 0)
+    assert unsupported in rows
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(unsupported, source_name="凝望")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
 
 def test_effect_multiple_decodes_team_same_skill_hit_count():
@@ -564,57 +625,56 @@ def test_effect_multiple_decodes_team_same_skill_hit_count():
     )]
 
 
-def test_source_context_decodes_slot_modifiers_but_keeps_transmission_gap():
-    """Slot power/cost is executable; transmission movement is still explicit gap."""
+def test_slot_modifier_desc_paths_are_not_compiler_decoded():
+    """Transmission/slot modifier text no longer produces compiler rows."""
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070160], pak)
-    assert (P_SLOT_SKILL_MOD_EFFECT, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 0, 30, 0) in rows
-    assert gaps == [{
-        "primitive": P_SLOT_SKILL_MOD_EFFECT,
-        "timing_code": pak_cast_moment_key(11),
-        "effect_order": 0,
-        "reason": "transmission_unimplemented",
-        "params": {
-            "effect_id": 1083001,
-            "buff_id": None,
-            "ref_id": 1083001,
-            "amount": 1,
-            "source_id": 7070160,
-            "target_type": 1,
-            "success_rate": 10000,
-        },
-    }]
+    assert rows == [(P_SLOT_SKILL_MOD_EFFECT, pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)]
+    assert gaps == []
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(rows[0], source_name="磁暴")
+    assert exc_info.value.gap.reason == "effect_shape_unsupported"
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070030], pak)
-    assert (P_SLOT_SKILL_MOD_BUFF, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0001, 0, 60, 0) in rows
-    assert gaps[0]["reason"] == "transmission_unimplemented"
+    assert rows == [(P_SLOT_SKILL_MOD_BUFF, pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)]
+    assert gaps == []
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(rows[0], source_name="传动")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
     rows, gaps = generate_effect_rows(pak.skill_conf[7070170], pak)
-    assert (P_SLOT_SKILL_MOD_BUFF, TIMING_HOOK_BEFORE_MOVE, 1, 10000, 0b0101, 2, 0, 0) in rows
-    assert any(gap["reason"] == "transmission_unimplemented" for gap in gaps)
+    assert (P_SLOT_SKILL_MOD_BUFF, pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0) in rows
+    assert gaps == []
 
 
 def test_bft_assign_keeps_condition_and_nested_flag_as_gaps():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
 
-    _rows, gaps = generate_effect_rows({"skill_result": [{
+    rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20170210,  # target/condition code 299909
         "cast_moment": 11,
         "result_target_type": 1,
         "success_rate": 10000,
-    }]}, pak, allow_ability_flags=True)
-    assert gaps[0]["primitive"] == "assign_condition_299909"
-    assert gaps[0]["reason"] == "assign_condition_unsupported"
+    }]}, pak)
+    assert rows == [(buff_ref_key(20170210), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)]
+    assert gaps == []
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(rows[0], source_name="石天平")
+    assert exc_info.value.gap.reason == "assign_condition_unsupported"
 
-    _rows, gaps = generate_effect_rows({"skill_result": [{
-        "effect_id": 20170290,  # -> AbilityFlagOutcome 1066001 via BFT_ASSIGN
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20170290,  # -> AbilityFlagRule 1066001 via BFT_ASSIGN
         "cast_moment": 11,
         "result_target_type": 1,
         "success_rate": 10000,
-    }]}, pak, allow_ability_flags=True)
-    assert gaps[0]["reason"] == "assign_ability_flag_requires_provenance"
-    assert gaps[0]["params"]["assigned_ref"] == 1066001
+    }]}, pak)
+    assert rows == [(buff_ref_key(20170290), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)]
+    assert gaps == []
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(rows[0], source_name="循环")
+    assert exc_info.value.gap.reason == "effect_shape_unsupported"
+    assert exc_info.value.gap.effect_id == 1066001
 
 
 def test_runtime_classifier_falls_through_to_prefix_for_mixed(buffbase_conf):
@@ -662,7 +722,7 @@ def test_immunity_desc_buff_maps_to_active_immunity_primitive():
         "battle_event:BEVT_BEFORE_HURT",
         1,
         10000,
-        1,
+        0,
         0,
         0,
         0,
@@ -679,7 +739,7 @@ def test_immunity_desc_buff_maps_to_active_immunity_primitive():
     )
 
 
-def test_non_immunity_bft_immune_shape_stays_gap():
+def test_zero_energy_bft_immune_shape_links_from_pak_shape():
     pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20030220,
@@ -687,6 +747,24 @@ def test_non_immunity_bft_immune_shape_stays_gap():
         "result_target_type": 1,
         "success_rate": 10000,
     }]}, pak)
-    assert rows == []
-    assert gaps[0]["primitive"] == "prefix_2003"
-    assert gaps[0]["params"]["buff_id"] == 20030220
+    assert gaps == []
+    assert rows == [(
+        buff_ref_key(20030220),
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert _linked_tuple(rows[0], "零能量切换") == (
+        "op_auto_switch_on_zero_energy",
+        11,
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )

@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import re
 
 import pytest
@@ -91,7 +92,11 @@ def test_hot_catalog_excludes_kernel_unsupported_effect_rows():
     supported = set(KERNEL_SUPPORTED_TAGS)
     assert all(row[0] in supported for row in hot.SKILL_EFFECT_ROWS)
     assert all(row[0] in supported for row in hot.ABILITY_EFFECT_ROWS)
-    assert hot.SKIPPED_EFFECT_STATS == ()
+    gap_path = Path(__file__).resolve().parents[1] / "roco" / "generated" / "audit" / "engine_link_gaps.jsonl"
+    gaps = [json.loads(line) for line in gap_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    stats = tuple(sorted((reason, sum(1 for gap in gaps if gap["reason"] == reason)) for reason in {gap["reason"] for gap in gaps}))
+    assert hot.SKIPPED_EFFECT_STATS == stats
+    assert sum(count for _reason, count in hot.SKIPPED_EFFECT_STATS) == len(gaps)
 
 
 def test_catalog_validation_rejects_version_schema_and_empty_hash():
@@ -257,7 +262,7 @@ def test_effect_row_stage_and_damage_rounding_semantics():
     assert _damage(actor, target, skill, ctx) == expected
 
 
-def test_before_move_primitives_from_source_context():
+def test_before_move_runtime_ops():
     ctx = StageCtx()
     ctx.reset(SIDE_A, 0, SIDE_B, 0, 999)
     ctx.skill_slot = 2

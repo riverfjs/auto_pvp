@@ -79,6 +79,7 @@ def test_static_catalog_compiles_from_canonical_records(tmp_path: Path, monkeypa
         tmp_path / "pak",
         hot_path=tmp_path / "catalog_hot.py",
         debug_path=tmp_path / "catalog_debug.py",
+        engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
     )
     hot_text = hot_path.read_text(encoding="utf-8")
     debug_text = debug_path.read_text(encoding="utf-8")
@@ -114,6 +115,7 @@ def test_static_catalog_rejects_noop_effect_rows(tmp_path: Path, monkeypatch):
             tmp_path / "pak",
             hot_path=tmp_path / "catalog_hot.py",
             debug_path=tmp_path / "catalog_debug.py",
+            engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
         )
 
 

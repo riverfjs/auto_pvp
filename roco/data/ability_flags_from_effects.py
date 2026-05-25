@@ -12,9 +12,8 @@ evidence format is reported loudly.  Temporary fixture files may still
 pin old ``editor_name`` drift checks, but the production path does not
 depend on pak ``editor_name``.
 
-The loader returns ``dict[int, AbilityFlagOutcome]`` so callers can feed
-the same map to :func:`classify.decode_effect` and to
-:func:`build_effect_families._classify_one_source_id`.
+The loader returns ``dict[int, AbilityFlagRule]`` so data/catalog builders can
+join the map with pak ability provenance.
 """
 
 from __future__ import annotations
@@ -24,11 +23,11 @@ from functools import lru_cache
 from pathlib import Path
 
 from roco.common.enums import AbilityFlag
-from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome
+from roco.data.ability_flag_rules import AbilityFlagRule
 from roco.compiler_v2.sources import LuaEnumSource
 
 _DEFAULT_EFFECT_CONF_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[2]
     / "pak-public-kit"
     / "output"
     / "data"
@@ -36,7 +35,7 @@ _DEFAULT_EFFECT_CONF_PATH = (
     / "EFFECT_CONF.json"
 )
 _DEFAULT_BUFF_CONF_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[2]
     / "pak-public-kit"
     / "output"
     / "data"
@@ -44,7 +43,7 @@ _DEFAULT_BUFF_CONF_PATH = (
     / "BUFF_CONF.json"
 )
 _DEFAULT_BUFFBASE_CONF_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[2]
     / "pak-public-kit"
     / "output"
     / "data"
@@ -52,7 +51,7 @@ _DEFAULT_BUFFBASE_CONF_PATH = (
     / "BUFFBASE_CONF.json"
 )
 _DEFAULT_DESC_NOTE_CONF_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[2]
     / "pak-public-kit"
     / "output"
     / "data"
@@ -60,7 +59,7 @@ _DEFAULT_DESC_NOTE_CONF_PATH = (
     / "DESC_NOTE_CONF.json"
 )
 _DEFAULT_SKILL_CONF_PATH = (
-    Path(__file__).resolve().parents[3]
+    Path(__file__).resolve().parents[2]
     / "pak-public-kit"
     / "output"
     / "data"
@@ -128,7 +127,7 @@ def load_ability_flags_from_effects(
     buffbase_conf: dict[int, dict] | None = None,
     desc_note_conf: dict[int, dict] | None = None,
     skill_conf: dict[int, dict] | None = None,
-) -> dict[int, AbilityFlagOutcome]:
+) -> dict[int, AbilityFlagRule]:
     """Load ability-flag semantics into ``effect_id → outcome``.
 
     Strict validation (every check raises ``RuntimeError`` with file + line):
@@ -168,7 +167,7 @@ def load_ability_flags_from_effects(
         ability_consumers = _ability_skill_result_consumers(skill_rows) if skill_rows is not None else None
         return _derive_ability_flags(conf, buff_rows, base_rows, desc_rows, ability_consumers)
 
-    out: dict[int, AbilityFlagOutcome] = {}
+    out: dict[int, AbilityFlagRule] = {}
     first_seen_line: dict[int, int] = {}
     for line_no, rec in _iter_rule_records(rules_path, conf, buff_rows):
         effect_id = int(rec.get("effect_id", 0))
@@ -195,7 +194,7 @@ def load_ability_flags_from_effects(
                 )
             _validate_buff_flag_record(line_no, effect_id, rec, real)
             flag_name = str(rec.get("flag", ""))
-            out[effect_id] = AbilityFlagOutcome(effect_id=effect_id, flag_name=flag_name)
+            out[effect_id] = AbilityFlagRule(effect_id=effect_id, flag_name=flag_name)
             continue
 
         if source_table != "EFFECT_CONF":
@@ -283,7 +282,7 @@ def load_ability_flags_from_effects(
                 f"requires schema extension before this loader can accept it."
             )
 
-        out[effect_id] = AbilityFlagOutcome(effect_id=effect_id, flag_name=flag_name)
+        out[effect_id] = AbilityFlagRule(effect_id=effect_id, flag_name=flag_name)
     return out
 
 
@@ -316,8 +315,8 @@ def _derive_ability_flags(
     buffbase_conf: dict[int, dict],
     desc_note_conf: dict[int, dict],
     ability_consumers: dict[int, tuple[dict, ...]] | None,
-) -> dict[int, AbilityFlagOutcome]:
-    out: dict[int, AbilityFlagOutcome] = {}
+) -> dict[int, AbilityFlagRule]:
+    out: dict[int, AbilityFlagRule] = {}
     desc_notes = _desc_notes(desc_note_conf)
     desc_refs = _desc_refs(desc_notes)
 
@@ -618,7 +617,7 @@ def _status_tag_for_buff(
 
 
 def _put_flag(
-    out: dict[int, AbilityFlagOutcome],
+    out: dict[int, AbilityFlagRule],
     source_id: int,
     flag_name: str,
     source_table: str,
@@ -636,7 +635,7 @@ def _put_flag(
             f"{source_table}[{source_id}] derives conflicting ability flags: "
             f"{existing.flag_name!r} vs {flag_name!r}"
         )
-    out[source_id] = AbilityFlagOutcome(effect_id=source_id, flag_name=flag_name)
+    out[source_id] = AbilityFlagRule(effect_id=source_id, flag_name=flag_name)
 
 
 def _slot_values(params: list, index: int) -> tuple[int, ...]:
@@ -722,7 +721,7 @@ def _validate_buff_flag_record(
         )
 
 
-def normalized_payload(table: dict[int, AbilityFlagOutcome]) -> tuple[tuple[int, str], ...]:
+def normalized_payload(table: dict[int, AbilityFlagRule]) -> tuple[tuple[int, str], ...]:
     """Stable-sorted ``(effect_id, flag_name)`` tuple for SOURCE_HASH inputs.
 
     Sorted by ``effect_id`` so the payload is deterministic across runs;

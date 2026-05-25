@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome
+from roco.data.ability_flag_rules import AbilityFlagRule
 
 
 def _validate_ability_flag_rules(
-    rules: dict[int, AbilityFlagOutcome],
+    rules: dict[int, AbilityFlagRule],
     effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
     consumer_index: dict[int, list[dict]],
-    exact_emit_ids: set[int],
-    weather_ids: set[int],
 ) -> None:
     """Pak + canonical static cross-check for the ability-flag table.
 
@@ -22,15 +20,10 @@ def _validate_ability_flag_rules(
     * Any rule effect_id missing from both ``EFFECT_CONF`` and
       direct ``BUFF_CONF`` (defence in depth against loader-side bugs /
       stub overrides).
-    * Any rule effect_id that also appears in exact compiler semantics
-      or in the generated weather decoders table — those rule sources
-      must be disjoint, else routing is
-      ambiguous and a future edit could cause silent reordering.
     * Any rule effect_id whose recorded consumers include something
       other than an ability (skill / weather / mark / bloodline_magic).
-      Mirrors the runtime ``allow_ability_flags`` gate in
-      ``generate_effect_rows`` but at static-audit time, before any DB
-      build, so a misuse never reaches the runtime hot path.
+      This keeps ability-flag data-layer rules from silently applying to
+      non-ability consumers.
     """
     for effect_id in sorted(rules):
         if effect_id not in effect_conf and effect_id not in buff_conf:
@@ -38,18 +31,6 @@ def _validate_ability_flag_rules(
                 f"ability flag effect_id {effect_id} is "
                 f"missing from EFFECT_CONF.json and BUFF_CONF.json "
                 f"(loader override?)"
-            )
-        if effect_id in exact_emit_ids:
-            raise RuntimeError(
-                f"effect_id {effect_id} appears in "
-                f"ability flag semantics AND exact compiler semantics; "
-                f"these rule sources must be disjoint."
-            )
-        if effect_id in weather_ids:
-            raise RuntimeError(
-                f"effect_id {effect_id} appears in "
-                f"ability flag semantics AND generated_weather "
-                f"(WEATHER_EFFECT_DECODERS); these rule tables must be disjoint."
             )
         for consumer in consumer_index.get(effect_id, []):
             kind = str(consumer.get("kind", ""))

@@ -126,7 +126,16 @@ def test_compiler_v2_has_no_engine_imports():
 def test_compiler_v2_effect_codegen_does_not_emit_engine_entry_modes():
     root = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "effect_codegen"
     offenders: list[str] = []
-    forbidden = ("ENTRY_MOD_", "H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT")
+    forbidden = (
+        "ENTRY_MOD_",
+        "H_ENTRY_ELEMENT_SKILL_MOD_BY_COUNT",
+        "pack_primitive_params",
+        "effect_type_1_compound",
+        "effect_type_1_no_buff",
+        "effect_type_3_state_change",
+        "transmission_unimplemented",
+        "assign_condition_unsupported",
+    )
     for path in root.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         if any(term in text for term in forbidden):

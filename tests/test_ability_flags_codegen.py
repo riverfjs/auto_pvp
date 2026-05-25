@@ -1,13 +1,12 @@
-"""Phase 5C-iii: ABILITY_FLAGS codegen / loader / classifier tests.
+"""ABILITY_FLAGS data-layer codegen / loader tests.
 
 Covers the four hard boundaries:
 
-1. **ability-only gate** — :func:`generate_effect_rows` with
-   ``allow_ability_flags=False`` rejects an :class:`AbilityFlagOutcome`
-   (skill path must not silently swallow ability-passive effect_ids).
+1. **compiler boundary** — :func:`generate_effect_rows` emits pak refs for
+   ability-flag source ids; the compiler does not decide flag semantics.
 2. **multiplier reject** — loader rejects ``effect_param[1] != [1]``
    (and the shape variants around it).  No defaulting / truncation.
-3. **ABILITY_FLAGS = ability_effect_ids ⨝ pak-derived semantics** — codegen
+3. **ABILITY_FLAGS = ability_effect_ids joined with pak-derived rules** — codegen
    populates the per-ability mask from generated in-memory provenance rows
    joined with the derived semantic table.
 
@@ -23,15 +22,13 @@ from pathlib import Path
 import pytest
 
 from roco.common.enums import AbilityFlag
-from roco.compiler_v2 import ability_flags as ability_flag_artifact
+from roco.common.primitive_keys import buff_ref_key
+from roco.data import ability_flags as ability_flag_artifact
 from roco.compiler_v2.effect_codegen import (
-    AbilityFlagOutcome,
-    EmitOutcome,
-    GapOutcome,
     PakTables,
     generate_effect_rows,
 )
-from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
+from roco.data.ability_flags_from_effects import (
     load_ability_flags_from_effects,
     normalized_payload,
 )
@@ -275,21 +272,11 @@ def test_loader_skips_comments_and_blank_lines(tmp_path):
     assert table[12345].flag_name == "HEAL_ON_POISON_DAMAGE"
 
 
-# ── ability-only gate (boundary 1) ────────────────────────────────────────
+# ── compiler boundary (boundary 1) ────────────────────────────────────────
 
 
-def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
-    """Boundary 1: a skill that references an ability-flag effect_id must
-    not be silently absorbed.
-
-    Construct a skill_result entry referencing effect_id ``21540010`` (a
-    real direct ``BUFF_CONF`` ability-flag rule) and call ``generate_effect_rows`` with the
-    default ``allow_ability_flags=False`` (skill-builder semantics).
-    The function must raise — the alternative (silent skip / covered /
-    skipped) would let a future pak change wire passive heal-on-damage
-    semantics into a per-cast skill row, which the runtime would not
-    interpret correctly.
-    """
+def test_generate_effect_rows_emits_raw_ref_for_ability_flag_source_id():
+    """Compiler row generation does not own ability-flag semantics."""
     pak = PakTables(PAK_DATA)
     skill_row = {
         "skill_result": [{
@@ -299,31 +286,47 @@ def test_generate_effect_rows_skill_path_rejects_ability_flag_outcome():
             "success_rate": 10000,
         }],
     }
-    with pytest.raises(RuntimeError, match=r"AbilityFlagOutcome leaked into a non-ability"):
-        generate_effect_rows(skill_row, pak)
-
-
-def test_generate_effect_rows_ability_path_accepts_ability_flag_outcome():
-    """Symmetric positive: ability builder accepts the outcome and drops it
-    from rows / gaps.  ABILITY_FLAGS is then populated later by
-    ``ability_flags.populate`` — verified by other tests.
-    """
-    pak = PakTables(PAK_DATA)
-    skill_row = {
-        "skill_result": [{
-            "effect_id": 21540010,
-            "result_target_type": 1,
-            "cast_moment": 11,
-            "success_rate": 10000,
-        }],
-    }
-    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
-    assert rows == []
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == [(
+        buff_ref_key(21540010),
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
     assert gaps == []
 
 
-def test_generate_effect_rows_ability_path_accepts_direct_buff_flag_outcome():
-    """Direct BUFF_CONF passive rows can compile to ABILITY_FLAGS too."""
+def test_generate_effect_rows_ability_ref_is_not_dropped():
+    """ABILITY_FLAGS is populated by data/catalog build, not compiler rows."""
+    pak = PakTables(PAK_DATA)
+    skill_row = {
+        "skill_result": [{
+            "effect_id": 21540010,
+            "result_target_type": 1,
+            "cast_moment": 11,
+            "success_rate": 10000,
+        }],
+    }
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == [(
+        buff_ref_key(21540010),
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []
+
+
+def test_generate_effect_rows_direct_buff_flag_source_emits_ref():
+    """Direct BUFF_CONF passive rows still compile as pak refs."""
     pak = PakTables(PAK_DATA)
     skill_row = {
         "skill_result": [{
@@ -333,13 +336,22 @@ def test_generate_effect_rows_ability_path_accepts_direct_buff_flag_outcome():
             "success_rate": 10000,
         }],
     }
-    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
-    assert rows == []
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == [(
+        buff_ref_key(21430010),
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
     assert gaps == []
 
 
-def test_generate_effect_rows_ability_path_accepts_freeze_meteor_flag_outcome():
-    """The 月牙雪糕 direct BUFF_CONF row compiles into ABILITY_FLAGS."""
+def test_generate_effect_rows_freeze_meteor_source_emits_ref():
+    """The 月牙雪糕 direct BUFF_CONF row remains a pak ref."""
     pak = PakTables(PAK_DATA)
     skill_row = {
         "skill_result": [{
@@ -349,8 +361,17 @@ def test_generate_effect_rows_ability_path_accepts_freeze_meteor_flag_outcome():
             "success_rate": 10000,
         }],
     }
-    rows, gaps = generate_effect_rows(skill_row, pak, allow_ability_flags=True)
-    assert rows == []
+    rows, gaps = generate_effect_rows(skill_row, pak)
+    assert rows == [(
+        buff_ref_key(20400410),
+        "battle_event:BEVT_BEFORE_HURT",
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
     assert gaps == []
 
 

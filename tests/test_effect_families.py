@@ -51,8 +51,6 @@ BLOCKER_FAMILY_KEYS = (
     "buff_conf_direct:prefix_2040",
     "buff_conf_direct:prefix_2003",
 )
-BLOCKER_ALLOWED_STATUSES = {"gap", "exact_semantic_partial", "mixed"}
-
 
 @pytest.fixture(scope="module")
 def catalog() -> list[dict]:
@@ -203,37 +201,29 @@ def test_effect_families_buff_conf_direct_completeness(catalog, pak_tables):
 
 
 def test_effect_families_covers_blocker_gaps(by_key):
-    """Known blockers must appear in catalog with a gap-style coverage_status.
+    """Known blocker families stay visible in the pak family catalog.
 
-    Extra layer on top of completeness — if any of these blockers flip to
-    ``auto_structural``/``exact_semantic`` that means kernel
-    actually implemented the family; update this list with intent rather
-    than letting the change pass silently.
+    Engine support/gap status now lives in ``engine_link_gaps.jsonl``; this
+    catalog only asserts that the source family remains present.
     """
     for key in BLOCKER_FAMILY_KEYS:
         assert key in by_key, f"blocker family {key!r} missing from catalog"
-        status = by_key[key]["coverage_status"]
-        assert status in BLOCKER_ALLOWED_STATUSES, (
-            f"blocker {key!r} now reports coverage_status={status!r}; "
-            "if kernel implemented this family, update BLOCKER_ALLOWED_STATUSES "
-            "with intent."
-        )
 
 
-def test_effect_families_counts_source_context_coverage(by_key):
+def test_effect_families_counts_2091_as_pak_refs(by_key):
     family = by_key["buff_conf_direct:prefix_2091"]
-    assert family["coverage_status"] == "mixed"
-    assert family["coverage_breakdown"]["auto_structural_count"] == 2
-    assert family["coverage_breakdown"]["gap_count"] == 1
+    assert family["coverage_status"] == "pak_ref"
+    assert family["coverage_breakdown"]["pak_ref_count"] == family["count"]
+    assert family["coverage_breakdown"]["gap_count"] == 0
 
 
 def test_effect_families_counts_bft_assign_dispatcher_coverage(by_key):
-    """BFT_ASSIGN rows are structural dispatchers, not a runtime family."""
+    """BFT_ASSIGN direct refs are source refs; engine link gaps are separate."""
     family = by_key["buff_conf_direct:prefix_2017"]
     assert family["coverage_status"] == "mixed"
     assert family["coverage_breakdown"]["ability_flag_count"] == 1
-    assert family["coverage_breakdown"]["auto_structural_count"] == 44
-    assert family["coverage_breakdown"]["gap_count"] == 7
+    assert family["coverage_breakdown"]["pak_ref_count"] == family["count"] - 1
+    assert family["coverage_breakdown"]["gap_count"] == 0
 
 
 # ── check mode ───────────────────────────────────────────────────────────

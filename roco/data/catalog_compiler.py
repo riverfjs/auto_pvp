@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 import argparse
+import json
 import pprint
+from collections import Counter
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
 from roco.common.enums import ELEMENT_NAMES, SkillCategory, normalize_element_name
-from roco.compiler_v2 import ability_flags as ability_flag_artifact
+from roco.data import ability_flags as ability_flag_artifact
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.static_artifacts.bloodline_magic import build_bloodline_magic_tables
 from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
 from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
+from roco.engine.artifacts.linked_op import LinkGapError
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
 from roco.generated.handler_order import op_index
 
@@ -23,6 +26,7 @@ CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
 HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
 DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
+ENGINE_LINK_GAPS_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_gaps.jsonl"
 
 Record = Mapping[str, Any]
 AbilityEffectIdRow = tuple[int, int, int, int, int, int, int]
@@ -89,9 +93,19 @@ def _type_chart_bps(element_names: tuple[str, ...]) -> tuple[tuple[int, ...], ..
     return chart
 
 
-def _effect_rows(row_tuple: Iterable[object], *, source_name: str) -> tuple[tuple[int, ...], ...]:
+def _effect_rows(
+    row_tuple: Iterable[object],
+    *,
+    source_name: str,
+    link_gaps: list[dict[str, Any]],
+) -> tuple[tuple[int, ...], ...]:
     rows: list[tuple[int, ...]] = []
-    for linked in link_primitive_rows(row_tuple, source_name=source_name):
+    try:
+        linked_rows = link_primitive_rows(row_tuple, source_name=source_name)
+    except LinkGapError as exc:
+        link_gaps.append(exc.gap.as_record())
+        return ()
+    for linked in linked_rows:
         p0, p1, p2, p3 = linked.runtime_args()
         rows.append((
             op_index(linked.op_name),
@@ -224,6 +238,7 @@ def compile_catalogs(
     *,
     hot_path: Path = HOT_PATH,
     debug_path: Path = DEBUG_PATH,
+    engine_link_gaps_path: Path = ENGINE_LINK_GAPS_PATH,
 ) -> tuple[Path, Path]:
     canonical = load_canonical_records(pak_dir or DEFAULT_PAK_DATA_DIR)
     skill_records = _records(canonical["skills"], "skill")
@@ -294,6 +309,7 @@ def compile_catalogs(
     skill_source_rows: list[tuple[Any, ...]] = []
     skill_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
     skill_effect_source_rows: list[tuple[Any, ...]] = []
+    engine_link_gaps: list[dict[str, Any]] = []
     for skill_id, row in enumerate(skill_records, start=1):
         name = str(row["name"])
         element_id = _element_id(row.get("element", "普通"))
@@ -324,7 +340,7 @@ def compile_catalogs(
             flavor_text,
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            for effect in _effect_rows(raw_effect, source_name=name):
+            for effect in _effect_rows(raw_effect, source_name=name, link_gaps=engine_link_gaps):
                 skill_effect_keyed.append((skill_id, effect))
                 skill_effect_source_rows.append((skill_id, *effect, order))
 
@@ -346,7 +362,7 @@ def compile_catalogs(
             str(row.get("source_version", "")),
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            for effect in _effect_rows(raw_effect, source_name=name):
+            for effect in _effect_rows(raw_effect, source_name=name, link_gaps=engine_link_gaps):
                 ability_effect_keyed.append((ability_id, effect))
                 ability_effect_source_rows.append((ability_id, *effect, order))
 
@@ -405,7 +421,7 @@ def compile_catalogs(
         "bloodlines": tuple(bloodline_catalog_rows),
         "bloodline_magics": tuple(bloodline_magic_catalog_rows),
     })
-    skipped_effect_stats: tuple[tuple[int, int], ...] = ()
+    skipped_effect_stats = tuple(sorted(Counter(str(row["reason"]) for row in engine_link_gaps).items()))
 
     hot = _format_module(
         CATALOG_VERSION=CATALOG_VERSION,
@@ -448,8 +464,16 @@ def compile_catalogs(
     )
     hot_path.parent.mkdir(parents=True, exist_ok=True)
     debug_path.parent.mkdir(parents=True, exist_ok=True)
+    engine_link_gaps_path.parent.mkdir(parents=True, exist_ok=True)
     hot_path.write_text(hot, encoding="utf-8")
     debug_path.write_text(debug, encoding="utf-8")
+    engine_link_gaps_path.write_text(
+        "".join(
+            json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
+            for record in engine_link_gaps
+        ),
+        encoding="utf-8",
+    )
     return hot_path, debug_path
 
 

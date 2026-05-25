@@ -9,8 +9,9 @@ Produces two artifacts:
 
 The catalog is **not** a rule file — it has no ``handler`` field.  Its job is
 to document, per family, the pak evidence (parameter shapes, cross-refs,
-sample consumers, decoder-path coverage breakdown) that future kernel work
-needs.  Every string field is sourced from pak/Lua data tables or the
+sample consumers, compiler pak-ref coverage) that future kernel work
+needs.  Engine support gaps live in ``generated/audit/engine_link_gaps.jsonl``.
+Every string field is sourced from pak/Lua data tables or the
 project's own rule files — no speculation, no ``likely`` / ``would`` /
 ``probably`` / ``possibly``.
 

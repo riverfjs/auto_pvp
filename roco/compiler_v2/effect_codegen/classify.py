@@ -1,82 +1,28 @@
 """Pak-effect classification — pak-first primitive output.
 
-Each decoder returns ``list[EmitOutcome | GapOutcome | AbilityFlagOutcome]``
+Each decoder returns ``list[EmitOutcome | GapOutcome]``
 (never engine handler rows).  See :mod:`.outcomes` for the four-state contract.
 
 Dispatch for ``EFFECT_CONF`` rows (see :func:`decode_effect`):
 
-* ``type=2`` decodes structurally from ``effect_param`` to ``damage``.
-* ``type=1`` whose ``effect_param`` contains exactly one buff_id in
-  BUFF_CONF is treated as "apply that buff"; the buff is then classified
-  via :func:`classify_buff_primitive` (exact ``buff_id`` → exact
-  ``buff_base_id`` → pak order → mixed-prefix family).  Single-candidate
-  effects are deterministic — pak
-  literally wrote one buff to apply.
-* ``type=1`` with multiple buff_ids and any ``type=3`` row require
-  structural family decoders, generated tables, or pak-derived ability
-  passive flags.  Anything not covered surfaces as a :class:`GapOutcome`
-  rather than being heuristically guessed.
-
-  ``type=3`` rows that match pak-derived ability flag semantics
-  surface as :class:`AbilityFlagOutcome` — the bit is compiled into
-  ``ABILITY_FLAGS`` rather than into a runtime row.  Only the ability
-  builder path accepts that outcome; the skill builder raises if it
-  ever sees one (see :func:`generate_effect_rows`).
+* Any existing ``EFFECT_CONF`` row emits ``effect_ref:<id>``.
+* Any existing ``BUFF_CONF`` row emits ``buff_ref:<id>``.
 
 ``classify_buff_primitive`` (exact ``buff_id``/``buff_base_id`` then pak
 order/prefix) is also
-used by :func:`decode_buff_direct` when a skill_result references a
-buff in BUFF_CONF directly — that path has no ambiguity since the entry
-*is* the buff to apply.
+kept for generated axis/audit artifacts, but runtime row generation no
+longer consumes it.
 """
 
 from __future__ import annotations
 
-from roco.common.primitive_keys import effect_kind_key
+from roco.common.primitive_keys import buff_ref_key, effect_ref_key
 from roco.compiler_v2.build import build_static_bundle
-from roco.compiler_v2.effect_codegen.outcomes import AbilityFlagOutcome, EmitOutcome, GapOutcome
+from roco.compiler_v2.effect_codegen.outcomes import EmitOutcome, GapOutcome
 from roco.compiler_v2.effect_codegen.params import (
     extract_int_list,
-    pack_primitive_params,
-    safe_int,
 )
 from roco.compiler_v2.primitive_map_builder import build_primitive_map
-
-
-def _load_ability_flag_table() -> dict[int, AbilityFlagOutcome]:
-    """Load the effect → AbilityFlagOutcome map; empty on first-run boot.
-
-    Imported lazily inside the function so module import doesn't trigger
-    a full pak read at collect time (the loader pulls ``EFFECT_CONF.json``
-    when no override is supplied).
-    """
-    from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
-        load_ability_flags_from_effects,
-    )
-    return load_ability_flags_from_effects()
-
-
-ABILITY_FLAG_OUTCOMES: dict[int, AbilityFlagOutcome] = _load_ability_flag_table()
-
-
-def ability_flag_outcome(ref_id: int) -> AbilityFlagOutcome | None:
-    return ABILITY_FLAG_OUTCOMES.get(ref_id)
-
-
-def count_buff_repeats(params_raw: list, buff_id: int) -> int:
-    """Count how many times ``buff_id`` appears in any single ``effect_param`` slot.
-
-    Pak encodes status stack count by repeating the buff_id in the same slot
-    (e.g. 1042014's ``effect_param[2] = [20070020]*5`` means 5 burn stacks).
-    Returns 1 when ``buff_id`` is absent or only appears once.
-    """
-    if not buff_id:
-        return 1
-    for idx in range(len(params_raw)):
-        n = extract_int_list(params_raw, idx).count(buff_id)
-        if n > 1:
-            return n
-    return 1
 
 
 def _load_primitive_maps() -> tuple[dict[int, str], dict[int, str], dict[int, str], dict[int, str]]:
@@ -159,12 +105,6 @@ def collect_buff_candidates(
     return seen
 
 
-def _single_buff(params_raw: list, buff_conf: dict[int, dict]) -> int:
-    """If ``params_raw`` references exactly one BUFF_CONF id, return it; else 0."""
-    candidates = collect_buff_candidates(params_raw, buff_conf)
-    return candidates[0] if len(candidates) == 1 else 0
-
-
 def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -> GapOutcome:
     """Build a GapOutcome for a buff classification miss.
 
@@ -216,8 +156,8 @@ def _buff_gap(effect_id: int | None, buff_id: int, buff_conf: dict[int, dict]) -
                     "prefixes": sorted({b // 1000 for b in base_ids}),
                 },
             )
-    # Every base_id has a mapped prefix but pack_primitive_params (or some
-    # caller) still rejected — keep a precise fall-through.
+    # Every base_id has a mapped prefix but the caller still rejected it —
+    # keep a precise fall-through.
     return GapOutcome(
         primitive=f"buff_{buff_id}",
         effect_id=effect_id,
@@ -236,19 +176,8 @@ def decode_effect(
     effect_id: int,
     effect_conf: dict[int, dict],
     buff_conf: dict[int, dict],
-) -> list[EmitOutcome | GapOutcome | AbilityFlagOutcome]:
-    """Decode one ``EFFECT_CONF`` row into outcomes.
-
-    Returns at least one outcome.  ``type=1`` no-buff, compound, and every
-    ``type=3`` row default to :class:`GapOutcome`; the structural ``type=1``
-    single-buff path and ``type=2`` damage produce :class:`EmitOutcome`;
-    rows derived by ``ability_flags_from_effects`` produce
-    :class:`AbilityFlagOutcome` (only the ability builder accepts that —
-    the skill builder rejects it loudly).
-    """
-    flag_outcome = ABILITY_FLAG_OUTCOMES.get(effect_id)
-    if flag_outcome is not None:
-        return [flag_outcome]
+) -> list[EmitOutcome | GapOutcome]:
+    """Emit a pak ``EFFECT_CONF`` reference without interpreting behavior."""
     rec = effect_conf.get(effect_id)
     if rec is None:
         return [GapOutcome(
@@ -258,85 +187,14 @@ def decode_effect(
             reason="effect_id_not_in_pak",
             params={"effect_id": effect_id},
         )]
-
-    etype = rec.get("type", 0)
-    params_raw = rec.get("effect_param") or rec.get("params") or []
-
-    if etype == 1:
-        candidates = collect_buff_candidates(params_raw, buff_conf)
-        if len(candidates) == 1:
-            buff_id = candidates[0]
-            primitive = classify_buff_primitive(buff_id, buff_conf)
-            if primitive:
-                raw_stacks = count_buff_repeats(params_raw, buff_id)
-                p0, p1, p2, p3 = pack_primitive_params(
-                    primitive,
-                    buff_id,
-                    buff_conf,
-                    raw_stacks,
-                )
-                return [EmitOutcome(primitive, p0, p1, p2, p3, raw_stacks)]
-            return [_buff_gap(effect_id, buff_id, buff_conf)]
-        if len(candidates) > 1:
-            return [GapOutcome(
-                primitive=f"effect_{effect_id}",
-                effect_id=effect_id,
-                buff_id=candidates[0],  # first candidate for metadata only
-                reason="effect_type_1_compound",
-                params={
-                    "effect_id": effect_id,
-                    "buff_candidates": candidates,
-                },
-            )]
-        return [GapOutcome(
-            primitive=f"effect_{effect_id}",
-            effect_id=effect_id,
-            buff_id=None,
-            reason="effect_type_1_no_buff",
-            params={
-                "effect_id": effect_id,
-                "param_head": [safe_int(params_raw, 0), safe_int(params_raw, 1)],
-            },
-        )]
-
-    if etype == 2:
-        mode = safe_int(params_raw, 0)
-        power = safe_int(params_raw, 2)
-        self_damage = safe_int(params_raw, 6)
-        return [EmitOutcome(effect_kind_key(2), mode, power, self_damage, 0, 1)]
-
-    if etype == 3:
-        return [GapOutcome(
-            primitive=f"effect_{effect_id}",
-            effect_id=effect_id,
-            buff_id=None,
-            reason="effect_type_3_state_change",
-            params={"effect_id": effect_id},
-        )]
-
-    return [GapOutcome(
-        primitive=f"effect_{effect_id}",
-        effect_id=effect_id,
-        buff_id=None,
-        reason=f"effect_type_{etype}_unknown",
-        params={"effect_id": effect_id, "type": etype},
-    )]
+    return [EmitOutcome(effect_ref_key(effect_id), 0, 0, 0, 0, 1)]
 
 
 def decode_buff_direct(
     buff_id: int,
     buff_conf: dict[int, dict],
-) -> list[EmitOutcome | GapOutcome | AbilityFlagOutcome]:
-    """Decode a direct ``BUFF_CONF`` reference (not via ``EFFECT_CONF``).
-
-    No ``effect_param`` to inspect, so ``raw_stacks`` defaults to 1; the
-    caller supplies ``buff_group_level`` from the skill_result entry.
-    """
-    flag_outcome = ABILITY_FLAG_OUTCOMES.get(buff_id)
-    if flag_outcome is not None:
-        return [flag_outcome]
-    primitive = classify_buff_primitive(buff_id, buff_conf)
-    if primitive:
-        p0, p1, p2, p3 = pack_primitive_params(primitive, buff_id, buff_conf)
-        return [EmitOutcome(primitive, p0, p1, p2, p3, 1)]
+) -> list[EmitOutcome | GapOutcome]:
+    """Emit a pak ``BUFF_CONF`` reference without interpreting behavior."""
+    if buff_id in buff_conf:
+        return [EmitOutcome(buff_ref_key(buff_id), 0, 0, 0, 0, 1)]
     return [_buff_gap(None, buff_id, buff_conf)]

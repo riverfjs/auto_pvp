@@ -22,11 +22,10 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 
-from roco.compiler_v2.effect_codegen.ability_flags_from_effects import (
+from roco.data.ability_flags_from_effects import (
     load_ability_flags_from_effects,
 )
 from roco.compiler_v2.effect_codegen.pak import PakTables
-from roco.compiler_v2.static_artifacts.weather import build_weather_effect_decoders
 
 from .classify import (
     _buff_family_key,
@@ -34,7 +33,7 @@ from .classify import (
     _derive_coverage_status,
 )
 from .consumers import _build_consumer_index, _build_team_used
-from .io import _load_canonical, _load_desc_notes, _load_exact_rules
+from .io import _load_canonical, _load_desc_notes
 from .params import _collect_param_shape, _vec_from_param_slot
 from .paths import PAK_DATA
 from .refs import _cross_refs, _desc_note_refs, _sample_sorted
@@ -55,8 +54,6 @@ def _build_family(
     consumer_index: dict[int, list[dict]],
     team_used_skills: set[str],
     team_used_abilities: set[str],
-    weather_ids: set[int],
-    exact_emit_ids: set[int],
     ability_flag_ids: frozenset[int],
 ) -> dict:
     source_ids = sorted(source_ids)
@@ -93,9 +90,7 @@ def _build_family(
         or (c["kind"] == "ability" and c["name"] in team_used_abilities)
     )
     breakdown = {
-        "auto_structural_count": 0,
-        "exact_semantic_count": 0,
-        "generated_weather_count": 0,
+        "pak_ref_count": 0,
         "gap_count": 0,
         "ability_flag_count": 0,
     }
@@ -103,8 +98,6 @@ def _build_family(
         bucket = _classify_one_source_id(
             sid,
             pak=pak,
-            weather_ids=weather_ids,
-            exact_emit_ids=exact_emit_ids,
             ability_flag_ids=ability_flag_ids,
             source_rows=_source_rows_for_audit(consumer_index.get(sid, [])),
         )
@@ -135,16 +128,6 @@ def _build_family(
                 f"desc={rec.get('desc', '')!r}"
             )
         pak_evidence.append("BUFF_CONF.lua confirms field schema (id/buff_base_ids/desc/...)")
-    exact_semantic_hits = sorted(eid for eid in source_ids if eid in exact_emit_ids)
-    if exact_semantic_hits:
-        pak_evidence.append(
-            f"compiler_v2 exact semantic rows for: {exact_semantic_hits[:10]}"
-        )
-    weather_hits = sorted(eid for eid in source_ids if eid in weather_ids)
-    if weather_hits:
-        pak_evidence.append(
-            f"generated/weather_decoders.py covers: {weather_hits[:10]}"
-        )
     return {
         "family_key": family_key,
         "source_table": source_table,
@@ -181,8 +164,6 @@ def _source_rows_for_audit(consumers: list[dict]) -> list[dict]:
 def build_families() -> list[dict]:
     pak = PakTables(PAK_DATA)
     desc_notes = _load_desc_notes()
-    exact_emit_ids = _load_exact_rules()
-    weather_ids = set(build_weather_effect_decoders().keys())
     ability_flag_rules = load_ability_flags_from_effects(
         effect_conf=pak.effect_conf,
         buff_conf=pak.buff_conf,
@@ -201,8 +182,6 @@ def build_families() -> list[dict]:
         pak.effect_conf,
         pak.buff_conf,
         consumer_index,
-        exact_emit_ids,
-        weather_ids,
     )
 
     families: list[dict] = []
@@ -226,8 +205,6 @@ def build_families() -> list[dict]:
             consumer_index=consumer_index,
             team_used_skills=team_used_skills,
             team_used_abilities=team_used_abilities,
-            weather_ids=weather_ids,
-            exact_emit_ids=exact_emit_ids,
             ability_flag_ids=ability_flag_ids,
         ))
 
@@ -258,8 +235,6 @@ def build_families() -> list[dict]:
             consumer_index=consumer_index,
             team_used_skills=team_used_skills,
             team_used_abilities=team_used_abilities,
-            weather_ids=weather_ids,
-            exact_emit_ids=exact_emit_ids,
             ability_flag_ids=ability_flag_ids,
         ))
 

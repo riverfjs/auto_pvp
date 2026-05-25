@@ -7,9 +7,7 @@ import pytest
 
 from roco.common.primitive_keys import (
     buff_ref_key,
-    buff_type_key,
     effect_ref_key,
-    effect_kind_key,
 )
 from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
 from roco.compiler_v2.effect_codegen import (
@@ -19,11 +17,10 @@ from roco.compiler_v2.effect_codegen import (
 )
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 
-P_DAMAGE = effect_kind_key(2)
-P_DISPEL_MARKS_TO_BURN = effect_ref_key(1042014)
+P_DAMAGE = effect_ref_key(1001001)
 P_HIT_COUNT_DELTA = buff_ref_key(20450050)
 P_POISON = buff_ref_key(20070010)
-P_SELF_BUFF = buff_type_key("BFT_ATTR_CHANGE")
+P_SELF_BUFF = buff_ref_key(20010010)
 
 
 def _write_table(path: Path, rows: dict[str, dict]) -> None:
@@ -139,11 +136,17 @@ def test_generate_effect_rows_state_change_records_gap(pak):
         "success_rate": 10000,
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
-    # type=3 state changes are not yet executable — must surface as audit gaps.
-    assert rows == []
-    assert len(gaps) == 1
-    assert gaps[0]["reason"].startswith("effect_type_3")
-    assert gaps[0]["params"]["effect_id"] == 1004001
+    assert rows == [(
+        effect_ref_key(1004001),
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []
 
 
 def test_generate_effect_rows_timing_from_cast_moment(pak):
@@ -229,13 +232,7 @@ def test_build_ability_effect_rows(pak):
 
 
 def test_compound_type1_returns_gap(pak):
-    """type=1 effect with multiple BUFF_CONF candidates → GapOutcome.
-
-    Direct decoder coverage: until the new compound type was tested only
-    via exact_decoders override.  Inject an EFFECT_CONF row that names
-    both fixture buffs (20010010 STAT_MOD + 20070010 POISON) in its
-    ``effect_param`` and assert classify produces ``effect_type_1_compound``.
-    """
+    """type=1 compound remains a raw pak effect ref at compiler boundary."""
     pak.effect_conf[1099001] = {
         "id": 1099001,
         "editor_name": "fixture-compound-type1",
@@ -253,19 +250,21 @@ def test_compound_type1_returns_gap(pak):
         "success_rate": 10000,
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
-    assert rows == []
-    assert len(gaps) == 1
-    assert gaps[0]["reason"] == "effect_type_1_compound"
-    assert gaps[0]["primitive"] == "effect_1099001"
+    assert rows == [(
+        effect_ref_key(1099001),
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []
 
 
 def test_no_buff_type1_returns_gap(pak):
-    """type=1 effect with zero BUFF_CONF candidates → GapOutcome.
-
-    Inject an EFFECT_CONF row whose effect_param contains only ints that
-    are NOT BUFF_CONF ids.  classify must return
-    ``effect_type_1_no_buff`` and emit no row.
-    """
+    """type=1 no-buff remains a raw pak effect ref at compiler boundary."""
     pak.effect_conf[1099002] = {
         "id": 1099002,
         "editor_name": "fixture-no-buff-type1",
@@ -283,33 +282,27 @@ def test_no_buff_type1_returns_gap(pak):
         "success_rate": 10000,
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
-    assert rows == []
-    assert len(gaps) == 1
-    assert gaps[0]["reason"] == "effect_type_1_no_buff"
-    assert gaps[0]["primitive"] == "effect_1099002"
+    assert rows == [(
+        effect_ref_key(1099002),
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []
 
 
-def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
-    """A buff whose base_id prefix has no primitive must surface as
-    ``prefix_<n>_unmapped`` — not ``buff_unclassified``.
-
-    Locks in the fix for the regression where empty old prefix semantics
-    misclassified buffs as ``buff_unclassified`` instead.
-    """
-    from roco.compiler_v2.effect_codegen import classify
-
-    # Inject an extra buff whose base_id prefix (2999) is guaranteed
-    # absent from the prefix map.  Use monkeypatch so we don't have to
-    # rewrite the fixture tables on disk.
+def test_unmapped_prefix_buff_still_emits_raw_buff_ref(pak):
+    """Existing BUFF_CONF ids do not become compiler gaps."""
     pak.buff_conf[29991234] = {
         "id": 29991234,
         "editor_name": "fixture-unmapped-prefix",
         "buff_base_ids": [2999001],
         "type": 1,
     }
-    monkeypatch.setitem(classify.PREFIX_PRIMITIVE_MAP, 2999, "")  # ensure not mapped
-    classify.PREFIX_PRIMITIVE_MAP.pop(2999, None)
-
     skill_row = {"skill_result": [{
         "effect_id": 29991234,  # direct buff reference path
         "cast_moment": 11,
@@ -317,10 +310,17 @@ def test_unmapped_prefix_buff_reports_prefix_gap(pak, monkeypatch):
         "success_rate": 10000,
     }]}
     rows, gaps = generate_effect_rows(skill_row, pak)
-    assert rows == []
-    assert len(gaps) == 1
-    assert gaps[0]["reason"] == "prefix_2999_unmapped"
-    assert gaps[0]["primitive"] == "prefix_2999"
+    assert rows == [(
+        buff_ref_key(29991234),
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []
 
 
 def test_unknown_effect_id_becomes_gap(pak):
@@ -359,19 +359,16 @@ def test_emit_outcome_invariant_primitive_nonempty(pak):
 
 
 def test_no_python_exact_effect_rules_table():
-    """Runtime exact effects are now generated/weather-only, not Python rows."""
-    from roco.compiler_v2.effect_codegen import exact_decoders as ed
-
+    """Compiler effect_codegen no longer hosts exact behavior decoders."""
     path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "semantics.py"
+    exact_path = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2" / "effect_codegen" / "exact_decoders.py"
 
-    assert not hasattr(ed, "_load_python_rules")
     assert not path.exists()
+    assert not exact_path.exists()
 
 
-def test_former_exact_burn_mark_row_uses_family_decoder(pak):
-    """The 1042014 burn payload is derived from pak shape, not id semantics."""
-    from roco.compiler_v2.effect_codegen.family_axes import decode_family_axes
-
+def test_former_exact_burn_mark_row_stays_effect_ref_for_linker(pak):
+    """The compiler does not decode the 1042014 burn payload."""
     pak.effect_conf[1042014] = {
         "id": 1042014,
         "editor_name": "fixture-mark-to-burn",
@@ -396,7 +393,20 @@ def test_former_exact_burn_mark_row_uses_family_decoder(pak):
         "buff_base_ids": [2007002],
     }
 
-    entry = decode_family_axes(1042014, pak.effect_conf, pak.buff_conf)
-    assert entry is not None
-    assert entry.primitive == P_DISPEL_MARKS_TO_BURN
-    assert entry.p0 == 0
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 1042014,
+        "cast_moment": 11,
+        "result_target_type": 1,
+        "success_rate": 10000,
+    }]}, pak)
+    assert rows == [(
+        effect_ref_key(1042014),
+        pak_cast_moment_key(11),
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )]
+    assert gaps == []

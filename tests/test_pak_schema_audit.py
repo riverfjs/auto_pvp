@@ -140,9 +140,8 @@ def test_buffbase_families_count_total(buffbase_conf, buff_conf):
 
 def test_exact_rule_debt_h_install_counter_migrated_out():
     """Post-7B: ``H_INSTALL_COUNTER`` no longer appears in
-    exact compiler semantic rules — the whole family is covered by the
-    ``effect_order=31`` decoder in
-    :mod:`roco.compiler_v2.effect_codegen.family_axes`.
+    exact compiler semantic rules; compiler_v2 no longer owns behavior
+    decoders.
 
     Locks the migration: re-adding a row by hand for any ``ET_COUNTER``
     effect would fail this test, surfacing the regression at audit time.
@@ -151,8 +150,7 @@ def test_exact_rule_debt_h_install_counter_migrated_out():
     handlers = {r["handler"] for r in _load_exact_rules()}
     assert "H_INSTALL_COUNTER" not in handlers, (
         "H_INSTALL_COUNTER row in exact compiler semantics — the counter "
-        "family is now decoded by family_axes; add the rule to the "
-        "family decoder instead of exact semantics."
+        "family belongs in the engine artifact linker, not compiler_v2."
     )
 
 

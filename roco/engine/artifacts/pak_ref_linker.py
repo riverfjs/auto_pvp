@@ -15,12 +15,14 @@ from roco.common.entry_sources import (
 )
 from roco.common.enums import Element
 from roco.common.primitive_keys import BUFF_REF_PREFIX, EFFECT_REF_PREFIX, strip_prefix
-from roco.engine.artifacts.linked_op import LinkedOp
+from roco.engine.artifacts.linked_op import LinkGap, LinkGapError, LinkedOp
+from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.generated.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES, BUFF_TYPE as BUFF_KIND
 from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 from roco.generated.effect_params import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE
 from roco.generated.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT
 from roco.generated.static.lua_enums import BUFF_TYPE, EFFECT_TYPE as EFFECT_TYPE_ENUM
+from roco.generated.weather_table import PAK_WEATHER_DEFAULT_TURNS, PAK_WEATHER_TYPE_TO_KERNEL
 
 
 COUNT_FAINTED_ALLY = -1
@@ -44,18 +46,31 @@ BFT_NINETY_THREE = int(BUFF_TYPE["BFT_NINETY_THREE"])
 BFT_O_EIGHT = int(BUFF_TYPE["BFT_O_EIGHT"])
 BFT_O_FIFTEEN = int(BUFF_TYPE["BFT_O_FIFTEEN"])
 BFT_O_FORTYSIX = int(BUFF_TYPE["BFT_O_FORTYSIX"])
+BFT_O_T = int(BUFF_TYPE["BFT_O_T"])
 BFT_O_TWO = int(BUFF_TYPE["BFT_O_TWO"])
 BFT_SPIKES = int(BUFF_TYPE["BFT_SPIKES"])
 BFT_STRENGTHEN_THE_SKILL = int(BUFF_TYPE["BFT_STRENGTHEN_THE_SKILL"])
 
 ET_BUFF_BY_EQUIP_SKILL_NUM = int(EFFECT_TYPE_ENUM["ET_BUFF_BY_EQUIP_SKILL_NUM"])
+ET_BUFF_BY_CHANGE_TIMES = int(EFFECT_TYPE_ENUM["ET_BUFF_BY_CHANGE_TIMES"])
 ET_BUFF_BY_PACK_PET_NUM = int(EFFECT_TYPE_ENUM["ET_BUFF_BY_PACK_PET_NUM"])
 ET_BUFF_CONVERT = int(EFFECT_TYPE_ENUM["ET_BUFF_CONVERT"])
+ET_CHANGE_ENERGY = int(EFFECT_TYPE_ENUM["ET_CHANGE_ENERGY"])
+ET_CHANGE_WEATHER = int(EFFECT_TYPE_ENUM["ET_CHANGE_WEATHER"])
+ET_COPY_BUFF = int(EFFECT_TYPE_ENUM["ET_COPY_BUFF"])
+ET_COUNTER = int(EFFECT_TYPE_ENUM["ET_COUNTER"])
+ET_FAST_SKILL = int(EFFECT_TYPE_ENUM["ET_FAST_SKILL"])
 ET_HERO = int(EFFECT_TYPE_ENUM["ET_HERO"])
 ET_INLAY = int(EFFECT_TYPE_ENUM["ET_INLAY"])
 ET_LIMIT_FIGHT_BY_HP = int(EFFECT_TYPE_ENUM["ET_LIMIT_FIGHT_BY_HP"])
 ET_MULTIPLE = int(EFFECT_TYPE_ENUM["ET_MULTIPLE"])
+ET_PURIFY = int(EFFECT_TYPE_ENUM["ET_PURIFY"])
+ET_RECOVER = int(EFFECT_TYPE_ENUM["ET_RECOVER"])
+ET_SKILL_CD = int(EFFECT_TYPE_ENUM["ET_SKILL_CD"])
+ET_SUCKBLOOD = int(EFFECT_TYPE_ENUM["ET_SUCKBLOOD"])
 ET_SWAP_STAT = int(EFFECT_TYPE_ENUM["ET_SWAP_STAT"])
+ET_SWAP_SKILLS = int(EFFECT_TYPE_ENUM["ET_SWAP_SKILLS"])
+
 
 
 def link_pak_ref(
@@ -69,7 +84,7 @@ def link_pak_ref(
     p3: int,
     *,
     source_name: str,
-) -> LinkedOp | None:
+) -> tuple[LinkedOp, ...] | None:
     buff_ref = strip_prefix(primitive, BUFF_REF_PREFIX)
     if buff_ref is not None:
         try:
@@ -119,6 +134,173 @@ def _op(
     return LinkedOp(op_name, timing, target, rate, int(p0), int(p1), int(p2), int(p3))
 
 
+def _gap(
+    primitive: str,
+    reason: str,
+    *,
+    source_name: str,
+    timing: int,
+    target: int,
+    rate: int,
+    effect_id: int | None = None,
+    buff_id: int | None = None,
+    **params: object,
+) -> LinkGapError:
+    return LinkGapError(LinkGap(
+        primitive=primitive,
+        reason=reason,
+        source_name=source_name,
+        effect_id=effect_id,
+        buff_id=buff_id,
+        timing=timing,
+        target=target,
+        rate=rate,
+        params=params,
+    ))
+
+
+def _link_ref_id(
+    ref_id: int,
+    timing: int,
+    target: int,
+    rate: int,
+    *,
+    source_name: str,
+) -> tuple[LinkedOp, ...]:
+    if ref_id in EFFECT_ORDER:
+        return _link_effect_ref(ref_id, timing, target, rate, 0, 0, 0, 0, source_name=source_name)
+    if ref_id in BUFF_BASE_IDS:
+        return _link_buff_ref(ref_id, timing, target, rate, 0, 0, 0, 0, source_name=source_name)
+    raise _gap(
+        f"pak_ref:{ref_id}",
+        "assigned_ref_not_in_pak",
+        source_name=source_name,
+        timing=timing,
+        target=target,
+        rate=rate,
+        ref_id=ref_id,
+    )
+
+
+def _link_assign_buff(
+    buff_id: int,
+    timing: int,
+    target: int,
+    rate: int,
+    *,
+    source_name: str,
+) -> tuple[LinkedOp, ...] | None:
+    assign_rows = [
+        (base_id, params)
+        for base_id, order, params in _base_rows(buff_id)
+        if order == BFT_ASSIGN
+    ]
+    if not assign_rows:
+        return None
+    linked: list[LinkedOp] = []
+    for base_id, params in assign_rows:
+        refs = _as_int_tuple(_param(params, 0))
+        assign_rate = _param_int(params, 1, 10000)
+        target_code = _param_int(params, 2)
+        if not refs:
+            raise _gap(
+                f"buff_ref:{buff_id}",
+                "assign_no_refs",
+                source_name=source_name,
+                timing=timing,
+                target=target,
+                rate=rate,
+                buff_id=buff_id,
+                buff_base_id=base_id,
+            )
+        if assign_rate <= 0:
+            raise _gap(
+                f"buff_ref:{buff_id}",
+                "assign_zero_rate",
+                source_name=source_name,
+                timing=timing,
+                target=target,
+                rate=rate,
+                buff_id=buff_id,
+                buff_base_id=base_id,
+                assign_rate=assign_rate,
+            )
+        if target_code not in (0, 1, 2, 3, 4):
+            raise _gap(
+                f"buff_ref:{buff_id}",
+                "assign_condition_unsupported",
+                source_name=source_name,
+                timing=timing,
+                target=target,
+                rate=rate,
+                buff_id=buff_id,
+                buff_base_id=base_id,
+                assigned_refs=refs,
+                assign_target_or_condition=target_code,
+            )
+        child_target = target_code or target
+        child_rate = rate * assign_rate // 10000
+        for ref_id in refs:
+            linked.extend(_link_ref_id(ref_id, timing, child_target, child_rate, source_name=source_name))
+    return tuple(linked)
+
+
+def _link_entry_energy_buff(
+    buff_id: int,
+    target: int,
+    rate: int,
+    *,
+    source_name: str,
+) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != BFT_O_T:
+        return None
+    base_id, _order, base_params = rows[0]
+    if len(base_params) < 7:
+        raise _gap(
+            f"buff_ref:{buff_id}",
+            "bft_o_t_short_params",
+            source_name=source_name,
+            timing=TIMING_PAK_SDT,
+            target=target,
+            rate=rate,
+            buff_id=buff_id,
+            buff_base_id=base_id,
+            base_params=base_params,
+        )
+    amount = _energy_amount_from_effect_refs(_as_int_tuple(base_params[4]), source_name=source_name)
+    source_kind = _param_int(base_params, 6)
+    if source_kind == 0:
+        element = _skill_dam_type_to_element(_param_int(base_params, 0), source_name=source_name)
+        return _op("op_entry_energy_from_element_count", TIMING_PAK_SDT, target, rate, element, amount)
+    if source_kind == 1 and _param_int(base_params, 0) == 0:
+        return _op("op_entry_energy_from_counter_count", TIMING_PAK_SDT, target, rate, amount)
+    raise _gap(
+        f"buff_ref:{buff_id}",
+        "bft_o_t_source_shape_unsupported",
+        source_name=source_name,
+        timing=TIMING_PAK_SDT,
+        target=target,
+        rate=rate,
+        buff_id=buff_id,
+        buff_base_id=base_id,
+        base_params=base_params,
+    )
+
+
+def _link_generic_buff_delta(
+    buff_id: int,
+    timing: int,
+    target: int,
+    rate: int,
+) -> LinkedOp | None:
+    base_ids = tuple(int(v) for v in BUFF_BASE_IDS.get(buff_id) or () if v)
+    packed = pack_buff_delta_from_base_ids(base_ids)
+    if packed:
+        return _op("op_self_buff", timing, target, rate, packed)
+    return None
+
+
 def _link_buff_ref(
     buff_id: int,
     timing: int,
@@ -130,9 +312,21 @@ def _link_buff_ref(
     p3: int,
     *,
     source_name: str,
-) -> LinkedOp:
+) -> tuple[LinkedOp, ...]:
     if buff_id not in BUFF_BASE_IDS:
-        raise RuntimeError(f"{source_name!r} references unknown BUFF_CONF id {buff_id}")
+        raise _gap(
+            f"buff_ref:{buff_id}",
+            "buff_id_not_in_pak",
+            source_name=source_name,
+            timing=timing,
+            target=target,
+            rate=rate,
+            buff_id=buff_id,
+        )
+
+    assigned = _link_assign_buff(buff_id, timing, target, rate, source_name=source_name)
+    if assigned is not None:
+        return assigned
 
     stack_count = max(1, p0)
     linked = (
@@ -149,11 +343,21 @@ def _link_buff_ref(
         or _link_cute_bench_cost_reduce_buff(buff_id, timing, target, rate, source_name=source_name)
         or _link_conditional_hit_count_buff(buff_id, timing, target, rate, p0, source_name=source_name)
         or _link_transmission_buff(buff_id, timing, target, rate, p0, p1, p2, p3)
+        or _link_entry_energy_buff(buff_id, target, rate, source_name=source_name)
+        or _link_generic_buff_delta(buff_id, timing, target, rate)
     )
     if linked is not None:
-        return linked
-    raise RuntimeError(
-        f"{source_name!r} BUFF_CONF[{buff_id}] is emitted as a pak ref but has no engine linker rule"
+        return (linked,)
+    raise _gap(
+        f"buff_ref:{buff_id}",
+        "buff_shape_unsupported",
+        source_name=source_name,
+        timing=timing,
+        target=target,
+        rate=rate,
+        buff_id=buff_id,
+        base_ids=BUFF_BASE_IDS.get(buff_id) or (),
+        base_orders=tuple(BUFFBASE_ORDER.get(base_id) for base_id in BUFF_BASE_IDS.get(buff_id) or ()),
     )
 
 
@@ -168,47 +372,138 @@ def _link_effect_ref(
     p3: int,
     *,
     source_name: str,
-) -> LinkedOp:
+) -> tuple[LinkedOp, ...]:
     order = EFFECT_ORDER.get(effect_id)
     if order is None:
-        raise RuntimeError(f"{source_name!r} references unknown EFFECT_CONF id {effect_id}")
+        raise _gap(
+            f"effect_ref:{effect_id}",
+            "effect_id_not_in_pak",
+            source_name=source_name,
+            timing=timing,
+            target=target,
+            rate=rate,
+            effect_id=effect_id,
+        )
     params = EFFECT_PARAMS.get(effect_id) or ()
+    etype = EFFECT_TYPE.get(effect_id)
+    if etype == 2:
+        return (_op("op_damage", timing, target, rate, _param_int(params, 2), 0, _param_int(params, 6)),)
     if order == ET_INLAY and p0 > 0 and (p1 or p2 or p3):
-        return _op("op_skill_mod", timing, target, rate, p0, p1, p2, p3)
+        return (_op("op_skill_mod", timing, target, rate, p0, p1, p2, p3),)
+    if order == ET_PURIFY:
+        linked = _link_effect_purify(effect_id, params, timing, target, rate)
+        if linked is not None:
+            return (linked,)
+    if order == ET_RECOVER:
+        amount = _param_int(params, 1)
+        if amount:
+            return (_op("op_heal_hp", timing, target, rate, amount),)
+    if order == ET_SUCKBLOOD:
+        amount = _param_int(params, 0)
+        if amount:
+            return (_op("op_life_drain", timing, target, rate, amount),)
+    if order == ET_CHANGE_ENERGY:
+        linked = _link_effect_change_energy(effect_id, params, timing, target, rate)
+        if linked is not None:
+            return (linked,)
+    if order == ET_CHANGE_WEATHER:
+        linked = _link_effect_weather(effect_id, params, timing, target, rate)
+        if linked is not None:
+            return (linked,)
+    if order == ET_COUNTER:
+        response_skill_id = _param_int(params, 0)
+        if 7000000 <= response_skill_id < 8000000:
+            return (_op("op_install_counter", TIMING_PAK_BEFORE_HURT, target, rate, response_skill_id),)
     if order == ET_MULTIPLE:
         linked = _link_effect_hit_count(effect_id, params, timing, target, rate)
         if linked is not None:
-            return linked
+            return (linked,)
+    if order == ET_SKILL_CD:
+        turns = _param_int(params, 0)
+        if turns > 0 and _param_int(params, 2) == 1 and _param_int(params, 3) == 0:
+            return (_op("op_set_self_cooldown", timing, target, rate, turns),)
+    if order == ET_FAST_SKILL:
+        delta = _param_int(params, 2)
+        if delta:
+            return (_op("op_priority_next_delta", timing, target, rate, delta),)
     if order == ET_SWAP_STAT:
         mode = _param_int(params, 0)
         if mode == 1:
-            return _op("op_exchange_hp_ratio", timing, target, rate)
+            return (_op("op_exchange_hp_ratio", timing, target, rate),)
         if mode == 3:
-            return _op("op_transfer_mods", timing, target, rate)
+            return (_op("op_transfer_mods", timing, target, rate),)
+    if order == ET_SWAP_SKILLS and _param_int(params, 0) == 1:
+        return (_op("op_exchange_moves", timing, target, rate),)
+    if order == ET_COPY_BUFF:
+        linked = _link_effect_copy_buff(effect_id, params, timing, target, rate)
+        if linked is not None:
+            return (linked,)
     if order == ET_BUFF_CONVERT:
         linked = _link_effect_buff_convert(effect_id, params, timing, target, rate)
         if linked is not None:
-            return linked
+            return (linked,)
     if order == ET_BUFF_BY_PACK_PET_NUM:
         linked = _link_effect_buff_by_pack_pet_num(effect_id, params, timing, target, rate)
         if linked is not None:
-            return linked
+            return (linked,)
+    if order == ET_BUFF_BY_CHANGE_TIMES:
+        packed = _pack_buff_delta_from_buff_ids(_as_int_tuple(_param(params, 0)))
+        if packed:
+            return (_op("op_self_buff", TIMING_PAK_SDT, target, rate, packed),)
     if order == ET_LIMIT_FIGHT_BY_HP:
         linked = _link_effect_entry_buff_if_energy(effect_id, params, timing, target, rate)
         if linked is not None:
-            return linked
+            return (linked,)
     if order == ET_HERO:
         linked = _link_effect_hero(effect_id, params, timing, target, rate, source_name=source_name)
         if linked is not None:
-            return linked
+            return (linked,)
     if order == ET_BUFF_BY_EQUIP_SKILL_NUM:
         linked = _link_effect_buff_by_equip_skill_num(
             effect_id, params, timing, target, rate, source_name=source_name
         )
         if linked is not None:
-            return linked
-    raise RuntimeError(
-        f"{source_name!r} EFFECT_CONF[{effect_id}] is emitted as a pak ref but has no engine linker rule"
+            return (linked,)
+    if etype == 1:
+        buff_ids = _buff_refs_from_params(params)
+        if len(buff_ids) == 1:
+            stack_count = _count_param_repeats(params, buff_ids[0])
+            return _link_buff_ref(
+                buff_ids[0],
+                timing,
+                target,
+                rate,
+                stack_count,
+                0,
+                0,
+                0,
+                source_name=source_name,
+            )
+        reason = "effect_type_1_compound" if len(buff_ids) > 1 else "effect_type_1_no_buff"
+        raise _gap(
+            f"effect_ref:{effect_id}",
+            reason,
+            source_name=source_name,
+            timing=timing,
+            target=target,
+            rate=rate,
+            effect_id=effect_id,
+            effect_order=order,
+            effect_type=etype,
+            buff_candidates=buff_ids,
+            effect_params=params,
+        )
+    raise _gap(
+        f"effect_ref:{effect_id}",
+        "effect_shape_unsupported",
+        source_name=source_name,
+        timing=timing,
+        target=target,
+        rate=rate,
+        effect_id=effect_id,
+        effect_order=order,
+        effect_type=etype,
+        effect_params=params,
     )
 
 
@@ -231,6 +526,86 @@ def _link_status_or_mark_buff(
         op_name = _mark_op_name_by_shape(buff_id)
         if op_name is not None:
             return _op(op_name, timing, target, rate, stack_count)
+    return None
+
+
+def _link_effect_purify(
+    _effect_id: int,
+    params: tuple,
+    timing: int,
+    target: int,
+    rate: int,
+) -> LinkedOp | None:
+    if (
+        _param_int(params, 0) == 1
+        and _param_int(params, 1) == 2
+        and _param_int(params, 2) == 99
+        and _param_int(params, 3) == 99
+        and _param_int(params, 4) == 0
+    ):
+        return _op("op_dispel_debuffs", timing, target, rate)
+    return None
+
+
+def _link_effect_change_energy(
+    _effect_id: int,
+    params: tuple,
+    timing: int,
+    target: int,
+    rate: int,
+) -> LinkedOp | None:
+    direct = _param_int(params, 0)
+    if direct:
+        return _op("op_heal_energy", timing, target, rate, direct)
+    base = _param_int(params, 1)
+    ratio = _param_int(params, 2)
+    if base == 0 and ratio == 0 and len(params) >= 3:
+        return _op("op_heal_energy", timing, target, rate, 0)
+    if base > 0 and ratio:
+        amount = base * ratio // 10000
+        if amount:
+            return _op("op_heal_energy", timing, target, rate, amount)
+    return None
+
+
+def _link_effect_weather(
+    _effect_id: int,
+    params: tuple,
+    timing: int,
+    target: int,
+    rate: int,
+) -> LinkedOp | None:
+    pak_weather_type = _param_int(params, 0)
+    kernel_weather = PAK_WEATHER_TYPE_TO_KERNEL.get(pak_weather_type)
+    if kernel_weather is None:
+        return None
+    return _op(
+        "op_weather",
+        timing,
+        target,
+        rate,
+        int(kernel_weather),
+        int(PAK_WEATHER_DEFAULT_TURNS.get(pak_weather_type, 0)),
+    )
+
+
+def _link_effect_copy_buff(
+    _effect_id: int,
+    params: tuple,
+    timing: int,
+    target: int,
+    rate: int,
+) -> LinkedOp | None:
+    if (
+        _param_int(params, 0) == 0
+        and _param_int(params, 1) == 1
+        and _param_int(params, 2) == 0
+        and not _as_int_tuple(_param(params, 3))
+        and _param_int(params, 4) == 99
+        and _param_int(params, 5) == 1
+        and _param_int(params, 6) == 1
+    ):
+        return _op("op_mirror_enemy_buffs", timing, target, rate)
     return None
 
 
@@ -289,7 +664,7 @@ def _link_active_immunity_buff(
     if not rules:
         return None
     if len(rules) != 1:
-        raise RuntimeError(f"{source_name!r} active buff {buff_id} must have one pak reduce rule")
+        return None
     reduce_type, params = rules[0]
     if int(reduce_type) != 13:
         return None
@@ -328,7 +703,7 @@ def _link_team_skill_hit_count_buff(
         return None
     skill_ids = tuple(v for v in _as_int_tuple(params[1]) if v > 0)
     if len(skill_ids) > 1:
-        raise RuntimeError(f"{source_name!r} team hit-count buff {buff_id} has multiple skill ids {skill_ids!r}")
+        return None
     skill_id = skill_ids[0] if skill_ids else 0
     return _op("op_hit_count_by_team_skill_count", timing, target, rate, stack_count, skill_id)
 
@@ -347,15 +722,15 @@ def _link_hit_count_delta_buff(
         return None
     params = rows[0][2]
     if len(params) < 3:
-        raise RuntimeError(f"{source_name!r} hit-count buff {buff_id} has short params {params!r}")
+        return None
     amount = _single_int(params[0])
     mode = _single_int(params[2])
     if amount is None or amount == 0:
-        raise RuntimeError(f"{source_name!r} hit-count buff {buff_id} has no amount")
+        return None
     if mode == 0:
         skill_ids = tuple(v for v in _as_int_tuple(params[1]) if v > 0)
         if len(skill_ids) > 3:
-            raise RuntimeError(f"{source_name!r} hit-count buff {buff_id} has too many skill ids {skill_ids!r}")
+            return None
         padded = (skill_ids + (0, 0, 0))[:3]
         return _op(
             "op_hit_count_delta",
@@ -385,10 +760,10 @@ def _link_heal_reversal_buff(
         return None
     params = rows[0][2]
     if len(params) < 5 or _as_int_tuple(params[0]) != (24,) or _as_int_tuple(params[4]) != (-1,):
-        raise RuntimeError(f"{source_name!r} heal reversal buff {buff_id} has unsupported params {params!r}")
+        return None
     trigger = _as_int_tuple(params[3])
     if len(trigger) < 2:
-        raise RuntimeError(f"{source_name!r} heal reversal buff {buff_id} missing trigger params")
+        return None
     return _op("op_anti_heal", timing, target, rate, max(1, trigger[1] // 10))
 
 
@@ -411,7 +786,7 @@ def _link_cute_bench_cost_reduce_buff(
             continue
         amount = _all_skill_cost_reduce_amount(target_refs[0])
         if amount <= 0:
-            raise RuntimeError(f"{source_name!r} cute bench buff {buff_id} points at unsupported reducer {target_refs[0]}")
+            continue
         return _op("op_cute_bench_cost_reduce", timing, target, rate, amount)
     return None
 
@@ -429,14 +804,14 @@ def _link_conditional_hit_count_buff(
     if not base_ids or any(BUFFBASE_ORDER.get(base_id) != BFT_NINETY_ONE for base_id in base_ids):
         return None
     if amount <= 0:
-        raise RuntimeError(f"{source_name!r} conditional hit-count buff {buff_id} has no amount")
+        return None
     condition_refs, grant_refs = _conditional_refs_and_grants(base_ids)
     if not _grant_refs_are_hit_count_effects(grant_refs):
         return None
     if _condition_refs_are_poison_effects(condition_refs):
-        return _op("op_hit_count_per_poison_effect", timing, target, rate, amount)
+        return _op("op_hit_count_per_poison_effect", TIMING_HOOK_BEFORE_MOVE, target, rate, amount)
     if _condition_refs_are_cute_effects(condition_refs):
-        return _op("op_cute_hit_per_stack", timing, target, rate, amount)
+        return _op("op_cute_hit_per_stack", TIMING_HOOK_BEFORE_MOVE, target, rate, amount)
     return None
 
 
@@ -472,7 +847,50 @@ def _link_effect_hit_count(
         return _op("op_hit_count_by_team_skill_count", timing, target, rate, per_same_skill, skill_id)
     if delta > 0 and per_same_skill == 0 and skill_id == 0:
         return _op("op_hit_count_delta", timing, target, rate, delta)
-    raise RuntimeError(f"EFFECT_CONF[{effect_id}] ET_MULTIPLE has unsupported params {params!r}")
+    return None
+
+
+def _energy_amount_from_effect_refs(
+    effect_refs: tuple[int, ...],
+    *,
+    source_name: str,
+) -> int:
+    amounts: set[int] = set()
+    for effect_id in effect_refs:
+        if EFFECT_ORDER.get(effect_id) != ET_CHANGE_ENERGY or EFFECT_TYPE.get(effect_id) != 3:
+            raise _gap(
+                f"effect_ref:{effect_id}",
+                "bft_o_t_non_energy_ref",
+                source_name=source_name,
+                timing=TIMING_PAK_SDT,
+                target=0,
+                rate=0,
+                effect_id=effect_id,
+            )
+        amount = _param_int(EFFECT_PARAMS.get(effect_id) or (), 0)
+        if amount <= 0:
+            raise _gap(
+                f"effect_ref:{effect_id}",
+                "bft_o_t_non_positive_energy_ref",
+                source_name=source_name,
+                timing=TIMING_PAK_SDT,
+                target=0,
+                rate=0,
+                effect_id=effect_id,
+                amount=amount,
+            )
+        amounts.add(amount)
+    if len(amounts) != 1:
+        raise _gap(
+            "effect_ref:*",
+            "bft_o_t_mixed_energy_refs",
+            source_name=source_name,
+            timing=TIMING_PAK_SDT,
+            target=0,
+            rate=0,
+            amounts=tuple(sorted(amounts)),
+        )
+    return amounts.pop()
 
 
 def _link_effect_buff_convert(
@@ -502,6 +920,7 @@ def _link_effect_buff_by_pack_pet_num(
     target: int,
     rate: int,
 ) -> LinkedOp | None:
+    timing = TIMING_PAK_SDT
     packed = _pack_buff_delta_from_buff_ids(_as_int_tuple(_param(params, 3)))
     if packed == 0:
         return None
@@ -520,6 +939,7 @@ def _link_effect_entry_buff_if_energy(
     target: int,
     rate: int,
 ) -> LinkedOp | None:
+    timing = TIMING_PAK_SDT
     selector = _param_int(params, 2)
     if selector not in (1, 2):
         return None
@@ -538,6 +958,7 @@ def _link_effect_hero(
     *,
     source_name: str,
 ) -> LinkedOp | None:
+    timing = TIMING_PAK_SDT
     if _param_int(params, 3) == 2:
         linked = _link_hero_event_count(effect_id, params, timing, target, rate)
         if linked is not None:
@@ -566,7 +987,7 @@ def _link_effect_hero(
     element = _param_int(params, 0, -1)
     if packed and element > 0:
         return _op("op_entry_self_buff_by_used_skill_count", timing, target, rate, element, packed)
-    raise RuntimeError(f"{source_name!r} EFFECT_CONF[{effect_id}] ET_HERO has unsupported params {params!r}")
+    return None
 
 
 def _link_hero_event_count(
@@ -638,6 +1059,7 @@ def _link_effect_buff_by_equip_skill_num(
     *,
     source_name: str,
 ) -> LinkedOp | None:
+    timing = TIMING_PAK_SDT
     source_skill_dam_type = _param_int(params, 0, -1)
     base_ids = _base_ids_from_buff_ids(_as_int_tuple(_param(params, 4)))
     if not base_ids:
@@ -889,6 +1311,24 @@ def _base_ids_from_buff_ids(buff_ids: tuple[int, ...]) -> tuple[int, ...]:
     for buff_id in buff_ids:
         out.extend(int(v) for v in BUFF_BASE_IDS.get(buff_id) or () if v)
     return tuple(out)
+
+
+def _buff_refs_from_params(params: tuple) -> tuple[int, ...]:
+    seen: list[int] = []
+    for value in params:
+        for raw in _as_int_tuple(value):
+            if raw in BUFF_BASE_IDS and raw not in seen:
+                seen.append(raw)
+    return tuple(seen)
+
+
+def _count_param_repeats(params: tuple, ref_id: int) -> int:
+    best = 1
+    for value in params:
+        count = _as_int_tuple(value).count(ref_id)
+        if count > best:
+            best = count
+    return best
 
 
 def _param(params: tuple, index: int) -> object:
