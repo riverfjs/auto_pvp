@@ -53,6 +53,19 @@ def _link_heal_reversal_buff(buff_id: int, timing: int, target: int, rate: int, 
         return None
     return _op('op_anti_heal', timing, target, rate, max(1, trigger[1] // 10))
 
+
+def _link_life_drain_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_BLOOD'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 5 or not _all_zero(params[:4]) or not _all_zero(params[5:]):
+        return None
+    amount = _param_int(params, 4)
+    if amount <= 0:
+        return None
+    return _op('op_life_drain', timing, target, rate, amount)
+
 def _link_cute_bench_cost_reduce_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str) -> LinkedOp | None:
     for _base_id, order, params in _base_rows(buff_id):
         if order != buff_type('BFT_CHECK_BUFF_LAYER') or len(params) < 3:
@@ -102,7 +115,9 @@ def _link_global_cost_delta_buff(buff_id: int, timing: int, target: int, rate: i
             return None
         if _as_int_tuple(params[0]) != (0,):
             return None
-        if not _all_zero(params[1:3]) or not _all_zero(params[4:]):
+        if not _all_zero(params[1:3]) or _param_int(params, 4) != 0 or _param_int(params, 6) != 0:
+            return None
+        if _param_int(params, 5) not in (0, 1, 2, 3):
             return None
         amount = _param_int(params, 3)
         if amount == 0:
@@ -330,7 +345,9 @@ def _link_damage_reduction_buff(buff_id: int, timing: int, target: int, rate: in
         return None
     if _as_int_tuple(params[0]) != (0,) or set(_as_int_tuple(params[1])) != {2, 3}:
         return None
-    if not _all_zero(params[2:4]) or not _all_zero(params[5:]):
+    if not _all_zero(params[2:4]):
+        return None
+    if _param_int(params, 5) not in (0, 1) or not _all_zero(params[6:]):
         return None
     amount = _param_int(params, 4)
     if amount >= 0:
@@ -347,7 +364,9 @@ def _link_power_dynamic_buff(buff_id: int, timing: int, target: int, rate: int) 
     categories = _as_int_tuple(params[1])
     if categories not in ((0,), (2, 3), (3, 2)):
         return None
-    if not _all_zero(params[2:4]) or not _all_zero(params[6:]):
+    if not _all_zero(params[2:4]) or not _all_zero(params[6:9]):
+        return None
+    if _param_int(params, 9) not in (0, 1) or not _all_zero(params[10:]):
         return None
     mode = _param_int(params, 4)
     amount = _param_int(params, 5)
@@ -360,11 +379,33 @@ def _link_power_dynamic_buff(buff_id: int, timing: int, target: int, rate: int) 
         if element_mask:
             return _op('op_power_dynamic_elements', timing, target, rate, element_mask, BPS + amount)
         return _op('op_power_dynamic', timing, target, rate, BPS + amount)
-    if mode == 2 and amount > 0:
+    if mode == 2 and amount != 0:
         if element_mask:
             return _op('op_power_dynamic_elements', timing, target, rate, element_mask, 0, amount)
         return _op('op_power_dynamic', timing, target, rate, 0, amount)
     return None
+
+
+def _link_first_strike_power_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_INC_DAM_BY_ATTACK_FIRST'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 7:
+        return None
+    if _as_int_tuple(params[0]) != (0,) or _param_int(params, 2) != 0 or not _all_zero(params[4:]):
+        return None
+    categories = _as_int_tuple(params[1])
+    if categories == (0,):
+        category_scope = 0
+    elif set(categories) == {2, 3}:
+        category_scope = 1
+    else:
+        return None
+    amount = _param_int(params, 3)
+    if amount <= 0:
+        return None
+    return _op('op_first_strike_power_bps', timing, target, rate, category_scope, BPS + amount)
 
 
 def _link_specific_skill_power_bonus_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:

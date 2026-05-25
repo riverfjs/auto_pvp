@@ -41,7 +41,9 @@ from roco.engine.artifacts.primitive_linker import link_primitive_row, link_prim
 from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
-from roco.engine.kernel.ops.skill import op_power_dynamic_elements, op_specific_skill_power_bonus
+from roco.engine.kernel.ops.damage import op_damage_reduction
+from roco.engine.kernel.ops.resources import op_life_drain
+from roco.engine.kernel.ops.skill import op_first_strike_power_bps, op_power_dynamic, op_power_dynamic_elements, op_specific_skill_power_bonus
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -460,6 +462,32 @@ def test_direct_bft_damnum_change_links_damage_reduction_from_pak_shape():
         link_primitive_rows(positive_amount, source_name="展翅")
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
+    delayed_absorb = (buff_ref_key(20110140), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(delayed_absorb, "应对！无畏之心") == (
+        "op_damage_reduction",
+        11,
+        1,
+        10000,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_direct_bft_damnum_change_zero_delta_is_inert_not_noop():
+    raw = (buff_ref_key(20110400), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkInertError) as exc_info:
+        link_primitive_rows(raw, source_name="毒沼")
+    assert exc_info.value.inert.reason == "bft_damnum_change_zero_delta"
+    assert exc_info.value.inert.buff_id == 20110400
+
+
+def test_damage_reduction_runtime_accepts_zero_bps():
+    ctx = StageCtx()
+    op_damage_reduction(ctx, (0, 11, 1, 10000, 0, 0, 0, 0, 0))
+    assert ctx.damage_reduction_bps == 0
+
 
 def test_direct_bft_inc_dam_by_skill_links_unconditional_power_bonus():
     raw = (buff_ref_key(20230354), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
@@ -593,6 +621,18 @@ def test_direct_bft_change_skill_energy_cost_links_global_cost_delta():
         0,
     )
 
+    flagged = (buff_ref_key(20320230), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(flagged, "骑士敕令") == (
+        "op_global_cost_delta",
+        11,
+        2,
+        10000,
+        3,
+        0,
+        0,
+        0,
+    )
+
     scoped = (buff_ref_key(20320010), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
     assert _linked_tuple(scoped, "聒噪") == (
         "op_attack_cost_delta",
@@ -680,6 +720,80 @@ def test_direct_bft_inc_dam_by_skill_links_global_power_delta():
     with pytest.raises(LinkGapError) as exc_info:
         link_primitive_rows(slotted, source_name="机械1")
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_direct_bft_inc_dam_by_skill_links_negative_flat_power():
+    raw = (buff_ref_key(20230750), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "伤害降低") == (
+        "op_power_dynamic",
+        11,
+        2,
+        10000,
+        0,
+        -10,
+        0,
+        0,
+    )
+
+
+def test_power_dynamic_allows_negative_flat_delta():
+    ctx = StageCtx()
+    ctx.power = 90
+    op_power_dynamic(ctx, (0, 11, 2, 10000, 0, 0, -10, 0, 0))
+    assert ctx.power == 80
+
+
+def test_direct_bft_inc_dam_by_attack_first_links_first_strike_power():
+    raw = (buff_ref_key(20210050), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "顺风") == (
+        "op_first_strike_power_bps",
+        11,
+        1,
+        10000,
+        1,
+        15000,
+        0,
+        0,
+    )
+
+
+def test_first_strike_power_bps_runtime_gates_on_turn_order_and_category():
+    ctx = StageCtx()
+    ctx.first_strike = 1
+    ctx.skill_category = SkillCategory.PHYSICAL.value
+    op_first_strike_power_bps(ctx, (0, 11, 1, 10000, 0, 1, 15000, 0, 0))
+    assert ctx.power_bps == 15000
+
+    second = StageCtx()
+    second.skill_category = SkillCategory.PHYSICAL.value
+    op_first_strike_power_bps(second, (0, 11, 1, 10000, 0, 1, 15000, 0, 0))
+    assert second.power_bps == 10000
+
+    non_attack = StageCtx()
+    non_attack.first_strike = 1
+    non_attack.skill_category = SkillCategory.STATUS.value
+    op_first_strike_power_bps(non_attack, (0, 11, 1, 10000, 0, 1, 15000, 0, 0))
+    assert non_attack.power_bps == 10000
+
+
+def test_direct_bft_blood_links_life_drain():
+    raw = (buff_ref_key(20540010), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "吸血") == (
+        "op_life_drain",
+        11,
+        1,
+        10000,
+        1000,
+        0,
+        0,
+        0,
+    )
+
+
+def test_life_drain_op_accumulates_damage_drain_bps():
+    ctx = StageCtx()
+    op_life_drain(ctx, (0, 11, 1, 10000, 0, 1000, 0, 0, 0))
+    assert ctx.drain_bps == 1000
 
 
 def test_global_power_delta_op_routes_by_target():

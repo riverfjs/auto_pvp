@@ -17,7 +17,7 @@ def op_damage(ctx: StageCtx, row: tuple[int, ...]) -> None:
 
 
 def op_damage_reduction(ctx: StageCtx, row: tuple[int, ...]) -> None:
-    if row[ROW_ARG0] > 0:
+    if row[ROW_ARG0] >= 0:
         ctx.damage_reduction_bps = min(ctx.damage_reduction_bps, row[ROW_ARG0])
 
 

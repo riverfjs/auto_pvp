@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from roco.common.constants import BPS
-from roco.common.enums import Element
+from roco.common.enums import Element, SkillCategory
 from roco.common.packing import _add_element_nibble, _add_element_u8, _max_element_u8
 from roco.engine.kernel.effects.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.core.ctx import StageCtx
@@ -19,7 +19,7 @@ from roco.engine.kernel.core.rows import (
 def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if row[ROW_ARG0] > 0:
         ctx.power_bps = (ctx.power_bps * row[ROW_ARG0]) // BPS
-    if row[ROW_ARG1] > 0:
+    if row[ROW_ARG1] != 0:
         ctx.power += row[ROW_ARG1]
 
 
@@ -28,8 +28,17 @@ def op_power_dynamic_elements(ctx: StageCtx, row: tuple[int, ...]) -> None:
         return
     if row[ROW_ARG1] > 0:
         ctx.power_bps = (ctx.power_bps * row[ROW_ARG1]) // BPS
-    if row[ROW_ARG2] > 0:
+    if row[ROW_ARG2] != 0:
         ctx.power += row[ROW_ARG2]
+
+
+def op_first_strike_power_bps(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if not ctx.first_strike:
+        return
+    category_scope = row[ROW_ARG0]
+    if category_scope == 1 and ctx.skill_category not in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
+        return
+    ctx.power_bps = (ctx.power_bps * row[ROW_ARG1]) // BPS
 
 
 def op_skill_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
