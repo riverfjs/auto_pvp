@@ -5,10 +5,10 @@ from __future__ import annotations
 from roco.common.constants import BPS, POISON_DAMAGE_BPS
 from roco.common.packing import MarkIdx, _unpack_mark
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.catalog import STAT_HP
+from roco.engine.kernel.core.catalog import STAT_HP
 from roco.engine.kernel.residual._shared import energy_cap
-from roco.engine.kernel.state import KernelState, replace_pet, replace_side, side
-from roco.generated import catalog_hot as hot
+from roco.engine.kernel.model.state import KernelState, replace_pet, replace_side, side
+from roco.generated.catalog import hot
 
 
 def tick_marks(state: KernelState) -> KernelState:

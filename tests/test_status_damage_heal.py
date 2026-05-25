@@ -18,15 +18,15 @@ from __future__ import annotations
 from roco.common.enums import AbilityFlag, StatusType
 from roco.engine.common.choices import SIDE_A, SIDE_B
 from roco.engine.kernel.residual.turn_end import end_turn
-from roco.engine.kernel.state import (
+from roco.engine.kernel.model.state import (
     make_state,
     replace_pet,
     replace_side,
     side,
     with_status,
 )
-from roco.generated import catalog_hot as hot
-from roco.engine.kernel.catalog import STAT_HP
+from roco.generated.catalog import hot
+from roco.engine.kernel.core.catalog import STAT_HP
 
 
 _RENXIN_PET = 80         # 治愈兔, ability 200152 仁心 (generated catalog id)

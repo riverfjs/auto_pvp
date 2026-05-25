@@ -14,7 +14,7 @@ from roco.engine.artifacts.linked_op import (
     LinkedAction,
     LinkedOp,
 )
-from roco.generated.handler_order import op_index
+from roco.generated.runtime.handler_order import op_index
 
 
 ACTION_NONE = 0

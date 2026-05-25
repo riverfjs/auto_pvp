@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from roco.compiler_v2 import buff_immunity_decoders as bid
-from roco.generated import buff_immunity_table as generated
+from roco.generated.pak import buff_immunity_table as generated
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -184,7 +184,7 @@ def test_generated_table_matches_loader(tmp_path):
     """Generated table values must match the Python semantic loader."""
     fresh_table = bid.load_buff_immunity_table()
     assert generated.BUFF_IMMUNITY_TABLE == fresh_table, (
-        "roco/generated/buff_immunity_table.py is out of date; "
+        "roco/generated/pak/buff_immunity_table.py is out of date; "
         "re-run `uv run python -m roco.compiler_v2.gen_prefix_map`"
     )
 
@@ -196,7 +196,7 @@ def test_generated_status_immunity_map_exact_content():
     leak into this map — they are not StatusType members.
     """
     from roco.common.enums import StatusType
-    from roco.generated.buff_immunity_table import (
+    from roco.generated.pak.buff_immunity_table import (
         IMMUNITY_BURN,
         IMMUNITY_FREEZE,
         IMMUNITY_LEECH,
@@ -212,7 +212,7 @@ def test_generated_status_immunity_map_exact_content():
     }
     # Defensive: no StatusType value should map to force_switch /
     # energy_drain IMMUNITY_* bits, since those aren't status conditions.
-    from roco.generated.buff_immunity_table import (
+    from roco.generated.pak.buff_immunity_table import (
         IMMUNITY_ENERGY_DRAIN,
         IMMUNITY_FORCE_SWITCH,
     )

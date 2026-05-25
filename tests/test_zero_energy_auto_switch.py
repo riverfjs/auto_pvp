@@ -28,16 +28,16 @@ import pytest
 
 from roco.common.constants import STARTING_ENERGY
 from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice
-from roco.engine.kernel.catalog import SKILL_ENERGY, SKILL_POWER
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.mechanics import _run_ability_timing, update
+from roco.engine.kernel.core.catalog import SKILL_ENERGY, SKILL_POWER
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.flow.mechanics import _run_ability_timing, update
 from roco.engine.kernel.residual.after_move import apply_after_move
-from roco.engine.kernel.state import (
+from roco.engine.kernel.model.state import (
     make_state,
     replace_pet,
 )
-from roco.generated import catalog_debug as debug
-from roco.generated import catalog_hot as hot
+from roco.generated.catalog import debug
+from roco.generated.catalog import hot
 
 
 _STAR_ABILITY_PET = 194    # 粉粉星 — carries ability 200166 星地善良
@@ -142,7 +142,7 @@ def test_zero_energy_unit_after_move_sets_force_switch():
     """Skip the cost-deduction logic: hand-build ctx with actor_energy=0,
     fire TIMING_PAK_BEFORE_HURT, assert ctx.force_switch flips to 1, and
     confirm apply_after_move's _auto_switch consumes the flag."""
-    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
+    from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     actor = state.side_a.pets[0]
@@ -161,7 +161,7 @@ def test_zero_energy_unit_after_move_sets_force_switch():
 def test_positive_energy_no_switch():
     """Same hand-built fixture, but actor_energy stays > 0.  The op must
     leave ctx.force_switch == 0 and apply_after_move must not switch."""
-    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
+    from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     actor = state.side_a.pets[0]
@@ -182,7 +182,7 @@ def test_no_replacement_no_crash():
     return the state unchanged rather than raise.  This guards against
     a real-game scenario where 星地善良 triggers but no bench is alive
     to receive the switch."""
-    from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_HURT
+    from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_HURT
 
     state = _seeded_state_with_star_ability_actor()
     # Knock the bench pet down to fainted.

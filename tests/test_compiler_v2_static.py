@@ -64,7 +64,7 @@ def test_static_files_are_importable_python(tmp_path: Path):
 def test_generated_runtime_static_adapters_match_bundle():
     bundle = build_static_bundle()
 
-    from roco.generated import (
+    from roco.generated.pak import (
         battle_events,
         battle_globals,
         bloodline_magic,
@@ -94,7 +94,7 @@ def test_compiler_v2_has_no_semantics_table_module():
 
 
 def test_generated_battle_events_match_pak_lua_enum():
-    from roco.generated import battle_events
+    from roco.generated.pak import battle_events
 
     assert battle_events.BATTLE_EVENT_VALUES == LuaEnumSource().enums(("BattleEvent",))["BattleEvent"]
     assert battle_events.BEVT_ROUND_CALC_START == 6
@@ -104,7 +104,7 @@ def test_generated_battle_events_match_pak_lua_enum():
 def test_compiler_v2_has_no_generated_runtime_imports():
     root = Path(__file__).resolve().parents[1] / "roco" / "compiler_v2"
     offenders: list[str] = []
-    forbidden = ("from roco.generated", "import roco.generated", "roco/generated/primitive_map.json")
+    forbidden = ("from roco.generated", "import roco.generated", "roco/generated/pak/primitive_map.json")
     for path in root.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         if any(term in text for term in forbidden):

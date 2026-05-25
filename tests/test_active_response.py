@@ -8,15 +8,15 @@ from roco.common.primitive_keys import buff_ref_key
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.primitive_linker import link_primitive_row
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.active_buffs import active_buff_duration, active_buff_id, pack_active_buff
-from roco.engine.kernel.active_response import (
+from roco.engine.kernel.model.active_buffs import active_buff_duration, active_buff_id, pack_active_buff
+from roco.engine.kernel.effects.active_response import (
     after_attack_response_supported,
     trigger_after_attack_active_buffs,
 )
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.buffs import op_apply_active_buff
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.ops.buffs import op_apply_active_buff
 from roco.engine.kernel.residual.after_move import apply_after_move
-from roco.engine.kernel.state import make_state, replace_pet, replace_side, side, status_stack
+from roco.engine.kernel.model.state import make_state, replace_pet, replace_side, side, status_stack
 
 
 def _seed_active_response(state, side_id: int, slot: int, buff_id: int, duration: int = 1):

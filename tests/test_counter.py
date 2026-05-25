@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from roco.engine.common.choices import SIDE_A, SIDE_B, move_choice
-from roco.engine.kernel.mechanics import update
-from roco.engine.kernel.state import make_state
-from roco.generated import catalog_debug as debug
-from roco.generated import catalog_hot as hot
-from roco.generated.counter_skill_table import COUNTER_SKILL_TABLE
+from roco.engine.kernel.flow.mechanics import update
+from roco.engine.kernel.model.state import make_state
+from roco.generated.catalog import debug
+from roco.generated.catalog import hot
+from roco.generated.pak.counter_skill_table import COUNTER_SKILL_TABLE
 
 
 def _pet_id(name: str) -> int:

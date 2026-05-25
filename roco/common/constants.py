@@ -7,8 +7,8 @@ beside hand-curated kernel policy.
 
 from __future__ import annotations
 
-from roco.generated.battle_globals import BATTLE_GLOBAL_NUMS
-from roco.generated.bloodline_magic import (
+from roco.generated.pak.battle_globals import BATTLE_GLOBAL_NUMS
+from roco.generated.pak.bloodline_magic import (
     PLAYER_MAGIC_LEADER_TRANSFORM_ID,
     PLAYER_MAGIC_WILLPOWER_ID,
     PLAYER_MAGICS_BY_ID,

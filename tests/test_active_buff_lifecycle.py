@@ -1,6 +1,6 @@
 """Phase 5A active-buff lifecycle: data layer + turn-end tick.
 
-The lifecycle layer in :mod:`roco.engine.kernel.active_buffs` is pure
+The lifecycle layer in :mod:`roco.engine.kernel.model.active_buffs` is pure
 integer manipulation; almost every test below operates on packed ints
 directly.  The last test reaches into a real ``KernelState`` to prove
 that ``_tick_side_turn_state`` decrements a manually-inserted active
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from roco.engine.kernel.active_buffs import (
+from roco.engine.kernel.model.active_buffs import (
     LANES,
     active_buff_duration,
     active_buff_id,
@@ -28,7 +28,7 @@ from roco.engine.kernel.active_buffs import (
     tick_active_buffs,
 )
 from roco.engine.kernel.residual.turn_end import _tick_side_turn_state
-from roco.engine.kernel.state import make_state
+from roco.engine.kernel.model.state import make_state
 
 
 # ── pack / unpack ─────────────────────────────────────────────────────────

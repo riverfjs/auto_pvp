@@ -109,7 +109,7 @@ def test_generated_module_exists():
 
 def test_generated_module_imports():
     """Import the generated module and verify the public dicts are there."""
-    from roco.generated import buffbase_params as bp  # type: ignore
+    from roco.generated.pak import buffbase_params as bp  # type: ignore
     assert hasattr(bp, "BUFFBASE_PARAMS")
     assert hasattr(bp, "BUFFBASE_ORDER")
     assert hasattr(bp, "BUFFBASE_TRIGGER_TYPE")

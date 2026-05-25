@@ -15,12 +15,12 @@ from roco.engine.artifacts.linked_op import (
     LinkedOp,
 )
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
-from roco.engine.kernel import action_runner
-from roco.engine.kernel.action_runner import drain_pending_actions
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.combat import op_queue_action
-from roco.engine.kernel.state import make_state
-from roco.generated.handler_order import op_index
+from roco.engine.kernel.flow.action_runner import drain_pending_actions
+from roco.engine.kernel.flow import action_runner
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.ops.combat import op_queue_action
+from roco.engine.kernel.model.state import make_state
+from roco.generated.runtime.handler_order import op_index
 
 
 def test_bft_freeze_links_only_canonical_shape():

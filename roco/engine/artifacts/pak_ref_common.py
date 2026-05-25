@@ -3,10 +3,10 @@ from __future__ import annotations
 from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.common.enums import Element
 from roco.engine.artifacts.linked_op import LinkGap, LinkGapError, LinkInert, LinkInertError, LinkedOp
-from roco.generated.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES, BUFF_TYPE as BUFF_KIND
-from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
-from roco.generated.effect_params import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE
-from roco.generated.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT
+from roco.generated.pak.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES, BUFF_TYPE as BUFF_KIND
+from roco.generated.pak.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.generated.pak.effect_params import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE
+from roco.generated.pak.skill_dam_types import SKILL_DAM_TYPE_TO_ELEMENT
 from roco.generated.static.lua_enums import BUFF_TYPE as LUA_BUFF_TYPE
 from roco.generated.static.lua_enums import EFFECT_TYPE as LUA_EFFECT_TYPE
 

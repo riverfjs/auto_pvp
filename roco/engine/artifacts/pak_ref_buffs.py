@@ -5,7 +5,7 @@ from roco.engine.artifacts.linked_op import LinkedOp
 from roco.engine.artifacts.pak_ref_buff_marks import _link_active_immunity_buff, _link_status_or_mark_buff, _link_zero_energy_auto_switch_buff
 from roco.engine.artifacts.pak_ref_buff_modifiers import _energy_amount_from_effect_refs, _link_after_attack_response_buff, _link_after_attack_status_buff, _link_attack_cost_delta_buff, _link_conditional_hit_count_buff, _link_cute_bench_cost_reduce_buff, _link_damage_reduction_buff, _link_element_cost_reduce_buff, _link_force_switch_buff, _link_freeze_buff, _link_global_cost_delta_buff, _link_global_power_delta_buff, _link_heal_reversal_buff, _link_hit_count_delta_buff, _link_power_dynamic_buff, _link_specific_skill_power_bonus_buff, _link_team_skill_hit_count_buff, _link_transmission_buff
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, _all_zero, _as_int_tuple, _base_rows, _gap, _inert, _op, _param, _param_int, _skill_dam_type_to_element, buff_type
-from roco.engine.kernel.op_rows import TIMING_PAK_SDT
+from roco.engine.kernel.core.rows import TIMING_PAK_SDT
 
 _ATTR_CHANGE_STAT_CODES = frozenset((6, 29, 30, 31, 32, 33, 34, 35, 36))
 

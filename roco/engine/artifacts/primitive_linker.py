@@ -11,8 +11,8 @@ from roco.common.primitive_keys import (
 )
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.engine.artifacts.pak_ref_linker import link_pak_ref
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE
-from roco.generated.battle_events import BATTLE_EVENT_VALUES
+from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE
+from roco.generated.pak.battle_events import BATTLE_EVENT_VALUES
 
 
 PrimitiveRow = tuple[str, str, int, int, int, int, int, int]

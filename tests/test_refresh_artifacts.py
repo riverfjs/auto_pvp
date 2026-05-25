@@ -96,7 +96,7 @@ def test_check_drift_returns_nonzero(monkeypatch):
     monkeypatch.setattr(refresh, "_run_step", fake)
 
     def drifted(paths: tuple[str, ...]) -> tuple[int, str]:
-        return 0, " M roco/generated/catalog_hot.py\n"
+        return 0, " M roco/generated/catalog/hot.py\n"
 
     monkeypatch.setattr(refresh, "_git_status_porcelain", drifted)
     assert refresh.main(["--check"]) == 1

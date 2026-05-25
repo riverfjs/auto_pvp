@@ -5,9 +5,9 @@ from __future__ import annotations
 from roco.common.constants import SANDSTORM_DAMAGE_DENOM, SNOW_FREEZE_STACKS
 from roco.common.enums import StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.catalog import STAT_HP
-from roco.engine.kernel.damage import sandstorm_immune
-from roco.engine.kernel.state import (
+from roco.engine.kernel.core.catalog import STAT_HP
+from roco.engine.kernel.effects.damage import sandstorm_immune
+from roco.engine.kernel.model.state import (
     KernelState,
     pack_weather,
     replace_pet,
@@ -17,7 +17,7 @@ from roco.engine.kernel.state import (
     weather_type,
     with_status,
 )
-from roco.generated import catalog_hot as hot
+from roco.generated.catalog import hot
 
 
 def tick_weather(state: KernelState) -> KernelState:

@@ -17,17 +17,17 @@ from __future__ import annotations
 
 from roco.common.enums import StatusFlag, StatusType
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.active_buffs import (
+from roco.engine.kernel.model.active_buffs import (
     active_buff_id,
     effective_immunity_flags,
     pack_active_buff,
 )
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.buffs import op_apply_active_buff
-from roco.engine.kernel.op_rows import TARGET_SELF
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.ops.buffs import op_apply_active_buff
+from roco.engine.kernel.core.rows import TARGET_SELF
 from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.residual.status_ticks import apply_status_effect
-from roco.engine.kernel.state import (
+from roco.engine.kernel.model.state import (
     PetState,
     has_status,
     make_state,
@@ -36,7 +36,7 @@ from roco.engine.kernel.state import (
     side,
     status_stack,
 )
-from roco.generated.buff_immunity_table import (
+from roco.generated.pak.buff_immunity_table import (
     BUFF_IMMUNITY_TABLE,
     IMMUNITY_BURN,
     IMMUNITY_FORCE_SWITCH,

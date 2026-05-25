@@ -5,12 +5,13 @@ failure in one cannot corrupt the next:
 
     1. roco.compiler_v2.gen_prefix_map  -> roco/generated/static, battle globals,
                                         skill damage adapters, primitive maps, etc.
-    2. roco.engine.kernel.gen_runtime_artifacts
-                                     -> roco/generated/handler_order.py
+    2. roco.engine.kernel.generation.gen_runtime_artifacts
+                                     -> roco/generated/runtime/handler_order.py
                                         + handler_table.py
     3. roco.data.catalog_compiler
-                                     -> roco/generated/catalog_hot.py
-                                        + catalog_debug.py
+                                     -> roco/generated/catalog/hot.py
+                                        + debug.py
+                                        + actions.py
     4. roco.compiler_v2.build_effect_families
                                      -> roco/generated/audit/effect_families.jsonl
                                         + _docs/effect_family_audit.md
@@ -98,7 +99,7 @@ def _build_steps(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     py = sys.executable
     steps: list[tuple[str, list[str]]] = []
     steps.append(("gen_prefix_map", [py, "-m", "roco.compiler_v2.gen_prefix_map"]))
-    steps.append(("gen_runtime_artifacts", [py, "-m", "roco.engine.kernel.gen_runtime_artifacts"]))
+    steps.append(("gen_runtime_artifacts", [py, "-m", "roco.engine.kernel.generation.gen_runtime_artifacts"]))
     steps.append(("catalog_compiler", [py, "-m", "roco.data.catalog_compiler"]))
     steps.append(("build_effect_families", [py, "-m", "roco.compiler_v2.build_effect_families"]))
     steps.append((

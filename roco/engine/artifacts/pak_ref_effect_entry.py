@@ -4,7 +4,7 @@ from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.common.entry_sources import ENTRY_SOURCE_COUNTER, ENTRY_SOURCE_DEFENSE, ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE, ENTRY_SOURCE_ENEMY_SWITCH, ENTRY_SOURCE_EQUIPPED_ELEMENT, ENTRY_SOURCE_STATUS, ENTRY_SOURCE_USED_ELEMENT, entry_source_code
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.engine.artifacts.pak_ref_common import BUFFBASE_ORDER, BUFFBASE_PARAMS, _all_regular_marks, _as_int_tuple, _base_ids_from_buff_ids, _element_mask, _is_burn_status, _is_internal_mark_sentinel, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, _skill_dam_type_to_element, buff_type
-from roco.engine.kernel.op_rows import TIMING_PAK_SDT
+from roco.engine.kernel.core.rows import TIMING_PAK_SDT
 
 def _link_effect_buff_convert(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
     source_ids = _as_int_tuple(_param(params, 1))

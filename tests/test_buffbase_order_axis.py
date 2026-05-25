@@ -38,10 +38,10 @@ from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primiti
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
-from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
-from roco.engine.kernel.op_mods.skill import op_power_dynamic_elements, op_specific_skill_power_bonus
+from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
+from roco.engine.kernel.ops.skill import op_power_dynamic_elements, op_specific_skill_power_bonus
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -60,7 +60,7 @@ P_SLOT_SKILL_MOD_BUFF = buff_ref_key(21150010)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PRIMITIVE_MAP_PATH = REPO_ROOT / "roco" / "generated" / "primitive_map.json"
+PRIMITIVE_MAP_PATH = REPO_ROOT / "roco" / "generated" / "pak" / "primitive_map.json"
 BUFFBASE_CONF_PATH = (
     REPO_ROOT / "pak-public-kit" / "output" / "data" / "BinData" / "BUFFBASE_CONF.json"
 )

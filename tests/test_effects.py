@@ -9,7 +9,7 @@ from roco.common.primitive_keys import (
     buff_ref_key,
     effect_ref_key,
 )
-from roco.generated.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
+from roco.generated.pak.pak_ops import EFF_DAMAGE, EFF_STATE_CHANGE, PAK_PREFIX_NAMES
 from roco.compiler_v2.effect_codegen import (
     PakTables,
     generate_effect_rows,

@@ -2036,7 +2036,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/natures.py",
-        "roco/generated/natures.py",
+        "roco/generated/pak/natures.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -2165,7 +2165,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/bloodline_magic.py",
-        "roco/generated/bloodline_magic.py",
+        "roco/generated/pak/bloodline_magic.py",
         "roco/generated/static/manifest.py",
         "roco/pak_query/index.py"
       ],
@@ -2486,7 +2486,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/core.py",
-        "roco/generated/battle_globals.py",
+        "roco/generated/pak/battle_globals.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -3105,7 +3105,7 @@
         "roco/compiler_v2/static_artifacts/marks.py",
         "roco/data/ability_flags_from_effects.py",
         "roco/engine/artifacts/pak_ref_buffs.py",
-        "roco/generated/buffbase_params.py",
+        "roco/generated/pak/buffbase_params.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -3147,13 +3147,13 @@
         "roco/data/ability_flags_from_effects.py",
         "roco/engine/artifacts/pak_ref_buffs.py",
         "roco/engine/artifacts/pak_ref_linker.py",
-        "roco/engine/kernel/active_buffs.py",
-        "roco/engine/kernel/active_response.py",
+        "roco/engine/kernel/effects/active_response.py",
+        "roco/engine/kernel/model/active_buffs.py",
         "roco/engine/kernel/residual/status_ticks.py",
-        "roco/generated/buff_defs.py",
-        "roco/generated/buff_immunity_table.py",
-        "roco/generated/mark_groups.py",
-        "roco/generated/pak_ops.py",
+        "roco/generated/pak/buff_defs.py",
+        "roco/generated/pak/buff_immunity_table.py",
+        "roco/generated/pak/mark_groups.py",
+        "roco/generated/pak/pak_ops.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -3192,8 +3192,8 @@
       "code_refs": [
         "roco/compiler_v2/static_artifacts/buffs.py",
         "roco/engine/artifacts/pak_ref_common.py",
-        "roco/engine/kernel/active_response.py",
-        "roco/generated/buff_defs.py",
+        "roco/engine/kernel/effects/active_response.py",
+        "roco/generated/pak/buff_defs.py",
         "roco/generated/static/lua_enums.py"
       ],
       "combat_candidate": true,
@@ -3868,7 +3868,7 @@
         "roco/compiler_v2/static_artifacts/canonical_adapters.py",
         "roco/data/ability_flags_from_effects.py",
         "roco/data/parse_pak.py",
-        "roco/generated/canonical_adapters.py",
+        "roco/generated/pak/canonical_adapters.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -4040,10 +4040,10 @@
         "roco/engine/artifacts/pak_ref_effect_entry.py",
         "roco/engine/artifacts/pak_ref_effects.py",
         "roco/engine/artifacts/pak_ref_linker.py",
-        "roco/generated/counter_skill_table.py",
-        "roco/generated/effect_params.py",
-        "roco/generated/static/manifest.py",
-        "roco/generated/weather_decoders.py"
+        "roco/generated/pak/counter_skill_table.py",
+        "roco/generated/pak/effect_params.py",
+        "roco/generated/pak/weather_decoders.py",
+        "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
       "coverage": "generator_or_importer_referenced",
@@ -7013,7 +7013,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/natures.py",
-        "roco/generated/natures.py",
+        "roco/generated/pak/natures.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -8776,7 +8776,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/bloodline_magic.py",
-        "roco/generated/bloodline_magic.py",
+        "roco/generated/pak/bloodline_magic.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -9632,7 +9632,7 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/bloodline_magic.py",
-        "roco/generated/bloodline_magic.py",
+        "roco/generated/pak/bloodline_magic.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -12148,9 +12148,9 @@
         "roco/compiler_v2/static_artifacts/counter_skill.py",
         "roco/data/ability_flags_from_effects.py",
         "roco/data/parse_pak.py",
-        "roco/generated/bloodline_magic.py",
-        "roco/generated/canonical_adapters.py",
-        "roco/generated/counter_skill_table.py",
+        "roco/generated/pak/bloodline_magic.py",
+        "roco/generated/pak/canonical_adapters.py",
+        "roco/generated/pak/counter_skill_table.py",
         "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
@@ -13331,9 +13331,9 @@
       "code_refs": [
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/static_artifacts/core.py",
-        "roco/generated/skill_dam_types.py",
-        "roco/generated/static/manifest.py",
-        "roco/generated/type_chart.py"
+        "roco/generated/pak/skill_dam_types.py",
+        "roco/generated/pak/type_chart.py",
+        "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
       "coverage": "generator_or_importer_referenced",
@@ -13694,8 +13694,8 @@
         "roco/compiler_v2/build.py",
         "roco/compiler_v2/gen_prefix_map.py",
         "roco/compiler_v2/static_artifacts/weather.py",
-        "roco/generated/static/manifest.py",
-        "roco/generated/weather_table.py"
+        "roco/generated/pak/weather_table.py",
+        "roco/generated/static/manifest.py"
       ],
       "combat_candidate": true,
       "coverage": "generator_or_importer_referenced",

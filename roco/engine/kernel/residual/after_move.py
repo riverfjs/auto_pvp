@@ -25,13 +25,13 @@ from roco.common.packing import (
     _unpack_mark,
 )
 from roco.engine.common.rng import next_rng
-from roco.engine.kernel.active_buffs import add_active_buff, effective_immunity_flags
-from roco.engine.kernel.catalog import PET_ABILITY, STAT_HP
-from roco.engine.kernel.ctx import StageCtx
+from roco.engine.kernel.model.active_buffs import add_active_buff, effective_immunity_flags
+from roco.engine.kernel.core.catalog import PET_ABILITY, STAT_HP
+from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.residual._shared import energy_cap
 from roco.engine.kernel.residual.status_ticks import apply_status_effect
-from roco.generated.buff_immunity_table import IMMUNITY_FORCE_SWITCH
-from roco.engine.kernel.state import (
+from roco.generated.pak.buff_immunity_table import IMMUNITY_FORCE_SWITCH
+from roco.engine.kernel.model.state import (
     KernelState,
     PetState,
     pack_cost_mod,
@@ -39,12 +39,12 @@ from roco.engine.kernel.state import (
     replace_side,
     side,
 )
-from roco.engine.kernel.switch import (
+from roco.engine.kernel.flow.switch import (
     apply_mark_delta,
     apply_mark_delta_no_replace,
     switch as switch_state,
 )
-from roco.generated import catalog_hot as hot
+from roco.generated.catalog import hot
 
 
 def apply_after_move(
@@ -88,7 +88,7 @@ def apply_after_move(
 
 def _apply_weather_delta(state: KernelState, ctx: StageCtx) -> KernelState:
     if ctx.weather:
-        from roco.engine.kernel.state import pack_weather
+        from roco.engine.kernel.model.state import pack_weather
         state = state._replace(weather=pack_weather(ctx.weather, ctx.weather_turns))
     return state
 

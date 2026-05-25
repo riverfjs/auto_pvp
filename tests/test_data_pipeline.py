@@ -79,13 +79,14 @@ def test_static_catalog_compiles_from_canonical_records(tmp_path: Path, monkeypa
     monkeypatch.setattr(catalog_compiler, "load_canonical_records", lambda _pak_dir: _sample_canonical())
     hot_path, debug_path = catalog_compiler.compile_catalogs(
         tmp_path / "pak",
-        hot_path=tmp_path / "catalog_hot.py",
-        debug_path=tmp_path / "catalog_debug.py",
+        hot_path=tmp_path / "hot.py",
+        debug_path=tmp_path / "debug.py",
+        action_path=tmp_path / "actions.py",
         engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
     )
     hot_text = hot_path.read_text(encoding="utf-8")
     debug_text = debug_path.read_text(encoding="utf-8")
-    action_text = (tmp_path / "catalog_actions.py").read_text(encoding="utf-8")
+    action_text = (tmp_path / "actions.py").read_text(encoding="utf-8")
 
     assert "CATALOG_VERSION = 1" in hot_text
     assert "SCHEMA_VERSION = 'kernel-v2'" in hot_text
@@ -117,8 +118,9 @@ def test_static_catalog_rejects_noop_effect_rows(tmp_path: Path, monkeypatch):
     with pytest.raises(RuntimeError, match="empty effect primitive"):
         catalog_compiler.compile_catalogs(
             tmp_path / "pak",
-            hot_path=tmp_path / "catalog_hot.py",
-            debug_path=tmp_path / "catalog_debug.py",
+            hot_path=tmp_path / "hot.py",
+            debug_path=tmp_path / "debug.py",
+            action_path=tmp_path / "actions.py",
             engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
         )
 
@@ -135,8 +137,9 @@ def test_static_catalog_records_inert_engine_links(tmp_path: Path, monkeypatch):
 
     hot_path, _debug_path = catalog_compiler.compile_catalogs(
         tmp_path / "pak",
-        hot_path=tmp_path / "catalog_hot.py",
-        debug_path=tmp_path / "catalog_debug.py",
+        hot_path=tmp_path / "hot.py",
+        debug_path=tmp_path / "debug.py",
+        action_path=tmp_path / "actions.py",
         engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
         engine_link_inert_path=tmp_path / "engine_link_inert.jsonl",
     )

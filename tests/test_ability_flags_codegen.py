@@ -32,8 +32,8 @@ from roco.data.ability_flags_from_effects import (
     load_ability_flags_from_effects,
     normalized_payload,
 )
-from roco.generated import catalog_debug as debug
-from roco.generated import catalog_hot as hot
+from roco.generated.catalog import debug
+from roco.generated.catalog import hot
 
 
 ROOT = Path(__file__).resolve().parents[1]

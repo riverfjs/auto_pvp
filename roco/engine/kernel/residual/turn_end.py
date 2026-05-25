@@ -17,18 +17,18 @@ from __future__ import annotations
 from roco.common.enums import AbilityFlag
 from roco.common.packing import _tick_cooldowns
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.active_buffs import tick_active_buffs
-from roco.engine.kernel.catalog import PET_ABILITY, PET_PRIMARY, PET_SECONDARY
-from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_rows import TIMING_PAK_BEFORE_ADD
-from roco.engine.kernel.ops import run_skill_timing
+from roco.engine.kernel.model.active_buffs import tick_active_buffs
+from roco.engine.kernel.core.catalog import PET_ABILITY, PET_PRIMARY, PET_SECONDARY
+from roco.engine.kernel.core.ctx import StageCtx
+from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_ADD
+from roco.engine.kernel.core.dispatch import run_skill_timing
 from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.residual.mark_ticks import tick_marks
 from roco.engine.kernel.residual.status_ticks import tick_leech, tick_status
 from roco.engine.kernel.residual.weather_ticks import tick_weather
-from roco.engine.kernel.state import KernelState, side, tick_cost_mod
-from roco.engine.kernel.switch import mark_zero_hp_fainted
-from roco.generated import catalog_hot as hot
+from roco.engine.kernel.model.state import KernelState, side, tick_cost_mod
+from roco.engine.kernel.flow.switch import mark_zero_hp_fainted
+from roco.generated.catalog import hot
 
 
 def end_turn(state: KernelState, skill_a_id: int = 0, skill_b_id: int = 0) -> KernelState:

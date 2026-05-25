@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roco.generated.natures import (
+from roco.generated.pak.natures import (
     IV_STAT_MAP,
     NATURE_EFFECTS_BY_ID,
     NATURE_EFFECTS_BY_NAME,

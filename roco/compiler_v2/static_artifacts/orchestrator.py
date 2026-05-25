@@ -10,7 +10,7 @@ from .bloodline_magic import write_bloodline_magic
 from .buffs import write_buff_defs
 from .buffbase import write_buffbase_params
 from .canonical_adapters import write_canonical_adapters
-from .common import GEN_DIR, INIT_PATH, STATIC_DIR
+from .common import GEN_DIR, INIT_PATH, PAK_GEN_DIR, PAK_INIT_PATH, STATIC_DIR
 from .core import write_battle_globals, write_pak_ops, write_skill_dam_types, write_type_chart
 from .counter_skill import write_counter_skill_table
 from .effects import write_effect_params
@@ -24,7 +24,9 @@ from .weather import write_weather_decoders, write_weather_table
 def write_all() -> dict[str, Any]:
     """Write every generated artifact and return build stats."""
     GEN_DIR.mkdir(parents=True, exist_ok=True)
+    PAK_GEN_DIR.mkdir(parents=True, exist_ok=True)
     INIT_PATH.write_text('"""Auto-generated package for compiler_v2 artifacts."""\n', encoding="utf-8")
+    PAK_INIT_PATH.write_text('"""Pak-derived generated artifacts."""\n', encoding="utf-8")
     bundle = build_static_bundle()
     static_paths = write_static_files(bundle, STATIC_DIR)
 

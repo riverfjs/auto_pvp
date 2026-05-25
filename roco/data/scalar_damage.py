@@ -25,7 +25,7 @@ from roco.common.packing import buff_multiplier as _bm
 def _effectiveness_bps(move_element: str, defender_types: tuple[str, ...]) -> int:
     """Float-API wrapper around the pak-derived BPS chart.
 
-    Mirrors :func:`roco.engine.kernel.damage.type_bps` in plain Python so
+    Mirrors :func:`roco.engine.kernel.effects.damage.type_bps` in plain Python so
     test / display callers don't need the kernel chain.  Returns the
     final BPS multiplier (10000 = 1.0×).
     """

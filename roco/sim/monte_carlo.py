@@ -11,20 +11,20 @@ from typing import NamedTuple
 from roco.common.constants import DEFAULT_MAX_TURNS, MAGIC_WILLPOWER
 from roco.common.enums import normalize_element_name
 from roco.data.canonical import load_canonical_records
-from roco.generated import catalog_debug as debug
-from roco.generated import catalog_hot as hot
-from roco.generated.bloodline_magic import DEFAULT_BLOODLINE_MAGIC_NAME, PAK_ELEMENT_TO_BLOODLINE
+from roco.generated.catalog import debug
+from roco.generated.catalog import hot
+from roco.generated.pak.bloodline_magic import DEFAULT_BLOODLINE_MAGIC_NAME, PAK_ELEMENT_TO_BLOODLINE
 from roco.engine.facade.battle import BattleEngine
 from roco.engine.common.choices import SIDE_A, SIDE_B, Choice, focus_choice, move_choice, switch_choice
 from roco.common.constants import TYPE_DOUBLE_RESIST_BPS, TYPE_DOUBLE_WEAK_BPS
-from roco.engine.kernel.catalog import (
+from roco.engine.kernel.core.catalog import (
     PET_PRIMARY,
     PET_SECONDARY,
     SKILL_ELEMENT,
     SKILL_POWER,
 )
-from roco.engine.kernel.ctx import BPS
-from roco.engine.kernel.state import KernelState
+from roco.engine.kernel.core.ctx import BPS
+from roco.engine.kernel.model.state import KernelState
 
 
 class TeamSpec(NamedTuple):

@@ -5,10 +5,10 @@ from __future__ import annotations
 from roco.common.constants import BPS, LEECH_DAMAGE_BPS, POISON_DAMAGE_BPS
 from roco.common.enums import AbilityFlag, StatusFlag, StatusType
 from roco.engine.common.choices import SIDE_A, SIDE_B
-from roco.engine.kernel.active_buffs import effective_immunity_flags
-from roco.engine.kernel.catalog import STAT_HP
-from roco.engine.kernel.damage import burn_damage, status_immune
-from roco.engine.kernel.state import (
+from roco.engine.kernel.model.active_buffs import effective_immunity_flags
+from roco.engine.kernel.core.catalog import STAT_HP
+from roco.engine.kernel.effects.damage import burn_damage, status_immune
+from roco.engine.kernel.model.state import (
     KernelState,
     PetState,
     has_status,
@@ -19,8 +19,8 @@ from roco.engine.kernel.state import (
     status_stack,
     with_status,
 )
-from roco.generated import catalog_hot as hot
-from roco.generated.buff_immunity_table import STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE
+from roco.generated.catalog import hot
+from roco.generated.pak.buff_immunity_table import STATUS_IMMUNITY_FLAGS_BY_STATUS_TYPE
 
 
 def apply_status_effect(

@@ -5,14 +5,14 @@ import re
 import pytest
 
 from roco.common.constants import MIN_DAMAGE, STARTING_ENERGY, TYPE_RESIST_BPS
-from roco.generated import catalog_debug as debug
-from roco.generated import catalog_hot as hot
+from roco.generated.catalog import debug
+from roco.generated.catalog import hot
 from roco.data.scalar_damage import calc_attack_damage
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusFlag, StatusType, WeatherType
 from roco.engine.common.choices import SIDE_A, SIDE_B, focus_choice, magic_choice, move_choice, switch_choice
 from roco.common.constants import BLOODLINE_LEADER, MAGIC_LEADER_TRANSFORM
-from roco.engine.kernel.catalog import (
+from roco.engine.kernel.core.catalog import (
     SKILL_CATEGORY,
     SKILL_ELEMENT,
     SKILL_ENERGY,
@@ -20,24 +20,24 @@ from roco.engine.kernel.catalog import (
     SKILL_FLAG_DEVOTION,
     SKILL_POWER,
 )
-from roco.engine.kernel.ctx import BPS, StageCtx
-from roco.engine.kernel.damage import (
+from roco.engine.kernel.core.ctx import BPS, StageCtx
+from roco.engine.kernel.effects.damage import (
     DAMAGE_CONST_BPS,
     STAB_BPS,
     damage as _damage,
 )
-from roco.engine.kernel.mechanics import update
-from roco.engine.kernel.catalog import load_hot_catalog, validate_catalog
-from roco.engine.kernel.ops import KERNEL_SUPPORTED_TAGS, run_skill_timing
-from roco.engine.kernel.op_rows import (
+from roco.engine.kernel.flow.mechanics import update
+from roco.engine.kernel.core.catalog import load_hot_catalog, validate_catalog
+from roco.engine.kernel.core.dispatch import KERNEL_SUPPORTED_TAGS, run_skill_timing
+from roco.engine.kernel.core.rows import (
     TIMING_HOOK_BEFORE_MOVE,
     TIMING_PAK_BEFORE_HURT,
     TIMING_PAK_ROUND_CALC_START,
     TIMING_PAK_SDT,
 )
-from roco.engine.kernel.state import copy_state, make_state
-from roco.engine.kernel.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
-from roco.generated.handler_order import op_index
+from roco.engine.kernel.model.state import copy_state, make_state
+from roco.engine.kernel.model.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
+from roco.generated.runtime.handler_order import op_index
 from roco.common.packing import (
     DevotionIdx,
     MarkIdx,
@@ -816,7 +816,7 @@ def test_kernel_cute_boosts_damage_shields_and_transfers_on_faint():
 
 def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
     root = Path(__file__).resolve().parents[1]
-    kernel_files = tuple((root / "roco/engine/kernel").glob("*.py"))
+    kernel_files = tuple((root / "roco/engine/kernel").rglob("*.py"))
     forbidden_terms = (
         "EventBus",
         "EventCtx",
@@ -844,22 +844,25 @@ def test_kernel_hot_path_guard_has_no_dynamic_event_or_param_layer():
     init_text = (root / "roco/engine/kernel/__init__.py").read_text(encoding="utf-8")
     assert "from " not in init_text
     assert "import " not in init_text
-    effect_exec = (root / "roco/engine/kernel/ops.py").read_text(encoding="utf-8")
+    effect_exec = (root / "roco/engine/kernel/core/dispatch.py").read_text(encoding="utf-8")
     assert "HANDLERS[handler_idx]" in effect_exec
     assert len(effect_exec.splitlines()) < 300
     for rel in (
-        "op_rows.py",
-        "op_resources.py",
-        "op_status.py",
-        "op_marks.py",
-        "op_cute.py",
-        # op_mods became a package split by topic; the directory plus its
-        # canonical submodule names stand in for the legacy single file.
-        "op_mods/__init__.py",
-        "op_mods/damage.py",
-        "op_mods/buffs.py",
-        "op_mods/skill.py",
-        "op_mods/combat.py",
+        "core/rows.py",
+        "core/ctx.py",
+        "core/dispatch.py",
+        "ops/__init__.py",
+        "ops/resources.py",
+        "ops/status.py",
+        "ops/marks.py",
+        "ops/cute.py",
+        "ops/damage.py",
+        "ops/buffs.py",
+        "ops/skill.py",
+        "ops/combat.py",
+        "flow/mechanics.py",
+        "model/state.py",
+        "effects/damage.py",
     ):
         assert (root / "roco/engine/kernel" / rel).exists()
     assert not (root / "roco/engine/kernel/op_tags.py").exists()
@@ -878,8 +881,8 @@ def test_engine_has_no_compiler_imports():
 
 def test_op_rows_uses_generated_pak_timings_and_explicit_engine_hooks():
     root = Path(__file__).resolve().parents[1]
-    text = (root / "roco/engine/kernel/op_rows.py").read_text(encoding="utf-8")
-    assert "from roco.generated import battle_events" in text
+    text = (root / "roco/engine/kernel/core/rows.py").read_text(encoding="utf-8")
+    assert "from roco.generated.pak import battle_events" in text
     assert not re.search(r"^TIMING_PAK_[A-Z0-9_]+\s*=\s*\d+", text, re.MULTILINE)
     assert re.findall(r"^TIMING_HOOK_[A-Z0-9_]+\s*=\s*(\d+)", text, re.MULTILINE) == [
         "901",
@@ -923,8 +926,10 @@ def test_retired_root_engine_modules_are_not_legacy_entrypoints():
     for rel in retired:
         assert not (root / rel).exists()
 
-    assert (root / "roco/generated/catalog_hot.py").exists()
-    assert (root / "roco/generated/catalog_debug.py").exists()
+    assert (root / "roco/generated/catalog/hot.py").exists()
+    assert (root / "roco/generated/catalog/debug.py").exists()
+    assert (root / "roco/generated/runtime/handler_table.py").exists()
+    assert (root / "roco/generated/pak/battle_events.py").exists()
 
     forbidden_terms = (
         "EventBus",

@@ -2,7 +2,7 @@
 
 The hand-written ``roco.compiler_v2.type_chart`` BWiki-reverse-engineered
 table has been retired; the canonical chart now lives in
-``roco.generated.type_chart`` (regenerated from pak ``TYPE_DICTIONARY``
+``roco.generated.pak.type_chart`` (regenerated from pak ``TYPE_DICTIONARY``
 by :mod:`roco.compiler_v2.gen_prefix_map`).  These tests probe the
 generated table directly so any drift between pak and our compiled
 artifacts surfaces.
@@ -20,7 +20,7 @@ from roco.common.constants import (
 )
 from roco.common.enums import ELEMENT_NAMES, Element
 from roco.data.scalar_damage import _effectiveness_bps, get_type_multiplier
-from roco.generated.type_chart import TYPE_CHART_BPS
+from roco.generated.pak.type_chart import TYPE_CHART_BPS
 
 
 def _eid(name: str) -> int:

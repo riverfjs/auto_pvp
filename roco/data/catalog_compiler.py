@@ -29,13 +29,14 @@ from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
 from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError, LinkedAction, LinkedOp
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
-from roco.generated.handler_order import op_index
+from roco.generated.runtime.handler_order import op_index
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = "kernel-v2"
-HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
-DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
-ACTION_PATH = ROOT / "roco" / "generated" / "catalog_actions.py"
+CATALOG_GEN_DIR = ROOT / "roco" / "generated" / "catalog"
+HOT_PATH = CATALOG_GEN_DIR / "hot.py"
+DEBUG_PATH = CATALOG_GEN_DIR / "debug.py"
+ACTION_PATH = CATALOG_GEN_DIR / "actions.py"
 ENGINE_LINK_GAPS_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_gaps.jsonl"
 ENGINE_LINK_INERT_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_inert.jsonl"
 
@@ -277,7 +278,7 @@ def compile_catalogs(
     if engine_link_inert_path is None:
         engine_link_inert_path = engine_link_gaps_path.with_name("engine_link_inert.jsonl")
     if action_path == ACTION_PATH and hot_path != HOT_PATH:
-        action_path = hot_path.with_name("catalog_actions.py")
+        action_path = hot_path.with_name("actions.py")
     canonical = load_canonical_records(pak_dir or DEFAULT_PAK_DATA_DIR)
     skill_records = _records(canonical["skills"], "skill")
     ability_records = _records(canonical["abilities"], "ability")
@@ -519,6 +520,7 @@ def compile_catalogs(
     hot_path.parent.mkdir(parents=True, exist_ok=True)
     debug_path.parent.mkdir(parents=True, exist_ok=True)
     action_path.parent.mkdir(parents=True, exist_ok=True)
+    (action_path.parent / "__init__.py").write_text('"""Generated runtime catalogs."""\n', encoding="utf-8")
     engine_link_gaps_path.parent.mkdir(parents=True, exist_ok=True)
     engine_link_inert_path.parent.mkdir(parents=True, exist_ok=True)
     hot_path.write_text(hot, encoding="utf-8")

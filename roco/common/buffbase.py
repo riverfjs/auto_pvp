@@ -10,7 +10,7 @@ from roco.common.buff_delta import (
     pack_buff_delta_from_row as _pack_buff_delta_from_row,
     scale_buff_delta,
 )
-from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
+from roco.generated.pak.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 
 
 def base_id_to_buff_delta(base_id: int) -> int:
