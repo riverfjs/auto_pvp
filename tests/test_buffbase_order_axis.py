@@ -26,6 +26,7 @@ from roco.common.primitive_keys import (
 )
 from roco.common.entry_sources import ENTRY_SOURCE_EQUIPPED_ELEMENT, entry_source_code
 from roco.common.enums import AbilityFlag, Element, SkillCategory, StatusType
+from roco.common.packing import _unpack_skill_count
 from roco.compiler_v2.effect_codegen import classify as cls
 from roco.compiler_v2.effect_codegen import generate_effect_rows
 from roco.data.ability_flags_from_effects import load_ability_flags_from_effects
@@ -39,7 +40,8 @@ from roco.engine.artifacts.linked_op import LinkGapError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
 from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.engine.kernel.ctx import StageCtx
-from roco.engine.kernel.op_mods.buffs import op_after_attack_status, op_attack_cost_delta, op_global_cost_delta, op_global_power_delta
+from roco.engine.kernel.op_mods.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
+from roco.engine.kernel.op_mods.skill import op_power_dynamic_elements, op_specific_skill_power_bonus
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -478,6 +480,66 @@ def test_direct_bft_inc_dam_by_skill_links_unconditional_power_bonus():
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
 
+def test_direct_bft_inc_dam_by_skill_links_skill_dam_type_mask():
+    raw = (buff_ref_key(20230900), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "光系威力") == (
+        "op_power_dynamic_elements",
+        11,
+        1,
+        10000,
+        1 << Element.LIGHT,
+        11000,
+        0,
+        0,
+    )
+
+
+def test_power_dynamic_elements_runtime_checks_current_skill_element():
+    row = (0, 11, 1, 10000, 0, 1 << Element.LIGHT, 11000, 7, 0)
+    ctx = StageCtx()
+    ctx.skill_element = Element.LIGHT
+    ctx.power = 100
+    op_power_dynamic_elements(ctx, row)
+    assert ctx.power_bps == 11000
+    assert ctx.power == 107
+
+    other = StageCtx()
+    other.skill_element = Element.WATER
+    other.power = 100
+    op_power_dynamic_elements(other, row)
+    assert other.power_bps == 10000
+    assert other.power == 100
+
+
+def test_direct_bft_strengthen_the_skill_links_specific_skill_power_bonus():
+    raw = (buff_ref_key(20640660), pak_cast_moment_key(24), 1, 10000, 1, 0, 0, 0)
+    assert _linked_tuple(raw, "水光冲击") == (
+        "op_specific_skill_power_bonus",
+        24,
+        1,
+        10000,
+        7050300,
+        20,
+        0,
+        0,
+    )
+
+
+def test_specific_skill_power_bonus_runtime_checks_skill_id():
+    row = (0, 24, 1, 10000, 0, 7050300, 20, 0, 0)
+    ctx = StageCtx()
+    ctx.skill_id = 7050300
+    ctx.power = 80
+    op_specific_skill_power_bonus(ctx, row)
+    assert ctx.power == 100
+
+    other = StageCtx()
+    other.skill_id = 7050301
+    other.power = 80
+    op_specific_skill_power_bonus(other, row)
+    assert other.power == 80
+
+
 def test_direct_bft_change_skill_energy_cost_links_global_cost_delta():
     increase = (buff_ref_key(20320240), pak_cast_moment_key(11), 2, 10000, 1, 0, 0, 0)
     assert _linked_tuple(increase, "骑士突袭") == (
@@ -554,6 +616,35 @@ def test_attack_cost_delta_op_routes_by_target():
     op_attack_cost_delta(ctx, (0, 11, 2, 10000, 0, 2, 0, 0, 0))
     assert ctx.self_attack_cost_delta == -1
     assert ctx.enemy_attack_cost_delta == 2
+
+
+def test_direct_bft_change_skill_energy_cost_links_element_cost_reduce():
+    raw = (buff_ref_key(20320410), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    mask_without_illusion = sum(1 << element.value for element in Element if element is not Element.ILLUSION)
+    assert _linked_tuple(raw, "盲从") == (
+        "op_element_cost_reduce",
+        11,
+        1,
+        10000,
+        mask_without_illusion,
+        2,
+        0,
+        0,
+    )
+
+
+def test_element_cost_reduce_op_routes_by_target_and_element_mask():
+    mask = (1 << Element.NORMAL) | (1 << Element.LIGHT)
+    ctx = StageCtx()
+    op_element_cost_reduce(ctx, (0, 11, 1, 10000, 0, mask, 2, 0, 0))
+    assert _unpack_skill_count(ctx.self_element_cost_reduce, Element.NORMAL) == 2
+    assert _unpack_skill_count(ctx.self_element_cost_reduce, Element.LIGHT) == 2
+    assert _unpack_skill_count(ctx.self_element_cost_reduce, Element.ILLUSION) == 0
+
+    enemy = StageCtx()
+    op_element_cost_reduce(enemy, (0, 11, 2, 10000, 0, mask, 1, 0, 0))
+    assert _unpack_skill_count(enemy.enemy_element_cost_reduce, Element.NORMAL) == 1
+    assert enemy.self_element_cost_reduce == 0
 
 
 def test_direct_bft_inc_dam_by_skill_links_global_power_delta():

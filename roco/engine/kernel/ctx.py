@@ -63,6 +63,8 @@ _DEFAULTS: tuple[tuple[str, int | float], ...] = (
     ("enemy_global_cost_delta", 0),
     ("self_attack_cost_delta", 0),
     ("enemy_attack_cost_delta", 0),
+    ("self_element_cost_reduce", 0),
+    ("enemy_element_cost_reduce", 0),
     ("self_global_power_delta", 0),
     ("enemy_global_power_delta", 0),
     ("entry_power_bonus", 0),

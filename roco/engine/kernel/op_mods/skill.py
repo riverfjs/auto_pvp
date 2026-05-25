@@ -23,6 +23,15 @@ def op_power_dynamic(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.power += row[ROW_ARG1]
 
 
+def op_power_dynamic_elements(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if not row[ROW_ARG0] & (1 << ctx.skill_element):
+        return
+    if row[ROW_ARG1] > 0:
+        ctx.power_bps = (ctx.power_bps * row[ROW_ARG1]) // BPS
+    if row[ROW_ARG2] > 0:
+        ctx.power += row[ROW_ARG2]
+
+
 def op_skill_mod(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if not slot_mask_matches(ctx, row[ROW_ARG0]):
         return

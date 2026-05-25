@@ -101,10 +101,15 @@ def _response_params_supported(params: tuple) -> bool:
         return False
     if _param_int(params, 4) not in (-1, 0) or _param_int(params, 5) != 10000:
         return False
-    if _param_int(params, 7) != 0 or _param_int(params, 8) != 0:
+    if _param_int(params, 7) != 0:
         return False
     target = TARGET_ENEMY if _param_int(params, 4) == -1 else TARGET_SELF
-    return all(_ref_supported(ref_id, target) for ref_id in _as_int_tuple(params[6]))
+    tail_flag = _param_int(params, 8)
+    if tail_flag == 0:
+        return all(_ref_supported(ref_id, target) for ref_id in _as_int_tuple(params[6]))
+    if tail_flag == 1:
+        return all(_tail_flag_ref_supported(ref_id, target) for ref_id in _as_int_tuple(params[6]))
+    return False
 
 
 def _apply_response_params(ctx: StageCtx, params: tuple) -> None:
@@ -120,7 +125,14 @@ def _ref_supported(ref_id: int, target: int) -> bool:
         return True
     if _hit_delta(ref_id) is not None:
         return True
-    return bool(pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(ref_id) or ()))
+    return bool(_buff_delta(ref_id))
+
+
+def _tail_flag_ref_supported(ref_id: int, target: int) -> bool:
+    del target
+    if _mark_type(ref_id) is not None:
+        return True
+    return bool(_buff_delta(ref_id))
 
 
 def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
@@ -145,7 +157,7 @@ def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
         else:
             ctx.enemy_hit_delta += hit_delta
         return
-    packed = pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(ref_id) or ())
+    packed = _buff_delta(ref_id)
     if packed:
         if target == TARGET_SELF:
             ctx.self_buff = _merge_buff_delta(ctx.self_buff, packed)
@@ -182,6 +194,10 @@ def _hit_delta(buff_id: int) -> int | None:
         return None
     amount = _param_int(params, 0)
     return amount if amount else None
+
+
+def _buff_delta(buff_id: int) -> int:
+    return pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(buff_id) or ())
 
 
 def _base_rows(buff_id: int) -> tuple[tuple[int, int, tuple], ...]:

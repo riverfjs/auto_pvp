@@ -3,7 +3,7 @@ from __future__ import annotations
 from roco.common.constants import BPS
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.common.enums import StatusType
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _element_mask, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
 from roco.engine.kernel.active_response import after_attack_response_duration_args, after_attack_response_supported
 from roco.engine.kernel.op_rows import TARGET_ENEMY, TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 
@@ -132,6 +132,25 @@ def _link_attack_cost_delta_buff(buff_id: int, timing: int, target: int, rate: i
         return None
     return _op('op_attack_cost_delta', timing, target, rate, total)
 
+
+def _link_element_cost_reduce_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_CHANGE_SKILL_ENERGY_COST'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 7:
+        return None
+    element_mask = _element_mask(params[0], 'skill_dam_type')
+    if not element_mask:
+        return None
+    if not _all_zero(params[1:3]) or not _all_zero(params[4:]):
+        return None
+    amount = _param_int(params, 3)
+    if amount >= 0:
+        return None
+    return _op('op_element_cost_reduce', timing, target, rate, element_mask, abs(amount))
+
+
 def _link_after_attack_status_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)
     if len(rows) != 1 or rows[0][1] != buff_type('BFT_BUFF_AFTER_SKILL'):
@@ -201,8 +220,6 @@ def _link_power_dynamic_buff(buff_id: int, timing: int, target: int, rate: int) 
     _base_id, _order, params = rows[0]
     if len(params) < 6:
         return None
-    if _as_int_tuple(params[0]) != (0,):
-        return None
     categories = _as_int_tuple(params[1])
     if categories not in ((0,), (2, 3), (3, 2)):
         return None
@@ -210,11 +227,39 @@ def _link_power_dynamic_buff(buff_id: int, timing: int, target: int, rate: int) 
         return None
     mode = _param_int(params, 4)
     amount = _param_int(params, 5)
+    element_mask = 0
+    if _as_int_tuple(params[0]) != (0,):
+        element_mask = _element_mask(params[0], 'skill_dam_type')
+        if not element_mask:
+            return None
     if mode == 1 and amount > 0:
+        if element_mask:
+            return _op('op_power_dynamic_elements', timing, target, rate, element_mask, BPS + amount)
         return _op('op_power_dynamic', timing, target, rate, BPS + amount)
     if mode == 2 and amount > 0:
+        if element_mask:
+            return _op('op_power_dynamic_elements', timing, target, rate, element_mask, 0, amount)
         return _op('op_power_dynamic', timing, target, rate, 0, amount)
     return None
+
+
+def _link_specific_skill_power_bonus_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_STRENGTHEN_THE_SKILL'):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 8:
+        return None
+    skill_ids = _as_int_tuple(params[1])
+    if _param_int(params, 0) != 7 or len(skill_ids) != 1 or skill_ids[0] <= 0:
+        return None
+    if _param_int(params, 2) != 1 or _param_int(params, 3) != 1:
+        return None
+    amount = _param_int(params, 4)
+    if amount <= 0 or _param_int(params, 5) != 6 or not _all_zero(params[6:]):
+        return None
+    return _op('op_specific_skill_power_bonus', timing, target, rate, skill_ids[0], amount)
+
 
 def _link_force_switch_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)

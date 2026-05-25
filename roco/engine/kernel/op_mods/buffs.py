@@ -10,7 +10,9 @@ from roco.common.packing import (
     BUFF_DEF_PHYS,
     BUFF_SPEED,
     _add_buff_bps,
+    _add_element_nibble,
     _merge_buff_delta,
+    _merge_element_nibbles,
     _unpack_skill_count,
 )
 from roco.common.buffbase import pack_buff_delta_from_row, scale_buff_delta
@@ -160,6 +162,19 @@ def op_attack_cost_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.self_attack_cost_delta += row[ROW_ARG0]
     else:
         ctx.enemy_attack_cost_delta += row[ROW_ARG0]
+
+
+def op_element_cost_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    packed = 0
+    for element in Element:
+        if row[ROW_ARG0] & (1 << element.value):
+            packed = _add_element_nibble(packed, element, row[ROW_ARG1])
+    if not packed:
+        return
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.self_element_cost_reduce = _merge_element_nibbles(ctx.self_element_cost_reduce, packed)
+    else:
+        ctx.enemy_element_cost_reduce = _merge_element_nibbles(ctx.enemy_element_cost_reduce, packed)
 
 
 def op_global_power_delta(ctx: StageCtx, row: tuple[int, ...]) -> None:

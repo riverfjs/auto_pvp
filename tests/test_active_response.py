@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from roco.common.enums import SkillCategory, StatusType
-from roco.common.packing import MarkIdx, _unpack_mark
+from roco.common.packing import BUFF_ATK_MAG, BUFF_ATK_PHYS, MarkIdx, _unpack_buff, _unpack_mark
 from roco.common.primitive_keys import buff_ref_key
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.primitive_linker import link_primitive_row
@@ -90,3 +90,37 @@ def test_after_attack_active_response_applies_hit_delta_to_attacker():
         damage_dealt=10,
     )
     assert side(new_state, SIDE_A).pets[0].hit_delta == -3
+
+
+def test_after_attack_active_response_tail_flag_applies_self_stat_delta():
+    assert after_attack_response_supported(20190190)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190190)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.MAGICAL.value,
+        damage_dealt=10,
+    )
+    defender = side(new_state, SIDE_B).pets[0]
+    assert _unpack_buff(defender.buff_stages, BUFF_ATK_PHYS) == 4
+    assert _unpack_buff(defender.buff_stages, BUFF_ATK_MAG) == 4
+
+
+def test_after_attack_active_response_tail_flag_applies_marks_to_attacker_side():
+    assert after_attack_response_supported(20190400)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190400)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.PHYSICAL.value,
+        damage_dealt=10,
+    )
+    assert _unpack_mark(side(new_state, SIDE_A).marks, MarkIdx.METEOR) == 2
