@@ -36,7 +36,7 @@ from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primitive_axes
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
-from roco.engine.artifacts.linked_op import LinkGapError
+from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
 from roco.engine.kernel.op_rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.engine.kernel.ctx import StageCtx
@@ -478,6 +478,22 @@ def test_direct_bft_inc_dam_by_skill_links_unconditional_power_bonus():
     with pytest.raises(LinkGapError) as exc_info:
         link_primitive_rows(conditional, source_name="碰瓷")
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_direct_bft_inc_dam_by_skill_zero_amount_is_inert_not_noop():
+    raw = (buff_ref_key(20231140), pak_cast_moment_key(6), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkInertError) as exc_info:
+        link_primitive_rows(raw, source_name="应对！突袭")
+    assert exc_info.value.inert.reason == "bft_inc_dam_by_skill_zero"
+    assert exc_info.value.inert.buff_id == 20231140
+
+
+def test_direct_bft_attr_change_zero_delta_is_inert_not_noop():
+    raw = (buff_ref_key(20010792), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkInertError) as exc_info:
+        link_primitive_rows(raw, source_name="研磨")
+    assert exc_info.value.inert.reason == "bft_attr_change_zero_delta"
+    assert exc_info.value.inert.buff_id == 20010792
 
 
 def test_direct_bft_inc_dam_by_skill_links_skill_dam_type_mask():

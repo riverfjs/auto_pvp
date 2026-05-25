@@ -2,7 +2,7 @@
 from __future__ import annotations
 from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.common.enums import Element
-from roco.engine.artifacts.linked_op import LinkGap, LinkGapError, LinkedOp
+from roco.engine.artifacts.linked_op import LinkGap, LinkGapError, LinkInert, LinkInertError, LinkedOp
 from roco.generated.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES, BUFF_TYPE as BUFF_KIND
 from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 from roco.generated.effect_params import EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE
@@ -21,6 +21,9 @@ def _op(op_name: str, timing: int, target: int, rate: int, p0: int=0, p1: int=0,
 
 def _gap(primitive: str, reason: str, *, source_name: str, timing: int, target: int, rate: int, effect_id: int | None=None, buff_id: int | None=None, **params: object) -> LinkGapError:
     return LinkGapError(LinkGap(primitive=primitive, reason=reason, source_name=source_name, effect_id=effect_id, buff_id=buff_id, timing=timing, target=target, rate=rate, params=params))
+
+def _inert(primitive: str, reason: str, *, source_name: str, timing: int, target: int, rate: int, effect_id: int | None=None, buff_id: int | None=None, **params: object) -> LinkInertError:
+    return LinkInertError(LinkInert(primitive=primitive, reason=reason, source_name=source_name, effect_id=effect_id, buff_id=buff_id, timing=timing, target=target, rate=rate, params=params))
 
 def _element_mask(value: object, mask_kind: str) -> int:
     mask = 0

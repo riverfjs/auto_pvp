@@ -4,8 +4,10 @@ from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.engine.artifacts.pak_ref_buff_marks import _link_active_immunity_buff, _link_status_or_mark_buff, _link_zero_energy_auto_switch_buff
 from roco.engine.artifacts.pak_ref_buff_modifiers import _energy_amount_from_effect_refs, _link_after_attack_response_buff, _link_after_attack_status_buff, _link_attack_cost_delta_buff, _link_conditional_hit_count_buff, _link_cute_bench_cost_reduce_buff, _link_damage_reduction_buff, _link_element_cost_reduce_buff, _link_force_switch_buff, _link_global_cost_delta_buff, _link_global_power_delta_buff, _link_heal_reversal_buff, _link_hit_count_delta_buff, _link_power_dynamic_buff, _link_specific_skill_power_bonus_buff, _link_team_skill_hit_count_buff, _link_transmission_buff
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, _as_int_tuple, _base_rows, _gap, _op, _param, _param_int, _skill_dam_type_to_element, buff_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, _all_zero, _as_int_tuple, _base_rows, _gap, _inert, _op, _param, _param_int, _skill_dam_type_to_element, buff_type
 from roco.engine.kernel.op_rows import TIMING_PAK_SDT
+
+_ATTR_CHANGE_STAT_CODES = frozenset((6, 29, 30, 31, 32, 33, 34, 35, 36))
 
 def _link_assign_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str, link_ref_id) -> tuple[LinkedOp, ...] | None:
     assign_rows = [(base_id, params) for base_id, order, params in _base_rows(buff_id) if order == buff_type('BFT_ASSIGN')]
@@ -51,12 +53,30 @@ def _link_generic_buff_delta(buff_id: int, timing: int, target: int, rate: int) 
         return _op('op_self_buff', timing, target, rate, packed)
     return None
 
+def _inert_buff_shape(buff_id: int) -> tuple[str, int, tuple] | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1:
+        return None
+    base_id, order, params = rows[0]
+    if order == buff_type('BFT_INC_DAM_BY_SKILL'):
+        if len(params) >= 12 and _all_zero(params[:4]) and _param_int(params, 4) == 1 and _param_int(params, 5) == 0 and _all_zero(params[6:]):
+            return ('bft_inc_dam_by_skill_zero', base_id, params)
+    if order == buff_type('BFT_ATTR_CHANGE'):
+        stat_code = _param_int(params, 0)
+        if len(params) >= 3 and stat_code in _ATTR_CHANGE_STAT_CODES and _all_zero(params[1:]):
+            return ('bft_attr_change_zero_delta', base_id, params)
+    return None
+
 def link_buff_ref(buff_id: int, timing: int, target: int, rate: int, p0: int, p1: int, p2: int, p3: int, *, source_name: str, link_ref_id) -> tuple[LinkedOp, ...]:
     if buff_id not in BUFF_BASE_IDS:
         raise _gap(f'buff_ref:{buff_id}', 'buff_id_not_in_pak', source_name=source_name, timing=timing, target=target, rate=rate, buff_id=buff_id)
     assigned = _link_assign_buff(buff_id, timing, target, rate, source_name=source_name, link_ref_id=link_ref_id)
     if assigned is not None:
         return assigned
+    inert = _inert_buff_shape(buff_id)
+    if inert is not None:
+        reason, base_id, params = inert
+        raise _inert(f'buff_ref:{buff_id}', reason, source_name=source_name, timing=timing, target=target, rate=rate, buff_id=buff_id, buff_base_id=base_id, base_params=params)
     stack_count = max(1, p0)
     linked = _link_status_or_mark_buff(buff_id, timing, target, rate, stack_count) or _link_zero_energy_auto_switch_buff(buff_id, timing, target, rate) or _link_active_immunity_buff(buff_id, timing, target, rate, source_name=source_name) or _link_team_skill_hit_count_buff(buff_id, timing, target, rate, stack_count, source_name=source_name) or _link_hit_count_delta_buff(buff_id, timing, target, rate, stack_count, source_name=source_name) or _link_heal_reversal_buff(buff_id, timing, target, rate, source_name=source_name) or _link_cute_bench_cost_reduce_buff(buff_id, timing, target, rate, source_name=source_name) or _link_conditional_hit_count_buff(buff_id, timing, target, rate, p0, source_name=source_name) or _link_transmission_buff(buff_id, timing, target, rate, p0, p1, p2, p3) or _link_entry_energy_buff(buff_id, target, rate, source_name=source_name) or _link_global_cost_delta_buff(buff_id, timing, target, rate) or _link_attack_cost_delta_buff(buff_id, timing, target, rate) or _link_element_cost_reduce_buff(buff_id, timing, target, rate) or _link_global_power_delta_buff(buff_id, timing, target, rate) or _link_after_attack_status_buff(buff_id, timing, target, rate) or _link_after_attack_response_buff(buff_id, timing, target, rate) or _link_damage_reduction_buff(buff_id, timing, target, rate) or _link_power_dynamic_buff(buff_id, timing, target, rate) or _link_specific_skill_power_bonus_buff(buff_id, timing, target, rate) or _link_force_switch_buff(buff_id, timing, target, rate) or _link_generic_buff_delta(buff_id, timing, target, rate)
     if linked is not None:

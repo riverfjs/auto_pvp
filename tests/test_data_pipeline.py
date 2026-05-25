@@ -7,6 +7,8 @@ import pytest
 
 import roco.data.fetch_teams as fetch_teams
 import roco.data.parse_pak as parse_pak
+from roco.common.primitive_keys import buff_ref_key
+from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.data import catalog_compiler
 from roco.compiler_v2.static_artifacts.marks import mark_desc_by_idx
 from roco.data.utils import load_jsonl, write_jsonl
@@ -117,6 +119,37 @@ def test_static_catalog_rejects_noop_effect_rows(tmp_path: Path, monkeypatch):
             debug_path=tmp_path / "catalog_debug.py",
             engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
         )
+
+
+def test_static_catalog_records_inert_engine_links(tmp_path: Path, monkeypatch):
+    canonical = _sample_canonical()
+    skill = dict(canonical["skills"][0])
+    skill["effect_rows"] = [
+        (buff_ref_key(20231140), pak_cast_moment_key(6), 1, 10000, 1, 0, 0, 0),
+        (buff_ref_key(20010792), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0),
+    ]
+    canonical["skills"] = (skill, canonical["skills"][1])
+    monkeypatch.setattr(catalog_compiler, "load_canonical_records", lambda _pak_dir: canonical)
+
+    hot_path, _debug_path = catalog_compiler.compile_catalogs(
+        tmp_path / "pak",
+        hot_path=tmp_path / "catalog_hot.py",
+        debug_path=tmp_path / "catalog_debug.py",
+        engine_link_gaps_path=tmp_path / "engine_link_gaps.jsonl",
+        engine_link_inert_path=tmp_path / "engine_link_inert.jsonl",
+    )
+
+    hot = runpy.run_path(str(hot_path))
+    inert_rows = [
+        json.loads(line)
+        for line in (tmp_path / "engine_link_inert.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert hot["SKILL_EFFECT_ROWS"] == ()
+    assert (tmp_path / "engine_link_gaps.jsonl").read_text(encoding="utf-8") == ""
+    assert [row["reason"] for row in inert_rows] == [
+        "bft_inc_dam_by_skill_zero",
+        "bft_attr_change_zero_delta",
+    ]
 
 
 def test_jsonl_roundtrip_is_one_entity_per_line(tmp_path: Path):

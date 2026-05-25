@@ -11,13 +11,21 @@ from roco.engine.kernel.op_marks import op_meteor_mark, op_thorn_mark
 from roco.engine.kernel.op_rows import TARGET_ENEMY, TARGET_SELF
 from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.state import KernelState, side
-from roco.generated.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES
+from roco.generated.buff_defs import BUFF_BASE_IDS, BUFF_REDUCE_RULES, BUFF_TYPE as BUFF_KIND
 from roco.generated.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
-from roco.generated.static.lua_enums import BUFF_TYPE
+from roco.generated.effect_params import EFFECT_ORDER, EFFECT_PARAMS
+from roco.generated.static.lua_enums import BUFF_TYPE, EFFECT_TYPE
+
+_ATTR_CHANGE_STAT_CODES = frozenset((6, 29, 30, 31, 32, 33, 34, 35, 36))
+_RESPONSE_METADATA_PARAMS = (0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0)
 
 
 def _buff_type(symbol: str) -> int:
     return int(BUFF_TYPE[symbol])
+
+
+def _effect_type(symbol: str) -> int:
+    return int(EFFECT_TYPE[symbol])
 
 
 def after_attack_response_supported(buff_id: int) -> bool:
@@ -70,6 +78,8 @@ def _response_rows(buff_id: int) -> tuple[tuple[int, tuple], ...]:
     for base_id in BUFF_BASE_IDS.get(buff_id) or ():
         order = BUFFBASE_ORDER.get(base_id)
         params = BUFFBASE_PARAMS.get(base_id) or ()
+        if _is_response_metadata_row(order, params):
+            continue
         if order != _buff_type("BFT_CAST_SKILL_AFTER_ATTACK"):
             return ()
         if not _response_params_supported(params):
@@ -125,6 +135,10 @@ def _ref_supported(ref_id: int, target: int) -> bool:
         return True
     if _hit_delta(ref_id) is not None:
         return True
+    if _purifies_regular_marks(ref_id):
+        return True
+    if _inert_response_ref(ref_id):
+        return True
     return bool(_buff_delta(ref_id))
 
 
@@ -156,6 +170,14 @@ def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
             ctx.actor_hit_delta += hit_delta
         else:
             ctx.enemy_hit_delta += hit_delta
+        return
+    if _purifies_regular_marks(ref_id):
+        if target == TARGET_SELF:
+            ctx.clear_self_marks = 1
+        else:
+            ctx.clear_enemy_marks = 1
+        return
+    if _inert_response_ref(ref_id):
         return
     packed = _buff_delta(ref_id)
     if packed:
@@ -196,6 +218,75 @@ def _hit_delta(buff_id: int) -> int | None:
     return amount if amount else None
 
 
+def _purifies_regular_marks(ref_id: int) -> bool:
+    rows = _base_rows(ref_id)
+    if len(rows) == 1 and rows[0][1] == _buff_type("BFT_IMMUNE"):
+        params = rows[0][2]
+        if len(params) >= 2 and _param_int(params, 0) == 3:
+            effect_ids = _as_int_tuple(params[1])
+            return len(effect_ids) == 1 and _effect_purifies_regular_marks(effect_ids[0])
+    return _effect_purifies_regular_marks(ref_id)
+
+
+def _effect_purifies_regular_marks(effect_id: int) -> bool:
+    return _effect_purify_refs_match(effect_id, _regular_mark_refs)
+
+
+def _effect_purifies_zero_delta_sentinels(effect_id: int) -> bool:
+    return _effect_purify_refs_match(effect_id, _zero_delta_refs)
+
+
+def _effect_purify_refs_match(effect_id: int, predicate) -> bool:
+    if EFFECT_ORDER.get(effect_id) != _effect_type("ET_PURIFY"):
+        return False
+    params = EFFECT_PARAMS.get(effect_id) or ()
+    if len(params) < 5:
+        return False
+    if _param_int(params, 0) != 3 or _param_int(params, 2) != 99:
+        return False
+    if _param_int(params, 3) != 99 or _param_int(params, 4) != 0:
+        return False
+    refs = _as_int_tuple(params[1])
+    return bool(refs) and predicate(refs)
+
+
+def _regular_mark_refs(ref_ids: tuple[int, ...]) -> bool:
+    return all(int(BUFF_KIND.get(ref_id, 0) or 0) == 4 for ref_id in ref_ids)
+
+
+def _zero_delta_refs(ref_ids: tuple[int, ...]) -> bool:
+    return all(_zero_stat_delta_buff(ref_id) for ref_id in ref_ids)
+
+
+def _inert_response_ref(ref_id: int) -> bool:
+    return _zero_stat_delta_buff(ref_id) or _buff_after_skill_purifies_zero_delta_sentinels(ref_id)
+
+
+def _buff_after_skill_purifies_zero_delta_sentinels(buff_id: int) -> bool:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != _buff_type("BFT_BUFF_AFTER_SKILL"):
+        return False
+    _base_id, _order, params = rows[0]
+    if len(params) < 7:
+        return False
+    if not _params_all_zero(params[:4]) or _param_int(params, 5) != 0:
+        return False
+    effect_ids = _as_int_tuple(params[4])
+    return len(effect_ids) == 1 and _effect_purifies_zero_delta_sentinels(effect_ids[0])
+
+
+def _zero_stat_delta_buff(buff_id: int) -> bool:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != _buff_type("BFT_ATTR_CHANGE"):
+        return False
+    _base_id, _order, params = rows[0]
+    return len(params) >= 3 and _param_int(params, 0) in _ATTR_CHANGE_STAT_CODES and _params_all_zero(params[1:])
+
+
+def _is_response_metadata_row(order: object, params: tuple) -> bool:
+    return order == _buff_type("BFT_INC_DAM_BY_SKILL") and params == _RESPONSE_METADATA_PARAMS
+
+
 def _buff_delta(buff_id: int) -> int:
     return pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(buff_id) or ())
 
@@ -216,6 +307,10 @@ def _as_int_tuple(value: object) -> tuple[int, ...]:
         except (TypeError, ValueError):
             continue
     return tuple(out)
+
+
+def _params_all_zero(values: tuple) -> bool:
+    return all(all(raw == 0 for raw in _as_int_tuple(value)) for value in values)
 
 
 def _param_int(params: tuple, index: int, default: int = 0) -> int:

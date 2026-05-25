@@ -18,7 +18,7 @@ from roco.compiler_v2.static_artifacts.core import build_type_chart_bps
 from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
-from roco.engine.artifacts.linked_op import LinkGapError
+from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
 from roco.generated.handler_order import op_index
 
@@ -27,6 +27,7 @@ SCHEMA_VERSION = "kernel-v2"
 HOT_PATH = ROOT / "roco" / "generated" / "catalog_hot.py"
 DEBUG_PATH = ROOT / "roco" / "generated" / "catalog_debug.py"
 ENGINE_LINK_GAPS_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_gaps.jsonl"
+ENGINE_LINK_INERT_PATH = ROOT / "roco" / "generated" / "audit" / "engine_link_inert.jsonl"
 
 Record = Mapping[str, Any]
 AbilityEffectIdRow = tuple[int, int, int, int, int, int, int]
@@ -98,12 +99,16 @@ def _effect_rows(
     *,
     source_name: str,
     link_gaps: list[dict[str, Any]],
+    link_inert: list[dict[str, Any]],
 ) -> tuple[tuple[int, ...], ...]:
     rows: list[tuple[int, ...]] = []
     try:
         linked_rows = link_primitive_rows(row_tuple, source_name=source_name)
     except LinkGapError as exc:
         link_gaps.append(exc.gap.as_record())
+        return ()
+    except LinkInertError as exc:
+        link_inert.append(exc.inert.as_record())
         return ()
     for linked in linked_rows:
         p0, p1, p2, p3 = linked.runtime_args()
@@ -239,7 +244,10 @@ def compile_catalogs(
     hot_path: Path = HOT_PATH,
     debug_path: Path = DEBUG_PATH,
     engine_link_gaps_path: Path = ENGINE_LINK_GAPS_PATH,
+    engine_link_inert_path: Path | None = None,
 ) -> tuple[Path, Path]:
+    if engine_link_inert_path is None:
+        engine_link_inert_path = engine_link_gaps_path.with_name("engine_link_inert.jsonl")
     canonical = load_canonical_records(pak_dir or DEFAULT_PAK_DATA_DIR)
     skill_records = _records(canonical["skills"], "skill")
     ability_records = _records(canonical["abilities"], "ability")
@@ -310,6 +318,7 @@ def compile_catalogs(
     skill_effect_keyed: list[tuple[int, tuple[int, ...]]] = []
     skill_effect_source_rows: list[tuple[Any, ...]] = []
     engine_link_gaps: list[dict[str, Any]] = []
+    engine_link_inert: list[dict[str, Any]] = []
     for skill_id, row in enumerate(skill_records, start=1):
         name = str(row["name"])
         element_id = _element_id(row.get("element", "普通"))
@@ -340,7 +349,12 @@ def compile_catalogs(
             flavor_text,
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            for effect in _effect_rows(raw_effect, source_name=name, link_gaps=engine_link_gaps):
+            for effect in _effect_rows(
+                raw_effect,
+                source_name=name,
+                link_gaps=engine_link_gaps,
+                link_inert=engine_link_inert,
+            ):
                 skill_effect_keyed.append((skill_id, effect))
                 skill_effect_source_rows.append((skill_id, *effect, order))
 
@@ -362,7 +376,12 @@ def compile_catalogs(
             str(row.get("source_version", "")),
         ))
         for order, raw_effect in enumerate(row.get("effect_rows", ()) or ()):
-            for effect in _effect_rows(raw_effect, source_name=name, link_gaps=engine_link_gaps):
+            for effect in _effect_rows(
+                raw_effect,
+                source_name=name,
+                link_gaps=engine_link_gaps,
+                link_inert=engine_link_inert,
+            ):
                 ability_effect_keyed.append((ability_id, effect))
                 ability_effect_source_rows.append((ability_id, *effect, order))
 
@@ -465,12 +484,20 @@ def compile_catalogs(
     hot_path.parent.mkdir(parents=True, exist_ok=True)
     debug_path.parent.mkdir(parents=True, exist_ok=True)
     engine_link_gaps_path.parent.mkdir(parents=True, exist_ok=True)
+    engine_link_inert_path.parent.mkdir(parents=True, exist_ok=True)
     hot_path.write_text(hot, encoding="utf-8")
     debug_path.write_text(debug, encoding="utf-8")
     engine_link_gaps_path.write_text(
         "".join(
             json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
             for record in engine_link_gaps
+        ),
+        encoding="utf-8",
+    )
+    engine_link_inert_path.write_text(
+        "".join(
+            json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
+            for record in engine_link_inert
         ),
         encoding="utf-8",
     )
