@@ -118,6 +118,8 @@ def _ref_supported(ref_id: int, target: int) -> bool:
         return target == TARGET_ENEMY
     if _mark_type(ref_id) is not None:
         return True
+    if _hit_delta(ref_id) is not None:
+        return True
     return bool(pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(ref_id) or ()))
 
 
@@ -135,6 +137,13 @@ def _apply_response_ref(ctx: StageCtx, ref_id: int, target: int) -> None:
         return
     if mark == MarkIdx.THORN:
         op_thorn_mark(ctx, (0, 0, target, 10000, 0, 1, 0, 0, 0))
+        return
+    hit_delta = _hit_delta(ref_id)
+    if hit_delta is not None:
+        if target == TARGET_SELF:
+            ctx.actor_hit_delta += hit_delta
+        else:
+            ctx.enemy_hit_delta += hit_delta
         return
     packed = pack_buff_delta_from_base_ids(BUFF_BASE_IDS.get(ref_id) or ())
     if packed:
@@ -160,6 +169,19 @@ def _mark_type(buff_id: int) -> MarkIdx | None:
     if any(order == _buff_type("BFT_SPIKES") and _param_int(params, 0) == 1001005 for _base_id, order, params in rows):
         return MarkIdx.THORN
     return None
+
+
+def _hit_delta(buff_id: int) -> int | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != _buff_type("BFT_MULTIPLE_NUM"):
+        return None
+    _base_id, _order, params = rows[0]
+    if len(params) < 3:
+        return None
+    if _param_int(params, 1) != 0 or _param_int(params, 2) != 0:
+        return None
+    amount = _param_int(params, 0)
+    return amount if amount else None
 
 
 def _base_rows(buff_id: int) -> tuple[tuple[int, int, tuple], ...]:

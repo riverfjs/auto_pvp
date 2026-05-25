@@ -74,3 +74,19 @@ def test_after_attack_active_response_applies_meteor_marks_to_attacker_side():
         damage_dealt=10,
     )
     assert _unpack_mark(side(new_state, SIDE_A).marks, MarkIdx.METEOR) == 2
+
+
+def test_after_attack_active_response_applies_hit_delta_to_attacker():
+    assert after_attack_response_supported(20190220)
+    state = make_state((1, 2, 3), (4, 5, 6))
+    state = _seed_active_response(state, SIDE_B, 0, 20190220)
+    new_state = trigger_after_attack_active_buffs(
+        state,
+        SIDE_A,
+        0,
+        SIDE_B,
+        0,
+        SkillCategory.PHYSICAL.value,
+        damage_dealt=10,
+    )
+    assert side(new_state, SIDE_A).pets[0].hit_delta == -3
