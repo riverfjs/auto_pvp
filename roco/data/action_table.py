@@ -70,12 +70,20 @@ class ActionInterner:
                 lowered.append((int(weight), self.intern(child)))
             return kind, _with_source(action, (count, tuple(lowered)))
         if kind in (ACTION_CONDITIONAL, ACTION_TRIGGER_REGISTER):
-            payload = tuple(
-                self.intern(item) if isinstance(item, LinkedAction) else int(item)
-                for item in action.payload
-            )
+            payload = tuple(self._lower_payload_item(item) for item in action.payload)
             return kind, _with_source(action, payload)
         raise RuntimeError(f"unhandled action kind code {kind}")
+
+    def _lower_payload_item(self, item: Any) -> Any:
+        if isinstance(item, LinkedAction):
+            return self.intern(item)
+        if isinstance(item, int):
+            return int(item)
+        if isinstance(item, tuple):
+            return tuple(self._lower_payload_item(child) for child in item)
+        if isinstance(item, list):
+            return tuple(self._lower_payload_item(child) for child in item)
+        raise RuntimeError(f"action payload contains non-pure value {item!r}")
 
     def _validate_references(self) -> None:
         max_id = len(self._rows) - 1
@@ -150,7 +158,5 @@ def _payload_body(payload: tuple[Any, ...]) -> tuple[Any, ...]:
 
 def _action_refs(kind: int, payload: tuple[Any, ...]) -> tuple[int, ...]:
     if kind == ACTION_CONDITIONAL and len(payload) >= 2:
-        return (int(payload[-1]),)
-    if kind == ACTION_TRIGGER_REGISTER and len(payload) >= 1:
         return (int(payload[-1]),)
     return ()

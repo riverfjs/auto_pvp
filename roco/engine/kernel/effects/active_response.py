@@ -16,7 +16,6 @@ from roco.generated.pak.buffbase_params import BUFFBASE_ORDER, BUFFBASE_PARAMS
 from roco.generated.pak.effect_params import EFFECT_ORDER, EFFECT_PARAMS
 from roco.generated.static.lua_enums import BUFF_TYPE, EFFECT_TYPE
 
-_ATTR_CHANGE_STAT_CODES = frozenset((6, 29, 30, 31, 32, 33, 34, 35, 36))
 _RESPONSE_METADATA_PARAMS = (0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0)
 
 
@@ -328,7 +327,7 @@ def _zero_stat_delta_buff(buff_id: int) -> bool:
     if len(rows) != 1 or rows[0][1] != _buff_type("BFT_ATTR_CHANGE"):
         return False
     _base_id, _order, params = rows[0]
-    return len(params) >= 3 and _param_int(params, 0) in _ATTR_CHANGE_STAT_CODES and _params_all_zero(params[1:])
+    return len(params) >= 3 and _params_all_zero(params[1:])
 
 
 def _is_response_metadata_row(order: object, params: tuple) -> bool:

@@ -639,6 +639,7 @@ def test_kernel_marks_affect_speed_cost_damage_and_entry():
     meteor_state = meteor_state._replace(side_b=meteor_state.side_b._replace(marks=meteor_marks))
     meteor = update(meteor_state, move_choice(0), move_choice(0))
     assert meteor.damage_a == base.damage_a + 60
+    assert _unpack_mark(meteor.state.side_b.marks, MarkIdx.METEOR) == 0
 
     switch_state = make_state((fire, cat), (water,), team_a_moves=((impact,), (impact,)), team_b_moves=((0,),))
     switch_state = switch_state._replace(side_a=switch_state.side_a._replace(marks=thorn_spirit))
@@ -668,6 +669,23 @@ def test_kernel_freeze_counts_as_extra_meteor_damage_flag():
 
     assert flagged.damage_a == base.damage_a + 90
     assert _unpack_mark(flagged.state.side_b.marks, MarkIdx.METEOR) == 0
+
+
+def test_kernel_half_meteor_flag_preserves_half_stacks():
+    fire = _pet_id("火花")
+    water = _pet_id("水蓝蓝")
+    impact = _skill_id("猛烈撞击")
+    meteor_marks = _set_mark(0, MarkIdx.METEOR, 4)
+
+    state = make_state((fire,), (water,), team_a_moves=((impact,),), team_b_moves=((0,),))
+    actor = state.side_a.pets[0]._replace(ability_flags=int(AbilityFlag.HALF_METEOR_FULL_DAMAGE))
+    state = state._replace(
+        side_a=replace_pet(state.side_a, 0, actor),
+        side_b=state.side_b._replace(marks=meteor_marks),
+    )
+
+    result = update(state, move_choice(0), move_choice(0))
+    assert _unpack_mark(result.state.side_b.marks, MarkIdx.METEOR) == 2
 
 
 def test_kernel_mark_turn_end_poison_and_solar_ticks():

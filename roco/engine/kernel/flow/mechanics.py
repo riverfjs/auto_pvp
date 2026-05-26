@@ -8,6 +8,7 @@ from roco.engine.common.choices import ACTION_FOCUS, ACTION_MAGIC, ACTION_MOVE, 
 from roco.common.packing import (
     DevotionIdx,
     MarkIdx,
+    _unpack_buff,
     _cooldown_at,
     _inc_skill_count,
     _inc_u8_count,
@@ -53,7 +54,8 @@ from roco.engine.kernel.flow.action_runner import drain_pending_actions
 from roco.engine.kernel.flow.counter import fire_counter_skill
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.effects.active_response import trigger_after_attack_active_buffs
-from roco.engine.kernel.effects.damage import damage, marked_skill_cost
+from roco.engine.kernel.effects.after_skill_triggers import trigger_after_skill_active_buffs
+from roco.engine.kernel.effects.damage import consume_triggered_meteor_marks, damage, marked_skill_cost
 from roco.engine.kernel.flow.extra_skill import drain_extra_skill_queue
 from roco.engine.kernel.core.rows import (
     TIMING_PAK_BEFORE_HURT,
@@ -193,6 +195,7 @@ def _execute(
     actor_row = hot.PETS[actor.pet_id]
     target_row = hot.PETS[target.pet_id]
     ctx.skill_element = skill[SKILL_ELEMENT]
+    ctx.skill_dam_type = skill[SKILL_DAM_TYPE]
     ctx.skill_category = skill[SKILL_CATEGORY]
     ctx.skill_energy = skill[SKILL_ENERGY]
     ctx.skill_flags = skill[SKILL_FLAGS]
@@ -219,6 +222,8 @@ def _execute(
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
     ctx.target_skill_energy = target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
+    ctx.target_meteor_mark_stacks = _unpack_mark(target_side.marks, MarkIdx.METEOR)
+    ctx.target_positive_buff_layers = _positive_buff_layers(target.buff_stages)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
     ctx.target_poison_effect_stacks = (
         ctx.target_poison_stacks + _unpack_mark(target_side.marks, MarkIdx.POISON)
@@ -270,6 +275,9 @@ def _execute(
         if dealt > 0:
             _run_ability_timing(target, TIMING_HOOK_TAKE_DAMAGE, ctx)
             state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_HOOK_TAKE_DAMAGE)
+        target_side = target_side._replace(
+            marks=consume_triggered_meteor_marks(actor, skill, target_side.marks, dealt)
+        )
         next_hp = target.current_hp - dealt
         if next_hp <= 0 and target.ability_flags & int(AbilityFlag.CUTE_LETHAL_SHIELD):
             target = target._replace(current_hp=1, cute=target.cute + 1)
@@ -351,6 +359,7 @@ def _execute(
     state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, skill_id, TIMING_PAK_BEFORE_HURT)
     ctx.poison_stacks += _unpack_skill_count(actor.element_poison_stacks, Element(skill[SKILL_ELEMENT]))
     state = apply_after_move(state, actor_side_id, actor_slot, target_side_id, target_slot, ctx)
+    state = trigger_after_skill_active_buffs(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot)
     state = drain_extra_skill_queue(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, first_strike)
     state = clear_barrel_after_action(state, actor_side_id, actor_slot)
     return state, dealt
@@ -386,3 +395,10 @@ def _drain_action_group(
         trigger_event=trigger_event,
         allow_extra_queue=True,
     )
+
+
+def _positive_buff_layers(packed: int) -> int:
+    total = 0
+    for idx in range(7):
+        total += max(0, _unpack_buff(packed, idx))
+    return total

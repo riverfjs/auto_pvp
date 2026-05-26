@@ -4,11 +4,14 @@ import pytest
 
 from roco.common.primitive_keys import buff_ref_key, effect_ref_key
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
-from roco.data.action_table import ACTION_EXTRA_SKILL, ACTION_OP_LIST, ACTION_RANDOM, ActionInterner
+from roco.data.action_table import ACTION_CONDITIONAL, ACTION_EXTRA_SKILL, ACTION_OP_LIST, ACTION_RANDOM, ACTION_TRIGGER_REGISTER, ActionInterner
+from roco.engine.artifacts.action_payloads import COND_KIND_STATUS, COND_REF_COUNT_AT_LEAST, COND_SCOPE_ENEMY, TRIGGER_AFTER_SKILL
 from roco.engine.artifacts.linked_op import (
     ACTION_KIND_EXTRA_SKILL,
+    ACTION_KIND_CONDITIONAL,
     ACTION_KIND_OP_LIST,
     ACTION_KIND_RANDOM,
+    ACTION_KIND_TRIGGER_REGISTER,
     EXTRA_SKILL_POLICY_CONSERVATIVE,
     LinkGapError,
     LinkedAction,
@@ -20,6 +23,10 @@ from roco.engine.kernel.flow import action_runner
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.ops.combat import op_queue_action
 from roco.engine.kernel.model.state import make_state
+from roco.common.enums import StatusType
+from roco.engine.kernel.model.state import replace_pet, replace_side, side, with_status
+from roco.engine.kernel.effects.after_skill_triggers import trigger_after_skill_active_buffs
+from roco.engine.kernel.model.active_buffs import active_buff_id, pack_active_buff
 from roco.generated.runtime.handler_order import op_index
 
 
@@ -91,6 +98,53 @@ def test_action_interner_is_deterministic_and_integer_only():
         assert _only_pure_data(payload)
 
 
+def test_action_interner_preserves_nested_conditional_payload_as_pure_data():
+    action = LinkedAction(
+        ACTION_KIND_CONDITIONAL,
+        11,
+        1,
+        10000,
+        (
+            COND_REF_COUNT_AT_LEAST,
+            ((COND_KIND_STATUS, int(StatusType.FREEZE), COND_SCOPE_ENEMY),),
+            1,
+            LinkedAction(ACTION_KIND_OP_LIST, 11, 1, 10000, (LinkedOp("op_hit_count_delta", 11, 1, 10000, 1),)),
+        ),
+    )
+    interner = ActionInterner()
+    action_id = interner.intern(action)
+    rows = interner.rows()
+    assert rows[action_id][0] == ACTION_CONDITIONAL
+    assert _only_pure_data(rows[action_id][1])
+
+
+def test_trigger_register_action_requests_active_buff(monkeypatch):
+    monkeypatch.setattr(
+        action_runner.catalog_actions,
+        "ACTIONS",
+        (
+            (0, ()),
+            (ACTION_TRIGGER_REGISTER, (TRIGGER_AFTER_SKILL, 1, 20350460, 13, 999, 0)),
+        ),
+    )
+    state = make_state((1,), (2,))
+    ctx = StageCtx()
+    ctx.reset(0, 0, 1, 0, 1)
+    ctx.pending_actions = (1,)
+    drain_pending_actions(
+        state,
+        ctx,
+        actor_side=0,
+        actor_slot=0,
+        target_side=1,
+        target_slot=0,
+        source_skill_id=1,
+        trigger_event=11,
+    )
+    assert ctx.self_active_buff_id == 20350460
+    assert ctx.self_active_buff_duration == 0
+
+
 def test_queue_action_does_not_drain_extra_skill_inside_effect_row(monkeypatch):
     monkeypatch.setattr(
         action_runner.catalog_actions,
@@ -147,6 +201,69 @@ def test_random_action_uses_battle_rng_and_queues_selected_child(monkeypatch):
     )
     assert new_state.rng != state.rng
     assert ctx.extra_skill_queue == ((7020530, EXTRA_SKILL_POLICY_CONSERVATIVE),)
+
+
+def test_conditional_action_executes_child_when_target_status_matches(monkeypatch):
+    monkeypatch.setattr(
+        action_runner.catalog_actions,
+        "ACTIONS",
+        (
+            (0, ()),
+            (
+                ACTION_CONDITIONAL,
+                (
+                    COND_REF_COUNT_AT_LEAST,
+                    ((COND_KIND_STATUS, int(StatusType.FREEZE), COND_SCOPE_ENEMY),),
+                    1,
+                    2,
+                ),
+            ),
+            (ACTION_OP_LIST, ((op_index("op_poison"), 11, 2, 0, 0, 1, 0, 0, 0),)),
+        ),
+    )
+    state = make_state((1,), (2,))
+    target = with_status(side(state, 1).pets[0], StatusType.FREEZE, 1)
+    state = replace_side(state, 1, replace_pet(side(state, 1), 0, target))
+    ctx = StageCtx()
+    ctx.reset(0, 0, 1, 0, 1)
+    ctx.pending_actions = (1,)
+    drain_pending_actions(
+        state,
+        ctx,
+        actor_side=0,
+        actor_slot=0,
+        target_side=1,
+        target_slot=0,
+        source_skill_id=1,
+        trigger_event=11,
+    )
+    assert ctx.poison_stacks == 1
+
+
+def test_after_skill_trigger_follows_active_buff_lifecycle(monkeypatch):
+    monkeypatch.setattr(
+        action_runner.catalog_actions,
+        "ACTIONS",
+        (
+            (0, ()),
+            (ACTION_OP_LIST, ((op_index("op_poison"), 11, 2, 0, 0, 1, 0, 0, 0),)),
+        ),
+    )
+    monkeypatch.setattr(
+        action_runner.catalog_actions,
+        "AFTER_SKILL_TRIGGERS",
+        ((20350460, 1, (2,)),),
+        raising=False,
+    )
+    state = make_state((1,), (2,))
+    actor = side(state, 0).pets[0]._replace(active_buffs=pack_active_buff(20350460, 0, 0, 0))
+    state = replace_side(state, 0, replace_pet(side(state, 0), 0, actor))
+    ctx = StageCtx()
+    ctx.reset(0, 0, 1, 0, 1)
+    ctx.skill_dam_type = 2
+    new_state = trigger_after_skill_active_buffs(state, ctx, 0, 0, 1, 0)
+    assert active_buff_id(side(new_state, 0).pets[0].active_buffs) == 20350460
+    assert side(new_state, 1).pets[0].status_counts != 0
 
 
 def _only_pure_data(value) -> bool:

@@ -28,6 +28,8 @@ from roco.data.canonical import load_canonical_records
 from roco.data.parse_pak import DEFAULT_PAK_DATA_DIR
 from roco.data.utils import ROOT, RULES_DIR, content_hash, iter_jsonl
 from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError, LinkedAction, LinkedOp
+from roco.engine.artifacts.pak_ref_after_skill import build_after_skill_trigger_rows
+from roco.engine.artifacts.pak_ref_linker import _link_ref_id
 from roco.engine.artifacts.primitive_linker import link_primitive_rows
 from roco.generated.runtime.handler_order import op_index
 
@@ -459,6 +461,7 @@ def compile_catalogs(
     bloodline_tables = build_bloodline_magic_tables(build_static_bundle())
     bloodline_catalog_rows = bloodline_tables["bloodline_catalog_rows"]
     bloodline_magic_catalog_rows = bloodline_tables["supported_magic_catalog_rows"]
+    after_skill_triggers = build_after_skill_trigger_rows(action_interner, link_ref_id=_link_ref_id)
     action_rows = action_interner.rows()
 
     source_hash = content_hash({
@@ -474,6 +477,7 @@ def compile_catalogs(
         "ability_flags_from_effects_rules": ability_flag_artifact.normalized_payload(effect_to_flag),
         "bloodlines": tuple(bloodline_catalog_rows),
         "bloodline_magics": tuple(bloodline_magic_catalog_rows),
+        "after_skill_triggers": after_skill_triggers,
         "actions": action_rows,
     })
     skipped_effect_stats = tuple(sorted(Counter(str(row["reason"]) for row in engine_link_gaps).items()))
@@ -533,6 +537,7 @@ def compile_catalogs(
             ACTION_RANDOM=ACTION_RANDOM,
             ACTION_CONDITIONAL=ACTION_CONDITIONAL,
             ACTION_TRIGGER_REGISTER=ACTION_TRIGGER_REGISTER,
+            AFTER_SKILL_TRIGGERS=after_skill_triggers,
             ACTIONS=action_rows,
         ),
         encoding="utf-8",

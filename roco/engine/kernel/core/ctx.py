@@ -14,6 +14,7 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("skill_id", 0),
     ("skill_slot", -1),
     ("skill_element", 0),
+    ("skill_dam_type", 0),
     ("skill_category", 0),
     ("skill_energy", 0),
     ("skill_flags", 0),
@@ -43,6 +44,8 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("target_energy", 0),
     ("target_skill_slot", -1),
     ("target_skill_energy", 0),
+    ("target_meteor_mark_stacks", 0),
+    ("target_positive_buff_layers", 0),
     ("target_poison_stacks", 0),
     ("target_poison_effect_stacks", 0),
     ("power", 0),
@@ -152,6 +155,15 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("extra_skill_queue", ()),
 )
 
+_MOVE_OBSERVATION_FIELDS: tuple[str, ...] = tuple(
+    name
+    for name, _value in _DEFAULTS[: next(i for i, (field, _value) in enumerate(_DEFAULTS) if field == "power")]
+) + (
+    "damage_dealt",
+    "super_effective",
+    "first_strike",
+)
+
 
 class StageCtx:
     __slots__ = tuple(name for name, _ in _DEFAULTS)
@@ -168,3 +180,8 @@ class StageCtx:
         self.target_side = target_side
         self.target_slot = target_slot
         self.skill_id = skill_id
+
+    def copy_move_observations_from(self, other: StageCtx) -> None:
+        """Copy read-only move observations into a child action context."""
+        for name in _MOVE_OBSERVATION_FIELDS:
+            object.__setattr__(self, name, getattr(other, name))

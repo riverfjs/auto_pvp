@@ -2,7 +2,7 @@
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = 'kernel-v2'
-SOURCE_HASH = 'de2c5eb559d8defa8c1437dda05e00c481f8278f2699e5c7fae4d03a19570f33'
+SOURCE_HASH = 'a68267822832b2a9145ccda5afc6a364181c326b798011104850726d3c40dc2d'
 ELEMENT_NAMES = ('普通', '草', '火', '水', '光', '地', '冰', '龙', '电', '毒', '虫', '武', '翼', '萌', '幽', '恶', '机械', '幻')
 PET_NAMES = ('',
  '喵喵',
@@ -9912,8 +9912,17 @@ BLOODLINE_IDS_BY_NAME = {'光': 5,
  '黑魔法': 21,
  '龙': 8}
 BLOODLINE_MAGIC_IDS_BY_NAME = {'愿力强化': 100002, '进化之力': 100007}
-SKIPPED_EFFECT_STATS = (('assign_condition_unsupported', 11),
- ('buff_shape_unsupported', 387),
- ('effect_shape_unsupported', 50),
+SKIPPED_EFFECT_STATS = (('after_skill_all_children_inert', 2),
+ ('after_skill_nested_action_unsupported', 1),
+ ('after_skill_shape_unsupported', 4),
+ ('assign_condition_unsupported', 11),
+ ('buff_shape_unsupported', 352),
+ ('check_buff_layer_child_action_unsupported', 1),
+ ('check_buff_layer_condition_ref_unsupported', 2),
+ ('check_buff_layer_target_code_unsupported', 3),
+ ('effect_shape_unsupported', 51),
  ('effect_type_1_no_buff', 18),
- ('purify_shape_unsupported', 8))
+ ('purify_shape_unsupported', 9),
+ ('target_has_buff_desc_sentinel_unresolved', 5),
+ ('target_has_buff_mark_total_to_meteor_desc_unresolved', 2),
+ ('target_has_buff_sequence_sentinel_unsupported', 2))

@@ -9,7 +9,7 @@ from roco.common.primitive_keys import (
     ENGINE_HOOK_PREFIX,
     strip_prefix,
 )
-from roco.engine.artifacts.linked_op import LinkedOp
+from roco.engine.artifacts.linked_op import LinkedAction, LinkedOp
 from roco.engine.artifacts.pak_ref_linker import link_pak_ref
 from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE
 from roco.generated.pak.battle_events import BATTLE_EVENT_VALUES
@@ -22,7 +22,10 @@ ENGINE_HOOK_TIMINGS = {
 }
 
 
-def link_primitive_row(row: Iterable[object], *, source_name: str) -> LinkedOp:
+LinkedPrimitive = LinkedOp | LinkedAction
+
+
+def link_primitive_row(row: Iterable[object], *, source_name: str) -> LinkedPrimitive:
     """Convert one compiler primitive row to one engine linked op."""
 
     rows = link_primitive_rows(row, source_name=source_name)
@@ -33,7 +36,7 @@ def link_primitive_row(row: Iterable[object], *, source_name: str) -> LinkedOp:
     return rows[0]
 
 
-def link_primitive_rows(row: Iterable[object], *, source_name: str) -> tuple[LinkedOp, ...]:
+def link_primitive_rows(row: Iterable[object], *, source_name: str) -> tuple[LinkedPrimitive, ...]:
     """Convert a compiler primitive row to one or more engine linked ops."""
 
     values = tuple(row)

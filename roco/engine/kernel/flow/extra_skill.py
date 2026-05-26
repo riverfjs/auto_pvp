@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from roco.common.enums import Element, SkillCategory, StatusType
-from roco.common.packing import MarkIdx, _unpack_element_u8, _unpack_mark
+from roco.common.packing import MarkIdx, _unpack_buff, _unpack_element_u8, _unpack_mark
 from roco.engine.kernel.flow.action_runner import drain_pending_actions
 from roco.engine.kernel.core.catalog import (
     PET_ABILITY,
@@ -13,12 +13,13 @@ from roco.engine.kernel.core.catalog import (
     SKILL_ELEMENT,
     SKILL_ENERGY,
     SKILL_FLAGS,
+    SKILL_DAM_TYPE,
     SKILL_HIT_COUNT,
     SKILL_POWER,
     STAT_HP,
 )
 from roco.engine.kernel.core.ctx import StageCtx
-from roco.engine.kernel.effects.damage import damage
+from roco.engine.kernel.effects.damage import consume_triggered_meteor_marks, damage
 from roco.engine.kernel.core.rows import (
     TIMING_HOOK_TAKE_DAMAGE,
     TIMING_PAK_BEFORE_HURT,
@@ -110,6 +111,9 @@ def _resolve_forced_damage(
     if dealt > 0:
         _run_ability_timing(target, TIMING_HOOK_TAKE_DAMAGE, ctx)
         state = _drain_action_group(state, ctx, actor_side_id, actor_slot, target_side_id, target_slot, ctx.skill_id, TIMING_HOOK_TAKE_DAMAGE)
+    target_side = target_side._replace(
+        marks=consume_triggered_meteor_marks(actor, skill, target_side.marks, dealt)
+    )
     target = target._replace(current_hp=max(0, target.current_hp - dealt))
     target_side = replace_pet(target_side, target_slot, target)
     state = replace_side(state, target_side_id, target_side)
@@ -167,6 +171,7 @@ def _populate_core_ctx(
     actor_row = hot.PETS[actor.pet_id]
     target_row = hot.PETS[target.pet_id]
     ctx.skill_element = skill[SKILL_ELEMENT]
+    ctx.skill_dam_type = skill[SKILL_DAM_TYPE]
     ctx.skill_category = skill[SKILL_CATEGORY]
     ctx.skill_energy = skill[SKILL_ENERGY]
     ctx.skill_flags = skill[SKILL_FLAGS]
@@ -192,6 +197,8 @@ def _populate_core_ctx(
     ctx.target_secondary = target_row[PET_SECONDARY]
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_energy = target.current_energy
+    ctx.target_meteor_mark_stacks = _unpack_mark(target_side.marks, MarkIdx.METEOR)
+    ctx.target_positive_buff_layers = _positive_buff_layers(target.buff_stages)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)
     ctx.target_poison_effect_stacks = (
         ctx.target_poison_stacks + _unpack_mark(target_side.marks, MarkIdx.POISON)
@@ -204,3 +211,10 @@ def _populate_core_ctx(
     ctx.hit_count = max(1, skill[SKILL_HIT_COUNT] + actor.hit_delta)
     ctx.power_bps += _unpack_element_u8(actor.element_power_bps, Element(skill[SKILL_ELEMENT])) * 100
     ctx.first_strike = 1 if first_strike else 0
+
+
+def _positive_buff_layers(packed: int) -> int:
+    total = 0
+    for idx in range(7):
+        total += max(0, _unpack_buff(packed, idx))
+    return total

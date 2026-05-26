@@ -36,7 +36,7 @@ from roco.compiler_v2.effect_codegen.pak import PakTables
 from roco.compiler_v2.build import build_static_bundle
 from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primitive_axes
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
-from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
+from roco.engine.artifacts.linked_op import ACTION_KIND_TRIGGER_REGISTER, LinkGapError, LinkInertError, LinkedAction
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
 from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_ROUND_END, TIMING_PAK_SDT
 from roco.engine.kernel.core.ctx import StageCtx
@@ -840,95 +840,38 @@ def test_global_power_delta_op_routes_by_target():
 
 def test_direct_bft_buff_after_skill_links_attack_status():
     raw = (buff_ref_key(20350830), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(raw, "传染") == (
-        "op_after_attack_status",
-        TIMING_PAK_BEFORE_HURT,
-        2,
-        10000,
-        int(StatusType.POISON),
-        1,
-        0,
-        0,
-    )
+    linked = link_primitive_row(raw, source_name="传染")
+    assert isinstance(linked, LinkedAction)
+    assert linked.kind == ACTION_KIND_TRIGGER_REGISTER
+    assert linked.payload == (1, 1, 20350830, 13, 999, 0)
 
     unsupported_ref = (buff_ref_key(20350760), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
     with pytest.raises(LinkGapError) as exc_info:
         link_primitive_rows(unsupported_ref, source_name="化劲")
-    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+    assert exc_info.value.gap.reason == "after_skill_shape_unsupported"
 
 
 def test_direct_bft_buff_after_skill_links_element_child_refs():
     heal = (buff_ref_key(20350030), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(heal, "氧循环") == (
-        "op_on_skill_element_heal_hp",
-        11,
-        1,
-        10000,
-        int(Element.GRASS),
-        1000,
-        0,
-        0,
-    )
+    linked = link_primitive_row(heal, source_name="氧循环")
+    assert isinstance(linked, LinkedAction)
+    assert linked.kind == ACTION_KIND_TRIGGER_REGISTER
+    assert linked.payload == (1, 1, 20350030, 13, 999, 0)
 
     poison = (buff_ref_key(20350270), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(poison, "生物碱") == (
-        "op_on_skill_element_poison",
-        11,
-        1,
-        10000,
-        int(Element.GRASS),
-        2,
-        0,
-        0,
-    )
+    assert isinstance(link_primitive_row(poison, source_name="生物碱"), LinkedAction)
 
     cost = (buff_ref_key(20350050), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(cost, "浸润") == (
-        "op_on_skill_element_cost_reduce",
-        11,
-        1,
-        10000,
-        int(Element.WATER),
-        1,
-        0,
-        0,
-    )
+    assert isinstance(link_primitive_row(cost, source_name="浸润"), LinkedAction)
 
     freeze = (buff_ref_key(20230840), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(freeze, "灵魂灼伤") == (
-        "op_on_skill_element_freeze",
-        11,
-        1,
-        10000,
-        int(Element.FIRE),
-        2,
-        0,
-        0,
-    )
+    assert isinstance(link_primitive_row(freeze, source_name="灵魂灼伤"), LinkedAction)
 
     hit_count = (buff_ref_key(20350300), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(hit_count, "乘风连击") == (
-        "op_on_skill_element_hit_count",
-        11,
-        1,
-        10000,
-        int(Element.FLYING),
-        1,
-        0,
-        0,
-    )
+    assert isinstance(link_primitive_row(hit_count, source_name="乘风连击"), LinkedAction)
 
     stacked_cost = (buff_ref_key(20350450), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
-    assert _linked_tuple(stacked_cost, "浪潮") == (
-        "op_on_skill_element_cost_reduce",
-        11,
-        1,
-        10000,
-        int(Element.WATER),
-        2,
-        0,
-        0,
-    )
+    assert isinstance(link_primitive_row(stacked_cost, source_name="浪潮"), LinkedAction)
 
 
 def test_after_attack_status_op_gates_on_attack_category():

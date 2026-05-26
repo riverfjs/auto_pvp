@@ -79,6 +79,15 @@ def test_add_active_buff_fills_first_empty_slot():
     assert active_buff_duration(slot_0_lane) == 7
 
 
+def test_add_active_buff_refreshes_same_source_lane():
+    packed = add_active_buff(0, buff_id=20030010, source_side=0, source_slot=2, duration=3)
+    refreshed = add_active_buff(packed, buff_id=20030010, source_side=0, source_slot=2, duration=5)
+    seen = list(iter_active_buffs(refreshed))
+    assert len(seen) == 1
+    assert active_buff_id(seen[0][1]) == 20030010
+    assert active_buff_duration(seen[0][1]) == 5
+
+
 def test_add_active_buff_overflow_raises():
     packed = 0
     for i in range(LANES):

@@ -1,15 +1,19 @@
 """BUFF_CONF / BUFFBASE_CONF pak ref dispatcher."""
 from __future__ import annotations
 from roco.common.buffbase import pack_buff_delta_from_base_ids
-from roco.engine.artifacts.linked_op import LinkInertError, LinkedOp
+from roco.engine.artifacts.linked_op import LinkInertError, LinkedAction, LinkedOp
+from roco.engine.artifacts.pak_ref_after_skill import link_after_skill_buff_install
 from roco.engine.artifacts.pak_ref_buff_marks import _link_active_immunity_buff, _link_status_or_mark_buff, _link_zero_energy_auto_switch_buff
 from roco.engine.artifacts.pak_ref_buff_modifiers import _energy_amount_from_effect_refs, _link_after_attack_response_buff, _link_after_attack_status_buff, _link_after_skill_element_child_buff, _link_attack_cost_delta_buff, _link_conditional_hit_count_buff, _link_cute_bench_cost_reduce_buff, _link_damage_reduction_buff, _link_element_cost_reduce_buff, _link_first_strike_power_buff, _link_force_switch_buff, _link_freeze_buff, _link_global_cost_delta_buff, _link_global_power_delta_buff, _link_heal_reversal_buff, _link_hit_count_delta_buff, _link_life_drain_buff, _link_power_dynamic_buff, _link_specific_skill_power_bonus_buff, _link_team_skill_hit_count_buff, _link_transmission_buff
+from roco.engine.artifacts.pak_ref_condition_actions import link_check_buff_layer
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, _all_zero, _as_int_tuple, _base_rows, _gap, _inert, _op, _param, _param_int, _skill_dam_type_to_element, buff_type
+from roco.engine.artifacts.pak_ref_target_has_buff import link_target_has_buff
 from roco.engine.kernel.core.rows import TIMING_PAK_SDT
 
-_ATTR_CHANGE_STAT_CODES = frozenset((6, 29, 30, 31, 32, 33, 34, 35, 36))
+LinkedBuff = LinkedOp | LinkedAction
 
-def _link_assign_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str, link_ref_id) -> tuple[LinkedOp, ...] | None:
+
+def _link_assign_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str, link_ref_id) -> tuple[LinkedBuff, ...] | None:
     assign_rows = [(base_id, params) for base_id, order, params in _base_rows(buff_id) if order == buff_type('BFT_ASSIGN')]
     if not assign_rows:
         return None
@@ -75,15 +79,14 @@ def _inert_buff_shape(buff_id: int) -> tuple[str, int, tuple] | None:
         if len(params) >= 12 and _all_zero(params[:4]) and _param_int(params, 4) == 1 and _param_int(params, 5) == 0 and _all_zero(params[6:]):
             return ('bft_inc_dam_by_skill_zero', base_id, params)
     if order == buff_type('BFT_ATTR_CHANGE'):
-        stat_code = _param_int(params, 0)
-        if len(params) >= 3 and stat_code in _ATTR_CHANGE_STAT_CODES and _all_zero(params[1:]):
+        if len(params) >= 3 and _all_zero(params[1:]):
             return ('bft_attr_change_zero_delta', base_id, params)
     if order == buff_type('BFT_DAMNUM_CHANGE'):
         if len(params) >= 12 and _as_int_tuple(params[0]) == (0,) and set(_as_int_tuple(params[1])) == {2, 3} and _all_zero(params[2:]):
             return ('bft_damnum_change_zero_delta', base_id, params)
     return None
 
-def link_buff_ref(buff_id: int, timing: int, target: int, rate: int, p0: int, p1: int, p2: int, p3: int, *, source_name: str, link_ref_id) -> tuple[LinkedOp, ...]:
+def link_buff_ref(buff_id: int, timing: int, target: int, rate: int, p0: int, p1: int, p2: int, p3: int, *, source_name: str, link_ref_id) -> tuple[LinkedBuff, ...]:
     if buff_id not in BUFF_BASE_IDS:
         raise _gap(f'buff_ref:{buff_id}', 'buff_id_not_in_pak', source_name=source_name, timing=timing, target=target, rate=rate, buff_id=buff_id)
     assigned = _link_assign_buff(buff_id, timing, target, rate, source_name=source_name, link_ref_id=link_ref_id)
@@ -94,6 +97,15 @@ def link_buff_ref(buff_id: int, timing: int, target: int, rate: int, p0: int, p1
         reason, base_id, params = inert
         raise _inert(f'buff_ref:{buff_id}', reason, source_name=source_name, timing=timing, target=target, rate=rate, buff_id=buff_id, buff_base_id=base_id, base_params=params)
     stack_count = max(1, p0)
+    check = link_check_buff_layer(buff_id, timing, target, rate, source_name=source_name, link_ref_id=link_ref_id)
+    if check is not None:
+        return (check,)
+    target_has = link_target_has_buff(buff_id, timing, target, rate, source_name=source_name)
+    if target_has is not None:
+        return target_has
+    after_skill_install = link_after_skill_buff_install(buff_id, timing, target, rate, source_name=source_name, link_ref_id=link_ref_id)
+    if after_skill_install is not None:
+        return (after_skill_install,)
     after_skill = _link_after_skill_element_child_buff(buff_id, timing, target, rate, source_name=source_name)
     if after_skill is not None:
         return after_skill

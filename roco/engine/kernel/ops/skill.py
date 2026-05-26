@@ -36,6 +36,21 @@ def op_power_dynamic_elements(ctx: StageCtx, row: tuple[int, ...]) -> None:
         ctx.power += row[ROW_ARG2]
 
 
+def op_power_bps_by_target_meteor_mark(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    raw_skill_dam_type = row[ROW_ARG0]
+    if raw_skill_dam_type and ctx.skill_dam_type != raw_skill_dam_type:
+        return
+    count = ctx.target_meteor_mark_stacks
+    if count > 0:
+        ctx.power_bps = ctx.power_bps * (BPS + count * row[ROW_ARG1]) // BPS
+
+
+def op_power_bps_by_target_positive_buff_layers(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    count = ctx.target_positive_buff_layers
+    if count > 0:
+        ctx.power_bps = ctx.power_bps * (BPS + count * row[ROW_ARG0]) // BPS
+
+
 def op_first_strike_power_bps(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if not ctx.first_strike:
         return

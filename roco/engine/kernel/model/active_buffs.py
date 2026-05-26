@@ -228,17 +228,30 @@ def add_active_buff(
     source_slot: int,
     duration: int,
 ) -> int:
-    """Pack a new lane and place it in the first empty slot.
+    """Upsert a lane by ``buff_id + source_side + source_slot``.
 
-    Phase 5A does **not** dedupe — even if ``packed`` already contains a
-    lane with the same ``buff_id``, a second call places a new lane in
-    the next empty slot.  Refresh / dedupe semantics belong to the
-    consumer family that adopts active buffs.
+    Re-applying the same active buff from the same source refreshes the
+    existing lane instead of creating duplicate trigger/immunity carriers.
+    A persistent duration (0) wins over finite durations; otherwise the longer
+    remaining duration is kept.
 
     Raises ``RuntimeError`` when all 8 lanes are occupied.
     """
     _ensure_packed(packed)
     lane = pack_active_buff(buff_id, source_side, source_slot, duration)
+    for slot_idx, existing in iter_active_buffs(packed):
+        if (
+            active_buff_id(existing) == buff_id
+            and active_buff_source_side(existing) == source_side
+            and active_buff_source_slot(existing) == source_slot
+        ):
+            existing_duration = active_buff_duration(existing)
+            refreshed_duration = 0 if existing_duration == 0 or duration == 0 else max(existing_duration, duration)
+            return set_active_buff_slot(
+                packed,
+                slot_idx,
+                pack_active_buff(buff_id, source_side, source_slot, refreshed_duration),
+            )
     for slot_idx in range(LANES):
         if active_buff_id(_lane_at(packed, slot_idx)) == 0:
             return _clear_lane(packed, slot_idx) | (lane << (slot_idx * LANE_BITS))

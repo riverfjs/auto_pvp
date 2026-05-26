@@ -8,6 +8,7 @@ from roco.common.packing import (
     BUFF_DEF_MAG,
     BUFF_DEF_PHYS,
     MarkIdx,
+    _set_mark,
     _unpack_element_u8,
     _unpack_mark,
     _unpack_status,
@@ -138,6 +139,17 @@ def _meteor_damage_stacks(actor: PetState, target: PetState, target_marks: int) 
     if actor.ability_flags & int(AbilityFlag.FREEZE_COUNTS_AS_METEOR):
         stacks += _unpack_status(target.status_counts, StatusType.FREEZE)
     return stacks
+
+
+def consume_triggered_meteor_marks(actor: PetState, skill: tuple[int, ...], target_marks: int, dealt: int) -> int:
+    if dealt <= 0 or skill[SKILL_ELEMENT] == ELEMENT_ILLUSION:
+        return target_marks
+    stacks = _unpack_mark(target_marks, MarkIdx.METEOR)
+    if stacks <= 0:
+        return target_marks
+    if actor.ability_flags & int(AbilityFlag.HALF_METEOR_FULL_DAMAGE):
+        return _set_mark(target_marks, MarkIdx.METEOR, (stacks + 1) // 2)
+    return _set_mark(target_marks, MarkIdx.METEOR, 0)
 
 
 def weather_damage_bps(skill_element: int, weather: int) -> int:

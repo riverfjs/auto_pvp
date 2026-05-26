@@ -9,12 +9,26 @@ resolution has completed.
 
 from __future__ import annotations
 
+from roco.common.enums import StatusType
+from roco.common.packing import MarkIdx, _unpack_mark
 from roco.engine.common.rng import next_rng
+from roco.engine.artifacts.action_payloads import (
+    COND_KIND_ACTIVE_BUFF,
+    COND_KIND_CUTE,
+    COND_KIND_MARK,
+    COND_KIND_STATUS,
+    COND_REF_COUNT_AT_LEAST,
+    COND_SCOPE_ENEMY,
+    COND_SCOPE_SELF,
+    TRIGGER_AFTER_SKILL,
+)
+from roco.engine.artifacts.linked_op import EXTRA_SKILL_POLICY_CONSERVATIVE
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.core.dispatch import HANDLERS, HANDLER_COUNT
-from roco.engine.kernel.core.rows import ROW_HANDLER_IDX
-from roco.engine.kernel.model.state import KernelState
-from roco.engine.artifacts.linked_op import EXTRA_SKILL_POLICY_CONSERVATIVE
+from roco.engine.kernel.core.rows import ROW_HANDLER_IDX, TARGET_ENEMY, TARGET_SELF
+from roco.engine.kernel.model.active_buffs import active_buff_id, iter_active_buffs
+from roco.engine.kernel.model.state import KernelState, side, status_stack
+from roco.engine.kernel.ops.buffs import op_apply_active_buff
 from roco.generated.catalog import actions as catalog_actions
 
 
@@ -84,9 +98,7 @@ def execute_action(
     allow_extra_queue: bool,
     depth: int,
 ) -> KernelState:
-    del actor_side, actor_slot, target_side, target_slot
     del source_instance_id
-    del trigger_event, action_flags
     if depth > MAX_ACTION_DEPTH:
         raise RuntimeError(f"action depth exceeded {MAX_ACTION_DEPTH}")
     if action_id <= 0 or action_id >= len(catalog_actions.ACTIONS):
@@ -115,14 +127,38 @@ def execute_action(
             state,
             ctx,
             payload,
+            actor_side=actor_side,
+            actor_slot=actor_slot,
+            target_side=target_side,
+            target_slot=target_slot,
             source_ref=source_ref,
             source_skill_id=source_skill_id,
             source_buff_id=source_buff_id,
+            trigger_event=trigger_event,
+            action_flags=action_flags,
             allow_extra_queue=allow_extra_queue,
             depth=depth,
         )
-    if kind in (ACTION_CONDITIONAL, ACTION_TRIGGER_REGISTER):
-        raise RuntimeError(f"runtime action kind {kind} is not implemented in this batch")
+    if kind == ACTION_CONDITIONAL:
+        return _execute_conditional_action(
+            state,
+            ctx,
+            payload,
+            actor_side=actor_side,
+            actor_slot=actor_slot,
+            target_side=target_side,
+            target_slot=target_slot,
+            source_ref=source_ref,
+            source_skill_id=source_skill_id,
+            source_buff_id=source_buff_id,
+            trigger_event=trigger_event,
+            action_flags=action_flags,
+            allow_extra_queue=allow_extra_queue,
+            depth=depth,
+        )
+    if kind == ACTION_TRIGGER_REGISTER:
+        _execute_trigger_register(ctx, payload)
+        return state
     raise RuntimeError(f"unknown runtime action kind {kind}")
 
 
@@ -138,9 +174,15 @@ def _execute_random_action(
     ctx: StageCtx,
     payload: tuple,
     *,
+    actor_side: int,
+    actor_slot: int,
+    target_side: int,
+    target_slot: int,
     source_ref: int,
     source_skill_id: int,
     source_buff_id: int,
+    trigger_event: int,
+    action_flags: int,
     allow_extra_queue: bool,
     depth: int,
 ) -> KernelState:
@@ -168,20 +210,112 @@ def _execute_random_action(
             state,
             ctx,
             selected,
-            actor_side=ctx.actor_side,
-            actor_slot=ctx.actor_slot,
-            target_side=ctx.target_side,
-            target_slot=ctx.target_slot,
+            actor_side=actor_side,
+            actor_slot=actor_slot,
+            target_side=target_side,
+            target_slot=target_slot,
             source_ref=source_ref,
             source_skill_id=source_skill_id or ctx.skill_id,
             source_buff_id=source_buff_id,
             source_instance_id=0,
-            trigger_event=0,
-            action_flags=0,
+            trigger_event=trigger_event,
+            action_flags=action_flags,
             allow_extra_queue=allow_extra_queue,
             depth=depth + 1,
         )
     return state
+
+
+def _execute_conditional_action(
+    state: KernelState,
+    ctx: StageCtx,
+    payload: tuple,
+    *,
+    actor_side: int,
+    actor_slot: int,
+    target_side: int,
+    target_slot: int,
+    source_ref: int,
+    source_skill_id: int,
+    source_buff_id: int,
+    trigger_event: int,
+    action_flags: int,
+    allow_extra_queue: bool,
+    depth: int,
+) -> KernelState:
+    if len(payload) != 4:
+        raise RuntimeError(f"conditional action has malformed payload {payload!r}")
+    condition_kind = int(payload[0])
+    if condition_kind != COND_REF_COUNT_AT_LEAST:
+        raise RuntimeError(f"unsupported condition kind {condition_kind}")
+    specs = tuple(payload[1])
+    threshold = int(payload[2])
+    child_id = int(payload[3])
+    if _condition_count(state, specs, actor_side, actor_slot, target_side, target_slot) < threshold:
+        return state
+    return execute_action(
+        state,
+        ctx,
+        child_id,
+        actor_side=actor_side,
+        actor_slot=actor_slot,
+        target_side=target_side,
+        target_slot=target_slot,
+        source_ref=source_ref,
+        source_skill_id=source_skill_id or ctx.skill_id,
+        source_buff_id=source_buff_id,
+        source_instance_id=0,
+        trigger_event=trigger_event,
+        action_flags=action_flags,
+        allow_extra_queue=allow_extra_queue,
+        depth=depth + 1,
+    )
+
+
+def _condition_count(
+    state: KernelState,
+    specs: tuple,
+    actor_side: int,
+    actor_slot: int,
+    target_side: int,
+    target_slot: int,
+) -> int:
+    total = 0
+    for raw_spec in specs:
+        kind, value, scope = (int(raw_spec[0]), int(raw_spec[1]), int(raw_spec[2]))
+        side_id, slot = (actor_side, actor_slot) if scope == COND_SCOPE_SELF else (target_side, target_slot)
+        if scope not in (COND_SCOPE_SELF, COND_SCOPE_ENEMY):
+            raise RuntimeError(f"unsupported condition scope {scope}")
+        side_state = side(state, side_id)
+        pet = side_state.pets[slot]
+        if kind == COND_KIND_STATUS:
+            total += status_stack(pet, StatusType(value))
+            continue
+        if kind == COND_KIND_MARK:
+            total += _unpack_mark(side_state.marks, MarkIdx(value))
+            continue
+        if kind == COND_KIND_ACTIVE_BUFF:
+            total += sum(1 for _idx, lane in iter_active_buffs(pet.active_buffs) if active_buff_id(lane) == value)
+            continue
+        if kind == COND_KIND_CUTE:
+            total += pet.cute
+            continue
+        raise RuntimeError(f"unsupported condition spec kind {kind}")
+    return total
+
+
+def _execute_trigger_register(ctx: StageCtx, payload: tuple) -> None:
+    if len(payload) != 6:
+        raise RuntimeError(f"trigger_register action has malformed payload {payload!r}")
+    trigger_kind, target, buff_id, reduce_type, p0, p1 = (int(value) for value in payload)
+    if trigger_kind != TRIGGER_AFTER_SKILL:
+        raise RuntimeError(f"unsupported trigger_register kind {trigger_kind}")
+    if target not in (TARGET_SELF, TARGET_ENEMY):
+        raise RuntimeError(f"trigger_register has unsupported target {target}")
+    op_apply_active_buff(
+        ctx,
+        (0, 0, target, 0, 0, buff_id, reduce_type, p0, p1),
+    )
 
 
 def _split_source_payload(
