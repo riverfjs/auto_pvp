@@ -503,6 +503,20 @@ def test_direct_bft_damnum_change_zero_delta_is_inert_not_noop():
     assert exc_info.value.inert.buff_id == 20110400
 
 
+def test_type_three_et_dam_links_direct_damage_from_pak_shape():
+    raw = (effect_ref_key(1001008), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)
+    assert _linked_tuple(raw, "轻伤") == (
+        "op_damage",
+        11,
+        1,
+        10000,
+        2000,
+        0,
+        2000,
+        0,
+    )
+
+
 def test_damage_reduction_runtime_accepts_zero_bps():
     ctx = StageCtx()
     op_damage_reduction(ctx, (0, 11, 1, 10000, 0, 0, 0, 0, 0))

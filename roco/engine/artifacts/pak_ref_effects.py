@@ -37,6 +37,10 @@ def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int
     etype = EFFECT_TYPE.get(effect_id)
     if etype == 2:
         return (_op('op_damage', timing, target, rate, _param_int(params, 2), 0, _param_int(params, 6)),)
+    if order == effect_type('ET_DAM'):
+        linked = _link_effect_damage(params, timing, target, rate)
+        if linked is not None:
+            return (linked,)
     if order == effect_type('ET_INLAY') and p0 > 0 and (p1 or p2 or p3):
         return (_op('op_skill_mod', timing, target, rate, p0, p1, p2, p3),)
     if order == effect_type('ET_PURIFY'):
@@ -159,6 +163,19 @@ def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int
         reason = 'effect_type_1_compound' if len(buff_ids) > 1 else 'effect_type_1_no_buff'
         raise _gap(f'effect_ref:{effect_id}', reason, source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id, effect_order=order, effect_type=etype, buff_candidates=buff_ids, effect_params=params)
     raise _gap(f'effect_ref:{effect_id}', 'effect_shape_unsupported', source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id, effect_order=order, effect_type=etype, effect_params=params)
+
+
+def _link_effect_damage(params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
+    if len(params) < 7:
+        return None
+    if _param_int(params, 0) != 1 or _param_int(params, 5) != 1:
+        return None
+    if _param_int(params, 3) != 0 or _param_int(params, 4) != 0:
+        return None
+    amount = _param_int(params, 2)
+    if amount <= 0:
+        return None
+    return _op('op_damage', timing, target, rate, amount, 0, _param_int(params, 6))
 
 
 def _link_effect_series_skill(effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedAction | None:
