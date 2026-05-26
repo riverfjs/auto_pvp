@@ -12,7 +12,11 @@ from roco.engine.kernel.core.rows import (
     ROW_ARG1,
     ROW_ARG2,
     ROW_ARG3,
+    ROW_TARGET,
     ROW_TIMING,
+    TARGET_ALLY,
+    TARGET_SELF,
+    TARGET_TEAM,
     TIMING_HOOK_BEFORE_MOVE,
 )
 
@@ -132,6 +136,14 @@ def op_entry_element_damage_reduce_by_count(ctx: StageCtx, row: tuple[int, ...])
 def op_entry_element_damage_resist_by_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
     for element, _amount in _entry_element_amounts(ctx, row) or ():
         ctx.entry_element_damage_resist |= 1 << element.value
+
+
+def op_clear_element_damage_reduce(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    mask = row[ROW_ARG0]
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.clear_self_element_damage_reduce |= mask
+    else:
+        ctx.clear_enemy_element_damage_reduce |= mask
 
 
 def op_transfer_mods(ctx: StageCtx, row: tuple[int, ...]) -> None:

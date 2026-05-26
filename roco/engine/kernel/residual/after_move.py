@@ -17,6 +17,7 @@ from roco.common.packing import (
     _add_to_negative_buff_lanes,
     _add_to_positive_buff_lanes,
     _clear_buff_lanes,
+    _clear_element_u8_mask,
     _merge_buff_delta,
     _merge_element_nibbles,
     _set_cooldown,
@@ -182,6 +183,20 @@ def _apply_buff_and_cleanse_deltas(
     if ctx.enemy_element_cost_reduce:
         target = target._replace(
             element_cost_reduce=_merge_element_nibbles(target.element_cost_reduce, ctx.enemy_element_cost_reduce)
+        )
+    if ctx.clear_self_element_damage_reduce:
+        actor = actor._replace(
+            element_damage_reduce=_clear_element_u8_mask(
+                actor.element_damage_reduce,
+                ctx.clear_self_element_damage_reduce,
+            )
+        )
+    if ctx.clear_enemy_element_damage_reduce:
+        target = target._replace(
+            element_damage_reduce=_clear_element_u8_mask(
+                target.element_damage_reduce,
+                ctx.clear_enemy_element_damage_reduce,
+            )
         )
     if ctx.self_global_power_delta:
         actor = actor._replace(global_power_bonus=max(-255, min(255, actor.global_power_bonus + ctx.self_global_power_delta)))

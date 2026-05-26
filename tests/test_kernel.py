@@ -41,7 +41,9 @@ from roco.generated.runtime.handler_order import op_index
 from roco.common.packing import (
     DevotionIdx,
     MarkIdx,
+    _clear_element_u8_mask,
     _inc_skill_count,
+    _max_element_u8,
     _set_mark,
     _unpack_element_u8,
     _unpack_mark,
@@ -433,6 +435,16 @@ def test_entry_element_damage_resist_uses_pak_resist_bps_without_stacking():
     )
     assert _damage(actor, combined_target, skill, combined_ctx) == base_damage * TYPE_RESIST_BPS // BPS
     assert combined_ctx.damage_reduction_bps == TYPE_RESIST_BPS
+
+
+def test_clear_element_damage_reduce_mask_removes_only_selected_elements():
+    packed = _max_element_u8(0, Element.FIRE, 40)
+    packed = _max_element_u8(packed, Element.WATER, 60)
+
+    cleared = _clear_element_u8_mask(packed, 1 << Element.FIRE)
+
+    assert _unpack_element_u8(cleared, Element.FIRE) == 0
+    assert _unpack_element_u8(cleared, Element.WATER) == 60
 
 
 def test_kernel_after_move_status_and_status_ticks():

@@ -248,6 +248,13 @@ def _merge_element_u8_max(packed: int, delta: int) -> int:
     return packed
 
 
+def _clear_element_u8_mask(packed: int, mask: int) -> int:
+    for elem in Element:
+        if mask & (1 << elem.value):
+            packed &= ~(0xFF << (elem.value * 8))
+    return packed
+
+
 def _pack_weather(wtype: WeatherType, turns: int) -> int:
     return (wtype.value & 0xF) | (turns & 0xF) << 4
 

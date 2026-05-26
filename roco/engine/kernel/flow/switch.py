@@ -6,6 +6,7 @@ from roco.engine.common.choices import NO_WINNER, SIDE_A, SIDE_B, WIN_A, WIN_B, 
 from roco.common.packing import (
     MarkIdx,
     _add_to_positive_buff_lanes,
+    _clear_element_u8_mask,
     _inc_skill_count,
     _merge_buff_delta,
     _merge_element_nibbles,
@@ -175,6 +176,13 @@ def apply_switch_in_ability(side_state: SideState, slot: int, enemy_side: SideSt
             element_poison_stacks=_merge_element_nibbles(
                 pet.element_poison_stacks,
                 ctx.entry_element_poison_stacks,
+            )
+        )
+    if ctx.clear_self_element_damage_reduce:
+        pet = pet._replace(
+            element_damage_reduce=_clear_element_u8_mask(
+                pet.element_damage_reduce,
+                ctx.clear_self_element_damage_reduce,
             )
         )
     if ctx.entry_element_damage_reduce:

@@ -9,7 +9,7 @@ from roco.engine.artifacts.linked_op import (
     LinkedAction,
     LinkedOp,
 )
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _as_int_tuple, _buff_refs_from_params, _count_param_repeats, _gap, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, effect_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, BUFFBASE_PARAMS, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _as_int_tuple, _buff_refs_from_params, _count_param_repeats, _element_mask, _gap, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, buff_type, effect_type
 from roco.engine.artifacts.pak_ref_effect_entry import _link_effect_buff_by_equip_skill_num, _link_effect_buff_by_pack_pet_num, _link_effect_buff_convert, _link_effect_entry_buff_if_energy, _link_effect_hero
 from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.generated.pak.weather_table import PAK_WEATHER_DEFAULT_TURNS, PAK_WEATHER_TYPE_TO_KERNEL
@@ -43,6 +43,7 @@ def link_effect_ref(effect_id: int, timing: int, target: int, rate: int, p0: int
         linked = _link_effect_purify(effect_id, params, timing, target, rate)
         if linked is not None:
             return (linked,)
+        raise _gap(f'effect_ref:{effect_id}', 'purify_shape_unsupported', source_name=source_name, timing=timing, target=target, rate=rate, effect_id=effect_id, effect_order=order, effect_type=etype, effect_params=params)
     if order == effect_type('ET_RECOVER'):
         amount = _param_int(params, 1)
         if amount:
@@ -223,7 +224,53 @@ def _child_ref_action(ref_id: int, timing: int, target: int, rate: int, *, sourc
 def _link_effect_purify(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
     if _param_int(params, 0) == 1 and _param_int(params, 1) == 2 and (_param_int(params, 2) == 99) and (_param_int(params, 3) == 99) and (_param_int(params, 4) == 0):
         return _op('op_dispel_debuffs', timing, target, rate)
+    if _param_int(params, 0) == 3 and (_param_int(params, 2) == 99) and (_param_int(params, 3) == 99) and (_param_int(params, 4) == 0):
+        mask = _entry_damage_reduce_mask_from_refs(_as_int_tuple(_param(params, 1)))
+        if mask:
+            return _op('op_clear_element_damage_reduce', timing, target, rate, mask)
     return None
+
+
+def _entry_damage_reduce_mask_from_refs(ref_ids: tuple[int, ...]) -> int | None:
+    if not ref_ids:
+        return None
+    mask = 0
+    for ref_id in ref_ids:
+        ref_mask = _entry_damage_reduce_mask_from_ref(ref_id)
+        if ref_mask is None:
+            return None
+        mask |= ref_mask
+    return mask or None
+
+
+def _entry_damage_reduce_mask_from_ref(ref_id: int) -> int | None:
+    if ref_id in EFFECT_ORDER:
+        if EFFECT_ORDER.get(ref_id) != effect_type('ET_BUFF_BY_EQUIP_SKILL_NUM'):
+            return None
+        return _entry_damage_reduce_mask_from_refs(
+            _as_int_tuple(_param(EFFECT_PARAMS.get(ref_id) or (), 4))
+        )
+    base_ids = BUFF_BASE_IDS.get(ref_id)
+    if not base_ids:
+        return None
+    mask = 0
+    for base_id in base_ids:
+        order = BUFFBASE_ORDER.get(base_id)
+        params = BUFFBASE_PARAMS.get(base_id) or ()
+        if order == buff_type('BFT_ASSIGN'):
+            child_mask = _entry_damage_reduce_mask_from_refs(_as_int_tuple(_param(params, 0)))
+            if child_mask is None:
+                return None
+            mask |= child_mask
+            continue
+        if order == buff_type('BFT_DAMNUM_CHANGE') and len(params) >= 5:
+            categories = set(_as_int_tuple(_param(params, 1)))
+            amount = _param_int(params, 4)
+            if categories == {2, 3} and amount < 0:
+                mask |= _element_mask(_param(params, 0), 'skill_dam_type')
+                continue
+        return None
+    return mask or None
 
 def _link_effect_change_energy(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
     direct = _param_int(params, 0)

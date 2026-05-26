@@ -1,7 +1,7 @@
 """BUFF_CONF / BUFFBASE_CONF pak ref dispatcher."""
 from __future__ import annotations
 from roco.common.buffbase import pack_buff_delta_from_base_ids
-from roco.engine.artifacts.linked_op import LinkedOp
+from roco.engine.artifacts.linked_op import LinkInertError, LinkedOp
 from roco.engine.artifacts.pak_ref_buff_marks import _link_active_immunity_buff, _link_status_or_mark_buff, _link_zero_energy_auto_switch_buff
 from roco.engine.artifacts.pak_ref_buff_modifiers import _energy_amount_from_effect_refs, _link_after_attack_response_buff, _link_after_attack_status_buff, _link_after_skill_element_child_buff, _link_attack_cost_delta_buff, _link_conditional_hit_count_buff, _link_cute_bench_cost_reduce_buff, _link_damage_reduction_buff, _link_element_cost_reduce_buff, _link_first_strike_power_buff, _link_force_switch_buff, _link_freeze_buff, _link_global_cost_delta_buff, _link_global_power_delta_buff, _link_heal_reversal_buff, _link_hit_count_delta_buff, _link_life_drain_buff, _link_power_dynamic_buff, _link_specific_skill_power_bonus_buff, _link_team_skill_hit_count_buff, _link_transmission_buff
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, _all_zero, _as_int_tuple, _base_rows, _gap, _inert, _op, _param, _param_int, _skill_dam_type_to_element, buff_type
@@ -27,7 +27,20 @@ def _link_assign_buff(buff_id: int, timing: int, target: int, rate: int, *, sour
         child_target = target_code or target
         child_rate = rate * assign_rate // 10000
         for ref_id in refs:
-            linked.extend(link_ref_id(ref_id, timing, child_target, child_rate, source_name=source_name))
+            try:
+                linked.extend(link_ref_id(ref_id, timing, child_target, child_rate, source_name=source_name))
+            except LinkInertError:
+                continue
+    if not linked:
+        raise _inert(
+            f'buff_ref:{buff_id}',
+            'assign_all_children_inert',
+            source_name=source_name,
+            timing=timing,
+            target=target,
+            rate=rate,
+            buff_id=buff_id,
+        )
     return tuple(linked)
 
 def _link_entry_energy_buff(buff_id: int, target: int, rate: int, *, source_name: str) -> LinkedOp | None:

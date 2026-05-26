@@ -3,7 +3,7 @@ from __future__ import annotations
 from roco.common.buffbase import pack_buff_delta_from_base_ids
 from roco.common.entry_sources import ENTRY_SOURCE_COUNTER, ENTRY_SOURCE_DEFENSE, ENTRY_SOURCE_ENEMY_SKILL_DAM_TYPE, ENTRY_SOURCE_ENEMY_SWITCH, ENTRY_SOURCE_EQUIPPED_ELEMENT, ENTRY_SOURCE_STATUS, ENTRY_SOURCE_USED_ELEMENT, entry_source_code
 from roco.engine.artifacts.linked_op import LinkedOp
-from roco.engine.artifacts.pak_ref_common import BUFFBASE_ORDER, BUFFBASE_PARAMS, _all_regular_marks, _as_int_tuple, _base_ids_from_buff_ids, _element_mask, _is_burn_status, _is_internal_mark_sentinel, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, _skill_dam_type_to_element, buff_type
+from roco.engine.artifacts.pak_ref_common import BUFFBASE_ORDER, BUFFBASE_PARAMS, _all_regular_marks, _as_int_tuple, _base_ids_from_buff_ids, _element_mask, _inert, _is_burn_status, _is_internal_mark_sentinel, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, _skill_dam_type_to_element, buff_type
 from roco.engine.kernel.core.rows import TIMING_PAK_SDT
 
 def _link_effect_buff_convert(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
@@ -113,8 +113,20 @@ def _hero_count_source(params: tuple) -> int | None:
 def _link_effect_buff_by_equip_skill_num(effect_id: int, params: tuple, timing: int, target: int, rate: int, *, source_name: str) -> LinkedOp | None:
     timing = TIMING_PAK_SDT
     source_skill_dam_type = _param_int(params, 0, -1)
-    base_ids = _base_ids_from_buff_ids(_as_int_tuple(_param(params, 4)))
+    buff_ids = _as_int_tuple(_param(params, 4))
+    base_ids = _base_ids_from_buff_ids(buff_ids)
     if not base_ids:
+        if not buff_ids or all(ref_id == 0 for ref_id in buff_ids):
+            raise _inert(
+                f'effect_ref:{effect_id}',
+                'equip_skill_num_no_assigned_buff',
+                source_name=source_name,
+                timing=timing,
+                target=target,
+                rate=rate,
+                effect_id=effect_id,
+                effect_params=params,
+            )
         return None
     source_element = _skill_dam_type_to_element(source_skill_dam_type, source_name=source_name)
     source_code = entry_source_code(ENTRY_SOURCE_EQUIPPED_ELEMENT, source_element)

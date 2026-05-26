@@ -38,12 +38,12 @@ from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primiti
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
-from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
+from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_ROUND_END, TIMING_PAK_SDT
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
 from roco.engine.kernel.ops.damage import op_damage_reduction
 from roco.engine.kernel.ops.resources import op_life_drain
-from roco.engine.kernel.ops.skill import op_first_strike_power_bps, op_power_dynamic, op_power_dynamic_elements, op_specific_skill_power_bonus
+from roco.engine.kernel.ops.skill import op_clear_element_damage_reduce, op_first_strike_power_bps, op_power_dynamic, op_power_dynamic_elements, op_specific_skill_power_bonus
 
 P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
@@ -349,16 +349,13 @@ def test_equip_skill_num_decodes_damage_reduction_family():
     rows, _gaps = generate_effect_rows(pak.skill_conf[280010], pak)
     assign_resist_raw = (buff_ref_key(20171820), pak_cast_moment_key(11), 1, 10000, 1, 0, 0, 0)
     assert assign_resist_raw in rows
-    with pytest.raises(LinkGapError) as exc_info:
-        link_primitive_rows(assign_resist_raw, source_name="完全偏振")
-    assert exc_info.value.gap.effect_id == 1064036
-    assert exc_info.value.gap.reason == "effect_shape_unsupported"
+    linked_resist = _linked_tuples(assign_resist_raw, "完全偏振")
 
     normal_resist_raw = (effect_ref_key(1064031), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     ground_resist_raw = (effect_ref_key(1064037), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
     dragon_resist_raw = (effect_ref_key(1064039), pak_cast_moment_key(24), 1, 10000, 0, 0, 0, 0)
 
-    linked = [
+    linked = linked_resist + [
         _linked_tuple(row, "完全偏振")
         for row in (normal_resist_raw, ground_resist_raw, dragon_resist_raw)
     ]
@@ -392,7 +389,7 @@ def test_equip_skill_num_decodes_damage_reduction_family():
         1,
         0,
     ) in linked
-    assert not any(row[0] == "op_entry_element_damage_reduce_by_count" and row[-2] == 100 for row in linked)
+    assert not any(row[0] == "op_entry_element_damage_reduce_by_count" for row in linked_resist)
 
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 1064036,
@@ -402,8 +399,31 @@ def test_equip_skill_num_decodes_damage_reduction_family():
     }]}, pak)
     assert rows == [(effect_ref_key(1064036), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)]
     assert gaps == []
-    with pytest.raises(LinkGapError):
+    with pytest.raises(LinkInertError) as exc_info:
         link_primitive_rows(rows[0], source_name="完全偏振")
+    assert exc_info.value.inert.reason == "equip_skill_num_no_assigned_buff"
+
+    purge_assign = (effect_ref_key(1004090), pak_cast_moment_key(7), 1, 10000, 0, 0, 0, 0)
+    purge_leaf = (effect_ref_key(1004100), pak_cast_moment_key(7), 1, 10000, 0, 0, 0, 0)
+    for purge_row in (purge_assign, purge_leaf):
+        op_name, timing, target, rate, mask, _p1, _p2, _p3 = _linked_tuple(purge_row, "完全偏振")
+        assert op_name == "op_clear_element_damage_reduce"
+        assert timing == TIMING_PAK_ROUND_END
+        assert target == 1
+        assert rate == 10000
+        assert mask & (1 << Element.NORMAL)
+        assert mask & (1 << Element.GROUND)
+        assert mask & (1 << Element.DRAGON)
+
+
+def test_clear_element_damage_reduce_op_routes_by_target():
+    row_self = (0, TIMING_PAK_BEFORE_HURT, 1, 10000, 0, 1 << Element.FIRE, 0, 0, 0)
+    row_enemy = (0, TIMING_PAK_BEFORE_HURT, 2, 10000, 0, 1 << Element.WATER, 0, 0, 0)
+    ctx = StageCtx()
+    op_clear_element_damage_reduce(ctx, row_self)
+    op_clear_element_damage_reduce(ctx, row_enemy)
+    assert ctx.clear_self_element_damage_reduce == 1 << Element.FIRE
+    assert ctx.clear_enemy_element_damage_reduce == 1 << Element.WATER
 
 
 def test_equip_skill_num_maps_skill_dam_type_to_engine_element_for_skill_mods():

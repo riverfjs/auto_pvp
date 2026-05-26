@@ -76,6 +76,8 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("entry_element_poison_stacks", 0),
     ("entry_element_damage_reduce", 0),
     ("entry_element_damage_resist", 0),
+    ("clear_self_element_damage_reduce", 0),
+    ("clear_enemy_element_damage_reduce", 0),
     ("mirror_enemy_buffs", 0),
     ("heal_hp_bps", 0),
     ("drain_bps", 0),
