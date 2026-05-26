@@ -1,11 +1,14 @@
 """Status, mark, and active-buff pak shape matchers."""
 from __future__ import annotations
 from roco.engine.artifacts.linked_op import LinkedOp
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFF_KIND, BUFF_REDUCE_RULES, BUFFBASE_ORDER, _base_rows, _has_base_order, _has_order_params, _is_burn_status, _is_poison_mark, _is_poison_status, _op, _param_int, _single_int, buff_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFF_KIND, BUFF_REDUCE_RULES, BUFFBASE_ORDER, _as_int_tuple, _base_rows, _has_base_order, _has_order_params, _is_burn_status, _is_poison_mark, _is_poison_status, _op, _param_int, _single_int, buff_type
 
 def _link_status_or_mark_buff(buff_id: int, timing: int, target: int, rate: int, stack_count: int) -> LinkedOp | None:
     kind = int(BUFF_KIND.get(buff_id, 0) or 0)
     if kind == 2:
+        switch_lock = _link_switch_lock_buff(buff_id, timing, target, rate)
+        if switch_lock is not None:
+            return switch_lock
         if _is_poison_status(buff_id):
             return _op('op_poison', timing, target, rate, stack_count)
         if _is_burn_status(buff_id):
@@ -47,6 +50,29 @@ def _mark_op_name_by_shape(buff_id: int) -> str | None:
     if has_power_plus:
         return 'op_attack_mark'
     return None
+
+def _link_switch_lock_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if not rows:
+        return None
+    ban_rows = [params for _base_id, order, params in rows if order == buff_type('BFT_BAN')]
+    immune_rows = [params for _base_id, order, params in rows if order == buff_type('BFT_IMMUNE')]
+    if len(ban_rows) != 1 or _as_int_tuple(ban_rows[0]) != (1,):
+        return None
+    if len(immune_rows) != len(rows) - 1:
+        return None
+    if any(_as_int_tuple(params) != (5, 48) for params in immune_rows):
+        return None
+    rules = BUFF_REDUCE_RULES.get(buff_id) or ()
+    if len(rules) != 1:
+        return None
+    reduce_type, reduce_params = rules[0]
+    if int(reduce_type) != 2 or len(reduce_params) < 1:
+        return None
+    turns = int(reduce_params[0])
+    if turns <= 0:
+        return None
+    return _op('op_switch_lock', timing, target, rate, turns)
 
 def _link_active_immunity_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str) -> LinkedOp | None:
     if int(BUFF_KIND.get(buff_id, 0) or 0) != 3:

@@ -51,6 +51,8 @@ def switch(state: KernelState, side_id: int, slot: int) -> KernelState:
         return state
     outgoing_slot = side_state.active
     outgoing = side_state.pets[outgoing_slot]
+    if slot != outgoing_slot and outgoing.switch_lock_turns > 0 and not outgoing.fainted:
+        return state
     if outgoing.ability_flags & int(AbilityFlag.BARREL_ACTIVE):
         side_state = side_state._replace(barrel_pending=1)
     copy_mods = bool(outgoing.ability_flags & int(AbilityFlag.COPY_SWITCH_STATE))

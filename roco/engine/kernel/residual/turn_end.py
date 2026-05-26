@@ -67,8 +67,9 @@ def _tick_side_turn_state(side_state):
             anti_heal_multiplier=0,
             cooldowns=_tick_cooldowns(pet.cooldowns),
             active_buffs=tick_active_buffs(pet.active_buffs),
+            switch_lock_turns=max(0, pet.switch_lock_turns - 1),
         )
-        if pet.anti_heal_multiplier or pet.cooldowns or pet.active_buffs else pet
+        if pet.anti_heal_multiplier or pet.cooldowns or pet.active_buffs or pet.switch_lock_turns else pet
         for pet in side_state.pets
     )
     return side_state._replace(cost_mods=tick_cost_mod(side_state.cost_mods), pets=pets)

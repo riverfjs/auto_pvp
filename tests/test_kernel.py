@@ -26,6 +26,7 @@ from roco.engine.kernel.effects.damage import (
     STAB_BPS,
     damage as _damage,
 )
+from roco.engine.kernel.flow.switch import switch as apply_switch
 from roco.engine.kernel.flow.mechanics import update
 from roco.engine.kernel.core.catalog import load_hot_catalog, validate_catalog
 from roco.engine.kernel.core.dispatch import KERNEL_SUPPORTED_TAGS, run_skill_timing
@@ -37,6 +38,7 @@ from roco.engine.kernel.core.rows import (
 )
 from roco.engine.kernel.model.state import copy_state, make_state
 from roco.engine.kernel.model.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
+from roco.engine.kernel.residual.turn_end import tick_side_cost_mods
 from roco.generated.runtime.handler_order import op_index
 from roco.common.packing import (
     DevotionIdx,
@@ -710,6 +712,21 @@ def test_kernel_barrel_neutralizes_type_and_transfers_on_switch():
     assert switched.side_a.active == 1
     assert switched.side_a.barrel_pending == 0
     assert switched.side_a.pets[1].ability_flags & int(AbilityFlag.BARREL_ACTIVE)
+
+
+def test_kernel_switch_lock_blocks_manual_switch_and_ticks_down():
+    fire = _pet_id("火花")
+    water = _pet_id("水蓝蓝")
+    impact = _skill_id("猛烈撞击")
+    state = make_state((fire, water), (water,), team_a_moves=((impact,), (impact,)), team_b_moves=((0,),))
+    locked = state.side_a.pets[0]._replace(switch_lock_turns=2)
+    state = state._replace(side_a=replace_pet(state.side_a, 0, locked))
+
+    blocked = apply_switch(state, SIDE_A, 1)
+    assert blocked.side_a.active == 0
+
+    ticked = tick_side_cost_mods(state)
+    assert ticked.side_a.pets[0].switch_lock_turns == 1
 
 
 def test_kernel_devotion_reduces_cost_and_boosts_devotion_skills():

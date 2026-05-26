@@ -59,6 +59,14 @@ def op_apply_active_buff(ctx: StageCtx, row: tuple[int, ...]) -> None:
         raise RuntimeError(f"active buff row has unsupported target_type {target}")
 
 
+def op_switch_lock(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    turns = max(1, row[ROW_ARG0])
+    if row[ROW_TARGET] in (TARGET_SELF, TARGET_ALLY, TARGET_TEAM):
+        ctx.self_switch_lock_turns = max(ctx.self_switch_lock_turns, turns)
+    else:
+        ctx.enemy_switch_lock_turns = max(ctx.enemy_switch_lock_turns, turns)
+
+
 def op_after_attack_status(ctx: StageCtx, row: tuple[int, ...]) -> None:
     if ctx.skill_category not in (SkillCategory.PHYSICAL.value, SkillCategory.MAGICAL.value):
         return

@@ -40,7 +40,7 @@ from roco.engine.artifacts.linked_op import LinkGapError, LinkInertError
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
 from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_ROUND_END, TIMING_PAK_SDT
 from roco.engine.kernel.core.ctx import StageCtx
-from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta
+from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta, op_switch_lock
 from roco.engine.kernel.ops.damage import op_damage_reduction
 from roco.engine.kernel.ops.resources import op_life_drain
 from roco.engine.kernel.ops.skill import op_clear_element_damage_reduce, op_first_strike_power_bps, op_power_dynamic, op_power_dynamic_elements, op_specific_skill_power_bonus
@@ -1263,3 +1263,39 @@ def test_zero_energy_bft_immune_shape_links_from_pak_shape():
         0,
         0,
     )
+
+
+def test_switch_lock_shape_links_from_pak_ban_and_reduce_rule():
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
+    rows, gaps = generate_effect_rows({"skill_result": [{
+        "effect_id": 20040014,
+        "cast_moment": 11,
+        "result_target_type": 2,
+        "success_rate": 10000,
+        "buff_group_level": 1,
+    }]}, pak)
+    assert gaps == []
+    assert rows == [(
+        buff_ref_key(20040014),
+        "battle_event:BEVT_BEFORE_HURT",
+        2,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )]
+    assert _linked_tuple(rows[0], "地刺") == (
+        "op_switch_lock",
+        11,
+        2,
+        10000,
+        3,
+        0,
+        0,
+        0,
+    )
+
+    ctx = StageCtx()
+    op_switch_lock(ctx, (0, TIMING_PAK_BEFORE_HURT, 2, 0, 0, 3, 0, 0, 0))
+    assert ctx.enemy_switch_lock_turns == 3

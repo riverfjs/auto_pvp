@@ -52,6 +52,7 @@ class PetState(NamedTuple):
     element_poison_stacks: int = 0
     element_damage_reduce: int = 0
     element_damage_resist: int = 0
+    switch_lock_turns: int = 0
 
 
 class SideState(NamedTuple):
@@ -206,6 +207,7 @@ def _pet_state(pet_id: int) -> PetState:
         element_poison_stacks=0,
         element_damage_reduce=0,
         element_damage_resist=0,
+        switch_lock_turns=0,
     )
 
 

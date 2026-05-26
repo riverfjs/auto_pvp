@@ -93,6 +93,8 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("enemy_active_buff_duration", 0),
     ("force_switch", 0),
     ("force_enemy_switch", 0),
+    ("self_switch_lock_turns", 0),
+    ("enemy_switch_lock_turns", 0),
     ("priority_next", 0),
     ("swap_mods", 0),
     ("swap_moves", 0),

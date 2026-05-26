@@ -137,6 +137,7 @@ HANDLER_ORDER: tuple[str, ...] = (
     'op_stat_scale_hits_per_hp_lost',
     'op_steal_all_enemy_energy',
     'op_steal_energy',
+    'op_switch_lock',
     'op_team_synergy_bug_swarm_attack',
     'op_thorn_mark',
     'op_transfer_mods',
@@ -281,11 +282,12 @@ OP_INDEX: dict[str, int] = {
     'op_stat_scale_hits_per_hp_lost': 133,
     'op_steal_all_enemy_energy': 134,
     'op_steal_energy': 135,
-    'op_team_synergy_bug_swarm_attack': 136,
-    'op_thorn_mark': 137,
-    'op_transfer_mods': 138,
-    'op_weather': 139,
-    'op_wind_mark': 140,
+    'op_switch_lock': 136,
+    'op_team_synergy_bug_swarm_attack': 137,
+    'op_thorn_mark': 138,
+    'op_transfer_mods': 139,
+    'op_weather': 140,
+    'op_wind_mark': 141,
 }
 
 

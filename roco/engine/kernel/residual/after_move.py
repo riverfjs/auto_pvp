@@ -218,6 +218,10 @@ def _apply_buff_and_cleanse_deltas(
             ctx.actor_slot,
             ctx.enemy_active_buff_duration,
         ))
+    if ctx.self_switch_lock_turns:
+        actor = actor._replace(switch_lock_turns=max(actor.switch_lock_turns, ctx.self_switch_lock_turns))
+    if ctx.enemy_switch_lock_turns:
+        target = target._replace(switch_lock_turns=max(target.switch_lock_turns, ctx.enemy_switch_lock_turns))
     if ctx.debuff_extra_layers:
         target = target._replace(buff_stages=_add_to_negative_buff_lanes(target.buff_stages, ctx.debuff_extra_layers))
     if ctx.swap_mods:
