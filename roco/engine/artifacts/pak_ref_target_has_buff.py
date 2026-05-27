@@ -78,6 +78,9 @@ def _link_target_has_buff_row(
             buff_base_id=base_id,
             base_params=params,
         )
+    desc_derived = _link_desc_derived_shape(buff_id, params, timing, target, rate)
+    if desc_derived is not None:
+        return desc_derived
     if _uses_desc_only_zero_delta_sentinel(params):
         raise _gap(
             f"buff_ref:{buff_id}",
@@ -166,6 +169,23 @@ def _uses_desc_only_zero_delta_sentinel(params: tuple) -> bool:
 
 def _is_target_positive_buff_power(params: tuple) -> bool:
     return tuple(params) == (0, 1, 0, 0, 2, 0, 0, 1, 0, 2, 1000)
+
+
+def _link_desc_derived_shape(buff_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
+    # These ids use zero-delta sentinel refs in pak; the sentinel proves the
+    # family row but not the human meaning.  The meaning was derived from source
+    # descriptions during development, then bound here by exact pak id+params.
+    if buff_id == 20630120 and tuple(params) == (0, 0, 0, 20010814, 2, 0, 0, 1, 0, 1, 10):
+        return _op("op_power_flat_by_target_skill_type_count", timing, target, rate, 10)
+    if buff_id == 20630190 and tuple(params) == (0, 0, 0, 20340060, 2, 0, 0, 1, 0, 2, 1000):
+        return _op("op_power_bps_by_target_skill_total_cost", timing, target, rate, 1000)
+    if buff_id == 20630160 and tuple(params) == (0, 0, 0, 20010854, 2, 0, 0, 1, 0, 2, 10000):
+        return _op("op_power_bps_if_target_bloodline", timing, target, rate, 1, 10000)
+    if buff_id == 20630200 and tuple(params) == (0, 0, 0, (20010856, 20960020), 2, 0, 0, 1, 0, 2, 10000):
+        return _op("op_power_bps_if_target_bloodline", timing, target, rate, 2, 10000)
+    if buff_id == 20630180 and tuple(params) == (0, 0, 0, 20010855, 2, 0, 0, 1, 0, 2, -10000):
+        return _op("op_power_bps_if_target_bloodline", timing, target, rate, 3, 10000)
+    return None
 
 
 def _is_meteor_mark_power(params: tuple) -> bool:

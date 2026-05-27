@@ -56,9 +56,12 @@ from roco.engine.kernel.ops.skill import (
     op_first_strike_power_bps,
     op_power_bps_by_target_meteor_mark,
     op_power_bps_by_target_positive_buff_layers,
+    op_power_bps_by_target_skill_total_cost,
+    op_power_bps_if_target_bloodline,
     op_power_by_status_count_elements,
     op_power_dynamic,
     op_power_dynamic_elements,
+    op_power_flat_by_target_skill_type_count,
     op_skill_mod,
     op_specific_skill_power_bonus,
     op_transfer_mods,
@@ -302,30 +305,33 @@ HANDLERS: tuple = (
     op_poison_on_skill_apply,  # 121
     op_power_bps_by_target_meteor_mark,  # 122
     op_power_bps_by_target_positive_buff_layers,  # 123
-    op_power_by_status_count_elements,  # 124
-    op_power_dynamic,  # 125
-    op_power_dynamic_elements,  # 126
-    op_priority_next_delta,  # 127
-    op_queue_action,  # 128
-    op_self_buff,  # 129
-    op_self_debuff,  # 130
-    op_set_self_cooldown,  # 131
-    op_skill_cost_reduction_type,  # 132
-    op_skill_mod,  # 133
-    op_slow_mark,  # 134
-    op_sluggish_mark,  # 135
-    op_solar_mark,  # 136
-    op_specific_skill_power_bonus,  # 137
-    op_spirit_mark,  # 138
-    op_stat_scale_hits_per_hp_lost,  # 139
-    op_steal_all_enemy_energy,  # 140
-    op_steal_energy,  # 141
-    op_switch_lock,  # 142
-    op_team_synergy_bug_swarm_attack,  # 143
-    op_thorn_mark,  # 144
-    op_transfer_mods,  # 145
-    op_weather,  # 146
-    op_wind_mark,  # 147
+    op_power_bps_by_target_skill_total_cost,  # 124
+    op_power_bps_if_target_bloodline,  # 125
+    op_power_by_status_count_elements,  # 126
+    op_power_dynamic,  # 127
+    op_power_dynamic_elements,  # 128
+    op_power_flat_by_target_skill_type_count,  # 129
+    op_priority_next_delta,  # 130
+    op_queue_action,  # 131
+    op_self_buff,  # 132
+    op_self_debuff,  # 133
+    op_set_self_cooldown,  # 134
+    op_skill_cost_reduction_type,  # 135
+    op_skill_mod,  # 136
+    op_slow_mark,  # 137
+    op_sluggish_mark,  # 138
+    op_solar_mark,  # 139
+    op_specific_skill_power_bonus,  # 140
+    op_spirit_mark,  # 141
+    op_stat_scale_hits_per_hp_lost,  # 142
+    op_steal_all_enemy_energy,  # 143
+    op_steal_energy,  # 144
+    op_switch_lock,  # 145
+    op_team_synergy_bug_swarm_attack,  # 146
+    op_thorn_mark,  # 147
+    op_transfer_mods,  # 148
+    op_weather,  # 149
+    op_wind_mark,  # 150
 )
 
 HANDLER_COUNT = len(HANDLERS)

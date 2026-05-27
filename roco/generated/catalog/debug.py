@@ -2,7 +2,7 @@
 
 CATALOG_VERSION = 1
 SCHEMA_VERSION = 'kernel-v2'
-SOURCE_HASH = '3c96b12a40e7bf1256e5e093043808ffc844c52b97ca259444beef4a340b4d1d'
+SOURCE_HASH = 'a73f6faa93db9681f48a262e5c11eb7c2c3f99a79201cd843a98eb76eff059f5'
 ELEMENT_NAMES = ('普通', '草', '火', '水', '光', '地', '冰', '龙', '电', '毒', '虫', '武', '翼', '萌', '幽', '恶', '机械', '幻')
 PET_NAMES = ('',
  '喵喵',
@@ -9923,5 +9923,4 @@ SKIPPED_EFFECT_STATS = (('after_skill_all_children_inert', 2),
  ('effect_shape_unsupported', 51),
  ('effect_type_1_no_buff', 18),
  ('purify_shape_unsupported', 9),
- ('target_has_buff_desc_sentinel_unresolved', 5),
  ('target_has_buff_sequence_sentinel_unsupported', 2))

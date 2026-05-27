@@ -223,6 +223,10 @@ def _execute(
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
     ctx.target_skill_energy = target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
+    (
+        ctx.target_equipped_skill_type_count,
+        ctx.target_equipped_skill_total_cost,
+    ) = _equipped_skill_type_count_and_total_cost(target_side, target_slot)
     ctx.target_mark_total = sum(_unpack_mark(target_side.marks, idx) for idx in MarkIdx)
     ctx.target_meteor_mark_stacks = _unpack_mark(target_side.marks, MarkIdx.METEOR)
     ctx.target_positive_buff_layers = _positive_buff_layers(target.buff_stages)
@@ -404,3 +408,19 @@ def _positive_buff_layers(packed: int) -> int:
     for idx in range(7):
         total += max(0, _unpack_buff(packed, idx))
     return total
+
+
+def _equipped_skill_type_count_and_total_cost(side_state, slot: int) -> tuple[int, int]:
+    if slot < 0 or slot >= len(side_state.moves):
+        return 0, 0
+    skill_types: set[int] = set()
+    total_cost = 0
+    for skill_id in side_state.moves[slot]:
+        if skill_id <= 0 or skill_id >= len(hot.SKILLS):
+            continue
+        skill = hot.SKILLS[skill_id]
+        skill_dam_type = int(skill[SKILL_DAM_TYPE])
+        if skill_dam_type > 0:
+            skill_types.add(skill_dam_type)
+        total_cost += max(0, int(skill[SKILL_ENERGY]))
+    return len(skill_types), total_cost

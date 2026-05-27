@@ -45,6 +45,8 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("target_energy", 0),
     ("target_skill_slot", -1),
     ("target_skill_energy", 0),
+    ("target_equipped_skill_type_count", 0),
+    ("target_equipped_skill_total_cost", 0),
     ("target_mark_total", 0),
     ("target_meteor_mark_stacks", 0),
     ("target_positive_buff_layers", 0),

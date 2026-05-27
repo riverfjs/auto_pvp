@@ -5,6 +5,7 @@ from __future__ import annotations
 from roco.common.constants import BPS
 from roco.common.enums import Element, SkillCategory
 from roco.common.packing import _add_element_nibble, _add_element_u8, _max_element_u8
+from roco.generated.pak.bloodline_magic import PAK_BLOODLINE_LEADER, PAK_BLOODLINE_POLLUTANT, PAK_ELEMENT_TO_BLOODLINE
 from roco.engine.kernel.effects.conditions import entry_source_count, slot_mask_matches
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.core.rows import (
@@ -49,6 +50,36 @@ def op_power_bps_by_target_positive_buff_layers(ctx: StageCtx, row: tuple[int, .
     count = ctx.target_positive_buff_layers
     if count > 0:
         ctx.power_bps = ctx.power_bps * (BPS + count * row[ROW_ARG0]) // BPS
+
+
+def op_power_flat_by_target_skill_type_count(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.target_equipped_skill_type_count > 0:
+        ctx.power += ctx.target_equipped_skill_type_count * row[ROW_ARG0]
+
+
+def op_power_bps_by_target_skill_total_cost(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    if ctx.target_equipped_skill_total_cost > 0:
+        ctx.power_bps = ctx.power_bps * (BPS + ctx.target_equipped_skill_total_cost * row[ROW_ARG0]) // BPS
+
+
+def op_power_bps_if_target_bloodline(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    mode = row[ROW_ARG0]
+    applies = (
+        (mode == 1 and ctx.target_bloodline == PAK_BLOODLINE_LEADER)
+        or (mode == 2 and ctx.target_bloodline == PAK_BLOODLINE_POLLUTANT)
+        or (mode == 3 and _target_bloodline_is_non_stab_element(ctx))
+    )
+    if applies:
+        ctx.power_bps = ctx.power_bps * (BPS + row[ROW_ARG1]) // BPS
+
+
+def _target_bloodline_is_non_stab_element(ctx: StageCtx) -> bool:
+    if ctx.target_bloodline <= 0:
+        return False
+    own = {PAK_ELEMENT_TO_BLOODLINE[ctx.target_primary]}
+    if ctx.target_secondary >= 0:
+        own.add(PAK_ELEMENT_TO_BLOODLINE[ctx.target_secondary])
+    return ctx.target_bloodline in PAK_ELEMENT_TO_BLOODLINE and ctx.target_bloodline not in own
 
 
 def op_first_strike_power_bps(ctx: StageCtx, row: tuple[int, ...]) -> None:
