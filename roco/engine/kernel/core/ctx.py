@@ -23,6 +23,7 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("actor_bloodline", -1),
     ("actor_energy", 0),
     ("actor_cute", 0),
+    ("actor_poison_stacks", 0),
     ("actor_hp_lost_quarters", 0),
     ("actor_counter_count", 0),
     ("side_skill_counts", 0),
@@ -44,6 +45,7 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("target_energy", 0),
     ("target_skill_slot", -1),
     ("target_skill_energy", 0),
+    ("target_mark_total", 0),
     ("target_meteor_mark_stacks", 0),
     ("target_positive_buff_layers", 0),
     ("target_poison_stacks", 0),
@@ -138,6 +140,9 @@ _DEFAULTS: tuple[tuple[str, int | float | tuple[Any, ...]], ...] = (
     ("poison_stacks", 0),
     ("freeze_stacks", 0),
     ("leech_stacks", 0),
+    ("self_poison_consume", 0),
+    ("enemy_poison_consume", 0),
+    ("self_current_hp_damage_bps", 0),
     # Snapshot of ``state.marks_dispelled`` from before this stage ran —
     # populated by the residual phase before calling ``run_skill_timing``
     # so handlers like ``op_dispel_marks_to_burn`` can scale their effect

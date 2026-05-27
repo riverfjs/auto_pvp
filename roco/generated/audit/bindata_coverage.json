@@ -3145,9 +3145,10 @@
         "roco/compiler_v2/static_artifacts/immunity.py",
         "roco/compiler_v2/static_artifacts/marks.py",
         "roco/data/ability_flags_from_effects.py",
+        "roco/engine/artifacts/domains/ability_effects/matchers.py",
+        "roco/engine/artifacts/domains/active_buff/after_attack.py",
         "roco/engine/artifacts/pak_ref_buffs.py",
         "roco/engine/artifacts/pak_ref_linker.py",
-        "roco/engine/kernel/effects/active_response.py",
         "roco/engine/kernel/model/active_buffs.py",
         "roco/engine/kernel/residual/status_ticks.py",
         "roco/generated/pak/buff_defs.py",
@@ -3192,7 +3193,6 @@
       "code_refs": [
         "roco/compiler_v2/static_artifacts/buffs.py",
         "roco/engine/artifacts/pak_ref_common.py",
-        "roco/engine/kernel/effects/active_response.py",
         "roco/generated/pak/buff_defs.py",
         "roco/generated/static/lua_enums.py"
       ],
@@ -4037,6 +4037,7 @@
         "roco/compiler_v2/static_artifacts/weather.py",
         "roco/data/ability_flags_from_effects.py",
         "roco/data/parse_pak.py",
+        "roco/engine/artifacts/domains/status_mark/matchers.py",
         "roco/engine/artifacts/pak_ref_effect_entry.py",
         "roco/engine/artifacts/pak_ref_effects.py",
         "roco/engine/artifacts/pak_ref_linker.py",

@@ -1,7 +1,7 @@
 """Status, mark, and active-buff pak shape matchers."""
 from __future__ import annotations
 from roco.engine.artifacts.linked_op import LinkedOp
-from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFF_KIND, BUFF_REDUCE_RULES, BUFFBASE_ORDER, _as_int_tuple, _base_rows, _has_base_order, _has_order_params, _is_burn_status, _is_poison_mark, _is_poison_status, _op, _param_int, _single_int, buff_type
+from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFF_KIND, BUFF_REDUCE_RULES, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, _as_int_tuple, _base_rows, _has_base_order, _has_order_params, _is_burn_status, _is_poison_mark, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
 
 def _link_status_or_mark_buff(buff_id: int, timing: int, target: int, rate: int, stack_count: int) -> LinkedOp | None:
     kind = int(BUFF_KIND.get(buff_id, 0) or 0)
@@ -16,10 +16,38 @@ def _link_status_or_mark_buff(buff_id: int, timing: int, target: int, rate: int,
         if _has_base_order(buff_id, buff_type('BFT_ABSORB')):
             return _op('op_leech', timing, target, rate, stack_count)
     if kind == 4:
+        purify_mark = _link_mark_purify_carrier(buff_id, timing, target, rate)
+        if purify_mark is not None:
+            return purify_mark
         op_name = _mark_op_name_by_shape(buff_id)
         if op_name is not None:
             return _op(op_name, timing, target, rate, stack_count)
     return None
+
+def _link_mark_purify_carrier(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1 or rows[0][1] != buff_type('BFT_IMMUNE'):
+        return None
+    params = rows[0][2]
+    if len(params) < 2 or _single_int(params[0]) != 3:
+        return None
+    effect_id = _single_int(params[1])
+    if effect_id and _effect_purifies_regular_marks(effect_id):
+        return _op('op_dispel_marks', timing, target, rate)
+    return None
+
+def _effect_purifies_regular_marks(effect_id: int) -> bool:
+    if EFFECT_ORDER.get(effect_id) != effect_type('ET_PURIFY'):
+        return False
+    params = EFFECT_PARAMS.get(effect_id) or ()
+    if len(params) < 5:
+        return False
+    if _param_int(params, 0) != 3 or _param_int(params, 2) != 99:
+        return False
+    if _param_int(params, 3) != 99 or _param_int(params, 4) != 0:
+        return False
+    refs = _as_int_tuple(_param(params, 1))
+    return bool(refs) and all(int(BUFF_KIND.get(ref_id, 0) or 0) == 4 for ref_id in refs)
 
 def _mark_op_name_by_shape(buff_id: int) -> str | None:
     rows = _base_rows(buff_id)

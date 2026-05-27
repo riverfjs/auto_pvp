@@ -23,6 +23,9 @@ OP_MODULES: tuple[str, ...] = (
     "roco.engine.kernel.ops.marks",
     "roco.engine.kernel.ops.status",
     "roco.engine.kernel.ops.cute",
+    "roco.engine.kernel.domains.ability.ops",
+    "roco.engine.kernel.domains.mark.ops",
+    "roco.engine.kernel.domains.status.ops",
 )
 
 

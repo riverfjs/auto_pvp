@@ -7,8 +7,8 @@ Total families: **186**
 ## Coverage status
 
 - `ability_flag`: 4
-- `mixed`: 2
-- `pak_ref`: 180
+- `mixed`: 3
+- `pak_ref`: 179
 
 ## `buff_conf_direct:prefix_2001` — BUFF_CONF_DIRECT
 
@@ -1091,10 +1091,10 @@ Total families: **186**
 
 ## `buff_conf_direct:prefix_2111` — BUFF_CONF_DIRECT
 
-- count: **2** | coverage: `pak_ref` | used_consumer_count: 1
+- count: **2** | coverage: `mixed` | used_consumer_count: 1
 - editor_names: 焰色反应, 煤渣草
 - example_source_ids: [21110010, 21110020]
-- coverage_breakdown: {'pak_ref_count': 2, 'gap_count': 0, 'ability_flag_count': 0}
+- coverage_breakdown: {'pak_ref_count': 1, 'gap_count': 0, 'ability_flag_count': 1}
 - sample_ability_consumers:
     - `200203` 煤渣草 — 在场时，所有灼烧的衰减变为增长。
     - `200273` 焰色反应 — 在场时，衰减的灼烧变为相同层数的中毒。

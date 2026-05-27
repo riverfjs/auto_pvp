@@ -100,6 +100,7 @@ def test_loader_accepts_real_pak_derivation():
         1066001,
         20170610,
         20400410,
+        21110010,
         21430010,
         21540010,
         21540040,
@@ -108,6 +109,7 @@ def test_loader_accepts_real_pak_derivation():
     assert table[1066001].flag_name == "SHUFFLE_SKILLS_REDUCE_LAST"
     assert table[20170610].flag_name == "START_ZERO_ENERGY"
     assert table[20400410].flag_name == "FREEZE_COUNTS_AS_METEOR"
+    assert table[21110010].flag_name == "BURN_NO_DECAY"
     assert table[21540010].flag_name == "HEAL_ON_POISON_DAMAGE"
     assert table[21540040].flag_name == "HEAL_ON_BURN_DAMAGE"
     assert table[21430010].flag_name == "MARK_STACK_NO_REPLACE"

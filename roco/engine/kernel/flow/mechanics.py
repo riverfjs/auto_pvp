@@ -204,6 +204,7 @@ def _execute(
     ctx.actor_bloodline = actor_side.bloodlines[actor_slot] if actor_slot < len(actor_side.bloodlines) else -1
     ctx.actor_energy = actor.current_energy
     ctx.actor_cute = actor.cute
+    ctx.actor_poison_stacks = status_stack(actor, StatusType.POISON)
     ctx.actor_counter_count = actor.counter_success_count
     ctx.actor_hp_lost_quarters = max(0, actor_row[STAT_HP] - actor.current_hp) * 4 // max(1, actor_row[STAT_HP])
     ctx.side_skill_counts = actor_side.skill_counts
@@ -222,6 +223,7 @@ def _execute(
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
     ctx.target_skill_slot = target_choice_slot if 0 <= target_choice_slot < 4 else -1
     ctx.target_skill_energy = target_skill_energy(target_side, target_slot, ctx.target_skill_slot)
+    ctx.target_mark_total = sum(_unpack_mark(target_side.marks, idx) for idx in MarkIdx)
     ctx.target_meteor_mark_stacks = _unpack_mark(target_side.marks, MarkIdx.METEOR)
     ctx.target_positive_buff_layers = _positive_buff_layers(target.buff_stages)
     ctx.target_poison_stacks = status_stack(target, StatusType.POISON)

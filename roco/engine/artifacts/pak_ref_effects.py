@@ -11,7 +11,7 @@ from roco.engine.artifacts.linked_op import (
 )
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, BUFFBASE_PARAMS, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _as_int_tuple, _buff_refs_from_params, _count_param_repeats, _element_mask, _gap, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, buff_type, effect_type
 from roco.engine.artifacts.pak_ref_effect_entry import _link_effect_buff_by_equip_skill_num, _link_effect_buff_by_pack_pet_num, _link_effect_buff_convert, _link_effect_entry_buff_if_energy, _link_effect_hero
-from roco.engine.kernel.core.rows import TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
+from roco.engine.kernel.core.rows import TARGET_ENEMY, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 from roco.generated.pak.weather_table import PAK_WEATHER_DEFAULT_TURNS, PAK_WEATHER_TYPE_TO_KERNEL
 
 LinkedEffect = LinkedOp | LinkedAction
@@ -292,6 +292,8 @@ def _entry_damage_reduce_mask_from_ref(ref_id: int) -> int | None:
 def _link_effect_change_energy(_effect_id: int, params: tuple, timing: int, target: int, rate: int) -> LinkedOp | None:
     direct = _param_int(params, 0)
     if direct:
+        if target == TARGET_ENEMY and direct < 0:
+            return _op('op_enemy_lose_energy', timing, target, rate, abs(direct))
         return _op('op_heal_energy', timing, target, rate, direct)
     base = _param_int(params, 1)
     ratio = _param_int(params, 2)

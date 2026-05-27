@@ -37,10 +37,11 @@ def test_bft_target_has_buff_sequence_sentinels_stay_gap():
         _link(20630060)
 
 
-def test_bft_target_has_buff_mark_total_to_meteor_stays_gap():
+def test_bft_target_has_buff_mark_total_to_meteor_links_from_pak_mark_refs():
     for buff_id in (20630040, 20630050):
-        with pytest.raises(LinkGapError, match="target_has_buff_mark_total_to_meteor_desc_unresolved"):
-            _link(buff_id)
+        assert _link(buff_id) == (
+            LinkedOp("op_meteor_mark_by_target_mark_total", 11, 1, 10000, 1, 0, 0, 0),
+        )
 
 
 def test_target_has_buff_runtime_meteor_power_uses_explicit_special_effect():

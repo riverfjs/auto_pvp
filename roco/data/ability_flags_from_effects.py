@@ -82,6 +82,7 @@ BUFFBASE_ORDER_MARK_STACK_NO_REPLACE = _enum_value("BuffType", "BFT_O_FORTYTHREE
 BUFFBASE_ORDER_HEAL_ON_STATUS_DAMAGE = _enum_value("BuffType", "BFT_O_FIFTYFOUR")
 BUFFBASE_ORDER_ATTR_CHANGE = _enum_value("BuffType", "BFT_ATTR_CHANGE")
 BUFFBASE_ORDER_CHECK_BUFF_LAYER = _enum_value("BuffType", "BFT_CHECK_BUFF_LAYER")
+BUFFBASE_ORDER_BURN_DECAY_GROWTH = _enum_value("BuffType", "BFT_O_ELEVEN")
 
 _DESC_NOTE_LABELS = {
     "poison": "中毒",
@@ -463,7 +464,27 @@ def _flag_from_buff_row(
     if _is_freeze_counts_as_meteor(rec, buff_conf, buffbase_conf, desc_notes, desc_refs, ability_rows):
         return "FREEZE_COUNTS_AS_METEOR"
 
+    if _is_burn_decay_growth(rec, buffbase_conf):
+        return "BURN_NO_DECAY"
+
     return None
+
+
+def _is_burn_decay_growth(rec: dict, buffbase_conf: dict[int, dict]) -> bool:
+    base_ids = tuple(_maybe_int(v) for v in rec.get("buff_base_ids") or ())
+    base_ids = tuple(v for v in base_ids if v > 0)
+    if len(base_ids) != 1:
+        return False
+    base = buffbase_conf.get(base_ids[0])
+    if not isinstance(base, dict) or int(base.get("buffbase_order") or 0) != BUFFBASE_ORDER_BURN_DECAY_GROWTH:
+        return False
+    params = base.get("buffbase_param")
+    return (
+        isinstance(params, list)
+        and _slot_values(params, 0) == (20070020,)
+        and _slot_int_values(params, 1) == (-1,)
+        and _slot_int_values(params, 2) == (0,)
+    )
 
 
 def _assigned_refs_for_base_ids(

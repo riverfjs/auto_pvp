@@ -1,10 +1,10 @@
 """Numeric BUFFBASE pak shape matchers."""
 from __future__ import annotations
 from roco.common.constants import BPS
-from roco.engine.artifacts.linked_op import LinkedOp
+from roco.engine.artifacts.linked_op import LinkGapError, LinkedOp
 from roco.common.enums import StatusType
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, EFFECT_TYPE, _all_skill_cost_reduce_amount, _all_zero, _as_int_tuple, _base_rows, _condition_refs_are_cute_effects, _condition_refs_are_poison_effects, _conditional_refs_and_grants, _element_mask, _gap, _grant_refs_are_hit_count_effects, _is_burn_status, _is_poison_status, _op, _pack_buff_delta_from_buff_ids, _param, _param_int, _single_int, _skill_dam_type_to_element, buff_type, effect_type
-from roco.engine.kernel.effects.active_response import after_attack_response_duration_args, after_attack_response_supported
+from roco.engine.artifacts.domains.active_buff.after_attack import link_after_attack_buff_install
 from roco.engine.kernel.core.rows import TARGET_ENEMY, TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_SDT
 
 def _link_team_skill_hit_count_buff(buff_id: int, timing: int, target: int, rate: int, stack_count: int, *, source_name: str) -> LinkedOp | None:
@@ -312,11 +312,11 @@ def _is_freeze_status(buff_id: int) -> bool:
     rows = _base_rows(buff_id)
     return len(rows) == 1 and rows[0][1] == buff_type('BFT_FREEZE') and tuple(rows[0][2]) == (1, 500, 0, 50)
 
-def _link_after_attack_response_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
-    if not after_attack_response_supported(buff_id):
+def _link_after_attack_response_buff(buff_id: int, timing: int, target: int, rate: int, *, source_name: str, link_ref_id) -> LinkedOp | None:
+    try:
+        return link_after_attack_buff_install(buff_id, timing, target, rate, link_ref_id=link_ref_id, source_name=source_name)
+    except LinkGapError:
         return None
-    reduce_type, p0, p1 = after_attack_response_duration_args(buff_id)
-    return _op('op_apply_active_buff', timing, target, rate, buff_id, reduce_type, p0, p1)
 
 def _link_global_power_delta_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
     rows = _base_rows(buff_id)
@@ -435,6 +435,8 @@ def _link_force_switch_buff(buff_id: int, timing: int, target: int, rate: int) -
         return None
     mode = _param_int(params, 1)
     if mode == 1:
+        if target == TARGET_ENEMY:
+            return _op('op_force_enemy_switch', timing, target, rate)
         return _op('op_force_switch', timing, target, rate)
     if mode == 2:
         return _op('op_force_enemy_switch', timing, target, rate)

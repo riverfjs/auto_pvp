@@ -27,6 +27,7 @@ from roco.engine.kernel.residual.mark_ticks import tick_marks
 from roco.engine.kernel.residual.status_ticks import tick_leech, tick_status
 from roco.engine.kernel.residual.weather_ticks import tick_weather
 from roco.engine.kernel.model.state import KernelState, side, tick_cost_mod
+from roco.engine.kernel.model.state import status_stack
 from roco.engine.kernel.flow.switch import mark_zero_hp_fainted
 from roco.generated.catalog import hot
 
@@ -130,9 +131,12 @@ def _run_actor_turn_end(
     ctx.actor_secondary = pet_row[PET_SECONDARY]
     ctx.actor_bloodline = side_state.bloodlines[slot] if slot < len(side_state.bloodlines) else -1
     ctx.actor_energy = pet.current_energy
+    from roco.common.enums import StatusType
+    ctx.actor_poison_stacks = status_stack(pet, StatusType.POISON)
     ctx.target_primary = target_row[PET_PRIMARY]
     ctx.target_secondary = target_row[PET_SECONDARY]
     ctx.target_bloodline = target_side.bloodlines[target_slot] if target_slot < len(target_side.bloodlines) else -1
+    ctx.target_poison_stacks = status_stack(target_side.pets[target_slot], StatusType.POISON)
     # Each actor reads only its own dispel tally so opposing actors that
     # also cleared marks this turn don't bleed into this skill's
     # mark→burn payload.

@@ -38,6 +38,7 @@ from roco.engine.kernel.core.rows import (
 )
 from roco.engine.kernel.model.state import copy_state, make_state
 from roco.engine.kernel.model.state import pack_weather, replace_pet, set_status_count, status_stack, weather_turns, weather_type, with_status
+from roco.engine.kernel.residual.after_move import apply_after_move
 from roco.engine.kernel.residual.turn_end import tick_side_cost_mods
 from roco.generated.runtime.handler_order import op_index
 from roco.common.packing import (
@@ -128,6 +129,76 @@ def test_catalog_validation_rejects_version_schema_and_empty_hash():
         validate_catalog(SchemaMismatch)
     with pytest.raises(RuntimeError, match="source hash"):
         validate_catalog(EmptyHash)
+
+
+def test_qiuka_etching_converts_poison_status_to_poison_mark():
+    qiuka = _pet_id("裘卡")
+    target_id = _pet_id("喵喵")
+    state = make_state((qiuka,), (target_id,))
+    poisoned = set_status_count(state.side_b.pets[0], StatusType.POISON, 3)
+    state = state._replace(side_b=replace_pet(state.side_b, 0, poisoned))
+
+    ability_id = hot.PETS[qiuka][9]
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.target_poison_stacks = status_stack(poisoned, StatusType.POISON)
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_PAK_BEFORE_HURT, ctx)
+    state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
+
+    assert status_stack(state.side_b.pets[0], StatusType.POISON) == 1
+    assert _unpack_mark(state.side_b.marks, MarkIdx.POISON) == 1
+
+
+def test_qiuka_etching_does_not_convert_below_threshold():
+    qiuka = _pet_id("裘卡")
+    target_id = _pet_id("喵喵")
+    state = make_state((qiuka,), (target_id,))
+    poisoned = set_status_count(state.side_b.pets[0], StatusType.POISON, 1)
+    state = state._replace(side_b=replace_pet(state.side_b, 0, poisoned))
+
+    ability_id = hot.PETS[qiuka][9]
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.target_poison_stacks = status_stack(poisoned, StatusType.POISON)
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_PAK_BEFORE_HURT, ctx)
+    state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
+
+    assert status_stack(state.side_b.pets[0], StatusType.POISON) == 1
+    assert _unpack_mark(state.side_b.marks, MarkIdx.POISON) == 0
+
+
+def test_xiaoye_jiahuo_scales_hits_by_lost_hp_quarters():
+    xiaoye = _pet_id("小夜")
+    ability_id = hot.PETS[xiaoye][9]
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.actor_hp_lost_quarters = 3
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_HOOK_BEFORE_MOVE, ctx)
+    assert ctx.hit_count == 7
+
+
+def test_life_trick_power_and_current_hp_cost():
+    xiaoye = _pet_id("小夜#103142")
+    target_id = _pet_id("喵喵")
+    state = make_state((xiaoye,), (target_id,))
+    actor = state.side_a.pets[0]._replace(current_hp=80)
+    state = state._replace(side_a=replace_pet(state.side_a, 0, actor))
+
+    ability_id = hot.PETS[xiaoye][9]
+    ctx = StageCtx()
+    ctx.reset(SIDE_A, 0, SIDE_B, 0, 0)
+    ctx.skill_category = SkillCategory.PHYSICAL.value
+    run_skill_timing(hot.ABILITY_EFFECT_ROWS, hot.ABILITY_EFFECT_RANGES[ability_id], TIMING_HOOK_BEFORE_MOVE, ctx)
+    assert ctx.power_bps == BPS * 2
+
+    state = apply_after_move(state, SIDE_A, 0, SIDE_B, 0, ctx)
+    assert state.side_a.pets[0].current_hp == 40
+
+
+def test_ranxinchong_sets_burn_decay_growth_flag():
+    ranxinchong = _pet_id("燃薪虫")
+    ability_id = hot.PETS[ranxinchong][9]
+    assert hot.ABILITY_FLAGS[ability_id] & int(AbilityFlag.BURN_NO_DECAY)
 
 
 def test_choice_update_and_copy_state_smoke():

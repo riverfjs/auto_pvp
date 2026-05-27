@@ -65,17 +65,7 @@ def _link_target_has_buff_row(
     source_name: str,
 ) -> LinkedOp:
     if _is_mark_total_to_meteor_shape(params):
-        raise _gap(
-            f"buff_ref:{buff_id}",
-            "target_has_buff_mark_total_to_meteor_desc_unresolved",
-            source_name=source_name,
-            timing=timing,
-            target=target,
-            rate=rate,
-            buff_id=buff_id,
-            buff_base_id=base_id,
-            base_params=params,
-        )
+        return _op("op_meteor_mark_by_target_mark_total", timing, target, rate, 1)
     if _is_sequence_sentinel_shape(params):
         raise _gap(
             f"buff_ref:{buff_id}",

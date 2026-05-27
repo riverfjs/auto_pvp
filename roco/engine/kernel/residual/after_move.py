@@ -38,7 +38,9 @@ from roco.engine.kernel.model.state import (
     pack_cost_mod,
     replace_pet,
     replace_side,
+    set_status_count,
     side,
+    status_stack,
 )
 from roco.engine.kernel.flow.switch import (
     apply_mark_delta,
@@ -65,6 +67,7 @@ def apply_after_move(
     target = target_side.pets[target_slot]
 
     actor, target = _apply_buff_and_cleanse_deltas(actor, target, ctx)
+    actor, target = _apply_status_consume_deltas(actor, target, ctx)
     actor, target, hp_gain, energy_gain = _apply_resource_deltas(actor, target, ctx)
     actor, target = _apply_cooldown_and_counter_deltas(actor, target, ctx)
 
@@ -231,6 +234,26 @@ def _apply_buff_and_cleanse_deltas(
     return actor, target
 
 
+def _apply_status_consume_deltas(
+    actor: PetState,
+    target: PetState,
+    ctx: StageCtx,
+) -> tuple[PetState, PetState]:
+    if ctx.self_poison_consume:
+        actor = set_status_count(
+            actor,
+            StatusType.POISON,
+            max(0, status_stack(actor, StatusType.POISON) - ctx.self_poison_consume),
+        )
+    if ctx.enemy_poison_consume:
+        target = set_status_count(
+            target,
+            StatusType.POISON,
+            max(0, status_stack(target, StatusType.POISON) - ctx.enemy_poison_consume),
+        )
+    return actor, target
+
+
 def _apply_resource_deltas(
     actor: PetState,
     target: PetState,
@@ -285,6 +308,10 @@ def _apply_resource_deltas(
         before = actor.current_hp
         actor = _apply_heal_hp(actor, max_hp * energy_gain * 500 // BPS)
         hp_gain += max(0, actor.current_hp - before)
+    if ctx.self_current_hp_damage_bps:
+        actor = actor._replace(
+            current_hp=max(1, actor.current_hp - actor.current_hp * ctx.self_current_hp_damage_bps // BPS)
+        )
     return actor, target, hp_gain, energy_gain
 
 
