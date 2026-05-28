@@ -38,7 +38,7 @@ from roco.compiler_v2.primitive_axes import PREFIX_TYPE_SYMBOLS, resolve_primiti
 from roco.compiler_v2.timing_keys import pak_cast_moment_key
 from roco.engine.artifacts.linked_op import ACTION_KIND_TRIGGER_REGISTER, LinkGapError, LinkInertError, LinkedAction
 from roco.engine.artifacts.primitive_linker import link_primitive_row, link_primitive_rows
-from roco.engine.kernel.core.rows import TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_ROUND_END, TIMING_PAK_SDT
+from roco.engine.kernel.core.rows import TARGET_ENEMY, TARGET_SELF, TIMING_HOOK_BEFORE_MOVE, TIMING_PAK_BEFORE_HURT, TIMING_PAK_ROUND_END, TIMING_PAK_SDT
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta, op_switch_lock
 from roco.engine.kernel.ops.damage import op_damage_reduction
@@ -49,6 +49,7 @@ P_ANTI_HEAL = buff_ref_key(21460330)
 P_ACTIVE_IMMUNITY_BUFF = buff_ref_key(20030010)
 P_CUTE_BENCH_COST_REDUCE = buff_ref_key(20400130)
 P_CUTE_HIT_PER_STACK = buff_ref_key(20910020)
+P_CUTE_STACK = buff_ref_key(21020040)
 P_BFT_O_T = buff_type_key("BFT_O_T")
 P_DAMAGE_REDUCTION = buff_type_key("BFT_DAMNUM_CHANGE")
 P_FORCE_SWITCH = buff_type_key("BFT_PET_TRANSE")
@@ -1056,6 +1057,37 @@ def test_conditional_hit_count_buffs_link_from_pak_shape_without_desc():
     assert unsupported in rows
     with pytest.raises(LinkGapError) as exc_info:
         link_primitive_rows(unsupported, source_name="凝望")
+    assert exc_info.value.gap.reason == "buff_shape_unsupported"
+
+
+def test_canonical_cute_stack_buff_links_by_pak_shape():
+    self_row = (P_CUTE_STACK, pak_cast_moment_key(12), TARGET_SELF, 10000, 1, 0, 0, 0)
+    enemy_row = (P_CUTE_STACK, pak_cast_moment_key(12), TARGET_ENEMY, 10000, 1, 0, 0, 0)
+
+    assert _linked_tuple(self_row, "超级糖果") == (
+        "op_cute_gain",
+        12,
+        TARGET_SELF,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
+    assert _linked_tuple(enemy_row, "退化") == (
+        "op_cute_enemy_gain",
+        12,
+        TARGET_ENEMY,
+        10000,
+        1,
+        0,
+        0,
+        0,
+    )
+
+    non_canonical = (buff_ref_key(21020100), pak_cast_moment_key(11), TARGET_SELF, 10000, 1, 0, 0, 0)
+    with pytest.raises(LinkGapError) as exc_info:
+        link_primitive_rows(non_canonical, source_name="希望超新星")
     assert exc_info.value.gap.reason == "buff_shape_unsupported"
 
 

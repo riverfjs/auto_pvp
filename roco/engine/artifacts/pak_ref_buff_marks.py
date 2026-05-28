@@ -2,6 +2,23 @@
 from __future__ import annotations
 from roco.engine.artifacts.linked_op import LinkedOp
 from roco.engine.artifacts.pak_ref_common import BUFF_BASE_IDS, BUFF_KIND, BUFF_REDUCE_RULES, BUFFBASE_ORDER, EFFECT_ORDER, EFFECT_PARAMS, _as_int_tuple, _base_rows, _has_base_order, _has_order_params, _is_burn_status, _is_poison_mark, _is_poison_status, _op, _param, _param_int, _single_int, buff_type, effect_type
+from roco.engine.kernel.core.rows import TARGET_ENEMY, TARGET_SELF
+
+_CUTE_STACK_PARAMS = (1, 0, 0, 1, 1)
+
+
+def _link_cute_stack_buff(buff_id: int, timing: int, target: int, rate: int) -> LinkedOp | None:
+    rows = _base_rows(buff_id)
+    if len(rows) != 1:
+        return None
+    _base_id, order, params = rows[0]
+    if order != buff_type("BFT_O_TWO") or tuple(params) != _CUTE_STACK_PARAMS:
+        return None
+    if target == TARGET_SELF:
+        return _op("op_cute_gain", timing, target, rate, 1)
+    if target == TARGET_ENEMY:
+        return _op("op_cute_enemy_gain", timing, target, rate, 1)
+    return None
 
 def _link_status_or_mark_buff(buff_id: int, timing: int, target: int, rate: int, stack_count: int) -> LinkedOp | None:
     kind = int(BUFF_KIND.get(buff_id, 0) or 0)
