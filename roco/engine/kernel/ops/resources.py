@@ -26,6 +26,10 @@ def op_heal_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.heal_energy += row[ROW_ARG0]
 
 
+def op_heal_energy_by_target_skill_total_cost(ctx: StageCtx, row: tuple[int, ...]) -> None:
+    ctx.heal_energy += ctx.target_equipped_skill_total_cost * row[ROW_ARG0] // BPS
+
+
 def op_steal_energy(ctx: StageCtx, row: tuple[int, ...]) -> None:
     ctx.steal_energy += row[ROW_ARG0]
 

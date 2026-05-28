@@ -42,7 +42,7 @@ from roco.engine.kernel.core.rows import TARGET_ENEMY, TARGET_SELF, TIMING_HOOK_
 from roco.engine.kernel.core.ctx import StageCtx
 from roco.engine.kernel.ops.buffs import op_after_attack_status, op_attack_cost_delta, op_element_cost_reduce, op_global_cost_delta, op_global_power_delta, op_switch_lock
 from roco.engine.kernel.ops.damage import op_damage_reduction
-from roco.engine.kernel.ops.resources import op_life_drain
+from roco.engine.kernel.ops.resources import op_heal_energy_by_target_skill_total_cost, op_life_drain
 from roco.engine.kernel.ops.skill import op_clear_element_damage_reduce, op_first_strike_power_bps, op_power_dynamic, op_power_dynamic_elements, op_specific_skill_power_bonus
 
 P_ANTI_HEAL = buff_ref_key(21460330)
@@ -956,6 +956,27 @@ def test_bft_assign_expands_unconditional_refs_with_target_override():
         0,
     )]
 
+
+def test_change_energy_can_scale_from_target_skill_total_cost():
+    row = (effect_ref_key(1019029), pak_cast_moment_key(11), 1, 10000, 0, 0, 0, 0)
+
+    assert _linked_tuple(row, "雾气环绕") == (
+        "op_heal_energy_by_target_skill_total_cost",
+        11,
+        1,
+        10000,
+        5000,
+        0,
+        0,
+        0,
+    )
+
+    ctx = StageCtx()
+    ctx.target_equipped_skill_total_cost = 7
+    op_heal_energy_by_target_skill_total_cost(ctx, (0, 11, 1, 10000, 0, 5000, 0, 0, 0))
+    assert ctx.heal_energy == 3
+
+    pak = PakTables(REPO_ROOT / "pak-public-kit" / "output" / "data")
     rows, gaps = generate_effect_rows({"skill_result": [{
         "effect_id": 20170830,  # -> two 星陨印记 refs, target override=2
         "cast_moment": 11,

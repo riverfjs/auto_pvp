@@ -299,6 +299,8 @@ def _link_effect_change_energy(_effect_id: int, params: tuple, timing: int, targ
     ratio = _param_int(params, 2)
     if base == 0 and ratio == 0 and (len(params) >= 3):
         return _op('op_heal_energy', timing, target, rate, 0)
+    if direct == 0 and base == 1 and ratio > 0:
+        return _op('op_heal_energy_by_target_skill_total_cost', timing, target, rate, ratio)
     if base > 0 and ratio:
         amount = base * ratio // 10000
         if amount:
