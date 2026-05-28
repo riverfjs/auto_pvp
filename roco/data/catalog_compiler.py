@@ -112,6 +112,7 @@ def _effect_rows(
     row_tuple: Iterable[object],
     *,
     source_name: str,
+    source_meta: Mapping[str, Any],
     actions: ActionInterner,
     link_gaps: list[dict[str, Any]],
     link_inert: list[dict[str, Any]],
@@ -120,10 +121,10 @@ def _effect_rows(
     try:
         linked_rows = link_primitive_rows(row_tuple, source_name=source_name)
     except LinkGapError as exc:
-        link_gaps.append(exc.gap.as_record())
+        link_gaps.append(_with_source_meta(exc.gap.as_record(), source_meta))
         return ()
     except LinkInertError as exc:
-        link_inert.append(exc.inert.as_record())
+        link_inert.append(_with_source_meta(exc.inert.as_record(), source_meta))
         return ()
     for linked in linked_rows:
         if isinstance(linked, LinkedOp):
@@ -155,6 +156,12 @@ def _effect_rows(
             continue
         raise RuntimeError(f"{source_name!r} linked unsupported row object {linked!r}")
     return tuple(rows)
+
+
+def _with_source_meta(record: dict[str, Any], meta: Mapping[str, Any]) -> dict[str, Any]:
+    enriched = dict(record)
+    enriched.update({key: value for key, value in meta.items() if value not in (None, "")})
+    return enriched
 
 
 def _ranges(max_id: int, keyed_rows: list[tuple[int, tuple[int, ...]]]) -> tuple[tuple[int, int], ...]:
@@ -387,6 +394,14 @@ def compile_catalogs(
             for effect in _effect_rows(
                 raw_effect,
                 source_name=name,
+                source_meta={
+                    "source_kind": "skill",
+                    "source_catalog_id": skill_id,
+                    "source_id": _safe_int(row.get("source_id")),
+                    "source_desc": effect_text,
+                    "source_flavor": flavor_text,
+                    "source_effect_order": order,
+                },
                 actions=action_interner,
                 link_gaps=engine_link_gaps,
                 link_inert=engine_link_inert,
@@ -415,6 +430,13 @@ def compile_catalogs(
             for effect in _effect_rows(
                 raw_effect,
                 source_name=name,
+                source_meta={
+                    "source_kind": "ability",
+                    "source_catalog_id": ability_id,
+                    "source_id": _safe_int(row.get("source_id")),
+                    "source_desc": desc,
+                    "source_effect_order": order,
+                },
                 actions=action_interner,
                 link_gaps=engine_link_gaps,
                 link_inert=engine_link_inert,
