@@ -33,6 +33,7 @@
     "BEHAVIOR_CONF",
     "BLOCK_CONF",
     "BLOOD_MONSTER_SKILLBANK_CONF",
+    "BOND_TINT_CONF",
     "BONUS_CONTAINER_CONF",
     "BONUS_EVENT_POOL_CONF",
     "BOSS_CHALLENGE_CONF",
@@ -47,6 +48,7 @@
     "CHEER_POINT_CONF",
     "CLOSET_TAB_CONF",
     "COMBAT_MECHANISM_BATTLE_CONF",
+    "COMBAT_MECHANISM_TEACH_CONF",
     "COMPETITION_RULE_CONF",
     "CONTESTANT_REWARD_CONF",
     "CRYSTAL_CONF",
@@ -64,6 +66,7 @@
     "FIX_DATA_EVOLUTION_ERROR",
     "FUNCTION_BAN_CONF",
     "FUNCTION_STORY_FLAG_CONF",
+    "GLASS_TYPE_CONF",
     "GOODS_RETURN_CONF",
     "GRASS_TRIAL_CONF",
     "GRASS_TRIAL_EFFECT_CONF",
@@ -73,6 +76,7 @@
     "HANDBOOK_FILTER_CONF",
     "HIDDEN_GLASS_CONF",
     "HIDE_PLAYER_MANUAL_OPTION_CONF",
+    "IMPORTANT_PET_MUTATION_CONF",
     "INSPIRE_LEVEL_CONF",
     "INTERACTIONTREE_CONF",
     "INTERIOR_FINISH_CONF",
@@ -93,6 +97,7 @@
     "MARK_FAKE_MAGIC_MESSAGE_CONF",
     "MARK_GAMEPLAY_CONF",
     "MARK_MESSAGE_CHILD_CONF",
+    "MARK_MESSAGE_LIFE_TIME_CONF",
     "MARK_VIDEO_PROTOCOL",
     "MEDAL_BOND_CONF",
     "MEDAL_CONF",
@@ -112,11 +117,14 @@
     "NRC_AI_WORLD_COMBAT_SKILL_CONF",
     "NRC_GROUP_AI_BEHAVIOR_CONF",
     "NRC_GROUP_AI_EVENT_CONF",
+    "NRC_GROUP_AI_MOVE_CONF",
+    "NRC_GROUP_AI_ROLE_TYPE_CONF",
     "NRC_GROUP_AI_STATION_CONF",
     "OWL_SANCTUARY_CONF",
     "PARAGRAPH_CONF",
     "PERFORM_CONF",
     "PETFREE_CONF",
+    "PETPAGE_BLACKLIST",
     "PET_ACTION_CLOSE_EXP_CONF",
     "PET_BEHAVIOR_REACTION_CONF",
     "PET_BOND",
@@ -126,13 +134,17 @@
     "PET_CLASSIS_CONF",
     "PET_CLOSE_LEVEL_EFFECT_CONF",
     "PET_CONF",
+    "PET_EFFORTS_LEVEL",
     "PET_EGG_CONF",
     "PET_EGG_WAY_TO_PROB_CONF",
     "PET_EVOLUTION_CONF",
+    "PET_FEATURE_RAND",
     "PET_FILTER_CONF",
     "PET_FREE_REWARD_CONF",
     "PET_GLOBAL_CONFIG",
+    "PET_HABIT_CONF",
     "PET_HANDBOOK_REWARD",
+    "PET_HANDBOOK_SEQUENCE",
     "PET_INFORMATION_CONF",
     "PET_INFO_CONF",
     "PET_INTERACTION_COMPLEX",
@@ -143,6 +155,7 @@
     "PET_PARTNER_DATA",
     "PET_RANDOM_EGG_CONF",
     "PET_REPORT_SCORE_CONF",
+    "PET_ROLLBACK_CONF",
     "PET_SCENE_ABILITY_GANZHI",
     "PET_SETTLED_BONUS_CONF",
     "PET_SHARE_ITEM_CONF",
@@ -154,6 +167,7 @@
     "PET_WAREHOUSE_CONF",
     "POWER_MAX_CONF",
     "PREATTACK_SKILL",
+    "PRIVILEGE_WAND_CONF",
     "PVP_AWARD_CONF",
     "PVP_BATTLE_SCORE_CONF",
     "PVP_CONF",
@@ -163,6 +177,7 @@
     "PVP_RANDOM_SKILL_LIBRARY_CONF",
     "PVP_RANDOM_SKILL_LIST_CONF",
     "PVP_RANK_CONF",
+    "PVP_RANK_PLAYER_POLL_CONF",
     "PVP_RANK_RANDOM_PET_CONF",
     "PVP_RANK_ROBOT_NAME_CONF",
     "PVP_RANK_ROBOT_PLAYER_CONF",
@@ -176,11 +191,13 @@
     "QUALITY_GROUP_SETTING_CONF",
     "QUALITY_MAPPING_CONF",
     "RANDOM_GOODS_CONF",
+    "RANKBOARD_CONF",
     "REACALL_CONF",
     "READ_CONF",
     "RED_POINT_CONF",
     "REGION_CONF",
     "RELATIONTREE_CONF",
+    "RESOURCE_CONF",
     "REWARD_CONF",
     "ROLEPLAY_BEHAVIOR_CONF",
     "ROLEPLAY_PROP_CONF",
@@ -191,7 +208,9 @@
     "SCENE_ABILITY_CONF",
     "SCENE_ABILITY_DASH_CONF",
     "SCENE_ABILITY_SLIDING_CONF",
+    "SCENE_ABILITY_THROW_CONF",
     "SCENE_CONF",
+    "SCENE_EFFECT_CONF",
     "SCENE_PLAYER_STATUS_MATRIX",
     "SCENE_STATUS_SALS_CONF",
     "SCENE_STATUS_WPST_CONF",
@@ -199,6 +218,7 @@
     "SEASON_ADVENTURE_CHAPTER",
     "SEASON_BATTLE_RULE_CONF",
     "SEASON_BONUSCATCH_BOX_CONF",
+    "SEASON_BONUSCATCH_EFFECTS_CONF",
     "SEASON_CONF",
     "SEASON_ELITE_CONF",
     "SEASON_GROWTH_CONF",
@@ -212,19 +232,25 @@
     "SEASON_SKILL",
     "SEASON_TIPS_NEW_PET_CONF",
     "SEASON_TIPS_PVP_CONF",
+    "SECONDARY_TAB_CONF",
+    "SECOND_TIER_PASSWORD_CONF",
     "SHARE_BASE_CONF",
     "SHARE_CONF",
     "SHARE_PART_CONF",
+    "SHARE_REWARD_CONF",
     "SKILLFULLY_EXCHANGE_CONF",
     "SKILLMACHINE_FILTER_CONF",
+    "SKILLSPECIAL_CONF",
     "SKILL_COLOR_CONF",
     "SKILL_INTERACT_CONF",
     "SKILL_RANDOM_CONF",
+    "SKILL_SEQUENCE_CONF",
     "SKILL_TAG",
     "SKILL_TIME_CONF",
     "SLIDE_CONF",
     "SPECIAL_MOVE_CONF",
     "STAGE_CONF",
+    "STAR_MAGIC_CONF",
     "SUBMIT_PET_CONF",
     "SUB_EVENTS_CONF",
     "SUB_TPLS_CONF",
@@ -234,6 +260,7 @@
     "TEAM_BATTLE_AWARD",
     "TERRITORY_TRIAL_CHALLENGE_CONF",
     "TERRITORY_TRIAL_CONF",
+    "THROW_FUNC_CONF",
     "TIDY_SEQUENCE_TYPE",
     "TITLE_CONF",
     "TOP_MASTER_CONF",
@@ -247,6 +274,7 @@
     "VITALITY_CONF",
     "WAREHOUSE_COLLECT_MARK",
     "WATER_MARK_CONTROL_CONF",
+    "WATER_MARK_LOCALIZATION_CONF",
     "WATER_MARK_WHITE_LIST_CONF",
     "WEAKNESS_CONF",
     "WEEKEND_CHALLENGE_GROUP_CONF",
@@ -257,7 +285,8 @@
     "WORLD_COMBAT_SKILL_CONF",
     "WORLD_COMBAT_SKILL_CURVE_CONF",
     "WORLD_EXPLORING_STATISTIC_CONF",
-    "WORLD_LEVEL_CONF"
+    "WORLD_LEVEL_CONF",
+    "ZONE_EFFECT_CONF"
   ],
   "core_unreferenced_tables": [],
   "manual_kernel_constants": [
@@ -461,12 +490,12 @@
     }
   ],
   "summary": {
-    "bindata_table_count": 628,
-    "combat_candidate_count": 276,
+    "bindata_table_count": 737,
+    "combat_candidate_count": 305,
     "manual_kernel_constant_count": 31,
     "manual_semantic_binding_count": 2,
     "referenced_combat_table_count": 18,
-    "unreferenced_combat_table_count": 258,
+    "unreferenced_combat_table_count": 287,
     "unreferenced_core_table_count": 0
   },
   "tables": [
@@ -650,7 +679,7 @@
       ],
       "path": "pak-public-kit/output/data/BinData/ACTIVITY_CONF.json",
       "referenced_by_code": false,
-      "row_count": 527,
+      "row_count": 526,
       "table": "ACTIVITY_CONF"
     },
     {
@@ -674,7 +703,7 @@
       ],
       "path": "pak-public-kit/output/data/BinData/ACTIVITY_DROP_CONF.json",
       "referenced_by_code": false,
-      "row_count": 118,
+      "row_count": 117,
       "table": "ACTIVITY_DROP_CONF"
     },
     {
@@ -682,10 +711,9 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
-      "field_count": 13,
+      "field_count": 12,
       "fields": [
         "area_id",
-        "area_show",
         "begin_time",
         "drop_behavior",
         "drop_behavior_condition",
@@ -700,7 +728,7 @@
       ],
       "path": "pak-public-kit/output/data/BinData/ACTIVITY_DROP_METHOD_CONF.json",
       "referenced_by_code": false,
-      "row_count": 654,
+      "row_count": 652,
       "table": "ACTIVITY_DROP_METHOD_CONF"
     },
     {
@@ -1131,6 +1159,21 @@
       "coverage": "unreferenced",
       "field_count": 2,
       "fields": [
+        "addtime",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_PET_TRIP_RULE.json",
+      "referenced_by_code": false,
+      "row_count": 7,
+      "table": "ACTIVITY_PET_TRIP_RULE"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
         "id",
         "kv_path"
       ],
@@ -1350,6 +1393,61 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_SHINY_WEEKEND_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "ACTIVITY_SHINY_WEEKEND_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_SHOP_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "ACTIVITY_SHOP_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "id",
+        "reset_type",
+        "reward_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_SIGN_REWARD.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "ACTIVITY_SIGN_REWARD"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "editor_name",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_SPECIAL_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "ACTIVITY_SPECIAL_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 2,
       "fields": [
         "explain_group",
@@ -1529,6 +1627,20 @@
       "referenced_by_code": false,
       "row_count": 73,
       "table": "ACTIVITY_UMG_RULE_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/ACTIVITY_UP_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "ACTIVITY_UP_CONF"
     },
     {
       "category": "ui_or_content",
@@ -1740,6 +1852,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/ALL_DIALOGUE_EN.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "ALL_DIALOGUE_EN"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 28,
       "fields": [
         "active_skill_list",
@@ -1886,6 +2010,18 @@
       "table": "AONE_FINAL_BATTLE_PETSLIST_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/AREA_CHECK_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "AREA_CHECK_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -1984,6 +2120,18 @@
       "table": "AREA_HANDBOOK"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/AREA_SCENEOBJ_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "AREA_SCENEOBJ_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -1999,6 +2147,33 @@
       "referenced_by_code": false,
       "row_count": 25,
       "table": "AREA_TAG_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "area_id",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/AREA_TRIG_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "AREA_TRIG_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/AREA_UI_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "AREA_UI_CONF"
     },
     {
       "category": "combat_content",
@@ -2213,6 +2388,22 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "id",
+        "sequence",
+        "sequence_desc"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BAG_ITEM_SEQUENCE.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "BAG_ITEM_SEQUENCE"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 10,
       "fields": [
         "id",
@@ -2249,6 +2440,21 @@
       "referenced_by_code": false,
       "row_count": 41,
       "table": "BAG_PET_GIFT_EFFECT_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "id",
+        "widget_name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BALLTLEPASS_AWARDMAIN_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "BALLTLEPASS_AWARDMAIN_CONF"
     },
     {
       "category": "combat_content",
@@ -2364,6 +2570,22 @@
       "referenced_by_code": false,
       "row_count": 7,
       "table": "BAN_ACTION_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "allowed_list",
+        "id",
+        "type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BAN_NPC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "BAN_NPC_CONF"
     },
     {
       "category": "non_battle",
@@ -2877,6 +3099,43 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "fashion_bond_quality",
+        "id",
+        "name",
+        "tint_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BOND_TINT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "BOND_TINT_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 7,
+      "fields": [
+        "id",
+        "param1",
+        "param2",
+        "refresh_height",
+        "refresh_number",
+        "refresh_radius",
+        "text"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BONUSCATCH_REFRESH_RULE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "BONUSCATCH_REFRESH_RULE_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 5,
       "fields": [
         "id",
@@ -2908,6 +3167,34 @@
       "referenced_by_code": false,
       "row_count": 10433,
       "table": "BONUS_EVENT_POOL_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BONUS_SHINING_STG_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 16,
+      "table": "BONUS_SHINING_STG_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BONUS_SPE_EVENT_POOL_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 147,
+      "table": "BONUS_SPE_EVENT_POOL_CONF"
     },
     {
       "category": "combat_content",
@@ -3011,6 +3298,23 @@
         "lower_limit",
         "upper_limit"
       ],
+      "path": "pak-public-kit/output/data/BinData/BOTTLE_TIMES_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "BOTTLE_TIMES_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "exchange_conf",
+        "id",
+        "lower_limit",
+        "upper_limit"
+      ],
       "path": "pak-public-kit/output/data/BinData/BOTTLE_VOLUME_CONF.json",
       "referenced_by_code": false,
       "row_count": 8,
@@ -3091,6 +3395,31 @@
       "referenced_by_code": false,
       "row_count": 96,
       "table": "BREAK_REWARD_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 12,
+      "fields": [
+        "be_joined_ring_bst_limit",
+        "distance_max_weight",
+        "hist_insight_weight",
+        "id",
+        "insight_weight",
+        "object_weight",
+        "ring_bst_limit",
+        "ring_cnt",
+        "ring_limit_rates",
+        "ring_size_rates",
+        "sight_extent",
+        "update_ring_objs_interval"
+      ],
+      "path": "pak-public-kit/output/data/BinData/BST_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "BST_CONF"
     },
     {
       "category": "core_battle",
@@ -3232,6 +3561,22 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "callback_param_1",
+        "id",
+        "mail_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/CALLBACK_MAIL_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 6,
+      "table": "CALLBACK_MAIL_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 6,
       "fields": [
         "editor_name",
@@ -3327,6 +3672,18 @@
       "referenced_by_code": false,
       "row_count": 87,
       "table": "CAMP_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/CAMP_CONTENT_NPC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "CAMP_CONTENT_NPC_CONF"
     },
     {
       "category": "combat_content",
@@ -3441,6 +3798,23 @@
       "referenced_by_code": false,
       "row_count": 371,
       "table": "CARD_LABEL_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
+        "module_name",
+        "module_num",
+        "module_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/CARD_MODULE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "CARD_MODULE_CONF"
     },
     {
       "category": "ui_or_content",
@@ -3743,6 +4117,22 @@
       "coverage": "combat_candidate_unreferenced",
       "field_count": 3,
       "fields": [
+        "combat_mechanism_battle",
+        "display_name",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/COMBAT_MECHANISM_TEACH_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "COMBAT_MECHANISM_TEACH_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 3,
+      "fields": [
         "id",
         "next_round_prob",
         "show_max"
@@ -3806,6 +4196,26 @@
       "referenced_by_code": false,
       "row_count": 60,
       "table": "CURVE_DETAIL_INFO"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 7,
+      "fields": [
+        "DIST",
+        "POS_OFFSET_X",
+        "POS_OFFSET_Y",
+        "POS_OFFSET_Z",
+        "ROT_OFFSET_Y",
+        "ROT_OFFSET_Z",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/CUSTOMCAMERA_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "CUSTOMCAMERA_CONF"
     },
     {
       "category": "non_battle",
@@ -3922,6 +4332,20 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/DIALOGUE_ONLY_OPTION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 4205,
+      "table": "DIALOGUE_ONLY_OPTION_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 18,
       "fields": [
         "first_level_area_name",
@@ -4017,6 +4441,20 @@
       "referenced_by_code": false,
       "row_count": 74,
       "table": "DUNGEON_STAGE"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/EFFECT_ANIMATION.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "EFFECT_ANIMATION"
     },
     {
       "category": "core_battle",
@@ -4153,6 +4591,18 @@
       "referenced_by_code": false,
       "row_count": 12,
       "table": "EQS_BOX_EXPORT"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/ESCAPE_INFO_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "ESCAPE_INFO_CONF"
     },
     {
       "category": "combat_content",
@@ -4418,6 +4868,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/FASHION_DRESSFORM_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "FASHION_DRESSFORM_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 13,
       "fields": [
         "display_item",
@@ -4556,6 +5018,22 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "goods_id",
+        "goods_type",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/FASHION_VI_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "FASHION_VI_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 13,
       "fields": [
         "WandMesh",
@@ -4672,6 +5150,24 @@
       "table": "FRUIT_TREE_CONF"
     },
     {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 5,
+      "fields": [
+        "action_type",
+        "dialogue_id",
+        "id",
+        "range_max",
+        "range_min"
+      ],
+      "path": "pak-public-kit/output/data/BinData/FRUIT_TREE_RULE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "FRUIT_TREE_RULE_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -4689,6 +5185,32 @@
       "referenced_by_code": false,
       "row_count": 76,
       "table": "FUNCTION_BAN_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/FUNCTION_BAN_SCENE_RES_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "FUNCTION_BAN_SCENE_RES_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/FUNCTION_BAN_SPECIAL_NPC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "FUNCTION_BAN_SPECIAL_NPC_CONF"
     },
     {
       "category": "combat_content",
@@ -4731,6 +5253,23 @@
       "referenced_by_code": false,
       "row_count": 25,
       "table": "FURNITURE_CLASSIFICATION_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "effect_type",
+        "effect_type_param",
+        "id",
+        "trigger_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/FURNITURE_EFFECT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "FURNITURE_EFFECT_CONF"
     },
     {
       "category": "ui_or_content",
@@ -4785,6 +5324,40 @@
       "referenced_by_code": false,
       "row_count": 196,
       "table": "FURNITURE_ITEM_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "furniture_item_id",
+        "furniture_version",
+        "id",
+        "version_weight"
+      ],
+      "path": "pak-public-kit/output/data/BinData/FURNITURE_VERSION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "FURNITURE_VERSION_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "glass_type",
+        "id",
+        "star_ratio",
+        "weight"
+      ],
+      "path": "pak-public-kit/output/data/BinData/GLASS_TYPE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "GLASS_TYPE_CONF"
     },
     {
       "category": "non_battle",
@@ -5459,6 +6032,23 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "coordinate",
+        "furniture_coin_ratio",
+        "home_exp_ratio",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/HOME_COMFORT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "HOME_COMFORT_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 6,
       "fields": [
         "filter_desc",
@@ -5561,6 +6151,77 @@
       "referenced_by_code": false,
       "row_count": 4,
       "table": "HOME_USED_BY_TASK_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "exchange_conf",
+        "id",
+        "lower_limit",
+        "upper_limit"
+      ],
+      "path": "pak-public-kit/output/data/BinData/HP_MAX_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "HP_MAX_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/IMPORTANT_HIGH_VALUE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "IMPORTANT_HIGH_VALUE_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/IMPORTANT_ITEM_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3535,
+      "table": "IMPORTANT_ITEM_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/IMPORTANT_OUTPUT_PATH_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "IMPORTANT_OUTPUT_PATH_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/IMPORTANT_PET_MUTATION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 972,
+      "table": "IMPORTANT_PET_MUTATION_CONF"
     },
     {
       "category": "combat_content",
@@ -5889,6 +6550,18 @@
       "table": "LEVEL_SKILL_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/LINE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "LINE_CONF"
+    },
+    {
       "category": "ui_or_content",
       "code_refs": [],
       "combat_candidate": false,
@@ -6029,6 +6702,23 @@
       "referenced_by_code": false,
       "row_count": 23,
       "table": "LOTTERY_POOL_REWARD_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
+        "part_desc",
+        "part_name",
+        "umg_path"
+      ],
+      "path": "pak-public-kit/output/data/BinData/LOTTERY_RESULT_PAGE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "LOTTERY_RESULT_PAGE_CONF"
     },
     {
       "category": "non_battle",
@@ -6457,6 +7147,24 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 5,
+      "fields": [
+        "attitude_count",
+        "id",
+        "magic_message_add_time",
+        "magic_message_per_add_time",
+        "per_attitude_count"
+      ],
+      "path": "pak-public-kit/output/data/BinData/MARK_MESSAGE_LIFE_TIME_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "MARK_MESSAGE_LIFE_TIME_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 7,
       "fields": [
         "SpaceActionType",
@@ -6635,6 +7343,35 @@
       "referenced_by_code": false,
       "row_count": 18,
       "table": "MEGAMAP_OVERLAP_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/MEGAMAP_REFRESH_BLACKLIST.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "MEGAMAP_REFRESH_BLACKLIST"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "id",
+        "speed"
+      ],
+      "path": "pak-public-kit/output/data/BinData/MEGAMAP_SPEED_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "MEGAMAP_SPEED_CONF"
     },
     {
       "category": "non_battle",
@@ -7469,6 +8206,20 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NPC_PEER_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 68,
+      "table": "NPC_PEER_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 10,
       "fields": [
         "area_id",
@@ -7504,6 +8255,23 @@
       "referenced_by_code": false,
       "row_count": 1276,
       "table": "NPC_REACTION_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "bonus_id",
+        "bonus_type",
+        "event_type",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NPC_REFRESH_BONUS_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "NPC_REFRESH_BONUS_CONF"
     },
     {
       "category": "ui_or_content",
@@ -7640,6 +8408,21 @@
       "referenced_by_code": false,
       "row_count": 1993,
       "table": "NRC_AI_BB_INITIATE_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "blackboard_input",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NRC_AI_BB_INPUT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "NRC_AI_BB_INPUT_CONF"
     },
     {
       "category": "non_battle",
@@ -7788,6 +8571,25 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 6,
+      "fields": [
+        "from_state",
+        "id",
+        "interruptible",
+        "policy",
+        "to_state",
+        "via_state"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NRC_AI_GAMEPLAY_STATETRANS_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "NRC_AI_GAMEPLAY_STATETRANS_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 15,
       "fields": [
         "block_state_with_tags",
@@ -7865,6 +8667,20 @@
       "referenced_by_code": false,
       "row_count": 1993,
       "table": "NRC_AI_GROUP_INFO_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NRC_AI_MUTUAL_EXCLUSION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "NRC_AI_MUTUAL_EXCLUSION_CONF"
     },
     {
       "category": "non_battle",
@@ -8113,6 +8929,30 @@
       "table": "NRC_GROUP_AI_BEHAVIOR_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/NRC_GROUP_AI_DISMISS_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "NRC_GROUP_AI_DISMISS_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/NRC_GROUP_AI_DYNAMIC_EVENT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "NRC_GROUP_AI_DYNAMIC_EVENT_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -8133,6 +8973,38 @@
       "referenced_by_code": false,
       "row_count": 649,
       "table": "NRC_GROUP_AI_EVENT_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 5,
+      "fields": [
+        "center_param",
+        "editor_name",
+        "id",
+        "move_center_type",
+        "station_param"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NRC_GROUP_AI_MOVE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "NRC_GROUP_AI_MOVE_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/NRC_GROUP_AI_ROLE_TYPE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 159,
+      "table": "NRC_GROUP_AI_ROLE_TYPE_CONF"
     },
     {
       "category": "combat_content",
@@ -8203,6 +9075,18 @@
       "referenced_by_code": false,
       "row_count": 44,
       "table": "ONLINE_GLOBAL_CONFIG"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/OPERATION_MAIL.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "OPERATION_MAIL"
     },
     {
       "category": "ui_or_content",
@@ -8727,6 +9611,18 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/PETPAGE_BLACKLIST.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "PETPAGE_BLACKLIST"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 5,
       "fields": [
         "close_exp",
@@ -8950,6 +9846,18 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/PET_EFFORTS_LEVEL.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "PET_EFFORTS_LEVEL"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 21,
       "fields": [
         "close_level",
@@ -9024,6 +9932,21 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 2,
+      "fields": [
+        "feature_rand",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PET_FEATURE_RAND.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "PET_FEATURE_RAND"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 6,
       "fields": [
         "filter_desc",
@@ -9056,6 +9979,18 @@
       "table": "PET_FREE_REWARD_CONF"
     },
     {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/PET_FRUIT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "PET_FRUIT_CONF"
+    },
+    {
       "category": "battle_candidate",
       "code_refs": [],
       "combat_candidate": true,
@@ -9073,6 +10008,18 @@
       "referenced_by_code": false,
       "row_count": 364,
       "table": "PET_GLOBAL_CONFIG"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/PET_HABIT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "PET_HABIT_CONF"
     },
     {
       "category": "battle_candidate",
@@ -9113,6 +10060,23 @@
       "referenced_by_code": false,
       "row_count": 48,
       "table": "PET_HANDBOOK_REWARD"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
+        "sequence_default",
+        "sequence_desc",
+        "sequence_switch"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PET_HANDBOOK_SEQUENCE.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "PET_HANDBOOK_SEQUENCE"
     },
     {
       "category": "ui_or_content",
@@ -9378,6 +10342,18 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/PET_ROLLBACK_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "PET_ROLLBACK_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 8,
       "fields": [
         "ability_icon",
@@ -9543,6 +10519,22 @@
       "table": "PET_TYPE_SCORE_CONF"
     },
     {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "camera_yaobi_len",
+        "camera_yaobi_pitch",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PET_UI_CAMERA_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "PET_UI_CAMERA_CONF"
+    },
+    {
       "category": "battle_candidate",
       "code_refs": [],
       "combat_candidate": true,
@@ -9575,6 +10567,21 @@
       "referenced_by_code": false,
       "row_count": 24,
       "table": "PLANT_GROW_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "PlantStage",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PLANT_GROW_STAGE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "PLANT_GROW_STAGE_CONF"
     },
     {
       "category": "non_battle",
@@ -9652,6 +10659,18 @@
       "table": "PLAYER_MAGIC_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/POINT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "POINT_CONF"
+    },
+    {
       "category": "battle_candidate",
       "code_refs": [],
       "combat_candidate": true,
@@ -9685,6 +10704,21 @@
       "table": "PREATTACK_SKILL"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "id",
+        "reward_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PRE_DOWNLOAD_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "PRE_DOWNLOAD_CONF"
+    },
+    {
       "category": "ui_or_content",
       "code_refs": [],
       "combat_candidate": false,
@@ -9701,6 +10735,22 @@
       "referenced_by_code": false,
       "row_count": 2,
       "table": "PRIVILEGE_RIDE_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 3,
+      "fields": [
+        "fashion_item_id",
+        "id",
+        "magic_transform_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PRIVILEGE_WAND_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "PRIVILEGE_WAND_CONF"
     },
     {
       "category": "non_battle",
@@ -9899,6 +10949,31 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 12,
+      "fields": [
+        "deduction_day",
+        "deduction_time",
+        "id",
+        "max_score",
+        "new_player_fight_num",
+        "new_player_fight_num_robot",
+        "new_player_fight_win_num",
+        "new_player_fight_win_num_robot",
+        "new_player_score",
+        "player_change_pet",
+        "player_pet",
+        "player_skill"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PVP_RANK_PLAYER_POLL_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "PVP_RANK_PLAYER_POLL_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 4,
       "fields": [
         "expand_pet",
@@ -9910,6 +10985,20 @@
       "referenced_by_code": false,
       "row_count": 182,
       "table": "PVP_RANK_RANDOM_PET_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/PVP_RANK_ROBOT_CARD_ICON_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "PVP_RANK_ROBOT_CARD_ICON_CONF"
     },
     {
       "category": "battle_candidate",
@@ -10199,6 +11288,24 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 5,
+      "fields": [
+        "id",
+        "is_tied_rank",
+        "max_rank_no",
+        "max_view_no",
+        "rank_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/RANKBOARD_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "RANKBOARD_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 10,
       "fields": [
         "data1",
@@ -10371,6 +11478,23 @@
       "table": "RELATIONTREE_ANIM_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "RelationTreeBasic",
+        "friend_need",
+        "id",
+        "name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/RELATIONTREE_BASIC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "RELATIONTREE_BASIC_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -10428,6 +11552,27 @@
       "referenced_by_code": false,
       "row_count": 28,
       "table": "RESOLUTION_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 8,
+      "fields": [
+        "MISSION_BLOCKED",
+        "NPC_VISIBLE",
+        "id",
+        "magician_level",
+        "name",
+        "pet_promotion_level",
+        "role_level",
+        "unlock_handbook"
+      ],
+      "path": "pak-public-kit/output/data/BinData/RESOURCE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "RESOURCE_CONF"
     },
     {
       "category": "ui_or_content",
@@ -10507,6 +11652,18 @@
       "referenced_by_code": false,
       "row_count": 7810,
       "table": "REWARD_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/REWARD_TAG.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "REWARD_TAG"
     },
     {
       "category": "non_battle",
@@ -10948,6 +12105,18 @@
       "table": "SALON_TAB_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SCENE_ABILITY_ASCENDING_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SCENE_ABILITY_ASCENDING_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -11011,6 +12180,30 @@
       "table": "SCENE_ABILITY_DASH_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SCENE_ABILITY_FLYING_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SCENE_ABILITY_FLYING_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SCENE_ABILITY_RIDING_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SCENE_ABILITY_RIDING_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -11042,6 +12235,24 @@
       "referenced_by_code": false,
       "row_count": 1,
       "table": "SCENE_ABILITY_SLIDING_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 5,
+      "fields": [
+        "id",
+        "limit_pitch",
+        "pitch_max",
+        "pitch_min",
+        "throw_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SCENE_ABILITY_THROW_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "SCENE_ABILITY_THROW_CONF"
     },
     {
       "category": "non_battle",
@@ -11088,6 +12299,22 @@
       "referenced_by_code": false,
       "row_count": 85,
       "table": "SCENE_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 3,
+      "fields": [
+        "area_id",
+        "id",
+        "type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SCENE_EFFECT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "SCENE_EFFECT_CONF"
     },
     {
       "category": "non_battle",
@@ -11272,6 +12499,18 @@
       "table": "SCENE_STATUS_WPST_CONF"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SCENE_UPGRADE_VERSION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SCENE_UPGRADE_VERSION_CONF"
+    },
+    {
       "category": "combat_content",
       "code_refs": [],
       "combat_candidate": true,
@@ -11417,6 +12656,23 @@
       "referenced_by_code": false,
       "row_count": 48,
       "table": "SEASON_BONUSCATCH_BOX_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "catch_skill",
+        "id",
+        "season",
+        "sound_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SEASON_BONUSCATCH_EFFECTS_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "SEASON_BONUSCATCH_EFFECTS_CONF"
     },
     {
       "category": "non_battle",
@@ -11778,6 +13034,22 @@
       "table": "SEASON_SKILL"
     },
     {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "id",
+        "name",
+        "point"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SEASON_TALENT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "SEASON_TALENT_CONF"
+    },
+    {
       "category": "battle_candidate",
       "code_refs": [],
       "combat_candidate": true,
@@ -11834,6 +13106,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SEASON_TIPS_TXT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SEASON_TIPS_TXT_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 2,
       "fields": [
         "id",
@@ -11860,6 +13144,40 @@
       "referenced_by_code": false,
       "row_count": 18,
       "table": "SEAT_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "activity_type",
+        "base_id",
+        "id",
+        "name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SECONDARY_TAB_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "SECONDARY_TAB_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "action_type",
+        "goods_id",
+        "goods_type",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SECOND_TIER_PASSWORD_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "SECOND_TIER_PASSWORD_CONF"
     },
     {
       "category": "non_battle",
@@ -12005,6 +13323,40 @@
       "table": "SHARE_PART_CONF"
     },
     {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 6,
+      "fields": [
+        "goods_count",
+        "goods_id",
+        "goods_type",
+        "id",
+        "reward_refresh_rules",
+        "share_reward_get_times"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SHARE_REWARD_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "SHARE_REWARD_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "id",
+        "system_control_id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SHOP_BAN_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "SHOP_BAN_CONF"
+    },
+    {
       "category": "ui_or_content",
       "code_refs": [],
       "combat_candidate": false,
@@ -12085,6 +13437,18 @@
       "referenced_by_code": false,
       "row_count": 27,
       "table": "SKILLMACHINE_FILTER_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SKILLSPECIAL_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SKILLSPECIAL_CONF"
     },
     {
       "category": "ui_or_content",
@@ -12277,6 +13641,23 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
+        "sequence_default",
+        "sequence_desc",
+        "sequence_switch"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SKILL_SEQUENCE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "SKILL_SEQUENCE_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 7,
       "fields": [
         "condition_damtype",
@@ -12308,6 +13689,21 @@
       "referenced_by_code": false,
       "row_count": 3821,
       "table": "SKILL_TIME_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 2,
+      "fields": [
+        "id",
+        "ui_des"
+      ],
+      "path": "pak-public-kit/output/data/BinData/SKILL_UI_DES.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "SKILL_UI_DES"
     },
     {
       "category": "combat_content",
@@ -12380,6 +13776,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SPE_REFRESH_TRIG_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SPE_REFRESH_TRIG_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 6,
       "fields": [
         "bp_name",
@@ -12437,6 +13845,22 @@
       "referenced_by_code": false,
       "row_count": 25,
       "table": "STAR_AWARD_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 3,
+      "fields": [
+        "effect_struct",
+        "id",
+        "name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/STAR_MAGIC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "STAR_MAGIC_CONF"
     },
     {
       "category": "non_battle",
@@ -12508,6 +13932,18 @@
       "referenced_by_code": false,
       "row_count": 7,
       "table": "SUB_EVENTS_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/SUB_TASK_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "SUB_TASK_CONF"
     },
     {
       "category": "combat_content",
@@ -12847,6 +14283,22 @@
       "coverage": "unreferenced",
       "field_count": 3,
       "fields": [
+        "bag_item_id",
+        "id",
+        "task_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/TASK_ITEM.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "TASK_ITEM"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
         "id",
         "moduel_id",
         "task_weight"
@@ -12855,6 +14307,18 @@
       "referenced_by_code": false,
       "row_count": 115,
       "table": "TASK_MODULE_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/TASK_NPC.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "TASK_NPC"
     },
     {
       "category": "ui_or_content",
@@ -13144,6 +14608,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/TEST_RECHARGE_AMOUNT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "TEST_RECHARGE_AMOUNT_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 3,
       "fields": [
         "exp_icon",
@@ -13154,6 +14630,24 @@
       "referenced_by_code": false,
       "row_count": 1,
       "table": "TEXT_EXP_CONF"
+    },
+    {
+      "category": "combat_content",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 5,
+      "fields": [
+        "id",
+        "retrieve",
+        "throw_done",
+        "throw_function",
+        "throw_target"
+      ],
+      "path": "pak-public-kit/output/data/BinData/THROW_FUNC_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "THROW_FUNC_CONF"
     },
     {
       "category": "battle_candidate",
@@ -13264,6 +14758,23 @@
       "referenced_by_code": false,
       "row_count": 41,
       "table": "TRAVEL_FILTER_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
+        "sequence_default",
+        "sequence_desc",
+        "sequence_switch"
+      ],
+      "path": "pak-public-kit/output/data/BinData/TRAVEL_SEQUENCE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 2,
+      "table": "TRAVEL_SEQUENCE_CONF"
     },
     {
       "category": "non_battle",
@@ -13401,6 +14912,18 @@
       "code_refs": [],
       "combat_candidate": false,
       "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/UI_COMPASS.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "UI_COMPASS"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
       "field_count": 5,
       "fields": [
         "id",
@@ -13475,6 +14998,38 @@
       "referenced_by_code": false,
       "row_count": 19,
       "table": "UI_LOBBY_MAIN_COMPASS"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "editor_name",
+        "id",
+        "panel_name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/UI_RECONNECT.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "UI_RECONNECT"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "id",
+        "mutex_group_name",
+        "widget_name"
+      ],
+      "path": "pak-public-kit/output/data/BinData/UMG_DIALOG_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "UMG_DIALOG_CONF"
     },
     {
       "category": "non_battle",
@@ -13654,6 +15209,21 @@
       "code_refs": [],
       "combat_candidate": true,
       "coverage": "combat_candidate_unreferenced",
+      "field_count": 2,
+      "fields": [
+        "editor_name",
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/WATER_MARK_LOCALIZATION_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "WATER_MARK_LOCALIZATION_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
       "field_count": 9,
       "fields": [
         "account",
@@ -13798,6 +15368,36 @@
       "referenced_by_code": false,
       "row_count": 17,
       "table": "WEEKLY_PHOTO_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 1,
+      "fields": [
+        "id"
+      ],
+      "path": "pak-public-kit/output/data/BinData/WEIGHT_GROUP_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 3,
+      "table": "WEIGHT_GROUP_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "aura_id",
+        "id",
+        "location_z"
+      ],
+      "path": "pak-public-kit/output/data/BinData/WIND_GRASS.json",
+      "referenced_by_code": false,
+      "row_count": 1,
+      "table": "WIND_GRASS"
     },
     {
       "category": "non_battle",
@@ -14109,6 +15709,23 @@
       "field_count": 4,
       "fields": [
         "id",
+        "minmap_num",
+        "track_num",
+        "track_type"
+      ],
+      "path": "pak-public-kit/output/data/BinData/WORLD_MAP_DEFAULT_TRACK.json",
+      "referenced_by_code": false,
+      "row_count": 4,
+      "table": "WORLD_MAP_DEFAULT_TRACK"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 4,
+      "fields": [
+        "id",
         "key",
         "num",
         "numList"
@@ -14117,6 +15734,46 @@
       "referenced_by_code": false,
       "row_count": 4,
       "table": "WORLD_MAP_GLOBAL_CONF"
+    },
+    {
+      "category": "ui_or_content",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 3,
+      "fields": [
+        "id",
+        "max_scale",
+        "min_scale"
+      ],
+      "path": "pak-public-kit/output/data/BinData/WORLD_MAP_SCALE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 5,
+      "table": "WORLD_MAP_SCALE_CONF"
+    },
+    {
+      "category": "non_battle",
+      "code_refs": [],
+      "combat_candidate": false,
+      "coverage": "unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/WORLD_ZONE_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "WORLD_ZONE_CONF"
+    },
+    {
+      "category": "battle_candidate",
+      "code_refs": [],
+      "combat_candidate": true,
+      "coverage": "combat_candidate_unreferenced",
+      "field_count": 0,
+      "fields": [],
+      "path": "pak-public-kit/output/data/BinData/ZONE_EFFECT_CONF.json",
+      "referenced_by_code": false,
+      "row_count": 0,
+      "table": "ZONE_EFFECT_CONF"
     }
   ]
 }

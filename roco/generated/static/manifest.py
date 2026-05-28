@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-SOURCE_HASH = 'bc9dbdb080381375d645d0c989b0c719b10e3e3eca7298c5f7b46229ae49bd37'
+SOURCE_HASH = 'cc40471ab025f32248cb1f734e4e9cc4d8edac71a964544190dbb13143797708'
 
 SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name': 'ATTRIBUTE_CONF.json',
                                                             'sha256': 'e875e44ecf49738403b0b09faf6a2d67f02cf353bb4126de593d04f11ea81e41',
@@ -36,8 +36,8 @@ SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name
                                                                'sha256': 'd8797d6f47ce393174ded452662f310e49a9812c5272b7519fac791d2b68a9fe',
                                                                'size': 3333},
  'pak-public-kit/output/data/BinData/SKILL_CONF.json': {'name': 'SKILL_CONF.json',
-                                                        'sha256': 'af454e0cd7262a5ceb240e92e8815421142bf05d4e86e34f71e9829dc0b961d9',
-                                                        'size': 1629863},
+                                                        'sha256': '0d683455c6f1a0983d2f295c2e8117043cd49a126837dfb072678d223deff3c9',
+                                                        'size': 1628608},
  'pak-public-kit/output/data/BinData/TYPE_DICTIONARY.json': {'name': 'TYPE_DICTIONARY.json',
                                                              'sha256': '5770df8e481e6ef209185229d387e8f7c44f1d98bcc1fb0734e6b2a8d98d58f2',
                                                              'size': 29693},
@@ -45,8 +45,8 @@ SOURCE_FILES = {'pak-public-kit/output/data/BinData/ATTRIBUTE_CONF.json': {'name
                                                           'sha256': '925e94c7162cf4e23628e91064c4df0cd057beb1cfa79a72ec343b21aad08c26',
                                                           'size': 13177},
  'pak-public-kit/output/data/moves.json': {'name': 'moves.json',
-                                           'sha256': '0fbf5b722b9893ebeed2af7950f7cdc7365f081985d6c206e9978d588a5b50cf',
-                                           'size': 330614},
+                                           'sha256': '0f80bd8fc4964a5cf24eaca1e0ff44d384e5fd65a6a74ff3aec25ea41d597d0e',
+                                           'size': 529291},
  'pak-public-kit/output/scripts/lua/Data/Config/Enum.lua': {'name': 'Enum.lua',
                                                             'sha256': 'e778b6687bb1d91c96c019cb972f7c06c4d276cc54fc68e7163aa37bc8b7f244',
                                                             'size': 216270}}

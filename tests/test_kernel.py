@@ -824,10 +824,10 @@ def test_kernel_devotion_reduces_cost_and_boosts_devotion_skills():
     devotion_skills = [
         skill_id
         for skill_id, row in enumerate(hot.SKILLS)
-        if skill_id > 0 and row[SKILL_FLAGS] & SKILL_FLAG_DEVOTION
+        if skill_id > 0 and row[SKILL_FLAGS] & SKILL_FLAG_DEVOTION and row[SKILL_ENERGY] > 0
     ]
     if not devotion_skills:
-        pytest.skip("current generated catalog has no devotion-flagged skills")
+        pytest.skip("current generated catalog has no positive-cost devotion-flagged skills")
     swarm = devotion_skills[0]
     devotion = (
         (1 << (DevotionIdx.JIAMEI.value * 4))
